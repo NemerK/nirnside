@@ -1,0 +1,78 @@
+---
+description: Core product rules for Nirnside (ESO account hub). ALWAYS follow.
+globs:
+alwaysApply: true
+---
+
+# Nirnside — non-negotiable rules
+
+Nirnside is a **local-first, out-of-game hub** for The Elder Scrolls Online. It shows
+one player's own account (characters, inventory, stickerbook) and a Tamriel
+encyclopedia, sourced from in-game data. These rules are hard constraints agreed with
+the product owner. Do not relax them without explicit approval.
+
+## 1. Live patch only — never deprecated
+- All game data (skills, sets, items, scribing, Champion Points, tooltips, systems)
+  MUST match the **current live ESO patch**. As of this writing that is **Update 50 +
+  Season One (2026)**; on a new live patch the catalog must be re-ingested, not frozen
+  at an old update.
+- If something is **removed from the live game, it must not appear in the catalog**.
+  (Exception: an item that is no longer obtainable but is still physically sitting in a
+  player's bags MUST still render in Inventory — hiding it would make the bag a lie.
+  Mark it as unobtainable; do not delete it from the account view.)
+- PTS / unreleased data never mixes into the live catalog. If ever added, it lives in a
+  clearly separate PTS section.
+
+## 2. Accuracy is sacred
+- **In-game data is the source of truth**, above every external source. Order of trust:
+  in-game API dump > community DB (ESO-Hub, LibSets) > everything else. If a community
+  source conflicts with an in-game value, the in-game value wins.
+- Every displayed fact that came from a community source (not verified against an
+  in-game dump) MUST be tagged as such (`source: "community"` / "unverified"), never
+  presented as confirmed in-game truth.
+- **No silent math.** We do not currently compute combat numbers (DPS, mitigation, CP
+  diminishing returns, buff stacking). Show as-written tooltips and slotted state only.
+  If a calculated value is ever added and cannot be produced correctly, DO NOT guess —
+  surface a visible warning to the user instead.
+- Missing data is shown as **unknown with a timestamp** (e.g. "not scanned since last
+  patch"), never faked as empty or silently hidden.
+
+## 3. Privacy & security — local only
+- Nirnside runs **entirely on the user's own machine**. Account data never leaves the
+  device. No servers, no accounts, no telemetry, no analytics, no ads.
+- Each copy only ever handles **its own player's data**. Never build features that pull
+  another player's account data to a place the operator can read it. Any future sharing
+  must be end-to-end encrypted such that the host cannot decrypt it.
+- Never store or request ESO passwords or credentials. Never inject into, hook, read the
+  memory of, or sniff packets from the ESO process. The **only** sanctioned data path is
+  the game writing its own `SavedVariables`, which we parse from disk.
+- Guild banks: **not collected at all.** House banks: **not collected.**
+
+## 4. Never harm the game / never interrupt play
+- The in-game addon(s) MUST NOT do work during combat, and MUST NOT cause lag, frame
+  drops, or Lua errors — ever, but especially while playing.
+- Snapshots of account/character data happen **only on logout and ReloadUI** (idle
+  moments), event-driven, never on a timer during play, never scanning bag events mid-session.
+- Heavy full-catalog scans (every item/skill ID in the game) are a **separate, opt-in,
+  AFK-only** addon/mode that is never loaded during normal play.
+- Only read/write what actually changed. Data that doesn't change every session must not
+  be re-scanned or re-written every session (hash / dirty-check first).
+
+## 5. Scope guardrails (current)
+- Platform: **PC**. Region: **EU first** (schema keeps NA/megaserver as a flag).
+- Language: **English only**.
+- In scope: full inventory (IIfA-style, with locations + filters), stickerbook
+  (collected vs missing, game-like), character sheets (identity incl. vampire/werewolf
+  stage & lines, skills incl. subclassing / Class Mastery / scribing / skill styles,
+  Champion Points, equipped incl. back bar, companions, research/motifs/recipes),
+  currencies, guilds + trader status, Pithka-style trial/dungeon achievements, and a
+  full live encyclopedia.
+- Out of scope (for now): combat math, food/potion/buff timers ("currently buffed"),
+  guild banks, house banks, mail/buyback/decon, PvP ranks, quest log, outfits/dyes as a
+  feature, Tales of Tribute, armory/loadout manager.
+
+## 6. Assets & sources
+- Only use images/data that are **free and legal** to use, with attribution where
+  required. No paid or ToS-violating asset extraction.
+- Prefer in-game-derived strings/icons where we already have them from a snapshot;
+  otherwise community sources, clearly credited.

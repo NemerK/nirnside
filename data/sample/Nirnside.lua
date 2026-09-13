@@ -1,0 +1,367 @@
+-- Sample Nirnside SavedVariables (Update 50 / Season One era).
+-- This mimics exactly what the NirnsideSnapshot addon writes on logout/ReloadUI,
+-- so the parser, importer and UI can be developed and demoed without the game.
+-- Region EU, one @account, ESO+ active.
+NirnsideData =
+{
+    ["Default"] =
+    {
+        ["@AzuraStar"] =
+        {
+            ["$AccountWide"] =
+            {
+                ["version"] = 1,
+                ["displayName"] = "@AzuraStar",
+                ["region"] = "EU",
+                ["apiVersion"] = 101046,
+                ["esoPlus"] = true,
+                ["lastSnapshot"] = 1757800920,
+                ["gold"] = 4218764,
+                ["currencies"] =
+                {
+                    ["transmuteCrystals"] = 812,
+                    ["telVar"] = 15230,
+                    ["alliancePoints"] = 402118,
+                    ["writVouchers"] = 6640,
+                    ["eventTickets"] = 12,
+                    ["undauntedKeys"] = 21,
+                },
+                ["guilds"] =
+                {
+                    {
+                        ["name"] = "Tamriel Trade Co",
+                        ["rank"] = "Merchant",
+                        ["trader"] = true,
+                    },
+                    {
+                        ["name"] = "Nightfall Raiders",
+                        ["rank"] = "Officer",
+                        ["trader"] = false,
+                    },
+                    {
+                        ["name"] = "Housing & Chill",
+                        ["rank"] = "Member",
+                        ["trader"] = false,
+                    },
+                },
+                ["characters"] =
+                {
+                    {
+                        ["id"] = "char-001",
+                        ["name"] = "Sings-With-Shadows",
+                        ["class"] = "Nightblade",
+                        ["race"] = "Khajiit",
+                        ["alliance"] = "Aldmeri Dominion",
+                        ["gender"] = "Female",
+                        ["level"] = 50,
+                        ["championPoints"] = 3600,
+                        ["mundus"] = "The Shadow",
+                        ["attributes"] = { ["magicka"] = 0, ["health"] = 15, ["stamina"] = 49 },
+                        ["vampire"] = { ["isVampire"] = true, ["stage"] = 3 },
+                        ["werewolf"] = { ["isWerewolf"] = false },
+                        ["classMastery"] = false,
+                        ["lastSeen"] = 1757800920,
+                        ["skillLines"] =
+                        {
+                            {
+                                ["name"] = "Assassination",
+                                ["category"] = "Class",
+                                ["rank"] = 50,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Merciless Resolve", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true, ["skillStyle"] = "Order of the Hour" },
+                                    { ["name"] = "Killer's Blade", ["rank"] = 4, ["morph"] = 2, ["purchased"] = true },
+                                    { ["name"] = "Relentless Focus", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                },
+                            },
+                            {
+                                ["name"] = "Herald of the Tome",
+                                ["category"] = "Class",
+                                ["rank"] = 38,
+                                ["subclassed"] = true,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Fatecarver", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                    { ["name"] = "The Unblinking Eye", ["rank"] = 3, ["morph"] = 0, ["purchased"] = true },
+                                },
+                            },
+                            {
+                                ["name"] = "Dual Wield",
+                                ["category"] = "Weapon",
+                                ["rank"] = 50,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Flurry", ["rank"] = 4, ["morph"] = 2, ["purchased"] = true },
+                                },
+                            },
+                            {
+                                ["name"] = "Vampire",
+                                ["category"] = "World",
+                                ["rank"] = 10,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Blood Scion", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                    { ["name"] = "Mesmerize", ["rank"] = 2, ["morph"] = 0, ["purchased"] = false },
+                                },
+                            },
+                            {
+                                ["name"] = "Soul Magic",
+                                ["category"] = "Guild",
+                                ["rank"] = 6,
+                                ["subclassed"] = false,
+                                ["abilities"] = {},
+                            },
+                        },
+                        ["champion"] =
+                        {
+                            {
+                                ["name"] = "Warfare",
+                                ["stars"] =
+                                {
+                                    { ["name"] = "Deadly Aim", ["points"] = 50, ["slotted"] = true },
+                                    { ["name"] = "Master-at-Arms", ["points"] = 50, ["slotted"] = true },
+                                    { ["name"] = "Backstabber", ["points"] = 50, ["slotted"] = true },
+                                    { ["name"] = "Fighting Finesse", ["points"] = 50, ["slotted"] = true },
+                                    { ["name"] = "Wrathful Strikes", ["points"] = 50, ["slotted"] = false },
+                                },
+                            },
+                            {
+                                ["name"] = "Fitness",
+                                ["stars"] =
+                                {
+                                    { ["name"] = "Boundless Vitality", ["points"] = 50, ["slotted"] = true },
+                                    { ["name"] = "Fortified", ["points"] = 20, ["slotted"] = true },
+                                    { ["name"] = "Rejuvenation", ["points"] = 50, ["slotted"] = false },
+                                },
+                            },
+                            {
+                                ["name"] = "Craft",
+                                ["stars"] =
+                                {
+                                    { ["name"] = "Steed's Blessing", ["points"] = 50, ["slotted"] = true },
+                                    { ["name"] = "Gifted Rider", ["points"] = 75, ["slotted"] = true },
+                                    { ["name"] = "Treasure Hunter", ["points"] = 50, ["slotted"] = true },
+                                },
+                            },
+                        },
+                        ["equipped"] =
+                        {
+                            { ["slot"] = "Head", ["bar"] = nil, ["name"] = "Slimecraw's Helm", ["quality"] = "legendary", ["setName"] = "Slimecraw", ["trait"] = "Divines", ["enchant"] = "Max Magicka" },
+                            { ["slot"] = "Chest", ["bar"] = nil, ["name"] = "Coral Riptide Jack", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Divines", ["enchant"] = "Max Stamina" },
+                            { ["slot"] = "Shoulders", ["bar"] = nil, ["name"] = "Slimecraw's Pauldron", ["quality"] = "legendary", ["setName"] = "Slimecraw", ["trait"] = "Divines", ["enchant"] = "Max Stamina" },
+                            { ["slot"] = "Main Hand", ["bar"] = "front", ["name"] = "Coral Riptide Dagger", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Nirnhoned", ["enchant"] = "Weapon Damage", ["scribing"] = {} },
+                            { ["slot"] = "Off Hand", ["bar"] = "front", ["name"] = "Coral Riptide Dagger", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Sharpened", ["enchant"] = "Flame Damage" },
+                            { ["slot"] = "Main Hand", ["bar"] = "back", ["name"] = "Sul-Xan's Bow", ["quality"] = "legendary", ["setName"] = "Sul-Xan's Torment", ["trait"] = "Infused", ["enchant"] = "Weakening", ["scribing"] = { "Ulfsild's Contingency" } },
+                        },
+                        ["companions"] =
+                        {
+                            { ["name"] = "Azandar al-Cybiades", ["rapport"] = "Cherished", ["level"] = 20 },
+                            { ["name"] = "Sharp-as-Night", ["rapport"] = "Allied", ["level"] = 20 },
+                        },
+                        ["scribingScripts"] =
+                        {
+                            "Ulfsild's Contingency",
+                            "Traveling Knife",
+                            "Class Mastery: Assassin",
+                            "Anchorite's Cruelty",
+                        },
+                        ["research"] =
+                        {
+                            { ["craft"] = "Blacksmithing", ["trait"] = "Nirnhoned", ["remaining"] = "12d 4h" },
+                            { ["craft"] = "Clothing", ["trait"] = "Infused", ["remaining"] = "6d 1h" },
+                        },
+                    },
+                    {
+                        ["id"] = "char-002",
+                        ["name"] = "Draugr-Bane",
+                        ["class"] = "Dragonknight",
+                        ["race"] = "Nord",
+                        ["alliance"] = "Ebonheart Pact",
+                        ["gender"] = "Male",
+                        ["level"] = 50,
+                        ["championPoints"] = 3600,
+                        ["mundus"] = "The Lord",
+                        ["attributes"] = { ["magicka"] = 0, ["health"] = 64, ["stamina"] = 0 },
+                        ["vampire"] = { ["isVampire"] = false, ["stage"] = 0 },
+                        ["werewolf"] = { ["isWerewolf"] = true },
+                        ["classMastery"] = true,
+                        ["lastSeen"] = 1757714520,
+                        ["skillLines"] =
+                        {
+                            {
+                                ["name"] = "Draconic Power",
+                                ["category"] = "Class",
+                                ["rank"] = 50,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Dragon Blood", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                    { ["name"] = "Green Dragon Blood", ["rank"] = 4, ["morph"] = 2, ["purchased"] = true },
+                                },
+                            },
+                            {
+                                ["name"] = "Werewolf",
+                                ["category"] = "World",
+                                ["rank"] = 10,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Pack Leader", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                    { ["name"] = "Hircine's Fortitude", ["rank"] = 4, ["morph"] = 2, ["purchased"] = true },
+                                },
+                            },
+                            {
+                                ["name"] = "One Hand and Shield",
+                                ["category"] = "Weapon",
+                                ["rank"] = 50,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Pierce Armor", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                },
+                            },
+                        },
+                        ["champion"] =
+                        {
+                            {
+                                ["name"] = "Fitness",
+                                ["stars"] =
+                                {
+                                    { ["name"] = "Boundless Vitality", ["points"] = 50, ["slotted"] = true },
+                                    { ["name"] = "Bastion", ["points"] = 50, ["slotted"] = true },
+                                    { ["name"] = "Ironclad", ["points"] = 50, ["slotted"] = true },
+                                },
+                            },
+                        },
+                        ["equipped"] =
+                        {
+                            { ["slot"] = "Head", ["bar"] = nil, ["name"] = "Nazaray Helm", ["quality"] = "legendary", ["setName"] = "Nazaray", ["trait"] = "Reinforced", ["enchant"] = "Max Health" },
+                            { ["slot"] = "Chest", ["bar"] = nil, ["name"] = "Turning Tide Cuirass", ["quality"] = "legendary", ["setName"] = "Turning Tide", ["trait"] = "Reinforced", ["enchant"] = "Max Health" },
+                            { ["slot"] = "Main Hand", ["bar"] = "front", ["name"] = "Lucent Echoes Sword", ["quality"] = "legendary", ["setName"] = "Lucent Echoes", ["trait"] = "Charged", ["enchant"] = "Crusher" },
+                        },
+                        ["companions"] = {},
+                        ["scribingScripts"] = { "Class Mastery: Draconic", "Vault" },
+                        ["research"] = {},
+                    },
+                    {
+                        ["id"] = "char-003",
+                        ["name"] = "Bakes-Sweet-Rolls",
+                        ["class"] = "Arcanist",
+                        ["race"] = "High Elf",
+                        ["alliance"] = "Aldmeri Dominion",
+                        ["gender"] = "Female",
+                        ["level"] = 32,
+                        ["championPoints"] = 0,
+                        ["mundus"] = "The Atronach",
+                        ["attributes"] = { ["magicka"] = 20, ["health"] = 0, ["stamina"] = 0 },
+                        ["vampire"] = { ["isVampire"] = false, ["stage"] = 0 },
+                        ["werewolf"] = { ["isWerewolf"] = false },
+                        ["classMastery"] = false,
+                        ["lastSeen"] = nil,
+                        ["skillLines"] = {},
+                        ["champion"] = {},
+                        ["equipped"] = {},
+                        ["companions"] = {},
+                        ["scribingScripts"] = {},
+                        ["research"] = {},
+                    },
+                },
+                ["items"] =
+                {
+                    { ["itemId"] = 194512, ["name"] = "Coral Riptide Dagger", ["quality"] = "legendary", ["count"] = 1, ["ownerCharacter"] = "Sings-With-Shadows", ["location"] = "worn", ["setName"] = "Coral Riptide", ["setId"] = 693, ["trait"] = "Nirnhoned", ["level"] = 160, ["equipSlot"] = "Main Hand" },
+                    { ["itemId"] = 187224, ["name"] = "Slimecraw's Helm", ["quality"] = "legendary", ["count"] = 1, ["ownerCharacter"] = "Sings-With-Shadows", ["location"] = "worn", ["setName"] = "Slimecraw", ["setId"] = 154, ["trait"] = "Divines", ["level"] = 160, ["equipSlot"] = "Head" },
+                    { ["itemId"] = 147323, ["name"] = "Perfected Coral Riptide Bow", ["quality"] = "legendary", ["count"] = 1, ["ownerCharacter"] = "Sings-With-Shadows", ["location"] = "backpack", ["setName"] = "Coral Riptide", ["setId"] = 693, ["trait"] = "Infused", ["level"] = 160, ["equipSlot"] = "Two Hand" },
+                    { ["itemId"] = 45814, ["name"] = "Rubedite Ingot", ["quality"] = "normal", ["count"] = 480, ["ownerCharacter"] = nil, ["location"] = "craftBag", ["trait"] = nil, ["level"] = nil },
+                    { ["itemId"] = 23219, ["name"] = "Dwarven Oil", ["quality"] = "fine", ["count"] = 214, ["ownerCharacter"] = nil, ["location"] = "craftBag" },
+                    { ["itemId"] = 64509, ["name"] = "Perfect Roe", ["quality"] = "legendary", ["count"] = 61, ["ownerCharacter"] = nil, ["location"] = "craftBag" },
+                    { ["itemId"] = 135136, ["name"] = "Mythic Aetherial Ambrosia", ["quality"] = "legendary", ["count"] = 9, ["ownerCharacter"] = nil, ["location"] = "bank" },
+                    { ["itemId"] = 194501, ["name"] = "Ozezan the Inferno Ring", ["quality"] = "legendary", ["count"] = 1, ["ownerCharacter"] = nil, ["location"] = "bank", ["setName"] = "Ozezan the Inferno", ["setId"] = 700, ["trait"] = "Bloodthirsty", ["level"] = 160, ["equipSlot"] = "Ring" },
+                    { ["itemId"] = 171436, ["name"] = "Deadly Strike Bow", ["quality"] = "epic", ["count"] = 1, ["ownerCharacter"] = nil, ["location"] = "bank", ["setName"] = "Deadly Strike", ["setId"] = 356, ["trait"] = "Sharpened", ["level"] = 160, ["equipSlot"] = "Two Hand" },
+                    { ["itemId"] = 153576, ["name"] = "Ring of the Pale Order", ["quality"] = "legendary", ["count"] = 1, ["ownerCharacter"] = nil, ["location"] = "subscriberBank", ["setName"] = "Pale Order", ["setId"] = 574, ["trait"] = "Bloodthirsty", ["level"] = 160, ["equipSlot"] = "Ring" },
+                    { ["itemId"] = 187015, ["name"] = "Spaulder of Ruin", ["quality"] = "legendary", ["count"] = 1, ["ownerCharacter"] = nil, ["location"] = "subscriberBank", ["setName"] = "Spaulder of Ruin", ["setId"] = 583, ["trait"] = "Infused", ["level"] = 160, ["equipSlot"] = "Shoulders" },
+                    { ["itemId"] = 121522, ["name"] = "Crown Repair Kit", ["quality"] = "fine", ["count"] = 30, ["ownerCharacter"] = "Draugr-Bane", ["location"] = "backpack" },
+                    { ["itemId"] = 30357, ["name"] = "Event Cake Slice", ["quality"] = "normal", ["count"] = 3, ["ownerCharacter"] = "Draugr-Bane", ["location"] = "backpack", ["obtainable"] = false },
+                    { ["itemId"] = 64489, ["name"] = "Alliance War Repair Kit", ["quality"] = "normal", ["count"] = 12, ["ownerCharacter"] = "Draugr-Bane", ["location"] = "backpack" },
+                    { ["itemId"] = 54181, ["name"] = "Lockpick", ["quality"] = "normal", ["count"] = 199, ["ownerCharacter"] = "Sings-With-Shadows", ["location"] = "backpack" },
+                    { ["itemId"] = 88035, ["name"] = "Grand Repair Kit", ["quality"] = "superior", ["count"] = 8, ["ownerCharacter"] = "Sings-With-Shadows", ["location"] = "backpack" },
+                    { ["itemId"] = 194513, ["name"] = "Coral Riptide Sash", ["quality"] = "epic", ["count"] = 1, ["ownerCharacter"] = nil, ["location"] = "bank", ["setName"] = "Coral Riptide", ["setId"] = 693, ["trait"] = "Divines", ["level"] = 160, ["equipSlot"] = "Waist" },
+                    { ["itemId"] = 166149, ["name"] = "Stolen Silverware", ["quality"] = "fine", ["count"] = 4, ["ownerCharacter"] = "Sings-With-Shadows", ["location"] = "backpack", ["stolen"] = true },
+                },
+                ["stickerbook"] =
+                {
+                    {
+                        ["setId"] = 693,
+                        ["name"] = "Coral Riptide",
+                        ["category"] = "Trial",
+                        ["pieces"] =
+                        {
+                            ["Head"] = true, ["Chest"] = true, ["Shoulders"] = true, ["Hands"] = true,
+                            ["Waist"] = true, ["Legs"] = false, ["Feet"] = true, ["Necklace"] = false,
+                            ["Ring"] = true, ["Weapon"] = true,
+                        },
+                    },
+                    {
+                        ["setId"] = 574,
+                        ["name"] = "Pale Order",
+                        ["category"] = "Mythic",
+                        ["pieces"] = { ["Ring"] = true },
+                    },
+                    {
+                        ["setId"] = 700,
+                        ["name"] = "Ozezan the Inferno",
+                        ["category"] = "Monster Set",
+                        ["pieces"] = { ["Head"] = true, ["Shoulders"] = false },
+                    },
+                    {
+                        ["setId"] = 583,
+                        ["name"] = "Spaulder of Ruin",
+                        ["category"] = "Mythic",
+                        ["pieces"] = { ["Shoulders"] = true },
+                    },
+                    {
+                        ["setId"] = 356,
+                        ["name"] = "Deadly Strike",
+                        ["category"] = "PvP",
+                        ["pieces"] =
+                        {
+                            ["Head"] = false, ["Chest"] = false, ["Shoulders"] = true, ["Hands"] = true,
+                            ["Waist"] = false, ["Legs"] = false, ["Feet"] = false, ["Necklace"] = true,
+                            ["Ring"] = false, ["Weapon"] = true,
+                        },
+                    },
+                    {
+                        ["setId"] = 154,
+                        ["name"] = "Slimecraw",
+                        ["category"] = "Monster Set",
+                        ["pieces"] = { ["Head"] = true, ["Shoulders"] = true },
+                    },
+                    {
+                        ["setId"] = 800,
+                        ["name"] = "Turning Tide",
+                        ["category"] = "Trial",
+                        ["pieces"] =
+                        {
+                            ["Head"] = false, ["Chest"] = true, ["Shoulders"] = false, ["Hands"] = false,
+                            ["Waist"] = false, ["Legs"] = false, ["Feet"] = false, ["Necklace"] = false,
+                            ["Ring"] = false, ["Weapon"] = false,
+                        },
+                    },
+                    {
+                        ["setId"] = 801,
+                        ["name"] = "Lucent Echoes",
+                        ["category"] = "Trial",
+                        ["pieces"] =
+                        {
+                            ["Head"] = false, ["Chest"] = false, ["Shoulders"] = false, ["Hands"] = false,
+                            ["Waist"] = false, ["Legs"] = false, ["Feet"] = false, ["Necklace"] = false,
+                            ["Ring"] = false, ["Weapon"] = true,
+                        },
+                    },
+                },
+            },
+        },
+    },
+}

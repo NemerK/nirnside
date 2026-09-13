@@ -1,0 +1,36 @@
+{
+  "name": "nirnside",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first out-of-game hub for your Elder Scrolls Online account.",
+  "scripts": {
+    "dev": "next dev -p 43117",
+    "build": "next build",
+    "start": "next start -p 43117",
+    "lint": "eslint",
+    "import": "tsx scripts/import.ts",
+    "watch": "tsx scripts/watch.ts",
+    "seed": "tsx scripts/import.ts data/sample/Nirnside.lua"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "chokidar": "^5.0.0",
+    "lucide-react": "^1.45.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.6.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  }
+}
