@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Check, Search } from "lucide-react";
 import type { StickerbookSet } from "@/lib/snapshot/schema";
 
-type SetWithTotals = StickerbookSet & { total: number; collected: number };
+type SetWithTotals = StickerbookSet & { total: number; collected: number; href?: string };
 
 const STATUS = [
   { key: "all", label: "All" },
@@ -103,7 +104,13 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate font-medium text-fg">{s.name}</div>
+          {s.href ? (
+            <Link href={s.href} className="truncate font-medium text-fg hover:text-accent hover:underline">
+              {s.name}
+            </Link>
+          ) : (
+            <div className="truncate font-medium text-fg">{s.name}</div>
+          )}
           <div className="mt-0.5 text-xs text-fg-subtle">{s.category}</div>
         </div>
         {complete ? (

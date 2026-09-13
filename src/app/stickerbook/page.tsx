@@ -1,5 +1,6 @@
 import { BookMarked } from "lucide-react";
 import { getStickerbook, getStickerbookStats } from "@/lib/db/queries";
+import { setHref } from "@/lib/db/catalog-queries";
 import { StickerbookGrid } from "@/components/stickerbook-grid";
 import { EmptyState, PageHeader, Stat } from "@/components/ui";
 
@@ -38,7 +39,9 @@ export default function StickerbookPage() {
             <Stat label="Complete sets" value={completeSets} />
             <Stat label="Pieces missing" value={stats.total - stats.collected} />
           </div>
-          <StickerbookGrid sets={sets} />
+          <StickerbookGrid
+            sets={sets.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }))}
+          />
         </>
       )}
     </div>

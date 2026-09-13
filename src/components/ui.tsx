@@ -35,9 +35,9 @@ export function PageHeader({
   );
 }
 
-export function SectionTitle({ children }: { children: ReactNode }) {
+export function SectionTitle({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">{children}</h2>
+    <h2 className={`mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle ${className}`}>{children}</h2>
   );
 }
 

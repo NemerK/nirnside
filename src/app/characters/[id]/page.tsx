@@ -11,9 +11,19 @@ import {
   Users,
 } from "lucide-react";
 import { getCharacter } from "@/lib/db/queries";
+import { getSkillLineByName, setHref } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { Badge, Card, SectionTitle } from "@/components/ui";
 import { ALLIANCE_ACCENT, formatDateTime, qualityText, timeAgo } from "@/lib/format";
+
+function skillLineHref(name: string): string | null {
+  try {
+    const row = getSkillLineByName(name);
+    return row ? `/encyclopedia/skills/${encodeURIComponent(row.entry.id)}` : null;
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -113,11 +123,19 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               <Card className="px-4 py-6 text-sm text-fg-muted">No skills captured yet.</Card>
             ) : (
               <div className="space-y-3">
-                {c.skillLines.map((line, i) => (
+                {c.skillLines.map((line, i) => {
+                  const href = skillLineHref(line.name);
+                  return (
                   <Card key={i} className="p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-fg">{line.name}</span>
+                        {href ? (
+                          <Link href={href} className="font-medium text-fg hover:text-accent hover:underline">
+                            {line.name}
+                          </Link>
+                        ) : (
+                          <span className="font-medium text-fg">{line.name}</span>
+                        )}
                         <Badge tone="muted">{line.category}</Badge>
                         {line.subclassed && <Badge tone="accent">Subclassed</Badge>}
                       </div>
@@ -141,7 +159,8 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
                       </div>
                     )}
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -150,7 +169,12 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         <div className="space-y-6">
           {/* Champion points */}
           <section>
-            <SectionTitle>Champion Points</SectionTitle>
+            <div className="mb-3 flex items-center justify-between">
+              <SectionTitle className="mb-0">Champion Points</SectionTitle>
+              <Link href="/encyclopedia/champion-points" className="text-xs text-accent hover:underline">
+                Tree & planner →
+              </Link>
+            </div>
             {c.champion.length === 0 ? (
               <Card className="px-4 py-6 text-sm text-fg-muted">None slotted or not captured.</Card>
             ) : (
@@ -211,7 +235,12 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           {/* Scribing */}
           {c.scribingScripts.length > 0 && (
             <section>
-              <SectionTitle>Scribing Scripts</SectionTitle>
+              <div className="mb-3 flex items-center justify-between">
+                <SectionTitle className="mb-0">Scribing Scripts</SectionTitle>
+                <Link href="/encyclopedia/scribing" className="text-xs text-accent hover:underline">
+                  Combinations →
+                </Link>
+              </div>
               <Card className="flex flex-wrap gap-1.5 p-4">
                 {c.scribingScripts.map((s, i) => (
                   <Badge key={i} tone="default">
@@ -265,7 +294,11 @@ function GearGroup({
               <div className={`truncate text-sm font-medium ${qualityText(e.quality)}`}>{e.name}</div>
               <div className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-fg-subtle">
                 <span>{e.slot}</span>
-                {e.setName && <span>· {e.setName}</span>}
+                {e.setName && (
+                  <Link href={setHref({ name: e.setName })} className="text-accent hover:underline">
+                    · {e.setName}
+                  </Link>
+                )}
                 {e.trait && <span>· {e.trait}</span>}
                 {e.enchant && <span>· {e.enchant}</span>}
               </div>

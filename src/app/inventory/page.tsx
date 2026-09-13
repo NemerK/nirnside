@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { Backpack, Ban, Hand } from "lucide-react";
 import { getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
+import { setHref } from "@/lib/db/catalog-queries";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { locationLabel, qualityText } from "@/lib/format";
@@ -95,7 +97,15 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
                         </span>
                       </td>
                       <td className="px-3 py-2.5 text-fg-muted">{it.ownerCharacter ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-fg-muted">{it.setName ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-fg-muted">
+                        {it.setName ? (
+                          <Link href={setHref({ name: it.setName })} className="text-accent hover:underline">
+                            {it.setName}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="px-3 py-2.5 text-fg-muted">{it.trait ?? "—"}</td>
                     </tr>
                   ))}
