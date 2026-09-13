@@ -1,5 +1,25 @@
 import { getDb, setMeta } from "../db";
-import { CatalogBundle, SOURCE_RANK, type CatalogDomain } from "./schema";
+import { CatalogBundle, SOURCE_RANK, type CatalogDomain, type CatalogSource } from "./schema";
+
+type CatalogSourceKey = CatalogSource;
+
+/** True for values we treat as "not provided" and therefore don't overwrite with. */
+function isEmpty(v: unknown): boolean {
+  if (v == null) return true;
+  if (typeof v === "string") return v.trim() === "";
+  if (Array.isArray(v)) return v.length === 0;
+  return false;
+}
+
+/** Merge `next` over `prev`, keeping `prev`'s value wherever `next` is empty. */
+function mergeEntry(prev: Record<string, unknown>, next: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...prev };
+  for (const [k, v] of Object.entries(next)) {
+    if (!isEmpty(v)) out[k] = v;
+    else if (!(k in out)) out[k] = v;
+  }
+  return out;
+}
 
 type Row = {
   domain: CatalogDomain;
@@ -38,24 +58,31 @@ export function importCatalogBundle(raw: unknown): Record<string, number> {
   for (const s of bundle.scripts) push("script", s, s.slot, null);
   for (const a of bundle.achievements) push("achievement", a, a.category, a.subtype);
 
-  const stmt = db.prepare(`
-    INSERT INTO catalog (domain, id, name, category, subcategory, source, patch, json)
+  const selectStmt = db.prepare("SELECT source, json FROM catalog WHERE domain = ? AND id = ?");
+  const upsertStmt = db.prepare(`
+    INSERT OR REPLACE INTO catalog (domain, id, name, category, subcategory, source, patch, json)
     VALUES (@domain, @id, @name, @category, @subcategory, @source, @patch, @json)
-    ON CONFLICT(domain, id) DO UPDATE SET
-      name = excluded.name,
-      category = excluded.category,
-      subcategory = excluded.subcategory,
-      source = excluded.source,
-      patch = excluded.patch,
-      json = excluded.json
-    WHERE (CASE excluded.source WHEN 'ingame' THEN 3 WHEN 'community' THEN 2 ELSE 1 END)
-       >= (CASE catalog.source  WHEN 'ingame' THEN 3 WHEN 'community' THEN 2 ELSE 1 END)
   `);
+
+  const rank = (s: string) => SOURCE_RANK[(s as CatalogSourceKey)] ?? 1;
 
   const counts: Record<string, number> = {};
   const tx = db.transaction((all: Row[]) => {
     for (const r of all) {
-      stmt.run(r);
+      const existing = selectStmt.get(r.domain, r.id) as { source: string; json: string } | undefined;
+      if (existing && rank(r.source) < rank(existing.source)) continue; // lower precedence: keep existing
+
+      let mergedJson = r.json;
+      if (existing) {
+        // Field-level merge: incoming (higher/equal precedence) wins per field,
+        // but keeps existing values where incoming is empty/absent. This lets a
+        // partial in-game scan upgrade entries without dropping reference detail.
+        const prev = JSON.parse(existing.json) as Record<string, unknown>;
+        const next = JSON.parse(r.json) as Record<string, unknown>;
+        mergedJson = JSON.stringify(mergeEntry(prev, next));
+      }
+
+      upsertStmt.run({ ...r, json: mergedJson });
       counts[r.domain] = (counts[r.domain] ?? 0) + 1;
     }
   });

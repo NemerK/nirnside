@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Backpack,
@@ -10,6 +10,7 @@ import {
   Library,
   Menu,
   ScrollText,
+  Search,
   Trophy,
   Users,
   X,
@@ -72,6 +73,29 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function SearchBox({ onSubmit }: { onSubmit?: () => void }) {
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (q.trim()) router.push(`/search?q=${encodeURIComponent(q.trim())}`);
+        onSubmit?.();
+      }}
+      className="relative w-full max-w-sm"
+    >
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search sets, skills, CP, your bags…"
+        className="w-full rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+      />
+    </form>
+  );
+}
+
 export function AppShell({
   account,
   children,
@@ -110,6 +134,9 @@ export function AppShell({
       </div>
       {open && (
         <div className="border-b border-border bg-bg-elev p-4 md:hidden">
+          <div className="mb-3">
+            <SearchBox onSubmit={() => setOpen(false)} />
+          </div>
           <NavLinks onNavigate={() => setOpen(false)} />
           <div className="mt-4">
             <ThemeToggle />
@@ -136,6 +163,9 @@ export function AppShell({
             ) : (
               <span className="text-fg-muted">No account imported yet</span>
             )}
+          </div>
+          <div className="mx-6 flex-1">
+            <SearchBox />
           </div>
           {account && (
             <div className="flex items-center gap-2 text-xs text-fg-subtle">
