@@ -12,7 +12,7 @@ import { z } from "zod";
 export const CatalogSource = z.enum(["ingame", "community", "reference"]);
 export type CatalogSource = z.infer<typeof CatalogSource>;
 
-export const CatalogDomain = z.enum(["set", "skillline", "skill", "cp", "grimoire", "script"]);
+export const CatalogDomain = z.enum(["set", "skillline", "skill", "cp", "grimoire", "script", "achievement"]);
 export type CatalogDomain = z.infer<typeof CatalogDomain>;
 
 const base = {
@@ -94,6 +94,16 @@ export const CatalogScript = z.object({
 });
 export type CatalogScript = z.infer<typeof CatalogScript>;
 
+/** Pithka-style trial/dungeon/arena achievement (account-wide in ESO). */
+export const CatalogAchievement = z.object({
+  ...base,
+  category: z.string(), // Trial, Dungeon, Arena
+  content: z.string(), // the specific trial/dungeon/arena name
+  subtype: z.enum(["Completion", "Hard Mode", "Speed", "No Death", "Trifecta"]).default("Completion"),
+  description: z.string().default(""),
+});
+export type CatalogAchievement = z.infer<typeof CatalogAchievement>;
+
 /** A domain -> entries bundle, as stored in the reference JSON seeds. */
 export const CatalogBundle = z.object({
   patch: z.string().default("U50"),
@@ -104,6 +114,7 @@ export const CatalogBundle = z.object({
   cp: z.array(CatalogCPStar).default([]),
   grimoires: z.array(CatalogGrimoire).default([]),
   scripts: z.array(CatalogScript).default([]),
+  achievements: z.array(CatalogAchievement).default([]),
 });
 export type CatalogBundle = z.infer<typeof CatalogBundle>;
 

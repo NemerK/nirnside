@@ -10,6 +10,7 @@ import {
   Library,
   Menu,
   ScrollText,
+  Trophy,
   Users,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const NAV = [
   { href: "/characters", label: "Characters", icon: Users },
   { href: "/inventory", label: "Inventory", icon: Backpack },
   { href: "/stickerbook", label: "Stickerbook", icon: BookMarked },
+  { href: "/achievements", label: "Achievements", icon: Trophy },
   { href: "/encyclopedia", label: "Encyclopedia", icon: Library },
 ];
 

@@ -1,0 +1,93 @@
+{
+  "patch": "U50",
+  "source": "reference",
+  "achievements": [
+    { "id": "ach-aa-completion", "name": "Aetherian Archive Conqueror", "category": "Trial", "content": "Aetherian Archive", "subtype": "Completion" },
+    { "id": "ach-aa-hm", "name": "Aetherian Archive Vanquisher", "category": "Trial", "content": "Aetherian Archive", "subtype": "Hard Mode" },
+    { "id": "ach-aa-trifecta", "name": "Aetherian Archive Trifecta", "category": "Trial", "content": "Aetherian Archive", "subtype": "Trifecta" },
+
+    { "id": "ach-hrc-completion", "name": "Hel Ra Citadel Conqueror", "category": "Trial", "content": "Hel Ra Citadel", "subtype": "Completion" },
+    { "id": "ach-hrc-hm", "name": "Hel Ra Citadel Vanquisher", "category": "Trial", "content": "Hel Ra Citadel", "subtype": "Hard Mode" },
+    { "id": "ach-hrc-trifecta", "name": "Hel Ra Citadel Trifecta", "category": "Trial", "content": "Hel Ra Citadel", "subtype": "Trifecta" },
+
+    { "id": "ach-so-completion", "name": "Sanctum Ophidia Conqueror", "category": "Trial", "content": "Sanctum Ophidia", "subtype": "Completion" },
+    { "id": "ach-so-hm", "name": "Sanctum Ophidia Vanquisher", "category": "Trial", "content": "Sanctum Ophidia", "subtype": "Hard Mode" },
+    { "id": "ach-so-trifecta", "name": "Sanctum Ophidia Trifecta", "category": "Trial", "content": "Sanctum Ophidia", "subtype": "Trifecta" },
+
+    { "id": "ach-mol-completion", "name": "Maw of Lorkhaj Conqueror", "category": "Trial", "content": "Maw of Lorkhaj", "subtype": "Completion" },
+    { "id": "ach-mol-hm", "name": "Maw of Lorkhaj Hard Mode", "category": "Trial", "content": "Maw of Lorkhaj", "subtype": "Hard Mode" },
+    { "id": "ach-mol-trifecta", "name": "Maw of Lorkhaj Trifecta", "category": "Trial", "content": "Maw of Lorkhaj", "subtype": "Trifecta" },
+
+    { "id": "ach-hof-completion", "name": "Halls of Fabrication Conqueror", "category": "Trial", "content": "Halls of Fabrication", "subtype": "Completion" },
+    { "id": "ach-hof-hm", "name": "Halls of Fabrication Hard Mode", "category": "Trial", "content": "Halls of Fabrication", "subtype": "Hard Mode" },
+    { "id": "ach-hof-trifecta", "name": "Assembly General", "category": "Trial", "content": "Halls of Fabrication", "subtype": "Trifecta" },
+
+    { "id": "ach-as-completion", "name": "Asylum Sanctorium Conqueror", "category": "Trial", "content": "Asylum Sanctorium", "subtype": "Completion" },
+    { "id": "ach-as-hm", "name": "Asylum Sanctorium Hard Mode", "category": "Trial", "content": "Asylum Sanctorium", "subtype": "Hard Mode" },
+    { "id": "ach-as-trifecta", "name": "Tri-Focus", "category": "Trial", "content": "Asylum Sanctorium", "subtype": "Trifecta" },
+
+    { "id": "ach-cr-completion", "name": "Cloudrest Conqueror", "category": "Trial", "content": "Cloudrest", "subtype": "Completion" },
+    { "id": "ach-cr-hm", "name": "Cloudrest Hard Mode", "category": "Trial", "content": "Cloudrest", "subtype": "Hard Mode" },
+    { "id": "ach-cr-trifecta", "name": "Immortal Redeemer", "category": "Trial", "content": "Cloudrest", "subtype": "Trifecta" },
+
+    { "id": "ach-ss-completion", "name": "Sunspire Conqueror", "category": "Trial", "content": "Sunspire", "subtype": "Completion" },
+    { "id": "ach-ss-hm", "name": "Sunspire Hard Mode", "category": "Trial", "content": "Sunspire", "subtype": "Hard Mode" },
+    { "id": "ach-ss-trifecta", "name": "Dawnbringer", "category": "Trial", "content": "Sunspire", "subtype": "Trifecta" },
+
+    { "id": "ach-ka-completion", "name": "Kyne's Aegis Conqueror", "category": "Trial", "content": "Kyne's Aegis", "subtype": "Completion" },
+    { "id": "ach-ka-hm", "name": "Kyne's Aegis Hard Mode", "category": "Trial", "content": "Kyne's Aegis", "subtype": "Hard Mode" },
+    { "id": "ach-ka-trifecta", "name": "Tribute to Kyne", "category": "Trial", "content": "Kyne's Aegis", "subtype": "Trifecta" },
+
+    { "id": "ach-rg-completion", "name": "Rockgrove Conqueror", "category": "Trial", "content": "Rockgrove", "subtype": "Completion" },
+    { "id": "ach-rg-hm", "name": "Rockgrove Hard Mode", "category": "Trial", "content": "Rockgrove", "subtype": "Hard Mode" },
+    { "id": "ach-rg-trifecta", "name": "Rockgrove Trifecta", "category": "Trial", "content": "Rockgrove", "subtype": "Trifecta" },
+
+    { "id": "ach-dsr-completion", "name": "Dreadsail Reef Conqueror", "category": "Trial", "content": "Dreadsail Reef", "subtype": "Completion" },
+    { "id": "ach-dsr-hm", "name": "Dreadsail Reef Hard Mode", "category": "Trial", "content": "Dreadsail Reef", "subtype": "Hard Mode" },
+    { "id": "ach-dsr-trifecta", "name": "Dreadsail Reef Trifecta", "category": "Trial", "content": "Dreadsail Reef", "subtype": "Trifecta" },
+
+    { "id": "ach-se-completion", "name": "Sanity's Edge Conqueror", "category": "Trial", "content": "Sanity's Edge", "subtype": "Completion" },
+    { "id": "ach-se-hm", "name": "Sanity's Edge Hard Mode", "category": "Trial", "content": "Sanity's Edge", "subtype": "Hard Mode" },
+    { "id": "ach-se-trifecta", "name": "Sanity's Edge Trifecta", "category": "Trial", "content": "Sanity's Edge", "subtype": "Trifecta" },
+
+    { "id": "ach-lc-completion", "name": "Lucent Citadel Conqueror", "category": "Trial", "content": "Lucent Citadel", "subtype": "Completion" },
+    { "id": "ach-lc-hm", "name": "Lucent Citadel Hard Mode", "category": "Trial", "content": "Lucent Citadel", "subtype": "Hard Mode" },
+    { "id": "ach-lc-trifecta", "name": "Lucent Citadel Trifecta", "category": "Trial", "content": "Lucent Citadel", "subtype": "Trifecta" },
+
+    { "id": "ach-maelstrom-completion", "name": "Maelstrom Arena Conqueror", "category": "Arena", "content": "Maelstrom Arena", "subtype": "Completion" },
+    { "id": "ach-maelstrom-hm", "name": "Flawless Conqueror", "category": "Arena", "content": "Maelstrom Arena", "subtype": "Hard Mode" },
+    { "id": "ach-maelstrom-trifecta", "name": "Spirit Slayer", "category": "Arena", "content": "Maelstrom Arena", "subtype": "Trifecta" },
+
+    { "id": "ach-vateshran-completion", "name": "Vateshran Hollows Conqueror", "category": "Arena", "content": "Vateshran Hollows", "subtype": "Completion" },
+    { "id": "ach-vateshran-hm", "name": "Vateshran Hollows Champion", "category": "Arena", "content": "Vateshran Hollows", "subtype": "Hard Mode" },
+    { "id": "ach-vateshran-trifecta", "name": "Vateshran Hollows Trifecta", "category": "Arena", "content": "Vateshran Hollows", "subtype": "Trifecta" },
+
+    { "id": "ach-dsa-completion", "name": "Dragonstar Arena Conqueror", "category": "Arena", "content": "Dragonstar Arena", "subtype": "Completion" },
+    { "id": "ach-dsa-hm", "name": "Dragonstar Arena Master", "category": "Arena", "content": "Dragonstar Arena", "subtype": "Hard Mode" },
+
+    { "id": "ach-brp-completion", "name": "Blackrose Prison Conqueror", "category": "Arena", "content": "Blackrose Prison", "subtype": "Completion" },
+    { "id": "ach-brp-hm", "name": "Blackrose Prison Champion", "category": "Arena", "content": "Blackrose Prison", "subtype": "Hard Mode" },
+
+    { "id": "ach-fgi-completion", "name": "Fungal Grotto I Vanquisher", "category": "Dungeon", "content": "Fungal Grotto I", "subtype": "Completion" },
+    { "id": "ach-fgii-completion", "name": "Fungal Grotto II Vanquisher", "category": "Dungeon", "content": "Fungal Grotto II", "subtype": "Completion" },
+    { "id": "ach-fgii-hm", "name": "Fungal Grotto II Hard Mode", "category": "Dungeon", "content": "Fungal Grotto II", "subtype": "Hard Mode" },
+
+    { "id": "ach-icp-completion", "name": "Imperial City Prison Vanquisher", "category": "Dungeon", "content": "Imperial City Prison", "subtype": "Completion" },
+    { "id": "ach-icp-hm", "name": "Imperial City Prison Hard Mode", "category": "Dungeon", "content": "Imperial City Prison", "subtype": "Hard Mode" },
+
+    { "id": "ach-wgt-completion", "name": "White-Gold Tower Vanquisher", "category": "Dungeon", "content": "White-Gold Tower", "subtype": "Completion" },
+    { "id": "ach-wgt-hm", "name": "White-Gold Tower Hard Mode", "category": "Dungeon", "content": "White-Gold Tower", "subtype": "Hard Mode" },
+
+    { "id": "ach-cos-completion", "name": "Cradle of Shadows Vanquisher", "category": "Dungeon", "content": "Cradle of Shadows", "subtype": "Completion" },
+    { "id": "ach-cos-hm", "name": "Cradle of Shadows Hard Mode", "category": "Dungeon", "content": "Cradle of Shadows", "subtype": "Hard Mode" },
+
+    { "id": "ach-mhk-completion", "name": "Moongrave Fane Vanquisher", "category": "Dungeon", "content": "Moongrave Fane", "subtype": "Completion" },
+    { "id": "ach-mhk-hm", "name": "Moongrave Fane Hard Mode", "category": "Dungeon", "content": "Moongrave Fane", "subtype": "Hard Mode" },
+
+    { "id": "ach-oathsworn-completion", "name": "Oathsworn Pit Vanquisher", "category": "Dungeon", "content": "Oathsworn Pit", "subtype": "Completion" },
+    { "id": "ach-oathsworn-hm", "name": "Oathsworn Pit Hard Mode", "category": "Dungeon", "content": "Oathsworn Pit", "subtype": "Hard Mode" },
+
+    { "id": "ach-bedlam-completion", "name": "Bedlam Veil Vanquisher", "category": "Dungeon", "content": "Bedlam Veil", "subtype": "Completion" },
+    { "id": "ach-bedlam-hm", "name": "Bedlam Veil Hard Mode", "category": "Dungeon", "content": "Bedlam Veil", "subtype": "Hard Mode" }
+  ]
+}

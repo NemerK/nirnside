@@ -10,9 +10,12 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
   const db = getDb();
 
   const tx = db.transaction(() => {
-    db.exec("DELETE FROM meta; DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook;");
+    // Note: only clear account-scoped rows. The catalog table and its meta
+    // (source/patch) are a separate, shared dataset and must survive re-imports.
+    db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook;");
+    db.prepare("DELETE FROM meta WHERE key = 'account'").run();
 
-    const setMeta = db.prepare("INSERT INTO meta (key, value) VALUES (?, ?)");
+    const setMeta = db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)");
     setMeta.run(
       "account",
       JSON.stringify({
@@ -24,6 +27,7 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         gold: snap.gold,
         currencies: snap.currencies,
         guilds: snap.guilds,
+        achievements: snap.achievements,
       }),
     );
 

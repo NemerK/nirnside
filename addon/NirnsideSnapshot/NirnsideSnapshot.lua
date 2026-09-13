@@ -339,6 +339,52 @@ local function gatherStickerbook()
   return sets
 end
 
+-- Account-wide achievements (Pithka-style). ESO achievements are account-wide,
+-- so we record earned Trial / Dungeon / Arena achievement NAMES only. Iterated
+-- out of combat on logout/ReloadUI; no combat impact. We scope to the relevant
+-- categories to keep the file small.
+local ACH_CATEGORIES = { ["Dungeons"] = true, ["Trials"] = true, ["Arenas"] = true }
+
+local function collectCompleted(out, catIndex, subIndex)
+  local num = safe(function()
+    if subIndex then
+      return select(1, GetAchievementNumSubCategoryAchievements and 0 or 0)
+    end
+    return 0
+  end, 0)
+  -- Use the id-walking API which is stable across categories.
+  local i = 1
+  while true do
+    local id = safe(function() return GetAchievementId(catIndex, subIndex, i) end, 0)
+    if not id or id == 0 then break end
+    local completed = safe(function() return select(5, GetAchievementInfo(id)) end, false)
+    if completed then
+      local name = safe(function() return zo_strformat("<<1>>", GetAchievementName(id)) end, nil)
+      if name and name ~= "" then out[#out + 1] = name end
+    end
+    i = i + 1
+    if i > 500 then break end -- hard guard against malformed data
+  end
+end
+
+local function gatherAchievements()
+  local out = {}
+  safe(function()
+    local numCats = GetNumAchievementCategories()
+    for c = 1, numCats do
+      local catName, numSubCats = GetAchievementCategoryInfo(c)
+      local scoped = catName and ACH_CATEGORIES[zo_strformat("<<1>>", catName)]
+      if scoped then
+        collectCompleted(out, c, nil)
+        for s = 1, (numSubCats or 0) do
+          collectCompleted(out, c, s)
+        end
+      end
+    end
+  end)
+  return out
+end
+
 ----------------------------------------------------------------------
 -- Snapshot orchestration
 ----------------------------------------------------------------------
@@ -386,6 +432,7 @@ local function takeSnapshot(reason)
   sv.items = kept
 
   sv.stickerbook = gatherStickerbook()
+  sv.achievements = gatherAchievements()
 
   upsertCharacter(gatherCharacter())
 
@@ -419,6 +466,7 @@ local function onAddOnLoaded(_, name)
     items = {},
     characters = {},
     stickerbook = {},
+    achievements = {},
   })
 
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_PLAYER_ACTIVATED, onPlayerActivated)

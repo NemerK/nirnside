@@ -36,6 +36,7 @@ export function importCatalogBundle(raw: unknown): Record<string, number> {
   for (const c of bundle.cp) push("cp", c, c.category, c.type);
   for (const g of bundle.grimoires) push("grimoire", g, g.skillLine, null);
   for (const s of bundle.scripts) push("script", s, s.slot, null);
+  for (const a of bundle.achievements) push("achievement", a, a.category, a.subtype);
 
   const stmt = db.prepare(`
     INSERT INTO catalog (domain, id, name, category, subcategory, source, patch, json)

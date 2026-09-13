@@ -182,5 +182,11 @@ export const AccountSnapshot = z.object({
   items: z.array(Item).default([]),
   characters: z.array(Character).default([]),
   stickerbook: z.array(StickerbookSet).default([]),
+  /**
+   * Account-wide earned achievement names (Pithka-style trial/dungeon/arena
+   * tracking). ESO achievements are account-wide; the API does not expose which
+   * character earned them, so we do not fabricate per-character attribution.
+   */
+  achievements: z.array(z.string()).default([]),
 });
 export type AccountSnapshot = z.infer<typeof AccountSnapshot>;

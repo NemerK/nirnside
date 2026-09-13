@@ -7,6 +7,7 @@ import type {
   CatalogSkill,
   CatalogSkillLine,
   CatalogCPStar,
+  CatalogAchievement,
   CatalogDomain,
   CatalogSource,
 } from "../catalog/schema";
@@ -101,5 +102,8 @@ export const getGrimoires = (f?: Filters) => query<CatalogGrimoire>("grimoire", 
 export const getGrimoire = (id: string) => one<CatalogGrimoire>("grimoire", id);
 export const getScripts = (f?: Filters) => query<CatalogScript>("script", f);
 export const getScript = (id: string) => one<CatalogScript>("script", id);
+
+export const getAchievements = (f?: Filters) => query<CatalogAchievement>("achievement", f);
+export const achievementCategories = () => categories("achievement");
 
 export type { CatalogRow };

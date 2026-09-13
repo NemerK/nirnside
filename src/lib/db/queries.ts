@@ -4,11 +4,25 @@ import type { AccountSnapshot, Character, Item, StickerbookSet } from "../snapsh
 
 export type AccountMeta = Pick<
   AccountSnapshot,
-  "displayName" | "region" | "apiVersion" | "esoPlus" | "lastSnapshot" | "gold" | "currencies" | "guilds"
+  | "displayName"
+  | "region"
+  | "apiVersion"
+  | "esoPlus"
+  | "lastSnapshot"
+  | "gold"
+  | "currencies"
+  | "guilds"
+  | "achievements"
 >;
 
 export function getAccount(): AccountMeta | null {
   return getMeta<AccountMeta>("account");
+}
+
+/** Account-wide earned achievement names, lowercased for matching. */
+export function getEarnedAchievements(): Set<string> {
+  const acct = getAccount();
+  return new Set((acct?.achievements ?? []).map((a) => a.toLowerCase()));
 }
 
 export interface DataSource {
