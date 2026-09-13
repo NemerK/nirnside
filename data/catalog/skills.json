@@ -1,0 +1,221 @@
+{
+  "patch": "U50",
+  "source": "reference",
+  "skillLines": [
+    { "id": "line-ardent-flame", "name": "Ardent Flame", "category": "Class", "className": "Dragonknight" },
+    { "id": "line-draconic-power", "name": "Draconic Power", "category": "Class", "className": "Dragonknight" },
+    { "id": "line-earthen-heart", "name": "Earthen Heart", "category": "Class", "className": "Dragonknight" },
+    { "id": "line-dark-magic", "name": "Dark Magic", "category": "Class", "className": "Sorcerer" },
+    { "id": "line-daedric-summoning", "name": "Daedric Summoning", "category": "Class", "className": "Sorcerer" },
+    { "id": "line-storm-calling", "name": "Storm Calling", "category": "Class", "className": "Sorcerer" },
+    { "id": "line-assassination", "name": "Assassination", "category": "Class", "className": "Nightblade" },
+    { "id": "line-shadow", "name": "Shadow", "category": "Class", "className": "Nightblade" },
+    { "id": "line-siphoning", "name": "Siphoning", "category": "Class", "className": "Nightblade" },
+    { "id": "line-aedric-spear", "name": "Aedric Spear", "category": "Class", "className": "Templar" },
+    { "id": "line-dawns-wrath", "name": "Dawn's Wrath", "category": "Class", "className": "Templar" },
+    { "id": "line-restoring-light", "name": "Restoring Light", "category": "Class", "className": "Templar" },
+    { "id": "line-animal-companions", "name": "Animal Companions", "category": "Class", "className": "Warden" },
+    { "id": "line-green-balance", "name": "Green Balance", "category": "Class", "className": "Warden" },
+    { "id": "line-winters-embrace", "name": "Winter's Embrace", "category": "Class", "className": "Warden" },
+    { "id": "line-grave-lord", "name": "Grave Lord", "category": "Class", "className": "Necromancer" },
+    { "id": "line-bone-tyrant", "name": "Bone Tyrant", "category": "Class", "className": "Necromancer" },
+    { "id": "line-living-death", "name": "Living Death", "category": "Class", "className": "Necromancer" },
+    { "id": "line-herald-of-the-tome", "name": "Herald of the Tome", "category": "Class", "className": "Arcanist" },
+    { "id": "line-soldier-of-apocrypha", "name": "Soldier of Apocrypha", "category": "Class", "className": "Arcanist" },
+    { "id": "line-curative-runeforms", "name": "Curative Runeforms", "category": "Class", "className": "Arcanist" },
+    { "id": "line-two-handed", "name": "Two Handed", "category": "Weapon", "className": null },
+    { "id": "line-one-hand-and-shield", "name": "One Hand and Shield", "category": "Weapon", "className": null },
+    { "id": "line-dual-wield", "name": "Dual Wield", "category": "Weapon", "className": null },
+    { "id": "line-bow", "name": "Bow", "category": "Weapon", "className": null },
+    { "id": "line-destruction-staff", "name": "Destruction Staff", "category": "Weapon", "className": null },
+    { "id": "line-restoration-staff", "name": "Restoration Staff", "category": "Weapon", "className": null },
+    { "id": "line-light-armor", "name": "Light Armor", "category": "Armor", "className": null },
+    { "id": "line-medium-armor", "name": "Medium Armor", "category": "Armor", "className": null },
+    { "id": "line-heavy-armor", "name": "Heavy Armor", "category": "Armor", "className": null },
+    { "id": "line-soul-magic", "name": "Soul Magic", "category": "World", "className": null },
+    { "id": "line-vampire", "name": "Vampire", "category": "World", "className": null },
+    { "id": "line-werewolf", "name": "Werewolf", "category": "World", "className": null },
+    { "id": "line-legerdemain", "name": "Legerdemain", "category": "World", "className": null },
+    { "id": "line-fighters-guild", "name": "Fighters Guild", "category": "Guild", "className": null },
+    { "id": "line-mages-guild", "name": "Mages Guild", "category": "Guild", "className": null },
+    { "id": "line-undaunted", "name": "Undaunted", "category": "Guild", "className": null },
+    { "id": "line-thieves-guild", "name": "Thieves Guild", "category": "Guild", "className": null },
+    { "id": "line-dark-brotherhood", "name": "Dark Brotherhood", "category": "Guild", "className": null },
+    { "id": "line-psijic-order", "name": "Psijic Order", "category": "Guild", "className": null },
+    { "id": "line-assault", "name": "Assault", "category": "Alliance War", "className": null },
+    { "id": "line-support", "name": "Support", "category": "Alliance War", "className": null },
+    { "id": "line-alchemy", "name": "Alchemy", "category": "Craft", "className": null },
+    { "id": "line-blacksmithing", "name": "Blacksmithing", "category": "Craft", "className": null },
+    { "id": "line-clothing", "name": "Clothing", "category": "Craft", "className": null },
+    { "id": "line-woodworking", "name": "Woodworking", "category": "Craft", "className": null },
+    { "id": "line-jewelry-crafting", "name": "Jewelry Crafting", "category": "Craft", "className": null },
+    { "id": "line-enchanting", "name": "Enchanting", "category": "Craft", "className": null },
+    { "id": "line-provisioning", "name": "Provisioning", "category": "Craft", "className": null }
+  ],
+  "skills": [
+    { "id": "sk-death-stroke", "name": "Death Stroke", "lineId": "line-assassination", "type": "ultimate", "description": "Assassinate an enemy, dealing heavy damage and increasing their damage taken from you.", "morphs": [
+      { "name": "Incapacitating Strike", "isMorph": true, "description": "Adds a stun and empowers your next Grim Focus proc." },
+      { "name": "Soul Harvest", "isMorph": true, "description": "Increases the damage-taken debuff duration and generates Ultimate on kill." }
+    ]},
+    { "id": "sk-assassins-blade", "name": "Assassin's Blade", "lineId": "line-assassination", "type": "active", "description": "Slice an enemy, dealing bonus execute damage against low-health targets.", "morphs": [
+      { "name": "Killer's Blade", "isMorph": true, "description": "Increases execute damage and heals you when it kills." },
+      { "name": "Impale", "isMorph": true, "description": "Deals ranged execute damage instead of melee." }
+    ]},
+    { "id": "sk-teleport-strike", "name": "Teleport Strike", "lineId": "line-assassination", "type": "active", "description": "Blink to an enemy and strike, closing distance instantly.", "morphs": [
+      { "name": "Lotus Fan", "isMorph": true, "description": "Adds area damage and a damage shield on arrival." },
+      { "name": "Ambush", "isMorph": true, "description": "Empowers your next Light/Heavy attack." }
+    ]},
+    { "id": "sk-mark-target", "name": "Mark Target", "lineId": "line-assassination", "type": "active", "description": "Mark an enemy, increasing their damage taken and healing you on their death.", "morphs": [
+      { "name": "Piercing Mark", "isMorph": true, "description": "Reveals stealthed/invisible targets and follows them." },
+      { "name": "Reaper's Mark", "isMorph": true, "description": "Grants you Major buffs when the marked target dies." }
+    ]},
+    { "id": "sk-grim-focus", "name": "Grim Focus", "lineId": "line-assassination", "type": "active", "description": "Build stacks with Light/Heavy attacks; spend them to fire a spectral bow attack.", "morphs": [
+      { "name": "Relentless Focus", "isMorph": true, "description": "Stamina-based; the proc deals physical damage." },
+      { "name": "Merciless Resolve", "isMorph": true, "description": "Magicka-based; the proc deals magic damage and heals." }
+    ]},
+
+    { "id": "sk-dragon-leap", "name": "Dragon Leap", "lineId": "line-draconic-power", "type": "ultimate", "description": "Leap to an enemy, dealing area damage and knocking foes back.", "morphs": [
+      { "name": "Take Flight", "isMorph": true, "description": "Increases range and damage." },
+      { "name": "Ferocious Leap", "isMorph": true, "description": "Grants a damage shield on landing." }
+    ]},
+    { "id": "sk-spiked-armor", "name": "Spiked Armor", "lineId": "line-draconic-power", "type": "active", "description": "Gain Major Resolve and return damage to melee attackers.", "morphs": [
+      { "name": "Hardened Armor", "isMorph": true, "description": "Also grants a damage shield." },
+      { "name": "Volatile Armor", "isMorph": true, "description": "Adds area damage over time around you." }
+    ]},
+    { "id": "sk-dark-talons", "name": "Dark Talons", "lineId": "line-draconic-power", "type": "active", "description": "Immobilize nearby enemies with fiery talons.", "morphs": [
+      { "name": "Burning Talons", "isMorph": true, "description": "Adds flame damage over time." },
+      { "name": "Choking Talons", "isMorph": true, "description": "Applies Minor Maim to snared enemies." }
+    ]},
+    { "id": "sk-dragon-blood", "name": "Dragon Blood", "lineId": "line-draconic-power", "type": "active", "description": "Heal based on your missing Health and gain recovery.", "morphs": [
+      { "name": "Green Dragon Blood", "isMorph": true, "description": "Grants Major Fortitude/Endurance and Minor Vitality." },
+      { "name": "Coagulating Blood", "isMorph": true, "description": "Heals more the higher your Health." }
+    ]},
+    { "id": "sk-reflective-scale", "name": "Reflective Scale", "lineId": "line-draconic-power", "type": "active", "description": "Reflect incoming projectiles for a short time.", "morphs": [
+      { "name": "Dragon Fire Scale", "isMorph": true, "description": "Returns damage to ranged attackers." },
+      { "name": "Reflective Plate", "isMorph": true, "description": "Also removes snares and grants immunity to them briefly." }
+    ]},
+    { "id": "sk-inhale", "name": "Inhale", "lineId": "line-draconic-power", "type": "active", "description": "Deal area damage and heal after a short delay.", "morphs": [
+      { "name": "Deep Breath", "isMorph": true, "description": "Interrupts and increases the delayed heal." },
+      { "name": "Draw Essence", "isMorph": true, "description": "Restores Magicka." }
+    ]},
+
+    { "id": "sk-unblinking-eye", "name": "The Unblinking Eye", "lineId": "line-herald-of-the-tome", "type": "ultimate", "description": "Summon an Apocryphal eye that deals sustained area damage.", "morphs": [
+      { "name": "The Languid Eye", "isMorph": true, "description": "Lasts longer and follows the target area." },
+      { "name": "The Tide King's Gaze", "isMorph": true, "description": "Increases damage the longer it channels." }
+    ]},
+    { "id": "sk-runeblades", "name": "Runeblades", "lineId": "line-herald-of-the-tome", "type": "active", "description": "Hurl runic blades at an enemy, building Crux.", "morphs": [
+      { "name": "Writhing Runeblades", "isMorph": true, "description": "Increases Critical Chance and consumes Crux for bonus damage." },
+      { "name": "Escalating Runeblades", "isMorph": true, "description": "Deals more damage per Crux consumed." }
+    ]},
+    { "id": "sk-fatecarver", "name": "Fatecarver", "lineId": "line-herald-of-the-tome", "type": "active", "description": "Channel a beam of Apocryphal energy in a line, consuming Crux to extend it.", "morphs": [
+      { "name": "Exhausting Fatecarver", "isMorph": true, "description": "Snares enemies hit." },
+      { "name": "Pragmatic Fatecarver", "isMorph": true, "description": "Grants a damage shield while channeling." }
+    ]},
+    { "id": "sk-abyssal-impact", "name": "Abyssal Impact", "lineId": "line-herald-of-the-tome", "type": "active", "description": "Strike with tentacles, dealing area damage and building Crux.", "morphs": [
+      { "name": "Cephaliarch's Flail", "isMorph": true, "description": "Heals you and consumes Crux for extra healing." },
+      { "name": "Tentacular Dread", "isMorph": true, "description": "Immobilizes or stuns enemies based on Crux." }
+    ]},
+    { "id": "sk-tome-bearers-inspiration", "name": "Tome-Bearer's Inspiration", "lineId": "line-herald-of-the-tome", "type": "active", "description": "Slot to build Crux over time and empower Light/Heavy attacks.", "morphs": [
+      { "name": "Inspired Scholarship", "isMorph": true, "description": "Turns Light/Heavy attacks into beam attacks that build Crux." },
+      { "name": "Recuperative Treatise", "isMorph": true, "description": "Also restores resources over time." }
+    ]},
+
+    { "id": "sk-lacerate", "name": "Lacerate", "lineId": "line-dual-wield", "type": "ultimate", "description": "Rend nearby enemies for heavy bleed damage over time.", "morphs": [
+      { "name": "Rend", "isMorph": true, "description": "Heals you for a portion of the damage dealt." },
+      { "name": "Thrive in Chaos", "isMorph": true, "description": "Deals more damage per enemy hit." }
+    ]},
+    { "id": "sk-flurry", "name": "Flurry", "lineId": "line-dual-wield", "type": "active", "description": "Rapidly strike an enemy several times.", "morphs": [
+      { "name": "Rapid Strikes", "isMorph": true, "description": "Increases damage with each hit." },
+      { "name": "Bloodthirst", "isMorph": true, "description": "Heals you based on damage dealt." }
+    ]},
+    { "id": "sk-twin-slashes", "name": "Twin Slashes", "lineId": "line-dual-wield", "type": "active", "description": "Apply two stacking bleed damage-over-time effects.", "morphs": [
+      { "name": "Rending Slashes", "isMorph": true, "description": "Increases bleed damage and applies Minor Maim." },
+      { "name": "Blood Craze", "isMorph": true, "description": "Heals you over the duration." }
+    ]},
+    { "id": "sk-whirlwind", "name": "Whirlwind", "lineId": "line-dual-wield", "type": "active", "description": "Spin to deal area damage to nearby enemies.", "morphs": [
+      { "name": "Steel Tornado", "isMorph": true, "description": "Increases range and execute damage." },
+      { "name": "Whirling Blades", "isMorph": true, "description": "Deals more damage to low-health enemies and restores Stamina." }
+    ]},
+    { "id": "sk-blade-cloak", "name": "Blade Cloak", "lineId": "line-dual-wield", "type": "active", "description": "Gain Major Evasion and area damage over time around you.", "morphs": [
+      { "name": "Quick Cloak", "isMorph": true, "description": "Longer duration, lower cost." },
+      { "name": "Deadly Cloak", "isMorph": true, "description": "Higher area damage." }
+    ]},
+
+    { "id": "sk-rapid-fire", "name": "Rapid Fire", "lineId": "line-bow", "type": "ultimate", "description": "Channel a barrage of arrows at an enemy.", "morphs": [
+      { "name": "Toxic Barrage", "isMorph": true, "description": "Adds poison damage over time after the channel." },
+      { "name": "Ballista", "isMorph": true, "description": "Fires automatically as a persistent turret." }
+    ]},
+    { "id": "sk-snipe", "name": "Snipe", "lineId": "line-bow", "type": "active", "description": "A long-range aimed shot dealing heavy single-target damage.", "morphs": [
+      { "name": "Lethal Arrow", "isMorph": true, "description": "Adds poison damage and Minor Defile." },
+      { "name": "Focused Aim", "isMorph": true, "description": "Adds Minor Breach and reduced cost." }
+    ]},
+    { "id": "sk-volley", "name": "Volley", "lineId": "line-bow", "type": "active", "description": "Rain arrows over an area, dealing physical damage over time.", "morphs": [
+      { "name": "Endless Hail", "isMorph": true, "description": "Longer duration ground effect." },
+      { "name": "Arrow Barrage", "isMorph": true, "description": "Larger area of effect." }
+    ]},
+    { "id": "sk-poison-arrow", "name": "Poison Arrow", "lineId": "line-bow", "type": "active", "description": "Fire a venomous arrow dealing poison damage over time.", "morphs": [
+      { "name": "Venom Arrow", "isMorph": true, "description": "Interrupts and prevents casting briefly." },
+      { "name": "Poison Injection", "isMorph": true, "description": "Deals bonus execute damage over time." }
+    ]},
+
+    { "id": "sk-war-horn", "name": "War Horn", "lineId": "line-assault", "type": "ultimate", "description": "Rally your group, granting Major Force and increased Max Magicka/Stamina.", "morphs": [
+      { "name": "Aggressive Horn", "isMorph": true, "description": "Also grants Minor Force." },
+      { "name": "Sturdy Horn", "isMorph": true, "description": "Grants resource-based buffs and lower cost." }
+    ]},
+    { "id": "sk-rapid-maneuver", "name": "Rapid Maneuver", "lineId": "line-assault", "type": "active", "description": "Grant Major Expedition and Gallop to you and nearby allies.", "morphs": [
+      { "name": "Retreating Maneuver", "isMorph": true, "description": "Removes snares and reduces ranged damage while active." },
+      { "name": "Charging Maneuver", "isMorph": true, "description": "Longer Major Expedition duration." }
+    ]},
+    { "id": "sk-vigor", "name": "Vigor", "lineId": "line-assault", "type": "active", "description": "Heal yourself over time.", "morphs": [
+      { "name": "Echoing Vigor", "isMorph": true, "description": "Heals nearby allies too." },
+      { "name": "Resolving Vigor", "isMorph": true, "description": "Stronger self-heal." }
+    ]},
+    { "id": "sk-caltrops", "name": "Caltrops", "lineId": "line-assault", "type": "active", "description": "Scatter caltrops that snare and deal physical damage over time.", "morphs": [
+      { "name": "Anti-Cavalry Caltrops", "isMorph": true, "description": "Increases snare and Minor Maim." },
+      { "name": "Razor Caltrops", "isMorph": true, "description": "Applies Major Breach to enemies inside." }
+    ]},
+
+    { "id": "sk-barrier", "name": "Barrier", "lineId": "line-support", "type": "ultimate", "description": "Grant a large damage shield to you and nearby allies.", "morphs": [
+      { "name": "Reviving Barrier", "isMorph": true, "description": "Also heals allies over time." },
+      { "name": "Replenishing Barrier", "isMorph": true, "description": "Returns Ultimate over the duration." }
+    ]},
+    { "id": "sk-purge", "name": "Purge", "lineId": "line-support", "type": "active", "description": "Remove negative effects from you and nearby allies.", "morphs": [
+      { "name": "Cleanse", "isMorph": true, "description": "Also heals for each effect removed." },
+      { "name": "Efficient Purge", "isMorph": true, "description": "Lower cost." }
+    ]},
+    { "id": "sk-guard", "name": "Guard", "lineId": "line-support", "type": "active", "description": "Link to an ally, sharing a portion of damage taken and granting Minor buffs.", "morphs": [
+      { "name": "Mystic Guard", "isMorph": true, "description": "Grants Minor Vitality to both." },
+      { "name": "Stalwart Guard", "isMorph": true, "description": "Grants Minor Force to both." }
+    ]},
+
+    { "id": "sk-blood-scion", "name": "Blood Scion", "lineId": "line-vampire", "type": "ultimate", "description": "Transform into a powerful vampiric form with boosted stats and lifedrain.", "morphs": [
+      { "name": "Swarming Scion", "isMorph": true, "description": "Grants Major Berserk during the transform." },
+      { "name": "Perfect Scion", "isMorph": true, "description": "Restores Health/Magicka/Stamina on activation." }
+    ]},
+    { "id": "sk-vampiric-drain", "name": "Vampiric Drain", "lineId": "line-vampire", "type": "active", "description": "Drain an enemy's life, healing you and restoring Magicka.", "morphs": [
+      { "name": "Drain Vigor", "isMorph": true, "description": "Grants Major Vitality." },
+      { "name": "Exhilarating Drain", "isMorph": true, "description": "Returns Ultimate when it heals you at low Health." }
+    ]},
+    { "id": "sk-mist-form", "name": "Mist Form", "lineId": "line-vampire", "type": "active", "description": "Become mist, greatly reducing incoming damage while draining Health.", "morphs": [
+      { "name": "Elusive Mist", "isMorph": true, "description": "Grants Major Expedition and Evasion." },
+      { "name": "Blood Mist", "isMorph": true, "description": "Deals area damage and heals you." }
+    ]},
+
+    { "id": "sk-werewolf-transformation", "name": "Werewolf Transformation", "lineId": "line-werewolf", "type": "ultimate", "description": "Transform into a Werewolf, gaining new abilities and greatly increased stats.", "morphs": [
+      { "name": "Pack Leader", "isMorph": true, "description": "Summons two direwolves and grants group resistance." },
+      { "name": "Werewolf Berserker", "isMorph": true, "description": "Increases damage and Light/Heavy attack lifesteal." }
+    ]},
+    { "id": "sk-pounce", "name": "Pounce", "lineId": "line-werewolf", "type": "active", "description": "Leap to an enemy dealing bleed damage.", "morphs": [
+      { "name": "Brutal Pounce", "isMorph": true, "description": "Adds area damage on landing." },
+      { "name": "Feral Pounce", "isMorph": true, "description": "Extends transformation duration on hit." }
+    ]},
+    { "id": "sk-hircines-bounty", "name": "Hircine's Bounty", "lineId": "line-werewolf", "type": "active", "description": "Heal yourself, more if you are below half Health.", "morphs": [
+      { "name": "Hircine's Rage", "isMorph": true, "description": "Grants Major Berserk when healing at low Health." },
+      { "name": "Hircine's Fortitude", "isMorph": true, "description": "Also grants Max Health and recovery." }
+    ]},
+    { "id": "sk-roar", "name": "Roar", "lineId": "line-werewolf", "type": "active", "description": "Fear and stun nearby enemies, applying Major Breach.", "morphs": [
+      { "name": "Ferocious Roar", "isMorph": true, "description": "Grants Empower and reduces block mitigation of enemies." },
+      { "name": "Deafening Roar", "isMorph": true, "description": "Applies Major Breach over a longer area and duration." }
+    ]}
+  ]
+}

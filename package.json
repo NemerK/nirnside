@@ -10,7 +10,7 @@
     "lint": "eslint",
     "import": "tsx scripts/import.ts",
     "watch": "tsx scripts/watch.ts",
-    "seed": "tsx scripts/import.ts data/sample/Nirnside.lua"
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

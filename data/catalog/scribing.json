@@ -1,0 +1,94 @@
+{
+  "patch": "U50",
+  "source": "reference",
+  "scripts": [
+    { "id": "scr-f-flame", "name": "Flame Damage", "slot": "focus", "effect": "The ability deals Flame damage." },
+    { "id": "scr-f-frost", "name": "Frost Damage", "slot": "focus", "effect": "The ability deals Frost damage and can apply Chill." },
+    { "id": "scr-f-shock", "name": "Shock Damage", "slot": "focus", "effect": "The ability deals Shock damage and can apply Concussion." },
+    { "id": "scr-f-physical", "name": "Physical Damage", "slot": "focus", "effect": "The ability deals Physical damage." },
+    { "id": "scr-f-poison", "name": "Poison Damage", "slot": "focus", "effect": "The ability deals Poison damage and can apply Poisoned." },
+    { "id": "scr-f-magic", "name": "Magic Damage", "slot": "focus", "effect": "The ability deals Magic damage." },
+    { "id": "scr-f-bleed", "name": "Bleed Damage", "slot": "focus", "effect": "The ability deals Bleed damage over time and can apply Hemorrhaging." },
+    { "id": "scr-f-heal", "name": "Healing", "slot": "focus", "effect": "The ability heals you or an ally instead of dealing damage." },
+    { "id": "scr-f-shield", "name": "Damage Shield", "slot": "focus", "effect": "The ability grants a damage shield." },
+    { "id": "scr-f-taunt", "name": "Taunt", "slot": "focus", "effect": "The ability taunts the target." },
+    { "id": "scr-f-restore-mag", "name": "Restore Magicka", "slot": "focus", "effect": "The ability restores Magicka." },
+    { "id": "scr-f-restore-stam", "name": "Restore Stamina", "slot": "focus", "effect": "The ability restores Stamina." },
+
+    { "id": "scr-s-anchorite", "name": "Anchorite's Cruelty", "slot": "signature", "effect": "Adds a damage-over-time component to the ability." },
+    { "id": "scr-s-classmastery", "name": "Class Mastery", "slot": "signature", "effect": "Adds a bonus effect themed to your class." },
+    { "id": "scr-s-ranged", "name": "Ranged", "slot": "signature", "effect": "Increases the ability's range." },
+    { "id": "scr-s-multitarget", "name": "Multi-Target", "slot": "signature", "effect": "The ability hits additional nearby enemies." },
+    { "id": "scr-s-offbalance", "name": "Off Balance", "slot": "signature", "effect": "Sets enemies Off Balance." },
+    { "id": "scr-s-immobilize", "name": "Immobilize", "slot": "signature", "effect": "Immobilizes the target." },
+    { "id": "scr-s-ultimate", "name": "Ultimate Generation", "slot": "signature", "effect": "Generates Ultimate when the ability is used or hits." },
+    { "id": "scr-s-sustain", "name": "Sustain", "slot": "signature", "effect": "Restores resources when the ability is used." },
+
+    { "id": "scr-a-berserk", "name": "Minor Berserk", "slot": "affix", "effect": "Grants you Minor Berserk (increased damage done)." },
+    { "id": "scr-a-breach", "name": "Minor Breach", "slot": "affix", "effect": "Applies Minor Breach to enemies (reduced resistances)." },
+    { "id": "scr-a-empower", "name": "Empower", "slot": "affix", "effect": "Grants Empower (stronger Heavy Attacks)." },
+    { "id": "scr-a-maim", "name": "Minor Maim", "slot": "affix", "effect": "Applies Minor Maim to enemies (reduced damage done)." },
+    { "id": "scr-a-vulnerability", "name": "Minor Vulnerability", "slot": "affix", "effect": "Applies Minor Vulnerability to enemies (increased damage taken)." },
+    { "id": "scr-a-force", "name": "Minor Force", "slot": "affix", "effect": "Grants Minor Force (increased Critical Damage)." },
+    { "id": "scr-a-heroism", "name": "Minor Heroism", "slot": "affix", "effect": "Grants Minor Heroism (Ultimate generation)." },
+    { "id": "scr-a-restore", "name": "Resource Return", "slot": "affix", "effect": "Restores a small amount of resources." }
+  ],
+  "grimoires": [
+    {
+      "id": "grim-ulfsilds-contingency", "name": "Ulfsild's Contingency", "skillLine": "Mages Guild",
+      "description": "Place a rune that stores your next abilities and detonates them for area damage.",
+      "focusScripts": ["scr-f-flame", "scr-f-frost", "scr-f-shock", "scr-f-magic", "scr-f-physical", "scr-f-poison"],
+      "signatureScripts": ["scr-s-anchorite", "scr-s-multitarget", "scr-s-offbalance", "scr-s-classmastery"],
+      "affixScripts": ["scr-a-berserk", "scr-a-breach", "scr-a-vulnerability", "scr-a-force"]
+    },
+    {
+      "id": "grim-traveling-knife", "name": "Traveling Knife", "skillLine": "Fighters Guild",
+      "description": "Throw a knife that can be recalled, striking enemies on the way out and back.",
+      "focusScripts": ["scr-f-physical", "scr-f-bleed", "scr-f-poison", "scr-f-flame"],
+      "signatureScripts": ["scr-s-anchorite", "scr-s-ranged", "scr-s-immobilize", "scr-s-sustain"],
+      "affixScripts": ["scr-a-maim", "scr-a-breach", "scr-a-restore", "scr-a-force"]
+    },
+    {
+      "id": "grim-wield-soul", "name": "Wield Soul", "skillLine": "Soul Magic",
+      "description": "Conjure a soul-bound weapon to strike an enemy and apply an effect.",
+      "focusScripts": ["scr-f-magic", "scr-f-flame", "scr-f-frost", "scr-f-shock", "scr-f-heal", "scr-f-shield"],
+      "signatureScripts": ["scr-s-classmastery", "scr-s-offbalance", "scr-s-ultimate", "scr-s-anchorite"],
+      "affixScripts": ["scr-a-berserk", "scr-a-empower", "scr-a-vulnerability", "scr-a-heroism"]
+    },
+    {
+      "id": "grim-torchbearer", "name": "Torchbearer", "skillLine": "Undaunted",
+      "description": "Raise a torch that burns nearby enemies and can support your group.",
+      "focusScripts": ["scr-f-flame", "scr-f-heal", "scr-f-shield", "scr-f-taunt"],
+      "signatureScripts": ["scr-s-multitarget", "scr-s-sustain", "scr-s-classmastery"],
+      "affixScripts": ["scr-a-berserk", "scr-a-force", "scr-a-restore", "scr-a-heroism"]
+    },
+    {
+      "id": "grim-trample", "name": "Trample", "skillLine": "Assault",
+      "description": "Charge forward, damaging and controlling enemies in your path.",
+      "focusScripts": ["scr-f-physical", "scr-f-flame", "scr-f-bleed"],
+      "signatureScripts": ["scr-s-immobilize", "scr-s-offbalance", "scr-s-multitarget"],
+      "affixScripts": ["scr-a-maim", "scr-a-breach", "scr-a-force"]
+    },
+    {
+      "id": "grim-banner-bearer", "name": "Banner Bearer", "skillLine": "Support",
+      "description": "Plant a banner that empowers allies and pressures enemies within it.",
+      "focusScripts": ["scr-f-heal", "scr-f-shield", "scr-f-magic", "scr-f-flame"],
+      "signatureScripts": ["scr-s-sustain", "scr-s-ultimate", "scr-s-classmastery"],
+      "affixScripts": ["scr-a-force", "scr-a-heroism", "scr-a-berserk", "scr-a-restore"]
+    },
+    {
+      "id": "grim-shield-throw", "name": "Shield Throw", "skillLine": "One Hand and Shield",
+      "description": "Hurl your shield to strike enemies and return to guard you.",
+      "focusScripts": ["scr-f-physical", "scr-f-frost", "scr-f-taunt", "scr-f-shield"],
+      "signatureScripts": ["scr-s-ranged", "scr-s-offbalance", "scr-s-multitarget"],
+      "affixScripts": ["scr-a-maim", "scr-a-breach", "scr-a-restore"]
+    },
+    {
+      "id": "grim-elemental-explosion", "name": "Elemental Explosion", "skillLine": "Destruction Staff",
+      "description": "Unleash an elemental blast whose type follows your focus script.",
+      "focusScripts": ["scr-f-flame", "scr-f-frost", "scr-f-shock", "scr-f-magic"],
+      "signatureScripts": ["scr-s-anchorite", "scr-s-multitarget", "scr-s-offbalance", "scr-s-classmastery"],
+      "affixScripts": ["scr-a-vulnerability", "scr-a-breach", "scr-a-berserk", "scr-a-force"]
+    }
+  ]
+}

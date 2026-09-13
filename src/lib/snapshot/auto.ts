@@ -1,8 +1,11 @@
+import { existsSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { watch, type FSWatcher } from "chokidar";
 import { loadSnapshotFromFile } from "./load";
 import { locateSnapshot, candidatePaths, type SnapshotSource } from "./locate";
 import { importSnapshot } from "../db/import";
 import { setMeta } from "../db";
+import { loadReferenceCatalog, loadCatalogFromLua } from "../catalog/load";
 
 /**
  * The "work-free" engine. Started once when the app boots (see instrumentation).
@@ -88,9 +91,45 @@ function pollForRealFile() {
   if (typeof iv.unref === "function") iv.unref();
 }
 
+/** Load the bundled reference catalog, then overlay an in-game dump if present. */
+function loadCatalog() {
+  try {
+    const ref = loadReferenceCatalog();
+    console.log(`[nirnside] catalog: loaded ${ref.files} reference file(s).`);
+  } catch (err) {
+    console.error(`[nirnside] reference catalog failed: ${err instanceof Error ? err.message : err}`);
+  }
+
+  // An in-game catalog dump (from the NirnsideCatalog addon) sits next to the
+  // snapshot file. If present, import it (it overrides reference data) and watch.
+  const snap = locateSnapshot(false);
+  const catalogPath = snap ? join(dirname(snap.path), "NirnsideCatalog.lua") : process.env.NIRNSIDE_CATALOG_FILE;
+  if (catalogPath && existsSync(catalogPath)) {
+    try {
+      loadCatalogFromLua(catalogPath);
+      console.log(`[nirnside] catalog: applied in-game dump from ${catalogPath}`);
+    } catch (err) {
+      console.error(`[nirnside] in-game catalog import failed: ${err instanceof Error ? err.message : err}`);
+    }
+    watch(catalogPath, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 400, pollInterval: 100 } }).on(
+      "all",
+      () => {
+        try {
+          loadCatalogFromLua(catalogPath);
+          console.log("[nirnside] catalog: re-applied in-game dump.");
+        } catch (err) {
+          console.error(`[nirnside] in-game catalog re-import failed: ${err instanceof Error ? err.message : err}`);
+        }
+      },
+    );
+  }
+}
+
 export function startAutoImport() {
   if (started) return;
   started = true;
+
+  loadCatalog();
 
   const found = locateSnapshot(true);
   if (found) {

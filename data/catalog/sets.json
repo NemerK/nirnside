@@ -1,0 +1,161 @@
+{
+  "patch": "U50",
+  "source": "reference",
+  "sets": [
+    {
+      "id": "set-coral-riptide", "name": "Coral Riptide", "setId": 693, "category": "Trial",
+      "dlc": "Firesong", "dropSource": "Dreadsail Reef", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 3, "text": "Adds Critical Chance (Weapon and Spell)." },
+        { "pieces": 4, "text": "Adds Maximum Stamina." },
+        { "pieces": 5, "text": "Gain Weapon and Spell Damage that scales up the lower your Stamina is, reaching its maximum at low Stamina." }
+      ]
+    },
+    {
+      "id": "set-turning-tide", "name": "Turning Tide", "setId": 800, "category": "Trial",
+      "dlc": "Lucent Citadel", "dropSource": "Lucent Citadel", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 3, "text": "Adds Maximum Health." },
+        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 5, "text": "Bash attacks apply a stacking bonus that increases your damage done, building the more you Bash." }
+      ]
+    },
+    {
+      "id": "set-lucent-echoes", "name": "Lucent Echoes", "setId": 801, "category": "Trial",
+      "dlc": "Lucent Citadel", "dropSource": "Lucent Citadel", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Critical Chance (Weapon and Spell)." },
+        { "pieces": 3, "text": "Adds Maximum Magicka." },
+        { "pieces": 4, "text": "Adds Critical Chance (Weapon and Spell)." },
+        { "pieces": 5, "text": "Grants nearby group members a portion of your Critical Damage as a group buff (support-oriented)." }
+      ]
+    },
+    {
+      "id": "set-corpseburster", "name": "Corpseburster", "setId": 802, "category": "Trial",
+      "dlc": "Lucent Citadel", "dropSource": "Lucent Citadel", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 3, "text": "Adds Offensive Penetration." },
+        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 5, "text": "Damaging enemies builds corpse-charges that detonate for area damage." }
+      ]
+    },
+    {
+      "id": "set-ansuuls-torment", "name": "Ansuul's Torment", "setId": 750, "category": "Trial",
+      "dlc": "Necrom", "dropSource": "Sanity's Edge", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 3, "text": "Adds Critical Chance (Weapon and Spell)." },
+        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 5, "text": "Damaging a nearby enemy grants stacking Offensive Penetration, and consuming the stacks empowers your damage." }
+      ]
+    },
+    {
+      "id": "set-sul-xans-torment", "name": "Sul-Xan's Torment", "setId": 660, "category": "Trial",
+      "dlc": "Ascending Tide", "dropSource": "Rockgrove", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 3, "text": "Adds Maximum Stamina." },
+        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 5, "text": "Killing an enemy releases souls that deal damage to nearby foes." }
+      ]
+    },
+    {
+      "id": "set-ozezan-the-inferno", "name": "Ozezan the Inferno", "setId": 700, "category": "Monster Set",
+      "dlc": "Lucent Citadel", "dropSource": "Lucent Citadel (Undaunted)", "maxEquip": 2,
+      "bonuses": [
+        { "pieces": 1, "text": "Adds Maximum Health." },
+        { "pieces": 2, "text": "Casting a heal grants you and your target increased healing taken and Physical/Spell Resistance for a short time." }
+      ]
+    },
+    {
+      "id": "set-nazaray", "name": "Nazaray", "setId": 740, "category": "Monster Set",
+      "dlc": "Necrom", "dropSource": "Sanity's Edge (Undaunted)", "maxEquip": 2,
+      "bonuses": [
+        { "pieces": 1, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 2, "text": "Dealing damage with a Heavy Attack grants you a stacking Weapon and Spell Damage buff." }
+      ]
+    },
+    {
+      "id": "set-slimecraw", "name": "Slimecraw", "setId": 154, "category": "Monster Set",
+      "dlc": "Base", "dropSource": "Wayrest Sewers I (Undaunted)", "maxEquip": 2,
+      "bonuses": [
+        { "pieces": 1, "text": "Adds Critical Chance (Weapon and Spell)." },
+        { "pieces": 2, "text": "Grants Minor Berserk, increasing your damage done." }
+      ]
+    },
+    {
+      "id": "set-pale-order", "name": "Ring of the Pale Order", "setId": 574, "category": "Mythic",
+      "dlc": "Deadlands", "dropSource": "Antiquities (Mythic)", "maxEquip": 1,
+      "bonuses": [
+        { "pieces": 1, "text": "Heal for a percentage of your damage done, scaling down with each group member near you. Prevents most other sources of healing." }
+      ]
+    },
+    {
+      "id": "set-spaulder-of-ruin", "name": "Spaulder of Ruin", "setId": 583, "category": "Mythic",
+      "dlc": "Ascending Tide", "dropSource": "Antiquities (Mythic)", "maxEquip": 1,
+      "bonuses": [
+        { "pieces": 1, "text": "Creates a persistent aura that grants you and nearby allies Weapon and Spell Damage and resource recovery." }
+      ]
+    },
+    {
+      "id": "set-deadly-strike", "name": "Deadly Strike", "setId": 356, "category": "PvP",
+      "dlc": "Base", "dropSource": "Battlegrounds / Cyrodiil vendors", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 3, "text": "Adds Maximum Stamina." },
+        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 5, "text": "Increases the damage of your damage over time and channeled/area abilities." }
+      ]
+    },
+    {
+      "id": "set-order's-wrath", "name": "Order's Wrath", "setId": 583000, "category": "Crafted",
+      "dlc": "High Isle", "dropSource": "Crafted (High Isle)", "maxEquip": 5, "traitsNeeded": 4,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Critical Chance (Weapon and Spell)." },
+        { "pieces": 3, "text": "Adds Maximum Health, Magicka and Stamina." },
+        { "pieces": 4, "text": "Adds Critical Chance (Weapon and Spell)." },
+        { "pieces": 5, "text": "Increases your Critical Damage and Critical Healing." }
+      ]
+    },
+    {
+      "id": "set-briarheart", "name": "Briarheart", "setId": 392, "category": "Crafted",
+      "dlc": "Wrathstone", "dropSource": "Crafted (Deadlands)", "maxEquip": 5, "traitsNeeded": 6,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 3, "text": "Adds Maximum Stamina." },
+        { "pieces": 4, "text": "Adds Weapon Critical." },
+        { "pieces": 5, "text": "Dealing direct critical damage grants a stacking Weapon and Spell Damage buff and heals you." }
+      ]
+    },
+    {
+      "id": "set-mothers-sorrow", "name": "Mother's Sorrow", "setId": 209, "category": "Overland",
+      "dlc": "Morrowind", "dropSource": "Deshaan (Overland)", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Maximum Magicka." },
+        { "pieces": 3, "text": "Adds Spell Critical." },
+        { "pieces": 4, "text": "Adds Maximum Magicka." },
+        { "pieces": 5, "text": "Adds a large amount of Critical Chance (Spell)." }
+      ]
+    },
+    {
+      "id": "set-tarnished-nightmare", "name": "Tarnished Nightmare", "setId": 760, "category": "Dungeon",
+      "dlc": "Scions of Ithelia", "dropSource": "Oathsworn Pit", "maxEquip": 5,
+      "bonuses": [
+        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 3, "text": "Adds Offensive Penetration." },
+        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
+        { "pieces": 5, "text": "Applying a status effect deals additional damage over time to the target." }
+      ]
+    },
+    {
+      "id": "set-maelstrom-inferno", "name": "Perfected Crushing Wall", "setId": 401, "category": "Arena",
+      "dlc": "Wolfhunter", "dropSource": "Maelstrom Arena (Veteran)", "maxEquip": 2,
+      "bonuses": [
+        { "pieces": 2, "text": "Your Light and Heavy Attacks deal additional damage to enemies affected by your damage over time abilities. (Perfected variant adds a stat line.)" }
+      ]
+    }
+  ]
+}

@@ -76,6 +76,25 @@ function migrate(db: Database.Database) {
       collected  INTEGER NOT NULL,
       json       TEXT NOT NULL
     );
+
+    -- The shared Tamriel catalog. One row per entry across every domain
+    -- (set, skill, skillline, cp, grimoire, script, ...). 'source' encodes the
+    -- accuracy rule: 'ingame' > 'community' > 'reference'. On import, higher
+    -- precedence sources overwrite lower ones for the same (domain, id).
+    CREATE TABLE IF NOT EXISTS catalog (
+      domain     TEXT NOT NULL,
+      id         TEXT NOT NULL,
+      name       TEXT NOT NULL,
+      category   TEXT,
+      subcategory TEXT,
+      source     TEXT NOT NULL DEFAULT 'reference',
+      patch      TEXT,
+      json       TEXT NOT NULL,
+      PRIMARY KEY (domain, id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_catalog_domain ON catalog(domain);
+    CREATE INDEX IF NOT EXISTS idx_catalog_name ON catalog(domain, name);
+    CREATE INDEX IF NOT EXISTS idx_catalog_cat ON catalog(domain, category);
   `);
 }
 
