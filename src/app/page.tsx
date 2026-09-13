@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Backpack, BookMarked, Coins, Library, Shield, Sparkles, Users } from "lucide-react";
+import { Backpack, BookMarked, Coins, Library, Shield, Sparkles, Trophy, Users } from "lucide-react";
 import { getAccount, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
 import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
 import { CharacterCard } from "@/components/character-card";
@@ -58,7 +58,7 @@ export default function HomePage() {
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-fg-subtle">Jump in</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <TileLink
             href="/inventory"
             title="Inventory"
@@ -70,6 +70,12 @@ export default function HomePage() {
             title="Stickerbook"
             description="What you've collected and what's missing."
             icon={<BookMarked className="h-5 w-5" />}
+          />
+          <TileLink
+            href="/achievements"
+            title="Achievements"
+            description="Trial, arena & dungeon completion board."
+            icon={<Trophy className="h-5 w-5" />}
           />
           <TileLink
             href="/encyclopedia"

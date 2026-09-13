@@ -71,7 +71,19 @@ the product owner. Do not relax them without explicit approval.
   guild banks, house banks, mail/buyback/decon, PvP ranks, quest log, outfits/dyes as a
   feature, Tales of Tribute, armory/loadout manager.
 
-## 6. Assets & sources
+## 6. Coherence — one shared catalog
+- The account view and the encyclopedia are **one system over one database**, not two
+  apps. The same entities (sets, skills, Champion stars, scribing scripts, achievements)
+  back both. New features must reuse the catalog, not fork a parallel dataset.
+- Everything cross-links **both ways**: an account entity (a worn set, a known skill
+  line, a slotted CP star) links to its catalog page, and every catalog page shows the
+  player's ownership/knowledge of it.
+- Source precedence is enforced in the importer, not by convention: `ingame` >
+  `community` > `reference`, merged **field by field** so a partial in-game scan upgrades
+  entries without dropping reference detail. Reference seed data must be mechanic-accurate
+  and must NOT invent volatile per-patch numbers — leave those empty for the scan to fill.
+
+## 7. Assets & sources
 - Only use images/data that are **free and legal** to use, with attribution where
   required. No paid or ToS-violating asset extraction.
 - Prefer in-game-derived strings/icons where we already have them from a snapshot;

@@ -3,10 +3,31 @@
 **Your Elder Scrolls Online account, viewable outside the game — and entirely on your own machine.**
 
 Nirnside is a local-first hub for ESO. It reads the data the game writes to disk
-(via a small in-game addon), stores it in a local SQLite database, and shows it
-in a clean web UI: characters, inventory, stickerbook, and a live Tamriel
-encyclopedia. Nothing is uploaded anywhere. There are no accounts, no servers, no
-telemetry.
+(via small in-game addons), stores it in a local SQLite database, and shows it in
+a clean web UI. Nothing is uploaded anywhere. There are no accounts, no servers,
+no telemetry.
+
+It has two halves that share **one database**:
+
+- **Your account** — characters (skills, morphs, gear incl. back bar, Champion
+  Points, vampire/werewolf, companions, scribing, research), full inventory with
+  filters, stickerbook, and a Pithka-style trial/dungeon/arena achievement board.
+- **The catalog** — a live Tamriel encyclopedia: item sets, skill lines + morphs,
+  the Champion Point tree (with a what-if planner), and the full scribing
+  combination matrix.
+
+Everything is cross-linked: a set on your character opens its encyclopedia page,
+and every encyclopedia page shows whether you own/know it. A single global search
+covers both halves.
+
+### Accuracy & sources
+
+In-game data is the source of truth. Every catalog entry carries a `source` and
+the UI badges it: **In-game verified** > **Community** > **Reference**. The
+bundled reference seed is mechanic-accurate but deliberately omits volatile
+per-patch numbers until the in-game catalog scan fills them in — so nothing is
+silently wrong. The importer merges in-game data over reference **field by
+field**, so a scan upgrades entries without dropping detail.
 
 > Scope and hard rules live in [`.cursor/rules/nirnside.mdc`](.cursor/rules/nirnside.mdc).
 > The short version: **live patch only, in-game accuracy wins, local & private,
@@ -18,12 +39,15 @@ telemetry.
 
 | Part | Path | What it does |
 | --- | --- | --- |
-| Web app | `src/app` | Next.js UI: Home, Characters, Inventory, Stickerbook, Encyclopedia |
-| Data contract | `src/lib/snapshot/schema.ts` | The single shape of a snapshot (Zod-validated) |
+| Web app | `src/app` | Next.js UI: Home, Characters, Inventory, Stickerbook, Achievements, Encyclopedia, Search |
+| Account contract | `src/lib/snapshot/schema.ts` | The single shape of a snapshot (Zod-validated) |
+| Catalog contract | `src/lib/catalog/schema.ts` | The shape of catalog entries + source precedence |
+| Catalog seed | `data/catalog/*.json` | Mechanic-accurate U50 reference data (sets, skills, CP, scribing, achievements) |
 | Lua parser | `src/lib/snapshot/lua-parser.ts` | Reads ESO `SavedVariables` Lua from disk |
-| Local DB | `src/lib/db` | SQLite schema, importer, and queries |
+| Local DB | `src/lib/db` | SQLite schema, importer, queries, and account↔catalog overlays |
 | Importer / watcher | `scripts/` | One-shot import and a background auto-import watcher |
-| In-game addon | `addon/NirnsideSnapshot` | Writes account/character data on login & ReloadUI |
+| Snapshot addon | `addon/NirnsideSnapshot` | Writes account/character data on login & ReloadUI |
+| Catalog addon | `addon/NirnsideCatalog` | OPT-IN `/nirncatalog` scan of the live game catalog (AFK) |
 | Sample data | `data/sample/Nirnside.lua` | A realistic snapshot so you can try it without the game |
 
 ## Quick start (try it with sample data)
@@ -64,6 +88,19 @@ or `/reloadui` in ESO refreshes the app on its own. No env vars, no second
 terminal. The Home page shows exactly which file it's reading from. If the addon
 hasn't written a file yet, the app keeps looking and picks it up the moment it
 appears.
+
+### Optional: in-game-verified catalog
+
+The encyclopedia ships with mechanic-accurate reference data out of the box. To
+upgrade it to **in-game-verified** values (real Champion Point descriptions,
+skill tooltips, set names/ids straight from your client):
+
+1. Copy `addon/NirnsideCatalog` into your AddOns folder and enable it.
+2. **While AFK** (not in combat), run `/nirncatalog`, then `/reloadui` to write it.
+
+Nirnside finds `NirnsideCatalog.lua` next to your snapshot, imports it as
+`ingame`, and merges it over the reference data field by field. This addon is
+**opt-in only** — it never runs automatically and refuses to run in combat.
 
 ### Config (optional — only if your ESO install is somewhere unusual)
 
