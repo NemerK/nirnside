@@ -86,4 +86,10 @@ export function getMeta<T = unknown>(key: string): T | null {
   return row ? (JSON.parse(row.value) as T) : null;
 }
 
+export function setMeta(key: string, value: unknown): void {
+  getDb()
+    .prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(key, JSON.stringify(value));
+}
+
 export const DB_FILE = DB_PATH;

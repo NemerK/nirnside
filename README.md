@@ -34,37 +34,47 @@ npm run seed      # loads data/sample/Nirnside.lua into the local DB
 npm run dev       # http://127.0.0.1:43117
 ```
 
-## Using it with your real account (PC)
+## Using it with your real account (PC) — no configuration
+
+Run Nirnside **on the same PC you play ESO on** and it finds your data by itself.
 
 1. **Install the addon.** Copy `addon/NirnsideSnapshot` into your ESO AddOns folder:
    `Documents/Elder Scrolls Online/live/AddOns/` (the folder that holds your other addons).
 2. **Enable it** in the in-game AddOns menu, then **log in each character once** and
    log out or type `/reloadui`. You can also force a capture with `/nirnside`.
    The addon only ever runs at login / ReloadUI and **never during combat**.
-3. **Point Nirnside at the file** the game wrote. On EU:
-   `Documents/Elder Scrolls Online/liveeu/SavedVariables/NirnsideSnapshot.lua`
-   (on NA it's `live/…`).
-4. **Auto-import in the background** so the app stays current:
+3. **Start the app** and open it:
 
    ```bash
-   NIRNSIDE_SV_FILE="/path/to/SavedVariables/NirnsideSnapshot.lua" npm run watch
+   npm install
+   npm run dev      # http://127.0.0.1:43117
    ```
 
-   Or import once:
+That's the whole setup. On startup Nirnside automatically scans the standard ESO
+locations for `NirnsideSnapshot.lua`:
 
-   ```bash
-   npm run import -- "/path/to/SavedVariables/NirnsideSnapshot.lua"
-   ```
+```
+Documents/Elder Scrolls Online/liveeu/SavedVariables/NirnsideSnapshot.lua   (EU)
+Documents/Elder Scrolls Online/live/SavedVariables/NirnsideSnapshot.lua     (NA)
+…and the OneDrive-redirected Documents variants on Windows.
+```
 
-5. `npm run dev` and open the app. Leave `npm run watch` running and every logout /
-   ReloadUI refreshes the app automatically.
+When it finds the file it imports your account, then **watches it** — every logout
+or `/reloadui` in ESO refreshes the app on its own. No env vars, no second
+terminal. The Home page shows exactly which file it's reading from. If the addon
+hasn't written a file yet, the app keeps looking and picks it up the moment it
+appears.
 
-### Config
+### Config (optional — only if your ESO install is somewhere unusual)
 
 | Env var | Default | Meaning |
 | --- | --- | --- |
-| `NIRNSIDE_SV_FILE` | `data/sample/Nirnside.lua` | SavedVariables file to import / watch |
+| `NIRNSIDE_SV_FILE` | *(auto-detected)* | Force a specific SavedVariables file |
+| `NIRNSIDE_SV_DIR` | *(auto-detected)* | Force the SavedVariables folder to look in |
 | `NIRNSIDE_DB` | `data/nirnside.db` | Local SQLite database path |
+
+You can still import/watch manually if you prefer (`npm run import -- <file>`,
+`npm run watch -- <file>`), but you shouldn't need to.
 
 ## How "unknown" works
 

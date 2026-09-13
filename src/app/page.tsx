@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Backpack, BookMarked, Coins, Library, Shield, Sparkles, Users } from "lucide-react";
-import { getAccount, getCharacters, getItemCount, getStickerbookStats } from "@/lib/db/queries";
+import { getAccount, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
 import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
 import { CharacterCard } from "@/components/character-card";
+import { DataSourceBanner } from "@/components/data-source-banner";
 import { formatDateTime, formatGold, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   const account = safe(() => getAccount());
+  const dataSource = safe(() => getDataSource());
   if (!account) return <Onboarding />;
 
   const characters = safe(() => getCharacters()) ?? [];
@@ -24,6 +26,8 @@ export default function HomePage() {
           account.lastSnapshot,
         )}`}
       />
+
+      <DataSourceBanner source={dataSource} />
 
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Characters" value={characters.length} />
@@ -121,23 +125,28 @@ function Onboarding() {
         title="Welcome to Nirnside"
         subtitle="Your Elder Scrolls Online account, viewable outside the game — and entirely on your own machine."
       />
-      <EmptyState title="No account imported yet" icon={<Users className="h-8 w-8" />}>
+      <EmptyState title="Looking for your account…" icon={<Users className="h-8 w-8" />}>
         <p className="mb-4">
-          Nirnside reads the data the game writes to disk. Nothing is uploaded anywhere. To get started:
+          Nirnside auto-detects the data ESO writes to disk — nothing is uploaded anywhere, and there&apos;s nothing to
+          configure. Just:
         </p>
         <ol className="mx-auto max-w-md list-decimal space-y-2 text-left text-fg">
           <li>
-            Install the <code className="rounded bg-surface-2 px-1">NirnsideSnapshot</code> addon (in{" "}
-            <code className="rounded bg-surface-2 px-1">addon/</code>).
+            Copy the <code className="rounded bg-surface-2 px-1">NirnsideSnapshot</code> addon (in{" "}
+            <code className="rounded bg-surface-2 px-1">addon/</code>) into your ESO AddOns folder and enable it.
           </li>
-          <li>Log into each character once, then log out or <code className="rounded bg-surface-2 px-1">/reloadui</code>.</li>
           <li>
-            Run <code className="rounded bg-surface-2 px-1">npm run watch</code> (auto-import) or{" "}
-            <code className="rounded bg-surface-2 px-1">npm run import</code> once.
+            Log into each character once, then log out or type{" "}
+            <code className="rounded bg-surface-2 px-1">/reloadui</code>.
+          </li>
+          <li>
+            That&apos;s it. If this app is running on the same PC, it finds your file and loads your account within a few
+            seconds — and refreshes on every logout after that.
           </li>
         </ol>
         <p className="mt-4 text-fg-subtle">
-          Want to see it first? Run <code className="rounded bg-surface-2 px-1">npm run seed</code> to load sample data.
+          Running this on a machine without ESO? There&apos;s nothing to detect here. Use{" "}
+          <code className="rounded bg-surface-2 px-1">npm run seed</code> to preview with sample data.
         </p>
       </EmptyState>
     </div>

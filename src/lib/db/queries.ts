@@ -11,6 +11,19 @@ export function getAccount(): AccountMeta | null {
   return getMeta<AccountMeta>("account");
 }
 
+export interface DataSource {
+  kind: "env" | "eso" | "sample";
+  path: string;
+  label: string;
+  at: number;
+  ok: boolean;
+  error?: string;
+}
+
+export function getDataSource(): DataSource | null {
+  return getMeta<DataSource>("dataSource");
+}
+
 export function hasData(): boolean {
   return getAccount() !== null;
 }
