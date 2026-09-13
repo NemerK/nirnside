@@ -1,112 +1,100 @@
 import Link from "next/link";
-import {
-  BadgeCheck,
-  Boxes,
-  Feather,
-  Library,
-  Shirt,
-  Sparkles,
-  Star,
-  Swords,
-} from "lucide-react";
+import { BadgeCheck, Boxes, Feather, Shirt, Star, Swords } from "lucide-react";
 import { Badge, Card, PageHeader } from "@/components/ui";
-import { getStickerbook } from "@/lib/db/queries";
+import { catalogCount } from "@/lib/db/catalog-queries";
+import { getCatalogMeta } from "@/lib/catalog/import";
+import { SourceBadge } from "@/components/source-badge";
+import type { CatalogSource } from "@/lib/catalog/schema";
 
 export const dynamic = "force-dynamic";
 
-const DOMAINS = [
-  { href: "/encyclopedia/sets", title: "Item Sets", desc: "Bonuses, pieces, drop sources.", icon: Shirt, ready: true },
-  { href: "/encyclopedia", title: "Skills & Morphs", desc: "Every line, morph and skill style.", icon: Swords, ready: false },
-  { href: "/encyclopedia", title: "Scribing", desc: "Grimoires, scripts, full combinations.", icon: Feather, ready: false },
-  { href: "/encyclopedia", title: "Champion Points", desc: "The live constellation tree.", icon: Star, ready: false },
-  { href: "/encyclopedia", title: "Items", desc: "All item definitions and tooltips.", icon: Boxes, ready: false },
-  { href: "/encyclopedia", title: "Collectibles", desc: "Motifs, mounts, styles, dyes.", icon: Sparkles, ready: false },
-];
-
 export default function EncyclopediaPage() {
-  let knownSets = 0;
-  try {
-    knownSets = getStickerbook().length;
-  } catch {
-    knownSets = 0;
-  }
+  const meta = safe(() => getCatalogMeta());
+  const counts = {
+    set: safe(() => catalogCount("set")) ?? 0,
+    skill: safe(() => catalogCount("skill")) ?? 0,
+    skillline: safe(() => catalogCount("skillline")) ?? 0,
+    cp: safe(() => catalogCount("cp")) ?? 0,
+    grimoire: safe(() => catalogCount("grimoire")) ?? 0,
+    script: safe(() => catalogCount("script")) ?? 0,
+  };
+
+  const domains = [
+    { href: "/encyclopedia/sets", title: "Item Sets", desc: "Bonuses, pieces, drop sources.", icon: Shirt, count: counts.set, unit: "sets" },
+    { href: "/encyclopedia/skills", title: "Skills & Morphs", desc: "Every line, ability and morph.", icon: Swords, count: counts.skillline, unit: "lines" },
+    { href: "/encyclopedia/champion-points", title: "Champion Points", desc: "The live constellation stars.", icon: Star, count: counts.cp, unit: "stars" },
+    { href: "/encyclopedia/scribing", title: "Scribing", desc: "Grimoires, scripts, full combinations.", icon: Feather, count: counts.grimoire, unit: "grimoires" },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Encyclopedia"
-        subtitle="Live Tamriel reference. Accuracy first — in-game data always wins over community sources."
+        subtitle="Live Tamriel reference, sharing one database with your account. In-game data always wins."
+        action={meta ? <SourceBadge source={meta.source as CatalogSource} /> : undefined}
       />
 
-      <Card className="mb-6 flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent-soft text-accent">
-            <BadgeCheck className="h-5 w-5" />
-          </span>
-          <div className="text-sm text-fg-muted">
-            <p className="font-medium text-fg">How the catalog is sourced</p>
-            <p className="mt-1 max-w-2xl">
-              Data confirmed against your in-game snapshots is tagged{" "}
-              <Badge tone="ok" className="align-middle">
-                In-game verified
-              </Badge>
-              . Anything filled from community databases before verification is tagged{" "}
-              <Badge tone="muted" className="align-middle">
-                Community
-              </Badge>{" "}
-              and never presented as confirmed. The catalog tracks the current live patch only — nothing deprecated.
-            </p>
-          </div>
+      <Card className="mb-6 flex items-start gap-3 p-4">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent-soft text-accent">
+          <BadgeCheck className="h-5 w-5" />
+        </span>
+        <div className="text-sm text-fg-muted">
+          <p className="font-medium text-fg">Patch {meta?.patch ?? "U50"} · one shared catalog</p>
+          <p className="mt-1 max-w-3xl">
+            Every set, skill, Champion star and scribing script here links to your account — and your characters link
+            back to these pages. Entries badged{" "}
+            <Badge tone="muted" className="align-middle">
+              Reference
+            </Badge>{" "}
+            show mechanics but hold exact numbers until an in-game scan confirms them; the{" "}
+            <code className="rounded bg-surface-2 px-1">NirnsideCatalog</code> addon upgrades them to{" "}
+            <Badge tone="ok" className="align-middle">
+              In-game verified
+            </Badge>
+            . Only current live-patch content appears — nothing deprecated.
+          </p>
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {DOMAINS.map((d) => {
-          const Inner = (
-            <>
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent-soft text-accent">
-                <d.icon className="h-5 w-5" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {domains.map((d) => (
+          <Link
+            key={d.title}
+            href={d.href}
+            className="group flex items-start gap-4 rounded-xl border border-border bg-surface/70 p-5 transition-colors hover:border-accent/50 hover:bg-surface-2"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent-soft text-accent">
+              <d.icon className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-2">
+                <span className="font-medium text-fg group-hover:text-accent">{d.title}</span>
+                <Badge tone="accent">
+                  {d.count} {d.unit}
+                </Badge>
               </span>
-              <span className="min-w-0">
-                <span className="flex items-center gap-2">
-                  <span className="font-medium text-fg">{d.title}</span>
-                  {d.ready ? (
-                    <Badge tone="ok">
-                      {d.title === "Item Sets" ? `${knownSets} verified` : "Ready"}
-                    </Badge>
-                  ) : (
-                    <Badge tone="muted">Planned</Badge>
-                  )}
-                </span>
-                <span className="mt-0.5 block text-sm text-fg-muted">{d.desc}</span>
-              </span>
-            </>
-          );
-          return d.ready ? (
-            <Link
-              key={d.title}
-              href={d.href}
-              className="group flex items-start gap-4 rounded-xl border border-border bg-surface/70 p-5 transition-colors hover:border-accent/50 hover:bg-surface-2"
-            >
-              {Inner}
-            </Link>
-          ) : (
-            <div key={d.title} className="flex items-start gap-4 rounded-xl border border-border bg-surface/40 p-5 opacity-80">
-              {Inner}
-            </div>
-          );
-        })}
+              <span className="mt-0.5 block text-sm text-fg-muted">{d.desc}</span>
+            </span>
+          </Link>
+        ))}
       </div>
 
-      <Card className="mt-6 flex items-start gap-3 p-5 text-sm text-fg-muted">
-        <Library className="mt-0.5 h-5 w-5 shrink-0 text-fg-subtle" />
+      <Card className="mt-6 flex items-center gap-3 p-4 text-sm text-fg-muted">
+        <Boxes className="h-5 w-5 shrink-0 text-fg-subtle" />
         <p>
-          The encyclopedia and your account view share one local database, so pages can show your progress right on a
-          set or skill. The full live catalog (skills, scribing, CP, items) is ingested per patch — see{" "}
-          <code className="rounded bg-surface-2 px-1">.cursor/rules/nirnside.mdc</code> for the accuracy rules that
-          govern it.
+          {counts.set} sets · {counts.skillline} skill lines · {counts.skill} abilities · {counts.cp} CP stars ·{" "}
+          {counts.grimoire} grimoires · {counts.script} scripts in the catalog. More domains (items, collectibles,
+          antiquities, quests) ingest per patch into this same database.
         </p>
       </Card>
     </div>
   );
+}
+
+function safe<T>(fn: () => T): T | null {
+  try {
+    return fn();
+  } catch {
+    return null;
+  }
 }

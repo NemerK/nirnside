@@ -71,6 +71,21 @@ export const getSet = (id: string) => one<CatalogSet>("set", id);
 export const getSetByName = (name: string) => byName<CatalogSet>("set", name);
 export const setCategories = () => categories("set");
 
+/** Resolve a catalog set href from a name or game setId; falls back to search. */
+export function setHref(opts: { name?: string | null; setId?: number | null }): string {
+  if (opts.name) {
+    const byNm = getSetByName(opts.name);
+    if (byNm) return `/encyclopedia/sets/${encodeURIComponent(byNm.entry.id)}`;
+  }
+  if (opts.setId != null) {
+    const row = getDb()
+      .prepare("SELECT id FROM catalog WHERE domain = 'set' AND json_extract(json, '$.setId') = ? LIMIT 1")
+      .get(opts.setId) as { id: string } | undefined;
+    if (row) return `/encyclopedia/sets/${encodeURIComponent(row.id)}`;
+  }
+  return `/encyclopedia/sets?search=${encodeURIComponent(opts.name ?? "")}`;
+}
+
 export const getSkillLines = (f?: Filters) => query<CatalogSkillLine>("skillline", f);
 export const getSkillLine = (id: string) => one<CatalogSkillLine>("skillline", id);
 export const getSkillLineByName = (name: string) => byName<CatalogSkillLine>("skillline", name);
