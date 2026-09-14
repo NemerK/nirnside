@@ -31,23 +31,41 @@ end
 -- Value mappers
 ----------------------------------------------------------------------
 
-local QUALITY = {
-  [ITEM_FUNCTIONAL_QUALITY_TRASH]     = "trash",
-  [ITEM_FUNCTIONAL_QUALITY_NORMAL]    = "normal",
-  [ITEM_FUNCTIONAL_QUALITY_MAGIC]     = "fine",
-  [ITEM_FUNCTIONAL_QUALITY_ARCANE]    = "superior",
-  [ITEM_FUNCTIONAL_QUALITY_ARTIFACT]  = "epic",
-  [ITEM_FUNCTIONAL_QUALITY_LEGENDARY] = "legendary",
-  [ITEM_FUNCTIONAL_QUALITY_MYTHIC_OVERRIDE] = "mythic",
-}
+-- Built at load time from a list of {constant, label} pairs. Any constant that
+-- is missing in the current API (nil) is simply skipped, instead of being used
+-- as a nil table key -- which would throw "table index is nil" and error the
+-- game the instant the addon loads. Mythic is handled separately (display
+-- quality), because it has no functional-quality constant.
+local function buildLookup(pairs_)
+  local t = {}
+  for _, pair in ipairs(pairs_) do
+    if pair[1] ~= nil then t[pair[1]] = pair[2] end
+  end
+  return t
+end
 
-local ALLIANCE = {
-  [ALLIANCE_ALDMERI_DOMINION]   = "Aldmeri Dominion",
-  [ALLIANCE_DAGGERFALL_COVENANT]= "Daggerfall Covenant",
-  [ALLIANCE_EBONHEART_PACT]     = "Ebonheart Pact",
-}
+local QUALITY = buildLookup({
+  { ITEM_FUNCTIONAL_QUALITY_TRASH,     "trash" },
+  { ITEM_FUNCTIONAL_QUALITY_NORMAL,    "normal" },
+  { ITEM_FUNCTIONAL_QUALITY_MAGIC,     "fine" },
+  { ITEM_FUNCTIONAL_QUALITY_ARCANE,    "superior" },
+  { ITEM_FUNCTIONAL_QUALITY_ARTIFACT,  "epic" },
+  { ITEM_FUNCTIONAL_QUALITY_LEGENDARY, "legendary" },
+})
+
+local ALLIANCE = buildLookup({
+  { ALLIANCE_ALDMERI_DOMINION,    "Aldmeri Dominion" },
+  { ALLIANCE_DAGGERFALL_COVENANT, "Daggerfall Covenant" },
+  { ALLIANCE_EBONHEART_PACT,      "Ebonheart Pact" },
+})
 
 local function qualityString(link)
+  local isMythic = safe(function()
+    return ITEM_DISPLAY_QUALITY_MYTHIC_OVERRIDE ~= nil
+      and GetItemLinkDisplayQuality
+      and GetItemLinkDisplayQuality(link) == ITEM_DISPLAY_QUALITY_MYTHIC_OVERRIDE
+  end, false)
+  if isMythic then return "mythic" end
   local q = safe(function() return GetItemLinkFunctionalQuality(link) end, nil)
   return q and QUALITY[q] or "normal"
 end

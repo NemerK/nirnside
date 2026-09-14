@@ -1,6 +1,6 @@
 ## Title: Nirnside Snapshot
 ## Author: Nirnside
-## Version: 0.1.0
+## Version: 0.1.1
 ## APIVersion: 101046
 ## AddOnVersion: 1
 ## SavedVariables: NirnsideData
