@@ -38,6 +38,19 @@ export function getDataSource(): DataSource | null {
   return getMeta<DataSource>("dataSource");
 }
 
+export interface AutoSetup {
+  addOnsDirs: string[];
+  changed: number;
+  installed: string[];
+  updated: string[];
+  errors: string[];
+  at: number;
+}
+
+export function getAutoSetup(): AutoSetup | null {
+  return getMeta<AutoSetup>("autoSetup");
+}
+
 export function hasData(): boolean {
   return getAccount() !== null;
 }

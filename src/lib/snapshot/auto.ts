@@ -6,6 +6,7 @@ import { locateSnapshot, candidatePaths, type SnapshotSource } from "./locate";
 import { importSnapshot } from "../db/import";
 import { setMeta } from "../db";
 import { loadReferenceCatalog, loadCatalogFromLua } from "../catalog/load";
+import { installAddons } from "../setup/install-addons";
 
 /**
  * The "work-free" engine. Started once when the app boots (see instrumentation).
@@ -131,10 +132,37 @@ function loadCatalog() {
   }
 }
 
+/** Install/update our addons into any ESO AddOns folder found on this machine. */
+function autoSetup() {
+  try {
+    const res = installAddons();
+    if (res.addOnsDirs.length > 0) {
+      const changed = res.installed.length + res.updated.length;
+      console.log(
+        `[nirnside] auto-setup: ${res.addOnsDirs.length} AddOns folder(s); ` +
+          `${res.installed.length} installed, ${res.updated.length} updated, ${res.upToDate.length} up-to-date.`,
+      );
+      setMeta("autoSetup", {
+        addOnsDirs: res.addOnsDirs,
+        changed,
+        installed: res.installed,
+        updated: res.updated,
+        errors: res.errors,
+        at: Date.now(),
+      });
+    } else {
+      setMeta("autoSetup", { addOnsDirs: [], changed: 0, installed: [], updated: [], errors: [], at: Date.now() });
+    }
+  } catch (err) {
+    console.error(`[nirnside] auto-setup failed: ${err instanceof Error ? err.message : err}`);
+  }
+}
+
 export function startAutoImport() {
   if (started) return;
   started = true;
 
+  autoSetup();
   loadCatalog();
 
   const found = locateSnapshot(true);

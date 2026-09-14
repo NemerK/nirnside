@@ -1,29 +1,40 @@
-import { CheckCircle2, FolderSearch, TriangleAlert } from "lucide-react";
-import type { DataSource } from "@/lib/db/queries";
+import { CheckCircle2, FolderSearch, PackageCheck, TriangleAlert } from "lucide-react";
+import type { AutoSetup, DataSource } from "@/lib/db/queries";
 import { Card } from "./ui";
 
 /**
  * Tells the user exactly where their data is coming from. The whole app is
  * auto-detected, so this makes "is this my real account?" answerable at a glance.
  */
-export function DataSourceBanner({ source }: { source: DataSource | null }) {
+export function DataSourceBanner({ source, setup }: { source: DataSource | null; setup?: AutoSetup | null }) {
   if (!source) return null;
 
   if (source.kind === "sample") {
+    const foundEso = (setup?.addOnsDirs.length ?? 0) > 0;
     return (
       <Card className="mb-6 flex items-start gap-3 border-accent/40 bg-accent-soft p-4">
-        <FolderSearch className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+        {foundEso ? (
+          <PackageCheck className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+        ) : (
+          <FolderSearch className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+        )}
         <div className="text-sm text-fg">
-          <span className="font-medium">Showing sample data.</span> No ESO{" "}
-          <code className="rounded bg-surface-2 px-1">SavedVariables</code> file was found on this machine, so Nirnside
-          loaded a demo account. Two ways to see your real account:{" "}
-          <span className="text-fg-muted">
-            run Nirnside on the PC where you play ESO (with the{" "}
-            <code className="rounded bg-surface-2 px-1">NirnsideSnapshot</code> addon) and it auto-detects your file —
-            or, if this is running somewhere without ESO, drop your{" "}
-            <code className="rounded bg-surface-2 px-1">NirnsideSnapshot.lua</code> into{" "}
-            <code className="rounded bg-surface-2 px-1">data/incoming/</code> and it loads within seconds.
-          </span>
+          <span className="font-medium">Showing sample data.</span>{" "}
+          {foundEso ? (
+            <span className="text-fg-muted">
+              Nirnside found your ESO install and set up its addon in{" "}
+              <code className="rounded bg-surface-2 px-1">{setup!.addOnsDirs.length}</code> AddOns folder(s) for you.
+              Enable <span className="font-medium text-fg">Nirnside Snapshot</span> in the in-game AddOns menu once,
+              then log a character out or <code className="rounded bg-surface-2 px-1">/reloadui</code> — your real
+              account loads here automatically within seconds.
+            </span>
+          ) : (
+            <span className="text-fg-muted">
+              No ESO <code className="rounded bg-surface-2 px-1">SavedVariables</code> was found on this machine (this
+              preview runs on a remote server with no ESO). Run Nirnside on the PC where you play and it installs its
+              own addon, detects your account, and refreshes on every logout — no manual setup.
+            </span>
+          )}
         </div>
       </Card>
     );

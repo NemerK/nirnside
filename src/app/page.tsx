@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Backpack, BookMarked, Coins, Library, Shield, Sparkles, Trophy, Users } from "lucide-react";
-import { getAccount, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
+import { getAccount, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
 import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
 import { CharacterCard } from "@/components/character-card";
 import { DataSourceBanner } from "@/components/data-source-banner";
@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 export default function HomePage() {
   const account = safe(() => getAccount());
   const dataSource = safe(() => getDataSource());
-  if (!account) return <Onboarding />;
+  const autoSetup = safe(() => getAutoSetup());
+  if (!account) return <Onboarding setup={autoSetup} />;
 
   const characters = safe(() => getCharacters()) ?? [];
   const itemCount = safe(() => getItemCount()) ?? 0;
@@ -27,7 +28,7 @@ export default function HomePage() {
         )}`}
       />
 
-      <DataSourceBanner source={dataSource} />
+      <DataSourceBanner source={dataSource} setup={autoSetup} />
 
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Characters" value={characters.length} />
@@ -124,37 +125,45 @@ function MiniInfo({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function Onboarding() {
+function Onboarding({ setup }: { setup: ReturnType<typeof getAutoSetup> }) {
+  const foundEso = (setup?.addOnsDirs.length ?? 0) > 0;
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader
         title="Welcome to Nirnside"
         subtitle="Your Elder Scrolls Online account, viewable outside the game — and entirely on your own machine."
       />
-      <EmptyState title="Looking for your account…" icon={<Users className="h-8 w-8" />}>
-        <p className="mb-4">
-          Nirnside auto-detects the data ESO writes to disk — nothing is uploaded anywhere, and there&apos;s nothing to
-          configure. Just:
-        </p>
-        <ol className="mx-auto max-w-md list-decimal space-y-2 text-left text-fg">
-          <li>
-            Copy the <code className="rounded bg-surface-2 px-1">NirnsideSnapshot</code> addon (in{" "}
-            <code className="rounded bg-surface-2 px-1">addon/</code>) into your ESO AddOns folder and enable it.
-          </li>
-          <li>
-            Log into each character once, then log out or type{" "}
-            <code className="rounded bg-surface-2 px-1">/reloadui</code>.
-          </li>
-          <li>
-            That&apos;s it. If this app is running on the same PC, it finds your file and loads your account within a few
-            seconds — and refreshes on every logout after that.
-          </li>
-        </ol>
-        <p className="mt-4 text-fg-subtle">
-          Running this on a machine without ESO? There&apos;s nothing to detect here. Use{" "}
-          <code className="rounded bg-surface-2 px-1">npm run seed</code> to preview with sample data.
-        </p>
-      </EmptyState>
+      {foundEso ? (
+        <EmptyState title="Addon installed — waiting for your first snapshot" icon={<Users className="h-8 w-8" />}>
+          <p className="mb-4">
+            Nirnside found your ESO install and set up its addon in{" "}
+            <code className="rounded bg-surface-2 px-1">{setup!.addOnsDirs.length}</code> AddOns folder(s) automatically.
+            One click left:
+          </p>
+          <ol className="mx-auto max-w-md list-decimal space-y-2 text-left text-fg">
+            <li>
+              In game, open <span className="font-medium">AddOns</span> and enable{" "}
+              <span className="font-medium">Nirnside Snapshot</span>.
+            </li>
+            <li>
+              Log a character out, or type <code className="rounded bg-surface-2 px-1">/reloadui</code>.
+            </li>
+            <li>Your account appears here within seconds, and refreshes on every logout after that.</li>
+          </ol>
+        </EmptyState>
+      ) : (
+        <EmptyState title="Looking for your account…" icon={<Users className="h-8 w-8" />}>
+          <p className="mb-4">
+            Nirnside sets itself up: on the PC where you play ESO it finds your install, installs its own addon, then
+            auto-detects and live-refreshes your account. Nothing is uploaded anywhere.
+          </p>
+          <p className="text-fg-subtle">
+            This preview is running on a remote machine with no ESO, so there&apos;s nothing to detect here. Run Nirnside
+            on your gaming PC for the automatic experience, or use{" "}
+            <code className="rounded bg-surface-2 px-1">npm run seed</code> to preview with sample data.
+          </p>
+        </EmptyState>
+      )}
     </div>
   );
 }

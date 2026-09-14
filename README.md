@@ -58,29 +58,35 @@ npm run seed      # loads data/sample/Nirnside.lua into the local DB
 npm run dev       # http://127.0.0.1:43117
 ```
 
-## Using it with your real account (PC) — no configuration
+## Using it with your real account (PC) — nothing to set up
 
-Run Nirnside **on the same PC you play ESO on** and it finds your data by itself.
+Run Nirnside **on the same PC you play ESO on**. It sets *itself* up:
 
-1. **Install the addon.** Copy `addon/NirnsideSnapshot` into your ESO AddOns folder:
-   `Documents/Elder Scrolls Online/live/AddOns/` (the folder that holds your other addons).
-2. **Enable it** in the in-game AddOns menu, then **log in each character once** and
-   log out or type `/reloadui`. You can also force a capture with `/nirnside`.
-   The addon only ever runs at login / ReloadUI and **never during combat**.
-3. **Start the app** and open it:
+1. **Start it.** Double-click **`start-nirnside.cmd`** (Windows) or run
+   **`./start-nirnside.sh`** (macOS/Linux). On first run it installs dependencies,
+   starts the app, and opens your browser. (Node.js LTS from <https://nodejs.org>
+   is the only prerequisite.)
+2. On startup Nirnside **searches your drives** for your ESO install and **installs
+   its own addon into every ESO AddOns folder it finds** — you don't copy anything.
+3. In game, enable **Nirnside Snapshot** in the AddOns menu once, then log a
+   character out or type `/reloadui`. The addon only ever runs at login / ReloadUI
+   and **never during combat**; force a capture anytime with `/nirnside`.
+4. Nirnside detects the file, imports it, and **watches it** — every logout or
+   `/reloadui` refreshes the app on its own. No env vars, no manual import.
 
-   ```bash
-   npm install
-   npm run dev      # http://127.0.0.1:43117
-   ```
+Prefer to do it by hand? You still can: `npm install && npm run dev`, and copy
+`addon/NirnsideSnapshot` into `Documents/Elder Scrolls Online/live/AddOns/`
+yourself. But you shouldn't need to.
 
-That's the whole setup. On startup Nirnside automatically scans the standard ESO
-locations for `NirnsideSnapshot.lua`:
+On startup Nirnside scans broadly for your ESO folder — every Windows drive's
+`Users\*`, plain `Documents`, any `OneDrive*` (personal or business) Documents,
+localized Documents names, and every environment folder (`liveeu`, `live`, `pts`,
+or any custom one with a `SavedVariables` subdir):
 
 ```
 Documents/Elder Scrolls Online/liveeu/SavedVariables/NirnsideSnapshot.lua   (EU)
 Documents/Elder Scrolls Online/live/SavedVariables/NirnsideSnapshot.lua     (NA)
-…and the OneDrive-redirected Documents variants on Windows.
+…plus OneDrive-redirected + other-drive variants on Windows.
 ```
 
 When it finds the file it imports your account, then **watches it** — every logout

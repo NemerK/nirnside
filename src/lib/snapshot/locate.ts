@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -35,30 +35,99 @@ export function incomingPath(): string {
 /** ESO "live" environment folders, most-preferred first. */
 const ESO_ENVS = ["liveeu", "live", "pts"] as const;
 
-/** Roots under which "Elder Scrolls Online" typically lives. */
-function esoRoots(): string[] {
-  const home = homedir();
-  const roots = [
-    join(home, "Documents", "Elder Scrolls Online"),
-    // Windows with OneDrive-redirected Documents.
-    join(home, "OneDrive", "Documents", "Elder Scrolls Online"),
-    // Some localized Windows setups.
-    join(home, "OneDrive", "Documenten", "Elder Scrolls Online"),
-    // macOS keeps it under Documents too; already covered by the first entry.
-  ];
-  // Windows explicit env var, if present.
-  if (process.env.USERPROFILE) {
-    roots.push(join(process.env.USERPROFILE, "Documents", "Elder Scrolls Online"));
-    roots.push(join(process.env.USERPROFILE, "OneDrive", "Documents", "Elder Scrolls Online"));
+const ESO_DIRNAME = "Elder Scrolls Online";
+
+function safeReaddir(dir: string): string[] {
+  try {
+    return readdirSync(dir);
+  } catch {
+    return [];
   }
-  return Array.from(new Set(roots));
+}
+
+function isDir(p: string): boolean {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The "Documents" folders to look under. Covers plain Documents, OneDrive (any
+ * "OneDrive*" folder, including business "OneDrive - Company"), and a few
+ * localized Documents names — across the home dir and USERPROFILE.
+ */
+function documentsDirs(): string[] {
+  const homes = new Set<string>([homedir()]);
+  if (process.env.USERPROFILE) homes.add(process.env.USERPROFILE);
+  if (process.env.HOME) homes.add(process.env.HOME);
+
+  const docNames = ["Documents", "Documenten", "Dokumente", "Documentos", "Documenti", "文档", "My Documents"];
+  const out: string[] = [];
+  for (const home of homes) {
+    // Direct Documents variants.
+    for (const d of docNames) out.push(join(home, d));
+    // Any OneDrive* folder under home, then its Documents variants.
+    for (const entry of safeReaddir(home)) {
+      if (/^onedrive/i.test(entry)) {
+        for (const d of docNames) out.push(join(home, entry, d));
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Windows drive roots to also probe (C:..Z:), for installs on a non-system
+ * drive or a relocated Users folder. No-op on macOS/Linux.
+ */
+function windowsUserRoots(): string[] {
+  if (process.platform !== "win32") return [];
+  const out: string[] = [];
+  for (let c = 67; c <= 90; c++) {
+    const drive = String.fromCharCode(c) + ":\\";
+    const users = join(drive, "Users");
+    if (!isDir(users)) continue;
+    for (const user of safeReaddir(users)) {
+      const base = join(users, user);
+      out.push(join(base, "Documents"));
+      for (const entry of safeReaddir(base)) {
+        if (/^onedrive/i.test(entry)) out.push(join(base, entry, "Documents"));
+      }
+    }
+  }
+  return out;
+}
+
+/** Roots under which the "Elder Scrolls Online" folder typically lives. */
+export function esoRoots(): string[] {
+  const roots: string[] = [];
+  for (const docs of [...documentsDirs(), ...windowsUserRoots()]) {
+    roots.push(join(docs, ESO_DIRNAME));
+  }
+  // Explicit override: a directory that directly contains liveeu/live/pts.
+  if (process.env.NIRNSIDE_ESO_DIR) roots.push(process.env.NIRNSIDE_ESO_DIR);
+  return Array.from(new Set(roots)).filter(isDir);
+}
+
+/**
+ * Environment folders (liveeu/live/pts, plus any other folder that has a
+ * SavedVariables subdir) under a given ESO root, in preference order.
+ */
+export function envFolders(root: string): string[] {
+  const known = ESO_ENVS.filter((e) => isDir(join(root, e)));
+  const extra = safeReaddir(root).filter(
+    (e) => !ESO_ENVS.includes(e as (typeof ESO_ENVS)[number]) && isDir(join(root, e, "SavedVariables")),
+  );
+  return [...known, ...extra];
 }
 
 /** Every candidate SavedVariables file path we'd consider, in priority order. */
 export function candidatePaths(): string[] {
   const out: string[] = [incomingPath()];
   for (const root of esoRoots()) {
-    for (const env of ESO_ENVS) {
+    for (const env of envFolders(root)) {
       out.push(join(root, env, "SavedVariables", SNAPSHOT_FILENAME));
     }
   }
@@ -89,7 +158,7 @@ export function locateSnapshot(includeSample = true): SnapshotSource | null {
   }
 
   for (const root of esoRoots()) {
-    for (const env of ESO_ENVS) {
+    for (const env of envFolders(root)) {
       const p = join(root, env, "SavedVariables", SNAPSHOT_FILENAME);
       if (existsSync(p)) return { kind: "eso", path: p, label: env };
     }
