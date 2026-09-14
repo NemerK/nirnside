@@ -31,7 +31,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   }
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    // The pre-paint themeScript adds a `theme-*` class to <html> before React
+    // hydrates (to avoid a flash of the wrong theme), so the html element's
+    // attributes intentionally differ between server and client. Suppress the
+    // resulting hydration warning for this element only.
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
