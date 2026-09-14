@@ -1,6 +1,7 @@
 import { CheckCircle2, FolderSearch, PackageCheck, TriangleAlert } from "lucide-react";
 import type { AutoSetup, DataSource } from "@/lib/db/queries";
 import { Card } from "./ui";
+import { ExitDemoButton } from "./demo-controls";
 
 /**
  * Tells the user exactly where their data is coming from. The whole app is
@@ -35,6 +36,9 @@ export function DataSourceBanner({ source, setup }: { source: DataSource | null;
               own addon, detects your account, and refreshes on every logout — no manual setup.
             </span>
           )}
+        </div>
+        <div className="ml-auto shrink-0">
+          <ExitDemoButton />
         </div>
       </Card>
     );

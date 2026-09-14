@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Backpack, BookMarked, Coins, Library, Shield, Sparkles, Trophy, Users } from "lucide-react";
 import { getAccount, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
+import { candidatePaths } from "@/lib/snapshot/locate";
 import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
 import { CharacterCard } from "@/components/character-card";
 import { DataSourceBanner } from "@/components/data-source-banner";
+import { LoadDemoButton } from "@/components/demo-controls";
 import { formatDateTime, formatGold, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +14,7 @@ export default function HomePage() {
   const account = safe(() => getAccount());
   const dataSource = safe(() => getDataSource());
   const autoSetup = safe(() => getAutoSetup());
-  if (!account) return <Onboarding setup={autoSetup} />;
+  if (!account) return <Onboarding setup={autoSetup} scanned={safe(() => candidatePaths()) ?? []} />;
 
   const characters = safe(() => getCharacters()) ?? [];
   const itemCount = safe(() => getItemCount()) ?? 0;
@@ -125,7 +127,13 @@ function MiniInfo({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function Onboarding({ setup }: { setup: ReturnType<typeof getAutoSetup> }) {
+function Onboarding({
+  setup,
+  scanned,
+}: {
+  setup: ReturnType<typeof getAutoSetup>;
+  scanned: string[];
+}) {
   const foundEso = (setup?.addOnsDirs.length ?? 0) > 0;
   return (
     <div className="mx-auto max-w-3xl">
@@ -159,11 +167,48 @@ function Onboarding({ setup }: { setup: ReturnType<typeof getAutoSetup> }) {
           </p>
           <p className="text-fg-subtle">
             This preview is running on a remote machine with no ESO, so there&apos;s nothing to detect here. Run Nirnside
-            on your gaming PC for the automatic experience, or use{" "}
-            <code className="rounded bg-surface-2 px-1">npm run seed</code> to preview with sample data.
+            on your gaming PC for the automatic experience.
           </p>
         </EmptyState>
       )}
+
+      <div className="mt-5 flex flex-col items-center gap-2">
+        <LoadDemoButton />
+        <p className="text-xs text-fg-subtle">
+          Just want a look around? Loads a clearly-labelled sample account you can remove anytime.
+        </p>
+      </div>
+
+      <details className="mt-8 rounded-xl border border-border bg-surface/60 p-4 text-sm">
+        <summary className="cursor-pointer text-fg-muted">Where Nirnside looked ({scanned.length} locations)</summary>
+        <p className="mt-3 text-xs text-fg-subtle">
+          You don&apos;t need to configure any of these — Nirnside checks them all automatically. OneDrive appears
+          because Windows often redirects your Documents folder into it. If your file is somewhere unusual, set{" "}
+          <code className="rounded bg-surface-2 px-1">NIRNSIDE_SV_FILE</code>.
+        </p>
+        {setup?.addOnsDirs.length ? (
+          <div className="mt-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">AddOns folders found</div>
+            <ul className="mt-1 space-y-0.5">
+              {setup.addOnsDirs.map((d) => (
+                <li key={d} className="font-mono text-xs text-fg">
+                  {d}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <div className="mt-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Snapshot paths checked</div>
+          <ul className="mt-1 space-y-0.5">
+            {scanned.map((p) => (
+              <li key={p} className="font-mono text-xs text-fg-muted">
+                {p}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </details>
     </div>
   );
 }

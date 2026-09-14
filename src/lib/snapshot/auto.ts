@@ -4,7 +4,7 @@ import { watch, type FSWatcher } from "chokidar";
 import { loadSnapshotFromFile } from "./load";
 import { locateSnapshot, candidatePaths, type SnapshotSource } from "./locate";
 import { importSnapshot } from "../db/import";
-import { setMeta } from "../db";
+import { getDb, setMeta } from "../db";
 import { loadReferenceCatalog, loadCatalogFromLua } from "../catalog/load";
 import { installAddons } from "../setup/install-addons";
 
@@ -165,7 +165,10 @@ export function startAutoImport() {
   autoSetup();
   loadCatalog();
 
-  const found = locateSnapshot(true);
+  // Real data only. We never auto-load the sample account — showing fabricated
+  // data as if it were yours violates the accuracy rule. The demo is opt-in
+  // (see loadSampleData / the Home page button).
+  const found = locateSnapshot(false);
   if (found) {
     beginWatch(found);
     return;
@@ -177,11 +180,30 @@ export function startAutoImport() {
       "\nInstall the addon and log out once; it'll be picked up automatically.",
   );
   const iv = setInterval(() => {
-    const src = locateSnapshot(true);
+    const src = locateSnapshot(false);
     if (src) {
       clearInterval(iv);
       beginWatch(src);
     }
   }, 20_000);
   if (typeof iv.unref === "function") iv.unref();
+}
+
+/** Opt-in: import the bundled sample account so users can tour a populated app. */
+export function loadSampleData(): boolean {
+  const sample = join(process.cwd(), "data", "sample", "Nirnside.lua");
+  if (!existsSync(sample)) return false;
+  doImport({ kind: "sample", path: sample, label: "sample data" }, "demo");
+  return true;
+}
+
+/** Clear the imported account (returns the app to its honest empty state). */
+export function clearAccountData(): void {
+  try {
+    const db = getDb();
+    db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook;");
+    db.prepare("DELETE FROM meta WHERE key IN ('account','dataSource')").run();
+  } catch (err) {
+    console.error(`[nirnside] clear failed: ${err instanceof Error ? err.message : err}`);
+  }
 }
