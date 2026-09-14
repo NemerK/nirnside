@@ -19,8 +19,18 @@ export const SNAPSHOT_FILENAME = "NirnsideSnapshot.lua";
 
 export type SnapshotSource =
   | { kind: "env"; path: string; label: string }
+  | { kind: "uploaded"; path: string; label: string }
   | { kind: "eso"; path: string; label: string }
   | { kind: "sample"; path: string; label: string };
+
+/**
+ * Drop-in folder for a manually provided file. Useful when the app runs on a
+ * machine without ESO (e.g. a remote/cloud instance): put your real
+ * NirnsideSnapshot.lua here and it's imported and watched like a local file.
+ */
+export function incomingPath(): string {
+  return join(process.cwd(), "data", "incoming", SNAPSHOT_FILENAME);
+}
 
 /** ESO "live" environment folders, most-preferred first. */
 const ESO_ENVS = ["liveeu", "live", "pts"] as const;
@@ -46,7 +56,7 @@ function esoRoots(): string[] {
 
 /** Every candidate SavedVariables file path we'd consider, in priority order. */
 export function candidatePaths(): string[] {
-  const out: string[] = [];
+  const out: string[] = [incomingPath()];
   for (const root of esoRoots()) {
     for (const env of ESO_ENVS) {
       out.push(join(root, env, "SavedVariables", SNAPSHOT_FILENAME));
@@ -71,6 +81,11 @@ export function locateSnapshot(includeSample = true): SnapshotSource | null {
   if (envDir) {
     const p = join(envDir, SNAPSHOT_FILENAME);
     if (existsSync(p)) return { kind: "env", path: p, label: "NIRNSIDE_SV_DIR" };
+  }
+
+  const incoming = incomingPath();
+  if (existsSync(incoming)) {
+    return { kind: "uploaded", path: incoming, label: "uploaded file (data/incoming)" };
   }
 
   for (const root of esoRoots()) {

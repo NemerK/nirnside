@@ -26,7 +26,7 @@ export function getEarnedAchievements(): Set<string> {
 }
 
 export interface DataSource {
-  kind: "env" | "eso" | "sample";
+  kind: "env" | "uploaded" | "eso" | "sample";
   path: string;
   label: string;
   at: number;

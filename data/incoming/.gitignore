@@ -1,0 +1,4 @@
+# Drop a real NirnsideSnapshot.lua / NirnsideCatalog.lua here to import it on a
+# machine that doesn't have ESO (e.g. this remote instance). Never commit real
+# account data — it's private. Only this ignore file and the README are tracked.
+*.lua

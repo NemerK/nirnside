@@ -16,9 +16,14 @@ export function DataSourceBanner({ source }: { source: DataSource | null }) {
         <div className="text-sm text-fg">
           <span className="font-medium">Showing sample data.</span> No ESO{" "}
           <code className="rounded bg-surface-2 px-1">SavedVariables</code> file was found on this machine, so Nirnside
-          loaded a demo account. Run Nirnside on the PC where you play ESO (with the{" "}
-          <code className="rounded bg-surface-2 px-1">NirnsideSnapshot</code> addon installed) and it will detect and
-          load your real account automatically — no setup.
+          loaded a demo account. Two ways to see your real account:{" "}
+          <span className="text-fg-muted">
+            run Nirnside on the PC where you play ESO (with the{" "}
+            <code className="rounded bg-surface-2 px-1">NirnsideSnapshot</code> addon) and it auto-detects your file —
+            or, if this is running somewhere without ESO, drop your{" "}
+            <code className="rounded bg-surface-2 px-1">NirnsideSnapshot.lua</code> into{" "}
+            <code className="rounded bg-surface-2 px-1">data/incoming/</code> and it loads within seconds.
+          </span>
         </div>
       </Card>
     );

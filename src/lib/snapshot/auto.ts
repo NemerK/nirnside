@@ -101,9 +101,15 @@ function loadCatalog() {
   }
 
   // An in-game catalog dump (from the NirnsideCatalog addon) sits next to the
-  // snapshot file. If present, import it (it overrides reference data) and watch.
+  // snapshot file, or can be dropped into data/incoming. If present, import it
+  // (it overrides reference data) and watch it.
   const snap = locateSnapshot(false);
-  const catalogPath = snap ? join(dirname(snap.path), "NirnsideCatalog.lua") : process.env.NIRNSIDE_CATALOG_FILE;
+  const candidates = [
+    process.env.NIRNSIDE_CATALOG_FILE,
+    join(process.cwd(), "data", "incoming", "NirnsideCatalog.lua"),
+    snap ? join(dirname(snap.path), "NirnsideCatalog.lua") : undefined,
+  ].filter((p): p is string => !!p);
+  const catalogPath = candidates.find((p) => existsSync(p));
   if (catalogPath && existsSync(catalogPath)) {
     try {
       loadCatalogFromLua(catalogPath);
