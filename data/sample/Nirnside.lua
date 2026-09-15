@@ -295,69 +295,103 @@ NirnsideData =
                     {
                         ["setId"] = 693,
                         ["name"] = "Coral Riptide",
-                        ["category"] = "Trial",
+                        ["category"] = "Trials",
+                        ["subcategory"] = "Dreadsail Reef",
+                        ["categoryOrder"] = 4, ["subOrder"] = 10,
                         ["pieces"] =
                         {
-                            ["Head"] = true, ["Chest"] = true, ["Shoulders"] = true, ["Hands"] = true,
-                            ["Waist"] = true, ["Legs"] = false, ["Feet"] = true, ["Necklace"] = false,
-                            ["Ring"] = true, ["Weapon"] = true,
+                            { ["slot"] = "Head",      ["type"] = "Heavy Head",      ["name"] = "Coral Riptide Helm",     ["collected"] = true },
+                            { ["slot"] = "Chest",     ["type"] = "Medium Chest",    ["name"] = "Coral Riptide Jack",     ["collected"] = true },
+                            { ["slot"] = "Shoulders", ["type"] = "Light Shoulders", ["name"] = "Coral Riptide Epaulets", ["collected"] = true },
+                            { ["slot"] = "Hands",     ["type"] = "Medium Hands",    ["name"] = "Coral Riptide Bracers",  ["collected"] = true },
+                            { ["slot"] = "Waist",     ["type"] = "Heavy Waist",     ["name"] = "Coral Riptide Girdle",   ["collected"] = false },
+                            { ["slot"] = "Legs",      ["type"] = "Medium Legs",     ["name"] = "Coral Riptide Guards",   ["collected"] = true },
+                            { ["slot"] = "Feet",      ["type"] = "Light Feet",      ["name"] = "Coral Riptide Shoes",    ["collected"] = true },
+                            { ["slot"] = "Necklace",  ["type"] = "Necklace",        ["name"] = "Coral Riptide Necklace", ["collected"] = false },
+                            { ["slot"] = "Ring",      ["type"] = "Ring",            ["name"] = "Coral Riptide Ring",     ["collected"] = true },
+                            { ["slot"] = "Weapon",    ["type"] = "Restoration Staff", ["name"] = "Coral Riptide Restoration Staff", ["collected"] = true },
                         },
-                    },
-                    {
-                        ["setId"] = 574,
-                        ["name"] = "Pale Order",
-                        ["category"] = "Mythic",
-                        ["pieces"] = { ["Ring"] = true },
-                    },
-                    {
-                        ["setId"] = 700,
-                        ["name"] = "Ozezan the Inferno",
-                        ["category"] = "Monster Set",
-                        ["pieces"] = { ["Head"] = true, ["Shoulders"] = false },
-                    },
-                    {
-                        ["setId"] = 583,
-                        ["name"] = "Spaulder of Ruin",
-                        ["category"] = "Mythic",
-                        ["pieces"] = { ["Shoulders"] = true },
-                    },
-                    {
-                        ["setId"] = 356,
-                        ["name"] = "Deadly Strike",
-                        ["category"] = "PvP",
-                        ["pieces"] =
-                        {
-                            ["Head"] = false, ["Chest"] = false, ["Shoulders"] = true, ["Hands"] = true,
-                            ["Waist"] = false, ["Legs"] = false, ["Feet"] = false, ["Necklace"] = true,
-                            ["Ring"] = false, ["Weapon"] = true,
-                        },
-                    },
-                    {
-                        ["setId"] = 154,
-                        ["name"] = "Slimecraw",
-                        ["category"] = "Monster Set",
-                        ["pieces"] = { ["Head"] = true, ["Shoulders"] = true },
                     },
                     {
                         ["setId"] = 800,
                         ["name"] = "Turning Tide",
-                        ["category"] = "Trial",
+                        ["category"] = "Trials",
+                        ["subcategory"] = "Lucent Citadel",
+                        ["categoryOrder"] = 4, ["subOrder"] = 12,
                         ["pieces"] =
                         {
-                            ["Head"] = false, ["Chest"] = true, ["Shoulders"] = false, ["Hands"] = false,
-                            ["Waist"] = false, ["Legs"] = false, ["Feet"] = false, ["Necklace"] = false,
-                            ["Ring"] = false, ["Weapon"] = false,
+                            { ["slot"] = "Head",   ["type"] = "Heavy Head",   ["name"] = "Turning Tide Helm",   ["collected"] = false },
+                            { ["slot"] = "Chest",  ["type"] = "Heavy Chest",  ["name"] = "Turning Tide Cuirass", ["collected"] = true },
+                            { ["slot"] = "Legs",   ["type"] = "Medium Legs",  ["name"] = "Turning Tide Guards", ["collected"] = false },
+                            { ["slot"] = "Weapon", ["type"] = "Battle Axe",   ["name"] = "Turning Tide Battle Axe", ["collected"] = false },
                         },
                     },
                     {
                         ["setId"] = 801,
                         ["name"] = "Lucent Echoes",
-                        ["category"] = "Trial",
+                        ["category"] = "Trials",
+                        ["subcategory"] = "Lucent Citadel",
+                        ["categoryOrder"] = 4, ["subOrder"] = 12,
                         ["pieces"] =
                         {
-                            ["Head"] = false, ["Chest"] = false, ["Shoulders"] = false, ["Hands"] = false,
-                            ["Waist"] = false, ["Legs"] = false, ["Feet"] = false, ["Necklace"] = false,
-                            ["Ring"] = false, ["Weapon"] = true,
+                            { ["slot"] = "Chest",  ["type"] = "Light Chest", ["name"] = "Lucent Echoes Robe",  ["collected"] = false },
+                            { ["slot"] = "Weapon", ["type"] = "Inferno Staff", ["name"] = "Lucent Echoes Inferno Staff", ["collected"] = true },
+                        },
+                    },
+                    {
+                        ["setId"] = 700,
+                        ["name"] = "Ozezan the Inferno",
+                        ["category"] = "Monster Sets",
+                        ["categoryOrder"] = 6, ["subOrder"] = 0,
+                        ["pieces"] =
+                        {
+                            { ["slot"] = "Head",      ["type"] = "Heavy Head",      ["name"] = "Ozezan the Inferno Helm",     ["collected"] = true },
+                            { ["slot"] = "Shoulders", ["type"] = "Heavy Shoulders", ["name"] = "Ozezan the Inferno Pauldron", ["collected"] = false },
+                        },
+                    },
+                    {
+                        ["setId"] = 154,
+                        ["name"] = "Slimecraw",
+                        ["category"] = "Monster Sets",
+                        ["categoryOrder"] = 6, ["subOrder"] = 0,
+                        ["pieces"] =
+                        {
+                            { ["slot"] = "Head",      ["type"] = "Medium Head",      ["name"] = "Slimecraw Helmet",  ["collected"] = true },
+                            { ["slot"] = "Shoulders", ["type"] = "Medium Shoulders", ["name"] = "Slimecraw Arm Cops", ["collected"] = true },
+                        },
+                    },
+                    {
+                        ["setId"] = 574,
+                        ["name"] = "Pale Order",
+                        ["category"] = "Mythic Items",
+                        ["categoryOrder"] = 8, ["subOrder"] = 0,
+                        ["pieces"] =
+                        {
+                            { ["slot"] = "Ring", ["type"] = "Ring", ["name"] = "Ring of the Pale Order", ["collected"] = true },
+                        },
+                    },
+                    {
+                        ["setId"] = 583,
+                        ["name"] = "Spaulder of Ruin",
+                        ["category"] = "Mythic Items",
+                        ["categoryOrder"] = 8, ["subOrder"] = 0,
+                        ["pieces"] =
+                        {
+                            { ["slot"] = "Shoulders", ["type"] = "Light Shoulders", ["name"] = "Spaulder of Ruin", ["collected"] = true },
+                        },
+                    },
+                    {
+                        ["setId"] = 356,
+                        ["name"] = "Deadly Strike",
+                        ["category"] = "Cyrodiil",
+                        ["categoryOrder"] = 9, ["subOrder"] = 0,
+                        ["pieces"] =
+                        {
+                            { ["slot"] = "Shoulders", ["type"] = "Medium Shoulders", ["name"] = "Deadly Arm Cops", ["collected"] = true },
+                            { ["slot"] = "Hands",     ["type"] = "Medium Hands",     ["name"] = "Deadly Bracers",  ["collected"] = true },
+                            { ["slot"] = "Necklace",  ["type"] = "Necklace",         ["name"] = "Deadly Necklace", ["collected"] = true },
+                            { ["slot"] = "Weapon",    ["type"] = "Dagger",           ["name"] = "Deadly Dagger",   ["collected"] = true },
+                            { ["slot"] = "Head",      ["type"] = "Medium Head",      ["name"] = "Deadly Helmet",   ["collected"] = false },
                         },
                     },
                 },

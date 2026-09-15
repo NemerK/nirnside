@@ -214,7 +214,13 @@ const StickerbookPieces = z.preprocess((v) => {
 export const StickerbookSet = z.object({
   setId: z.number().int().nonnegative(),
   name: z.string(),
+  /** Top-level category, mirroring the game tree: Overland, Dungeons, Trials… */
   category: z.string().default("Unknown"),
+  /** Specific subcategory within the parent (zone/dungeon/trial name). */
+  subcategory: z.string().nullable().default(null),
+  /** Game's own ordering, so the UI tree matches the in-game order. */
+  categoryOrder: z.number().default(0),
+  subOrder: z.number().default(0),
   pieces: StickerbookPieces.default([]),
 });
 export type StickerbookSet = z.infer<typeof StickerbookSet>;

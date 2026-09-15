@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Check, Minus, Search } from "lucide-react";
+import { Check, ChevronRight, Minus, Search } from "lucide-react";
 import type { StickerbookSet } from "@/lib/snapshot/schema";
 import { GameIcon } from "./game-icon";
 
@@ -16,28 +16,63 @@ const STATUS = [
 
 type Status = (typeof STATUS)[number]["key"];
 
+interface SubNode {
+  name: string;
+  order: number;
+  collected: number;
+  total: number;
+}
+interface ParentNode {
+  name: string;
+  order: number;
+  collected: number;
+  total: number;
+  subs: SubNode[];
+}
+
 export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("all");
-  const [category, setCategory] = useState<string>("__all");
+  const [parent, setParent] = useState<string | null>(null);
+  const [sub, setSub] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Category rail with per-category collected/total, like the in-game tree.
-  const categories = useMemo(() => {
-    const map = new Map<string, { collected: number; total: number; sets: number }>();
+  // Build the in-game two-level tree (category -> subcategory) in game order.
+  const tree = useMemo<ParentNode[]>(() => {
+    const parents = new Map<string, ParentNode & { subMap: Map<string, SubNode> }>();
     for (const s of sets) {
-      const c = s.category || "Unknown";
-      const cur = map.get(c) ?? { collected: 0, total: 0, sets: 0 };
-      cur.collected += s.collected;
-      cur.total += s.total;
-      cur.sets += 1;
-      map.set(c, cur);
+      const pName = s.category || "Unknown";
+      const p =
+        parents.get(pName) ??
+        (() => {
+          const node = { name: pName, order: s.categoryOrder ?? 0, collected: 0, total: 0, subs: [], subMap: new Map() };
+          parents.set(pName, node);
+          return node;
+        })();
+      p.collected += s.collected;
+      p.total += s.total;
+      p.order = Math.min(p.order || s.categoryOrder || 0, s.categoryOrder || 0) || p.order;
+
+      const subName = s.subcategory;
+      if (subName) {
+        const sn =
+          p.subMap.get(subName) ?? { name: subName, order: s.subOrder ?? 0, collected: 0, total: 0 };
+        sn.collected += s.collected;
+        sn.total += s.total;
+        p.subMap.set(subName, sn);
+      }
     }
-    return Array.from(map.entries())
-      .map(([name, v]) => ({ name, ...v }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const arr = Array.from(parents.values()).map((p) => ({
+      name: p.name,
+      order: p.order,
+      collected: p.collected,
+      total: p.total,
+      subs: Array.from(p.subMap.values()).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)),
+    }));
+    return arr.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
   }, [sets]);
 
-  const grandTotal = useMemo(
+  const grand = useMemo(
     () => sets.reduce((a, s) => ({ collected: a.collected + s.collected, total: a.total + s.total }), {
       collected: 0,
       total: 0,
@@ -48,37 +83,122 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return sets.filter((s) => {
-      if (category !== "__all" && (s.category || "Unknown") !== category) return false;
+      if (parent && (s.category || "Unknown") !== parent) return false;
+      if (sub && s.subcategory !== sub) return false;
       if (q && !s.name.toLowerCase().includes(q)) return false;
       const complete = s.total > 0 && s.collected === s.total;
       if (status === "complete" && !complete) return false;
       if (status === "incomplete" && complete) return false;
       return true;
     });
-  }, [sets, search, status, category]);
+  }, [sets, search, status, parent, sub]);
+
+  function selectAll() {
+    setParent(null);
+    setSub(null);
+  }
+  function selectParent(name: string) {
+    setParent(name);
+    setSub(null);
+    setExpanded((e) => new Set(e).add(name));
+  }
+  function toggleExpand(name: string) {
+    setExpanded((e) => {
+      const next = new Set(e);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  const heading =
+    sub ?? parent ?? "All Sets";
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      {/* Category rail */}
-      <aside className="lg:w-56 lg:shrink-0">
-        <div className="flex gap-1.5 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
-          <CategoryButton
-            label="All Sets"
-            collected={grandTotal.collected}
-            total={grandTotal.total}
-            active={category === "__all"}
-            onClick={() => setCategory("__all")}
-          />
-          {categories.map((c) => (
-            <CategoryButton
-              key={c.name}
-              label={c.name}
-              collected={c.collected}
-              total={c.total}
-              active={category === c.name}
-              onClick={() => setCategory(c.name)}
-            />
-          ))}
+      {/* Category tree */}
+      <aside className="lg:w-64 lg:shrink-0">
+        <div className="max-h-[75vh] overflow-y-auto pr-1">
+          <button
+            onClick={selectAll}
+            className={`mb-1 flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+              !parent
+                ? "border-accent/50 bg-accent-soft text-fg"
+                : "border-border bg-surface/70 text-fg-muted hover:text-fg"
+            }`}
+          >
+            <span className="font-medium">All Sets</span>
+            <span className={`text-xs ${!parent ? "text-accent" : "text-fg-subtle"}`}>
+              {grand.collected}/{grand.total}
+            </span>
+          </button>
+
+          {tree.map((p) => {
+            const isOpen = expanded.has(p.name);
+            const parentActive = parent === p.name && !sub;
+            const done = p.total > 0 && p.collected === p.total;
+            return (
+              <div key={p.name} className="mb-0.5">
+                <div
+                  className={`flex items-center gap-1 rounded-lg border px-1 transition-colors ${
+                    parentActive ? "border-accent/50 bg-accent-soft" : "border-transparent hover:bg-surface-2/50"
+                  }`}
+                >
+                  {p.subs.length > 0 ? (
+                    <button
+                      onClick={() => toggleExpand(p.name)}
+                      aria-label={isOpen ? "Collapse" : "Expand"}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center text-fg-subtle hover:text-fg"
+                    >
+                      <ChevronRight className={`h-4 w-4 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                    </button>
+                  ) : (
+                    <span className="h-6 w-6 shrink-0" />
+                  )}
+                  <button
+                    onClick={() => selectParent(p.name)}
+                    className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2 text-left text-sm"
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      {done && <Check className="h-3.5 w-3.5 shrink-0 text-accent" />}
+                      <span className={`truncate font-medium ${parentActive ? "text-fg" : "text-fg-muted"}`}>
+                        {p.name}
+                      </span>
+                    </span>
+                    <span className={`shrink-0 text-xs ${parentActive ? "text-accent" : "text-fg-subtle"}`}>
+                      {p.collected}/{p.total}
+                    </span>
+                  </button>
+                </div>
+
+                {isOpen &&
+                  p.subs.map((sn) => {
+                    const active = sub === sn.name;
+                    const subDone = sn.total > 0 && sn.collected === sn.total;
+                    return (
+                      <button
+                        key={sn.name}
+                        onClick={() => {
+                          setParent(p.name);
+                          setSub(sn.name);
+                        }}
+                        className={`ml-7 flex w-[calc(100%-1.75rem)] items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                          active ? "bg-accent-soft text-fg" : "text-fg-muted hover:bg-surface-2/50 hover:text-fg"
+                        }`}
+                      >
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          {subDone && <Check className="h-3 w-3 shrink-0 text-accent" />}
+                          <span className="truncate">{sn.name}</span>
+                        </span>
+                        <span className={`shrink-0 text-xs ${active ? "text-accent" : "text-fg-subtle"}`}>
+                          {sn.collected}/{sn.total}
+                        </span>
+                      </button>
+                    );
+                  })}
+              </div>
+            );
+          })}
         </div>
       </aside>
 
@@ -109,9 +229,11 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
           </div>
         </div>
 
-        <div className="mb-3 text-sm text-fg-muted">
-          {filtered.length} {filtered.length === 1 ? "set" : "sets"}
-          {category !== "__all" && <span className="text-fg-subtle"> · {category}</span>}
+        <div className="mb-3 flex items-center gap-2 text-sm">
+          <span className="font-medium text-fg">{heading}</span>
+          <span className="text-fg-subtle">
+            · {filtered.length} {filtered.length === 1 ? "set" : "sets"}
+          </span>
         </div>
 
         {filtered.length === 0 ? (
@@ -134,10 +256,7 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
 // show that. Prefer the real item name, trimmed of the redundant set prefix.
 const SLOT_CODE = /^slot\s+[-\d.eE+]+$/i;
 
-function pieceLabel(
-  p: { name?: string; type?: string; slot?: string },
-  setName: string,
-): string {
+function pieceLabel(p: { name?: string; type?: string; slot?: string }, setName: string): string {
   const clean = (v?: string) => {
     const t = (v ?? "").trim();
     return !t || SLOT_CODE.test(t) ? "" : t;
@@ -152,40 +271,6 @@ function pieceLabel(
     return name;
   }
   return clean(p.type);
-}
-
-function CategoryButton({
-  label,
-  collected,
-  total,
-  active,
-  onClick,
-}: {
-  label: string;
-  collected: number;
-  total: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  const done = total > 0 && collected === total;
-  return (
-    <button
-      onClick={onClick}
-      className={`flex shrink-0 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors lg:w-full ${
-        active
-          ? "border-accent/50 bg-accent-soft text-fg"
-          : "border-border bg-surface/70 text-fg-muted hover:border-accent/30 hover:text-fg"
-      }`}
-    >
-      <span className="flex items-center gap-2 truncate">
-        {done && <Check className="h-3.5 w-3.5 shrink-0 text-accent" />}
-        <span className="truncate font-medium">{label}</span>
-      </span>
-      <span className={`shrink-0 text-xs ${active ? "text-accent" : "text-fg-subtle"}`}>
-        {collected}/{total}
-      </span>
-    </button>
-  );
 }
 
 function SetCard({ set: s }: { set: SetWithTotals }) {
@@ -207,7 +292,7 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
           ) : (
             <div className="truncate font-medium text-fg">{s.name}</div>
           )}
-          <div className="mt-0.5 text-xs text-fg-subtle">{s.category}</div>
+          <div className="mt-0.5 text-xs text-fg-subtle">{s.subcategory ?? s.category}</div>
         </div>
         {complete ? (
           <span className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-accent/40 bg-accent-soft px-1.5 text-xs text-accent">

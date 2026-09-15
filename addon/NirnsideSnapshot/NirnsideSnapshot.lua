@@ -423,10 +423,32 @@ local function gatherStickerbook()
       local numPieces = safe(function() return GetNumItemSetCollectionPieces(setId) end, 0) or 0
       local name = safe(function() return zo_strformat("<<1>>", GetItemSetName(setId)) end, nil)
       if name and name ~= "" and numPieces > 0 then
-        local catId = safe(function() return GetItemSetCollectionCategoryId(setId) end, nil)
-        local category = catId
-          and safe(function() return zo_strformat("<<1>>", GetItemSetCollectionCategoryName(catId)) end, "Unknown")
-          or "Unknown"
+        -- Mirror the in-game two-level tree: a top-level category (Overland,
+        -- Dungeons, Trials, …) with a specific subcategory (the zone/dungeon/
+        -- trial). Capture the game's own ordering so the UI can match it.
+        local subId = safe(function() return GetItemSetCollectionCategoryId(setId) end, nil)
+        local subName = subId
+          and safe(function() return zo_strformat("<<1>>", GetItemSetCollectionCategoryName(subId)) end, nil)
+          or nil
+        local parentId = subId
+          and safe(function() return GetItemSetCollectionCategoryParentId(subId) end, nil)
+          or nil
+        if parentId == 0 then parentId = nil end
+        local parentName = parentId
+          and safe(function() return zo_strformat("<<1>>", GetItemSetCollectionCategoryName(parentId)) end, nil)
+          or nil
+        local category, subcategory, catOrder, subOrder
+        if parentName and parentName ~= "" then
+          category = parentName
+          subcategory = subName
+          catOrder = safe(function() return GetItemSetCollectionCategoryOrder(parentId) end, 0) or 0
+          subOrder = safe(function() return GetItemSetCollectionCategoryOrder(subId) end, 0) or 0
+        else
+          category = subName or "Unknown"
+          subcategory = nil
+          catOrder = safe(function() return GetItemSetCollectionCategoryOrder(subId) end, 0) or 0
+          subOrder = 0
+        end
         local pieces = {}
         for i = 1, numPieces do
           local ok, pieceId, slot = pcall(GetItemSetCollectionPieceInfo, setId, i)
@@ -452,7 +474,10 @@ local function gatherStickerbook()
         sets[#sets + 1] = {
           setId = setId,
           name = name,
-          category = category ~= "" and category or "Unknown",
+          category = (category and category ~= "") and category or "Unknown",
+          subcategory = subcategory,
+          categoryOrder = catOrder,
+          subOrder = subOrder,
           pieces = pieces,
         }
       end
