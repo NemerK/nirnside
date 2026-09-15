@@ -32,6 +32,14 @@ local function slug(s)
   return s
 end
 
+-- Normalize an in-game .dds texture path to the plain path the app resolves
+-- against the icon CDN (e.g. "/esoui/art/icons/ability_x.dds").
+local function normIcon(path)
+  if not path or path == "" then return nil end
+  path = path:gsub("\\", "/")
+  return path
+end
+
 ----------------------------------------------------------------------
 -- Champion Points (accurate: names, descriptions, type, max points)
 ----------------------------------------------------------------------
@@ -57,6 +65,9 @@ local function gatherCP()
             type = slottable and "slottable" or "passive",
             description = safe(function() return zo_strformat("<<1>>", GetChampionSkillDescription(skillId)) end, ""),
             maxPoints = safe(function() return GetChampionSkillMaxPoints(skillId) end, 50) or 50,
+            icon = safe(function()
+              return GetChampionSkillIcon and normIcon(GetChampionSkillIcon(skillId)) or nil
+            end, nil),
             source = "ingame",
           }
         end
@@ -79,21 +90,27 @@ local function gatherSkills()
         local lineName = zo_strformat("<<1>>", GetSkillLineInfo(skillType, lineIndex))
         if lineName and lineName ~= "" then
           local lineId = "line-" .. slug(lineName)
-          lines[#lines + 1] = {
+          local line = {
             id = lineId,
             name = lineName,
             category = safe(function() return zo_strformat("<<1>>", GetString("SI_SKILLTYPE", skillType)) end, "Skill"),
+            icon = nil,
             source = "ingame",
           }
+          lines[#lines + 1] = line
           local numAbilities = GetNumSkillAbilities(skillType, lineIndex)
           for a = 1, numAbilities do
             local aName, _, _, passive = GetSkillAbilityInfo(skillType, lineIndex, a)
             aName = zo_strformat("<<1>>", aName)
             if aName and aName ~= "" then
               local abilityId = safe(function()
-                local pi = select(7, GetSkillAbilityInfo(skillType, lineIndex, a))
                 return GetSkillAbilityId(skillType, lineIndex, a, false)
               end, nil)
+              local icon = safe(function()
+                return abilityId and normIcon(GetAbilityIcon(abilityId)) or nil
+              end, nil)
+              -- First active ability's icon represents the line in the list view.
+              if icon and not line.icon and not passive then line.icon = icon end
               skills[#skills + 1] = {
                 id = "sk-" .. slug(aName),
                 name = aName,
@@ -102,6 +119,7 @@ local function gatherSkills()
                 description = safe(function()
                   return abilityId and zo_strformat("<<1>>", GetAbilityDescription(abilityId)) or ""
                 end, ""),
+                icon = icon,
                 morphs = {},
                 source = "ingame",
               }
@@ -131,12 +149,20 @@ local function gatherSets()
         local category = catId
           and safe(function() return zo_strformat("<<1>>", GetItemSetCollectionCategoryName(catId)) end, "Unknown")
           or "Unknown"
+        local icon = safe(function()
+          local numPieces = GetNumItemSetCollectionPieces(setId) or 0
+          if numPieces < 1 or not GetItemSetCollectionPieceItemLink then return nil end
+          local pieceId = select(1, GetItemSetCollectionPieceInfo(setId, 1))
+          local link = pieceId and GetItemSetCollectionPieceItemLink(pieceId)
+          return link and normIcon(GetItemLinkIcon(link)) or nil
+        end, nil)
         out[#out + 1] = {
           id = "set-" .. slug(name),
           name = name,
           setId = setId,
           category = category ~= "" and category or "Unknown",
           bonuses = {},
+          icon = icon,
           source = "ingame",
         }
       end

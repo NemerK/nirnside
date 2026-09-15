@@ -1,6 +1,6 @@
 ## Title: Nirnside Catalog
 ## Author: Nirnside
-## Version: 0.1.0
+## Version: 0.2.0
 ## APIVersion: 101046
 ## AddOnVersion: 1
 ## SavedVariables: NirnsideCatalog

@@ -1,10 +1,32 @@
+"use client";
+
+import { useState } from "react";
+
 /**
- * Legal image handling. We never bundle copyrighted ESO art. If an icon path is
- * known (from an in-game scan) and an icon CDN base is configured via
- * NEXT_PUBLIC_NIRNSIDE_ICON_BASE, we render from there; otherwise we draw a
- * tasteful, deterministic placeholder from the entry's initials + accent color.
+ * Icon rendering. ESO exposes icons as in-game .dds texture paths (e.g.
+ * "/esoui/art/icons/ability_mageguild_meteor.dds"). We never extract or bundle
+ * the game's art. Instead we resolve those paths against a public icon mirror
+ * (UESP's esoicons host, the de-facto community CDN) which serves PNG versions
+ * at the same path. If no icon path is known, or the image fails to load, we
+ * fall back to a tasteful deterministic placeholder from the entry's initials.
+ *
+ * The base is overridable via NEXT_PUBLIC_NIRNSIDE_ICON_BASE for anyone who
+ * wants to self-host the icons instead of hotlinking.
  */
-const ICON_BASE = process.env.NEXT_PUBLIC_NIRNSIDE_ICON_BASE;
+const ICON_BASE = process.env.NEXT_PUBLIC_NIRNSIDE_ICON_BASE || "https://esoicons.uesp.net";
+
+function resolveIconUrl(icon: string): string | null {
+  if (!icon) return null;
+  if (/^https?:\/\//i.test(icon)) return icon;
+  let p = icon.replace(/\\/g, "/").replace(/^\/+/, "").toLowerCase();
+  if (!p.startsWith("esoui/")) {
+    // Bare filename or partial path — assume the standard icons directory.
+    if (!p.includes("/")) p = `esoui/art/icons/${p}`;
+  }
+  if (p.endsWith(".dds")) p = `${p.slice(0, -4)}.png`;
+  else if (!/\.(png|jpg|jpeg|webp)$/.test(p)) p = `${p}.png`;
+  return `${ICON_BASE.replace(/\/$/, "")}/${p}`;
+}
 
 function initials(name: string): string {
   const words = name.replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).filter(Boolean);
@@ -30,16 +52,21 @@ export function GameIcon({
   size?: number;
   className?: string;
 }) {
-  if (icon && ICON_BASE) {
-    const src = icon.startsWith("http") ? icon : `${ICON_BASE.replace(/\/$/, "")}/${icon.replace(/^\//, "")}`;
-    // eslint-disable-next-line @next/next/no-img-element
+  const [failed, setFailed] = useState(false);
+  const src = icon ? resolveIconUrl(icon) : null;
+
+  if (src && !failed) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
         alt={name}
         width={size}
         height={size}
-        className={`rounded-md border border-border object-cover ${className}`}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className={`shrink-0 rounded-md border border-border bg-surface-2 object-cover ${className}`}
+        style={{ width: size, height: size }}
       />
     );
   }
