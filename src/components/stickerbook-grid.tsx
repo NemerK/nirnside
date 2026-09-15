@@ -311,7 +311,9 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
           return (
             <span
               key={`${p.slot}-${i}`}
-              title={`${label || p.name || "Piece"} · ${p.collected ? "collected" : "missing"}`}
+              title={`${p.name || label || "Piece"}${p.type && p.type !== p.name ? ` · ${p.type}` : ""} · ${
+                p.collected ? "collected" : "missing"
+              }`}
               className={`flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-xs ${
                 p.collected
                   ? "border-accent/40 bg-accent-soft text-fg"

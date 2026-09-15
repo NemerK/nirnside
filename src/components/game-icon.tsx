@@ -5,27 +5,20 @@ import { useState } from "react";
 /**
  * Icon rendering. ESO exposes icons as in-game .dds texture paths (e.g.
  * "/esoui/art/icons/ability_mageguild_meteor.dds"). We never extract or bundle
- * the game's art. Instead we resolve those paths against a public icon mirror
- * (UESP's esoicons host, the de-facto community CDN) which serves PNG versions
- * at the same path. If no icon path is known, or the image fails to load, we
- * fall back to a tasteful deterministic placeholder from the entry's initials.
+ * the game's art. Instead every icon is served by our own local proxy route
+ * (`/api/icon`), which fetches the PNG from a public mirror, caches it to disk,
+ * and serves it back. Because the fetch happens on the user's own machine with
+ * proper headers, it avoids the browser hotlink failures we used to see, and
+ * once cached everything is instant and works offline.
  *
- * The base is overridable via NEXT_PUBLIC_NIRNSIDE_ICON_BASE for anyone who
- * wants to self-host the icons instead of hotlinking.
+ * If no icon path is known, or the proxy can't source the image, we fall back
+ * to a tasteful deterministic placeholder from the entry's initials.
  */
-const ICON_BASE = process.env.NEXT_PUBLIC_NIRNSIDE_ICON_BASE || "https://esoicons.uesp.net";
-
 function resolveIconUrl(icon: string): string | null {
   if (!icon) return null;
+  // Already an absolute URL (e.g. bundled/self-hosted) — use it directly.
   if (/^https?:\/\//i.test(icon)) return icon;
-  let p = icon.replace(/\\/g, "/").replace(/^\/+/, "").toLowerCase();
-  if (!p.startsWith("esoui/")) {
-    // Bare filename or partial path — assume the standard icons directory.
-    if (!p.includes("/")) p = `esoui/art/icons/${p}`;
-  }
-  if (p.endsWith(".dds")) p = `${p.slice(0, -4)}.png`;
-  else if (!/\.(png|jpg|jpeg|webp)$/.test(p)) p = `${p}.png`;
-  return `${ICON_BASE.replace(/\/$/, "")}/${p}`;
+  return `/api/icon?p=${encodeURIComponent(icon)}`;
 }
 
 function initials(name: string): string {

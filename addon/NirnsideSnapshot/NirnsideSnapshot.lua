@@ -401,13 +401,57 @@ local function stickerSlotLabel(slot)
   return "Slot " .. tostring(slot)
 end
 
-local function pieceUnlocked(pieceId, slot)
-  return safe(function()
+-- Resolve the item link for a collection piece. Some clients want a link style
+-- argument, some don't — try both so we always get a link (and therefore the
+-- real item name + icon) when the game can provide one.
+local function pieceItemLink(pieceId)
+  if not GetItemSetCollectionPieceItemLink then return nil end
+  local link = safe(function() return GetItemSetCollectionPieceItemLink(pieceId, LINK_STYLE_DEFAULT) end, nil)
+  if not link or link == "" then
+    link = safe(function() return GetItemSetCollectionPieceItemLink(pieceId) end, nil)
+  end
+  if link == "" then link = nil end
+  return link
+end
+
+-- Read one stickerbook piece into the rich shape the app expects. Name comes
+-- from the game (authoritative): the item link's name first, the collections
+-- manager's formatted name second, so labels are always the correct item name.
+local function readStickerPiece(setId, i)
+  local ok, pieceId, slot = pcall(GetItemSetCollectionPieceInfo, setId, i)
+  if not ok or not pieceId then return nil end
+
+  local pd = safe(function()
     local mgr = ITEM_SET_COLLECTIONS_DATA_MANAGER
-    if not mgr then return false end
-    local pd = mgr:GetOrCreateItemSetCollectionPieceData(pieceId, slot)
-    return (pd and pd:IsUnlocked()) == true
-  end, false)
+    return mgr and mgr:GetOrCreateItemSetCollectionPieceData(pieceId, slot) or nil
+  end, nil)
+  local collected = pd and safe(function() return pd:IsUnlocked() == true end, false) or false
+  local pdName = pd and safe(function() return zo_strformat("<<1>>", pd:GetFormattedName()) end, nil) or nil
+
+  local link = pieceItemLink(pieceId)
+  local linkName = link and safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, nil) or nil
+  local icon = link and safe(function() return stickerNormIcon(GetItemLinkIcon(link)) end, nil) or nil
+  local typeLabel, weight
+  if link then typeLabel, weight = pieceTypeInfo(link) end
+
+  local fallback = stickerSlotLabel(slot)
+  local name
+  if linkName and linkName ~= "" then
+    name = linkName
+  elseif pdName and pdName ~= "" then
+    name = pdName
+  else
+    name = typeLabel or fallback
+  end
+
+  return {
+    slot = fallback,
+    type = (typeLabel and typeLabel ~= "") and typeLabel or fallback,
+    weight = weight,
+    name = name,
+    icon = icon,
+    collected = collected,
+  }
 end
 
 -- Rich per-piece data so the app can show the real item icon + name for each
@@ -451,25 +495,8 @@ local function gatherStickerbook()
         end
         local pieces = {}
         for i = 1, numPieces do
-          local ok, pieceId, slot = pcall(GetItemSetCollectionPieceInfo, setId, i)
-          if ok and pieceId then
-            local link = safe(function()
-              return GetItemSetCollectionPieceItemLink and GetItemSetCollectionPieceItemLink(pieceId, LINK_STYLE_DEFAULT)
-            end, nil)
-            local itemName = link and safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, nil)
-            local icon = link and safe(function() return stickerNormIcon(GetItemLinkIcon(link)) end, nil)
-            local typeLabel, weight
-            if link then typeLabel, weight = pieceTypeInfo(link) end
-            local fallback = stickerSlotLabel(slot)
-            pieces[#pieces + 1] = {
-              slot = fallback,
-              type = (typeLabel and typeLabel ~= "") and typeLabel or fallback,
-              weight = weight,
-              name = (itemName and itemName ~= "") and itemName or (typeLabel or fallback),
-              icon = icon,
-              collected = pieceUnlocked(pieceId, slot),
-            }
-          end
+          local piece = readStickerPiece(setId, i)
+          if piece then pieces[#pieces + 1] = piece end
         end
         sets[#sets + 1] = {
           setId = setId,
