@@ -62,13 +62,13 @@ export default function AchievementsPage() {
         </div>
       ) : (
         <>
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Challenges done" value={`${earned}/${uniqueIds.length}`} />
             <Stat label="Trifectas" value={`${trifectas}/${triIds.length}`} />
             <Stat label="Trials" value={trials.length} />
             <Stat label="Dungeons" value={triDungeons.length} />
           </div>
-          <p className="mb-4 text-xs text-fg-subtle">
+          <p className="mb-3 text-xs text-fg-subtle">
             {isSample
               ? "Showing sample data (demo). Log in with the Snapshot addon to replace this with your real, game-verified completion."
               : "Completion is read directly from your game (the same IsAchievementComplete the in-game tracker uses) — nothing is inferred. ESO achievements are account-wide."}

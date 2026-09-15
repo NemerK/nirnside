@@ -97,7 +97,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
   return (
     <div>
       {/* Tabs — one per Pithka window. */}
-      <div className="mb-4 flex flex-wrap items-center gap-1 border-b border-border">
+      <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-border">
         {PITHKA_TABS.map((t) => (
           <button
             key={t.id}
@@ -112,7 +112,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
       </div>
 
       {/* Controls */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
           <input
@@ -157,12 +157,12 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wider text-fg-subtle">
-              <th className="sticky left-0 z-10 bg-surface-2/40 px-4 py-2.5 font-medium">{ROW_LABEL[tab]}</th>
+              <th className="sticky left-0 z-10 bg-surface-2/40 px-3 py-2 font-medium">{ROW_LABEL[tab]}</th>
               {cols.map((c, i) => (
                 <th
                   key={i}
                   title={c.kind === "check" ? c.tip : undefined}
-                  className={`px-3 py-2.5 font-medium ${c.kind === "check" ? "text-center" : "text-left"}`}
+                  className={`px-3 py-2 font-medium ${c.kind === "check" ? "text-center" : "text-left"}`}
                 >
                   {c.label}
                 </th>
@@ -172,9 +172,9 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
           <tbody>
             {filtered.map((r) => (
               <tr key={r.abbv} className="border-b border-border/50 align-middle last:border-0 hover:bg-surface-2/30">
-                <td className="sticky left-0 z-10 bg-surface px-4 py-2.5 font-medium text-fg">{r.name}</td>
+                <td className="sticky left-0 z-10 bg-surface px-3 py-1 font-medium text-fg">{r.name}</td>
                 {cols.map((c, i) => (
-                  <td key={i} className={`px-3 py-2.5 ${c.kind === "check" ? "text-center" : ""}`}>
+                  <td key={i} className={`px-3 py-1 ${c.kind === "check" ? "text-center" : ""}`}>
                     {c.kind === "check" && <CheckCell id={r[c.field]} done={done} />}
                     {c.kind === "named" && (
                       <NamedCell id={r[c.id]} name={(r[c.name] as string | undefined) ?? ""} done={done} />
@@ -206,12 +206,12 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
 function CheckCell({ id, done }: { id?: number | null; done: Set<number> }) {
   if (typeof id !== "number") return <span className="text-fg-subtle/25">·</span>;
   return done.has(id) ? (
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-accent/40 bg-accent-soft text-accent">
-      <Check className="h-3.5 w-3.5" />
+    <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-accent/40 bg-accent-soft text-accent">
+      <Check className="h-3 w-3" />
     </span>
   ) : (
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/70 text-fg-subtle/60">
-      <Minus className="h-3.5 w-3.5" />
+    <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-border/70 text-fg-subtle/60">
+      <Minus className="h-3 w-3" />
     </span>
   );
 }
