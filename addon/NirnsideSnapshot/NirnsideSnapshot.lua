@@ -333,6 +333,11 @@ end
 -- ITEM_SET_COLLECTIONS_DATA_MANAGER. (The old GetNumItemSetCollections /
 -- GetItemSetCollectionInfo names never existed, so this silently returned
 -- nothing -- that was the "stickerbook doesn't work" bug.)
+local function stickerNormIcon(path)
+  if not path or path == "" then return nil end
+  return (path:gsub("\\", "/"))
+end
+
 local function stickerSlotLabel(slot)
   local name = safe(function() return zo_strformat("<<1>>", GetString("SI_ITEMSETCOLLECTIONSLOT", slot)) end, nil)
   if name and name ~= "" then return name end
@@ -348,6 +353,8 @@ local function pieceUnlocked(pieceId, slot)
   end, false)
 end
 
+-- Rich per-piece data so the app can show the real item icon + name for each
+-- slot (like the in-game stickerbook), collected or not.
 local function gatherStickerbook()
   local sets = {}
   safe(function()
@@ -367,10 +374,17 @@ local function gatherStickerbook()
         for i = 1, numPieces do
           local ok, pieceId, slot = pcall(GetItemSetCollectionPieceInfo, setId, i)
           if ok and pieceId then
-            local label = stickerSlotLabel(slot)
-            -- Avoid clobbering when two pieces share a slot label.
-            if pieces[label] ~= nil then label = label .. " " .. i end
-            pieces[label] = pieceUnlocked(pieceId, slot)
+            local link = safe(function()
+              return GetItemSetCollectionPieceItemLink and GetItemSetCollectionPieceItemLink(pieceId, LINK_STYLE_DEFAULT)
+            end, nil)
+            local itemName = link and safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, nil)
+            local icon = link and safe(function() return stickerNormIcon(GetItemLinkIcon(link)) end, nil)
+            pieces[#pieces + 1] = {
+              slot = stickerSlotLabel(slot),
+              name = (itemName and itemName ~= "") and itemName or stickerSlotLabel(slot),
+              icon = icon,
+              collected = pieceUnlocked(pieceId, slot),
+            }
           end
         end
         sets[#sets + 1] = {

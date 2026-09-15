@@ -173,12 +173,40 @@ export const Character = z.object({
 });
 export type Character = z.infer<typeof Character>;
 
+export const StickerbookPiece = z.object({
+  /** Gear slot label (Head, Chest, …) or a fallback like "Slot 1". */
+  slot: z.string().default(""),
+  /** The actual item name for this piece, e.g. "Ancient Dragonguard Helm". */
+  name: z.string().default(""),
+  /** In-game .dds icon path for the piece's item, resolved by GameIcon. */
+  icon: z.string().nullable().default(null),
+  collected: z.boolean().default(false),
+});
+export type StickerbookPiece = z.infer<typeof StickerbookPiece>;
+
+/**
+ * Pieces are an ordered array (game slot order). Older snapshots wrote a
+ * `{ slotLabel: boolean }` map; we transparently upgrade that legacy shape so
+ * old data never breaks the UI.
+ */
+const StickerbookPieces = z.preprocess((v) => {
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === "object") {
+    return Object.entries(v as Record<string, unknown>).map(([slot, collected]) => ({
+      slot,
+      name: slot,
+      icon: null,
+      collected: Boolean(collected),
+    }));
+  }
+  return [];
+}, z.array(StickerbookPiece));
+
 export const StickerbookSet = z.object({
   setId: z.number().int().nonnegative(),
   name: z.string(),
   category: z.string().default("Unknown"),
-  /** Piece slot name -> collected boolean. */
-  pieces: z.record(z.string(), z.boolean()).default({}),
+  pieces: StickerbookPieces.default([]),
 });
 export type StickerbookSet = z.infer<typeof StickerbookSet>;
 

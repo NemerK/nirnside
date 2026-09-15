@@ -89,13 +89,12 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
       VALUES (@setId, @name, @category, @total, @collected, @json)
     `);
     for (const s of snap.stickerbook) {
-      const pieces = Object.values(s.pieces);
       insSet.run({
         setId: s.setId,
         name: s.name,
         category: s.category,
-        total: pieces.length,
-        collected: pieces.filter(Boolean).length,
+        total: s.pieces.length,
+        collected: s.pieces.filter((p) => p.collected).length,
         json: JSON.stringify(s),
       });
     }

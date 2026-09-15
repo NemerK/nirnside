@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Check, Search } from "lucide-react";
 import type { StickerbookSet } from "@/lib/snapshot/schema";
+import { GameIcon } from "./game-icon";
 
 type SetWithTotals = StickerbookSet & { total: number; collected: number; href?: string };
 
@@ -13,17 +14,42 @@ const STATUS = [
   { key: "complete", label: "Complete" },
 ] as const;
 
+type Status = (typeof STATUS)[number]["key"];
+
 export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<(typeof STATUS)[number]["key"]>("all");
-  const [category, setCategory] = useState("");
+  const [status, setStatus] = useState<Status>("all");
+  const [category, setCategory] = useState<string>("__all");
 
-  const categories = useMemo(() => Array.from(new Set(sets.map((s) => s.category))).sort(), [sets]);
+  // Category rail with per-category collected/total, like the in-game tree.
+  const categories = useMemo(() => {
+    const map = new Map<string, { collected: number; total: number; sets: number }>();
+    for (const s of sets) {
+      const c = s.category || "Unknown";
+      const cur = map.get(c) ?? { collected: 0, total: 0, sets: 0 };
+      cur.collected += s.collected;
+      cur.total += s.total;
+      cur.sets += 1;
+      map.set(c, cur);
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [sets]);
+
+  const grandTotal = useMemo(
+    () => sets.reduce((a, s) => ({ collected: a.collected + s.collected, total: a.total + s.total }), {
+      collected: 0,
+      total: 0,
+    }),
+    [sets],
+  );
 
   const filtered = useMemo(() => {
+    const q = search.toLowerCase();
     return sets.filter((s) => {
-      if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (category && s.category !== category) return false;
+      if (category !== "__all" && (s.category || "Unknown") !== category) return false;
+      if (q && !s.name.toLowerCase().includes(q)) return false;
       const complete = s.total > 0 && s.collected === s.total;
       if (status === "complete" && !complete) return false;
       if (status === "incomplete" && complete) return false;
@@ -32,68 +58,114 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
   }, [sets, search, status, category]);
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search sets…"
-            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      {/* Category rail */}
+      <aside className="lg:w-56 lg:shrink-0">
+        <div className="flex gap-1.5 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+          <CategoryButton
+            label="All Sets"
+            collected={grandTotal.collected}
+            total={grandTotal.total}
+            active={category === "__all"}
+            onClick={() => setCategory("__all")}
           />
-        </div>
-
-        <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
-          {STATUS.map((s) => (
-            <button
-              key={s.key}
-              onClick={() => setStatus(s.key)}
-              className={`rounded-md px-2.5 py-1.5 text-sm transition-colors ${
-                status === s.key ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className={`rounded-lg border bg-surface py-2 pl-2.5 pr-7 text-sm focus:border-accent focus:outline-none ${
-            category ? "border-accent/50 text-fg" : "border-border text-fg-muted"
-          }`}
-        >
-          <option value="">All categories</option>
           {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <CategoryButton
+              key={c.name}
+              label={c.name}
+              collected={c.collected}
+              total={c.total}
+              active={category === c.name}
+              onClick={() => setCategory(c.name)}
+            />
           ))}
-        </select>
+        </div>
+      </aside>
+
+      {/* Sets */}
+      <div className="min-w-0 flex-1">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search sets…"
+              className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
+            {STATUS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setStatus(s.key)}
+                className={`rounded-md px-2.5 py-1.5 text-sm transition-colors ${
+                  status === s.key ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-3 text-sm text-fg-muted">
+          {filtered.length} {filtered.length === 1 ? "set" : "sets"}
+          {category !== "__all" && <span className="text-fg-subtle"> · {category}</span>}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="rounded-xl border border-border bg-surface/70 px-6 py-12 text-center text-sm text-fg-muted">
+            No sets match these filters.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((s) => (
+              <SetCard key={s.setId} set={s} />
+            ))}
+          </div>
+        )}
       </div>
-
-      <div className="mb-3 text-sm text-fg-muted">{filtered.length} sets</div>
-
-      {filtered.length === 0 ? (
-        <div className="rounded-xl border border-border bg-surface/70 px-6 py-12 text-center text-sm text-fg-muted">
-          No sets match these filters.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((s) => (
-            <SetCard key={s.setId} set={s} />
-          ))}
-        </div>
-      )}
     </div>
+  );
+}
+
+function CategoryButton({
+  label,
+  collected,
+  total,
+  active,
+  onClick,
+}: {
+  label: string;
+  collected: number;
+  total: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const done = total > 0 && collected === total;
+  return (
+    <button
+      onClick={onClick}
+      className={`flex shrink-0 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors lg:w-full ${
+        active
+          ? "border-accent/50 bg-accent-soft text-fg"
+          : "border-border bg-surface/70 text-fg-muted hover:border-accent/30 hover:text-fg"
+      }`}
+    >
+      <span className="flex items-center gap-2 truncate">
+        {done && <Check className="h-3.5 w-3.5 shrink-0 text-accent" />}
+        <span className="truncate font-medium">{label}</span>
+      </span>
+      <span className={`shrink-0 text-xs ${active ? "text-accent" : "text-fg-subtle"}`}>
+        {collected}/{total}
+      </span>
+    </button>
   );
 }
 
 function SetCard({ set: s }: { set: SetWithTotals }) {
   const complete = s.total > 0 && s.collected === s.total;
-  const entries = Object.entries(s.pieces);
   const pct = s.total > 0 ? Math.round((s.collected / s.total) * 100) : 0;
 
   return (
@@ -114,28 +186,29 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
           <div className="mt-0.5 text-xs text-fg-subtle">{s.category}</div>
         </div>
         {complete ? (
-          <span className="flex h-6 items-center gap-1 rounded-md border border-accent/40 bg-accent-soft px-1.5 text-xs text-accent">
+          <span className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-accent/40 bg-accent-soft px-1.5 text-xs text-accent">
             <Check className="h-3 w-3" /> Complete
           </span>
         ) : (
-          <span className="text-xs text-fg-muted">
+          <span className="shrink-0 text-xs text-fg-muted">
             {s.collected}/{s.total}
           </span>
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1">
-        {entries.map(([slot, owned]) => (
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {s.pieces.map((p, i) => (
           <span
-            key={slot}
-            title={`${slot}: ${owned ? "collected" : "missing"}`}
-            className={`flex h-6 min-w-6 items-center justify-center rounded-md border px-1 text-[10px] font-medium ${
-              owned
-                ? "border-accent/40 bg-accent-soft text-accent"
-                : "border-border/70 bg-surface-2 text-fg-subtle"
-            }`}
+            key={`${p.slot}-${i}`}
+            title={`${p.name || p.slot} — ${p.collected ? "collected" : "missing"}`}
+            className={`relative ${p.collected ? "" : "opacity-35 grayscale"}`}
           >
-            {slotAbbrev(slot)}
+            <GameIcon name={p.name || p.slot} icon={p.icon} size={30} />
+            {p.collected && (
+              <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-surface bg-accent text-accent-fg">
+                <Check className="h-2.5 w-2.5" />
+              </span>
+            )}
           </span>
         ))}
       </div>
@@ -145,20 +218,4 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
       </div>
     </div>
   );
-}
-
-function slotAbbrev(slot: string): string {
-  const map: Record<string, string> = {
-    Head: "Hd",
-    Chest: "Ch",
-    Shoulders: "Sh",
-    Hands: "Hn",
-    Waist: "Ws",
-    Legs: "Lg",
-    Feet: "Ft",
-    Necklace: "Nk",
-    Ring: "Rg",
-    Weapon: "Wp",
-  };
-  return map[slot] ?? slot.slice(0, 2);
 }
