@@ -55,7 +55,7 @@ field**, so a scan upgrades entries without dropping detail.
 ```bash
 npm install
 npm run seed      # loads data/sample/Nirnside.lua into the local DB
-npm run dev       # http://127.0.0.1:43117
+npm run dev       # http://127.0.0.1:43219
 ```
 
 ## Using it with your real account (PC) — nothing to set up
@@ -84,8 +84,7 @@ localized Documents names, and every environment folder (`liveeu`, `live`, `pts`
 or any custom one with a `SavedVariables` subdir):
 
 ```
-Documents/Elder Scrolls Online/liveeu/SavedVariables/NirnsideSnapshot.lua   (EU)
-Documents/Elder Scrolls Online/live/SavedVariables/NirnsideSnapshot.lua     (NA)
+Documents/Elder Scrolls Online/live/SavedVariables/NirnsideData.lua
 …plus OneDrive-redirected + other-drive variants on Windows.
 ```
 
@@ -136,7 +135,7 @@ mail, PvP ranks, and quest logs are out of scope by design. See the rules file.
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start the app on port 43117 |
+| `npm run dev` | Start the app on port 43219 |
 | `npm run build` / `npm run start` | Production build / serve |
 | `npm run seed` | Import the bundled sample snapshot |
 | `npm run import -- <file>` | Import a specific SavedVariables file |

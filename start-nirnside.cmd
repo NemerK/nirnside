@@ -26,5 +26,5 @@ if not exist node_modules (
 )
 
 echo Starting Nirnside... a browser tab will open shortly.
-start "" http://127.0.0.1:43117
+start "" http://127.0.0.1:43219
 call npm run dev

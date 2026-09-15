@@ -15,7 +15,10 @@ import { join } from "node:path";
  *   4. The bundled sample fixture (so a fresh clone still shows something)
  */
 
-export const SNAPSHOT_FILENAME = "NirnsideSnapshot.lua";
+// The file ESO actually writes is named after the addon's `## SavedVariables`
+// key (NirnsideData), NOT after the addon's code file (NirnsideSnapshot.lua).
+// ESO puts it in <env>/SavedVariables/NirnsideData.lua.
+export const SNAPSHOT_FILENAME = "NirnsideData.lua";
 
 export type SnapshotSource =
   | { kind: "env"; path: string; label: string }
@@ -26,7 +29,7 @@ export type SnapshotSource =
 /**
  * Drop-in folder for a manually provided file. Useful when the app runs on a
  * machine without ESO (e.g. a remote/cloud instance): put your real
- * NirnsideSnapshot.lua here and it's imported and watched like a local file.
+ * NirnsideData.lua here and it's imported and watched like a local file.
  */
 export function incomingPath(): string {
   return join(process.cwd(), "data", "incoming", SNAPSHOT_FILENAME);

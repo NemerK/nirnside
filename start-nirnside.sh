@@ -21,7 +21,7 @@ if [ ! -d node_modules ]; then
   npm install
 fi
 
-URL="http://127.0.0.1:43117"
+URL="http://127.0.0.1:43219"
 echo "Starting Nirnside... opening $URL"
 ( sleep 3; (open "$URL" >/dev/null 2>&1 || xdg-open "$URL" >/dev/null 2>&1 || true) ) &
 npm run dev
