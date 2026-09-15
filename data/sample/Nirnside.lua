@@ -433,6 +433,25 @@ NirnsideData =
 
                     { ["id"] = 3101, ["name"] = "Fungal Grotto I Vanquisher", ["description"] = "Defeat the final boss of Veteran Fungal Grotto I.", ["points"] = 10, ["completed"] = true, ["category"] = "Dungeons", ["content"] = "Fungal Grotto I" },
                 },
+                -- Real Pithka achievement ids the sample account has completed, so the
+                -- demo board lights up realistically (base clears + some HMs, a few
+                -- trials, one full dungeon trifecta).
+                ["completedAchievementIds"] =
+                {
+                    -- Base dungeon veteran clears (all)
+                    1556, 343, 1549, 545, 1573, 459, 1597, 878, 1610, 876, 1581, 464, 1565, 421, 1589, 678,
+                    1604, 1647, 1641, 1623, 1635, 1617, 1653, 1629, 1120, 880, 1505, 1523, 1699, 1691,
+                    -- A handful of base dungeon hard modes
+                    1561, 1554, 1578, 1615, 1570, 1594, 1609, 1658,
+                    -- Trials: veterans + a few hard modes + one trifecta
+                    1474, 1503, 1462, 1368, 1391, 1810, 1829, 2133, 2134, 2435, 2469, 2734,
+                    1136, 1137, 1138, 2139,
+                    -- Arenas
+                    1305, 1140, 2363, 2364, 2366, 2365,
+                    -- Trifecta dungeons: some vets/HM/SR/ND, one complete trifecta (Depths of Malatar)
+                    1960, 1965, 1963, 1966, 2416, 2417,
+                    2271, 2275, 2272, 2273, 2274, 2276,
+                },
             },
         },
     },

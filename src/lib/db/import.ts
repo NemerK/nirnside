@@ -28,6 +28,7 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         currencies: snap.currencies,
         guilds: snap.guilds,
         achievements: snap.achievements,
+        completedAchievementIds: snap.completedAchievementIds,
       }),
     );
 

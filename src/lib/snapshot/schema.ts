@@ -280,5 +280,12 @@ export const AccountSnapshot = z.object({
    * not fabricate per-character attribution.
    */
   achievementRecords: lenientArray(AchievementRecord).default([]),
+  /**
+   * Every achievement id the account has completed (a flat set). This is what
+   * the Pithka-style board runs on: for each achievement Pithka tracks (by id),
+   * we simply check membership here — exactly what the in-game add-on does with
+   * IsAchievementComplete. Sparse and cheap; written on logout/ReloadUI only.
+   */
+  completedAchievementIds: z.array(z.number().int().nonnegative()).default([]),
 });
 export type AccountSnapshot = z.infer<typeof AccountSnapshot>;

@@ -578,6 +578,46 @@ local function recordLine(out, seen, listedId, category, content)
   end
 end
 
+-- Flat set of EVERY completed achievement id on the account. This is what the
+-- Pithka-style board runs on: the app holds Pithka's curated id-per-column table
+-- and simply checks membership here, exactly like the in-game add-on does with
+-- IsAchievementComplete. We sweep all categories (and walk each achievement line
+-- so every tier is covered) out of combat on logout/ReloadUI only.
+local function gatherCompletedAchievementIds()
+  local done = {}
+  safe(function()
+    if not (GetNumAchievementCategories and IsAchievementComplete) then return end
+    local function scanId(id)
+      if not id or id == 0 then return end
+      local first = safe(function() return GetFirstAchievementInLine(id) end, 0)
+      local cur = (first and first ~= 0) and first or id
+      local guard = 0
+      while cur and cur ~= 0 and guard < 60 do
+        if safe(function() return IsAchievementComplete(cur) end, false) then done[cur] = true end
+        cur = safe(function() return GetNextAchievementInLine(cur) end, 0)
+        guard = guard + 1
+      end
+    end
+    local numCats = GetNumAchievementCategories()
+    for c = 1, numCats do
+      local _, numSub, numAch = GetAchievementCategoryInfo(c)
+      for a = 1, (numAch or 0) do
+        scanId(safe(function() return GetAchievementId(c, nil, a) end, 0))
+      end
+      for s = 1, (numSub or 0) do
+        local _, subNumAch = GetAchievementSubCategoryInfo(c, s)
+        for a = 1, (subNumAch or 0) do
+          scanId(safe(function() return GetAchievementId(c, s, a) end, 0))
+        end
+      end
+    end
+  end)
+  -- SavedVariables serialize integer-keyed maps awkwardly; emit a plain array.
+  local ids = {}
+  for id in pairs(done) do ids[#ids + 1] = id end
+  return ids
+end
+
 local function gatherAchievements()
   local out = {}
   local seen = {}
@@ -663,6 +703,7 @@ local function takeSnapshot(reason)
   local achRecords, achNames = gatherAchievements()
   sv.achievementRecords = achRecords
   sv.achievements = achNames
+  sv.completedAchievementIds = gatherCompletedAchievementIds()
 
   upsertCharacter(gatherCharacter())
 
@@ -698,6 +739,7 @@ local function onAddOnLoaded(_, name)
     stickerbook = {},
     achievements = {},
     achievementRecords = {},
+    completedAchievementIds = {},
   })
 
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_PLAYER_ACTIVATED, onPlayerActivated)

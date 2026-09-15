@@ -13,10 +13,20 @@ export type AccountMeta = Pick<
   | "currencies"
   | "guilds"
   | "achievements"
+  | "completedAchievementIds"
 >;
 
 export function getAccount(): AccountMeta | null {
   return getMeta<AccountMeta>("account");
+}
+
+/**
+ * Account-wide set of completed achievement ids — the authoritative input for
+ * the Pithka-style board. Straight from the game (IsAchievementComplete);
+ * nothing inferred.
+ */
+export function getCompletedAchievementIds(): number[] {
+  return getAccount()?.completedAchievementIds ?? [];
 }
 
 /** Account-wide earned achievement names, lowercased for matching. */
