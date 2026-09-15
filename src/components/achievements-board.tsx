@@ -65,12 +65,9 @@ export function AchievementsBoard({ rows }: { rows: BoardRow[] }) {
 
   const tabRows = useMemo(() => rows.filter((r) => r.category === activeTab), [rows, activeTab]);
 
-  // Only render columns this tab actually has data for (keeps the grid tidy).
-  const cols = useMemo<ColSpec[]>(() => {
-    const spec = COLS_BY_CATEGORY[activeTab] ?? DUNGEON_COLS;
-    const used = spec.filter((c) => tabRows.some((r) => r.cells[c.col].total > 0));
-    return used.length ? used : spec.slice(0, 1);
-  }, [activeTab, tabRows]);
+  // Always render the tab's full column set (like Pithka), so the grid is
+  // consistent and uncleared content shows dashes rather than dropping columns.
+  const cols = useMemo<ColSpec[]>(() => COLS_BY_CATEGORY[activeTab] ?? DUNGEON_COLS, [activeTab]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
