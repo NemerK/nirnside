@@ -188,6 +188,26 @@ export const Guild = z.object({
   trader: z.boolean().default(false),
 });
 
+/**
+ * One achievement, exactly as the game reports it. This is the Pithka-style
+ * board's single source of truth: name, description, points and completion all
+ * come straight from ESO, so nothing is guessed. `category` is the top-level
+ * ESO achievement category ("Dungeons" / "Trials" / "Group Arenas" / ...) and
+ * `content` is the subcategory (the specific dungeon/trial/arena) that the
+ * board groups by. `title` is the title reward, if this achievement grants one.
+ */
+export const AchievementRecord = z.object({
+  id: z.number().int().nonnegative().default(0),
+  name: z.string(),
+  description: z.string().default(""),
+  points: z.number().int().nonnegative().default(0),
+  completed: z.boolean().default(false),
+  category: z.string().default(""),
+  content: z.string().default(""),
+  title: z.string().nullable().default(null),
+});
+export type AchievementRecord = z.infer<typeof AchievementRecord>;
+
 export const AccountSnapshot = z.object({
   displayName: z.string(),
   region: Region.default("EU"),
@@ -203,10 +223,17 @@ export const AccountSnapshot = z.object({
   characters: lenientArray(Character).default([]),
   stickerbook: lenientArray(StickerbookSet).default([]),
   /**
-   * Account-wide earned achievement names (Pithka-style trial/dungeon/arena
-   * tracking). ESO achievements are account-wide; the API does not expose which
-   * character earned them, so we do not fabricate per-character attribution.
+   * Legacy: account-wide earned achievement NAMES only. Kept for back-compat
+   * with older snapshots. New snapshots also fill `achievementRecords` below,
+   * which the board prefers because it carries the full game truth.
    */
   achievements: z.array(z.string()).default([]),
+  /**
+   * Structured trial/dungeon/arena achievements straight from the game — the
+   * authoritative source for the Pithka-style board. ESO achievements are
+   * account-wide; the API does not expose which character earned them, so we do
+   * not fabricate per-character attribution.
+   */
+  achievementRecords: lenientArray(AchievementRecord).default([]),
 });
 export type AccountSnapshot = z.infer<typeof AccountSnapshot>;

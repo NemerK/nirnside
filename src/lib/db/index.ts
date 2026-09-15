@@ -77,6 +77,22 @@ function migrate(db: Database.Database) {
       json       TEXT NOT NULL
     );
 
+    -- Structured trial/dungeon/arena achievements as the game reports them.
+    -- Drives the Pithka-style board directly: completion is never inferred.
+    CREATE TABLE IF NOT EXISTS achievements (
+      id           INTEGER PRIMARY KEY,
+      name         TEXT NOT NULL,
+      description  TEXT NOT NULL DEFAULT '',
+      points       INTEGER NOT NULL DEFAULT 0,
+      completed    INTEGER NOT NULL DEFAULT 0,
+      category     TEXT NOT NULL DEFAULT '',
+      content      TEXT NOT NULL DEFAULT '',
+      title        TEXT,
+      json         TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ach_content ON achievements(content);
+    CREATE INDEX IF NOT EXISTS idx_ach_category ON achievements(category);
+
     -- The shared Tamriel catalog. One row per entry across every domain
     -- (set, skill, skillline, cp, grimoire, script, ...). 'source' encodes the
     -- accuracy rule: 'ingame' > 'community' > 'reference'. On import, higher

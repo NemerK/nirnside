@@ -12,7 +12,7 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
   const tx = db.transaction(() => {
     // Note: only clear account-scoped rows. The catalog table and its meta
     // (source/patch) are a separate, shared dataset and must survive re-imports.
-    db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook;");
+    db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook; DELETE FROM achievements;");
     db.prepare("DELETE FROM meta WHERE key = 'account'").run();
 
     const setMeta = db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)");
@@ -97,6 +97,27 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         total: pieces.length,
         collected: pieces.filter(Boolean).length,
         json: JSON.stringify(s),
+      });
+    }
+
+    const insAch = db.prepare(`
+      INSERT OR REPLACE INTO achievements
+        (id, name, description, points, completed, category, content, title, json)
+      VALUES (@id, @name, @description, @points, @completed, @category, @content, @title, @json)
+    `);
+    // Deduplicate by id (the game can surface the same achievement via multiple
+    // category paths); last write wins, which is fine since they're identical.
+    for (const a of snap.achievementRecords) {
+      insAch.run({
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        points: a.points,
+        completed: a.completed ? 1 : 0,
+        category: a.category,
+        content: a.content,
+        title: a.title,
+        json: JSON.stringify(a),
       });
     }
   });

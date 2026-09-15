@@ -357,50 +357,101 @@ local function gatherStickerbook()
   return sets
 end
 
--- Account-wide achievements (Pithka-style). ESO achievements are account-wide,
--- so we record earned Trial / Dungeon / Arena achievement NAMES only. Iterated
--- out of combat on logout/ReloadUI; no combat impact. We scope to the relevant
--- categories to keep the file small.
-local ACH_CATEGORIES = { ["Dungeons"] = true, ["Trials"] = true, ["Arenas"] = true }
+-- Account-wide achievements (Pithka-style). ESO achievements are account-wide.
+-- We export the FULL structured record (name, description, points, completion,
+-- category, content) for every Trial / Dungeon / Arena achievement — earned or
+-- not — so the app's board is driven entirely by real game data and never has
+-- to guess names. Iterated out of combat on logout/ReloadUI only; read-only.
 
-local function collectCompleted(out, catIndex, subIndex)
-  local num = safe(function()
-    if subIndex then
-      return select(1, GetAchievementNumSubCategoryAchievements and 0 or 0)
-    end
-    return 0
-  end, 0)
-  -- Use the id-walking API which is stable across categories.
-  local i = 1
-  while true do
-    local id = safe(function() return GetAchievementId(catIndex, subIndex, i) end, 0)
-    if not id or id == 0 then break end
-    local completed = safe(function() return select(5, GetAchievementInfo(id)) end, false)
-    if completed then
-      local name = safe(function() return zo_strformat("<<1>>", GetAchievementName(id)) end, nil)
-      if name and name ~= "" then out[#out + 1] = name end
-    end
-    i = i + 1
-    if i > 500 then break end -- hard guard against malformed data
+-- Map ESO's localized category name to our coarse content type. We match on
+-- keywords so it works regardless of exact wording ("Group Arenas", etc.).
+local function classifyCategory(name)
+  local n = name and name:lower() or ""
+  if n:find("trial") then return "Trial" end
+  if n:find("arena") then return "Arena" end
+  if n:find("dungeon") then return "Dungeon" end
+  return nil
+end
+
+-- Record one achievement id (deduped) into `out` with full detail.
+local function recordAchievement(out, seen, id, category, content)
+  if not id or id == 0 or seen[id] then return end
+  seen[id] = true
+  local name, description, points, completed = safe(function()
+    local n, d, p, _, c = GetAchievementInfo(id)
+    return n, d, p, c
+  end, nil, nil, 0, false)
+  if not name or name == "" then return end
+  -- Cross-check completion with the dedicated getter when present.
+  completed = safe(function()
+    if IsAchievementComplete then return IsAchievementComplete(id) == true end
+    return completed == true
+  end, completed == true)
+  local title = safe(function()
+    local t = GetAchievementRewardTitle and GetAchievementRewardTitle(id) or nil
+    if t and t ~= "" then return zo_strformat("<<1>>", t) end
+    return nil
+  end, nil)
+  out[#out + 1] = {
+    id = id,
+    name = zo_strformat("<<1>>", name),
+    description = description and zo_strformat("<<1>>", description) or "",
+    points = points or 0,
+    completed = completed,
+    category = category,
+    content = content,
+    title = title,
+  }
+end
+
+-- The category listing returns only the "current" achievement in a chain (e.g.
+-- the next uncompleted tier). Walk the whole line so we capture every tier
+-- (base clear -> hard mode -> trifecta) with its own completion state.
+local function recordLine(out, seen, listedId, category, content)
+  if not listedId or listedId == 0 then return end
+  local first = safe(function() return GetFirstAchievementInLine(listedId) end, 0)
+  local id = (first and first ~= 0) and first or listedId
+  local guard = 0
+  while id and id ~= 0 and guard < 50 do
+    recordAchievement(out, seen, id, category, content)
+    id = safe(function() return GetNextAchievementInLine(id) end, 0)
+    guard = guard + 1
   end
 end
 
 local function gatherAchievements()
   local out = {}
+  local seen = {}
   safe(function()
     local numCats = GetNumAchievementCategories()
     for c = 1, numCats do
-      local catName, numSubCats = GetAchievementCategoryInfo(c)
-      local scoped = catName and ACH_CATEGORIES[zo_strformat("<<1>>", catName)]
-      if scoped then
-        collectCompleted(out, c, nil)
+      local catName, numSubCats, numAch = GetAchievementCategoryInfo(c)
+      local category = classifyCategory(catName and zo_strformat("<<1>>", catName) or "")
+      if category then
+        local catLabel = zo_strformat("<<1>>", catName)
+        -- Top-level achievements (no subcategory).
+        for a = 1, (numAch or 0) do
+          local id = safe(function() return GetAchievementId(c, nil, a) end, 0)
+          recordLine(out, seen, id, category, catLabel)
+        end
+        -- Subcategories are the individual dungeons / trials / arenas.
         for s = 1, (numSubCats or 0) do
-          collectCompleted(out, c, s)
+          local subName, subNumAch = GetAchievementSubCategoryInfo(c, s)
+          local content = (subName and subName ~= "") and zo_strformat("<<1>>", subName) or catLabel
+          for a = 1, (subNumAch or 0) do
+            local id = safe(function() return GetAchievementId(c, s, a) end, 0)
+            recordLine(out, seen, id, category, content)
+          end
         end
       end
     end
   end)
-  return out
+  -- Legacy earned-names list, derived so older importers still work.
+  local names = {}
+  for _, r in ipairs(out) do
+    if r.completed then names[#names + 1] = r.name end
+  end
+  return out, names
 end
 
 ----------------------------------------------------------------------
@@ -450,7 +501,9 @@ local function takeSnapshot(reason)
   sv.items = kept
 
   sv.stickerbook = gatherStickerbook()
-  sv.achievements = gatherAchievements()
+  local achRecords, achNames = gatherAchievements()
+  sv.achievementRecords = achRecords
+  sv.achievements = achNames
 
   upsertCharacter(gatherCharacter())
 
@@ -485,6 +538,7 @@ local function onAddOnLoaded(_, name)
     characters = {},
     stickerbook = {},
     achievements = {},
+    achievementRecords = {},
   })
 
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_PLAYER_ACTIVATED, onPlayerActivated)

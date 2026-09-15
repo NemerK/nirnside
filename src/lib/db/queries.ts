@@ -1,6 +1,6 @@
 import "server-only";
 import { getDb, getMeta } from "./index";
-import type { AccountSnapshot, Character, Item, StickerbookSet } from "../snapshot/schema";
+import type { AccountSnapshot, AchievementRecord, Character, Item, StickerbookSet } from "../snapshot/schema";
 
 export type AccountMeta = Pick<
   AccountSnapshot,
@@ -23,6 +23,23 @@ export function getAccount(): AccountMeta | null {
 export function getEarnedAchievements(): Set<string> {
   const acct = getAccount();
   return new Set((acct?.achievements ?? []).map((a) => a.toLowerCase()));
+}
+
+/**
+ * Structured trial/dungeon/arena achievements straight from the game. This is
+ * the authoritative source for the achievements board — completion here is what
+ * ESO reported, never inferred.
+ */
+export function getAchievementRecords(): AchievementRecord[] {
+  const rows = getDb()
+    .prepare("SELECT json FROM achievements ORDER BY content ASC, points DESC, name ASC")
+    .all() as { json: string }[];
+  return rows.map((r) => JSON.parse(r.json) as AchievementRecord);
+}
+
+export function hasAchievementRecords(): boolean {
+  const row = getDb().prepare("SELECT COUNT(*) c FROM achievements").get() as { c: number };
+  return row.c > 0;
 }
 
 export interface DataSource {

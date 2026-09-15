@@ -1,78 +1,100 @@
 import { Trophy } from "lucide-react";
 import { getAchievements } from "@/lib/db/catalog-queries";
-import { getEarnedAchievements } from "@/lib/db/queries";
+import { getAchievementRecords, hasAchievementRecords, getEarnedAchievements } from "@/lib/db/queries";
 import { getCatalogMeta } from "@/lib/catalog/import";
 import { PageHeader, Stat, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
-import { AchievementsBoard, type ContentRow } from "@/components/achievements-board";
+import { AchievementsBoard } from "@/components/achievements-board";
+import { classifyAchievement, normalizeCategory } from "@/lib/achievements/classify";
+import { buildRows, boardStats, type BoardItem } from "@/lib/achievements/board";
 import type { CatalogSource } from "@/lib/catalog/schema";
 
 export const dynamic = "force-dynamic";
 
-const CONTENT_ORDER = ["Trial", "Arena", "Dungeon"];
-
 export default function AchievementsPage() {
-  const meta = safe(() => getCatalogMeta());
-  const earned = safe(() => getEarnedAchievements()) ?? new Set<string>();
-  const list = safe(() => getAchievements()) ?? [];
+  const inGame = safe(() => hasAchievementRecords()) ?? false;
+  const { items, source } = inGame ? fromGame() : fromReference();
 
-  const byContent = new Map<string, ContentRow>();
-  for (const { entry, source } of list) {
-    if (!byContent.has(entry.content)) {
-      byContent.set(entry.content, { content: entry.content, category: entry.category, source, cells: {} });
-    }
-    const row = byContent.get(entry.content)!;
-    const col = entry.subtype === "Speed" || entry.subtype === "No Death" ? "Trifecta" : entry.subtype;
-    if (col === "Completion" || col === "Hard Mode" || col === "Trifecta") {
-      row.cells[col] = { name: entry.name, earned: earned.has(entry.name.toLowerCase()) };
-    }
-  }
-
-  const rows = Array.from(byContent.values()).sort((a, b) => {
-    const ca = CONTENT_ORDER.indexOf(a.category);
-    const cb = CONTENT_ORDER.indexOf(b.category);
-    if (ca !== cb) return ca - cb;
-    return a.content.localeCompare(b.content);
-  });
-
-  const totalAch = list.length;
-  const earnedAch = list.filter((a) => earned.has(a.entry.name.toLowerCase())).length;
-  const trifectas = list.filter((a) => a.entry.subtype === "Trifecta");
-  const trifectasEarned = trifectas.filter((a) => earned.has(a.entry.name.toLowerCase())).length;
+  const rows = buildRows(items);
+  const stats = boardStats(rows);
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Trial & Dungeon Achievements"
         subtitle="Pithka-style completion board across trials, arenas and dungeons. Achievements are account-wide."
-        action={meta ? <SourceBadge source={meta.source as CatalogSource} /> : undefined}
+        action={<SourceBadge source={source} />}
       />
 
       {rows.length === 0 ? (
-        <EmptyState title="No achievement catalog yet" icon={<Trophy className="h-8 w-8" />}>
-          The trial/dungeon board loads from the catalog. Run <code className="rounded bg-surface-2 px-1">npm run seed</code>.
+        <EmptyState title="No achievements yet" icon={<Trophy className="h-8 w-8" />}>
+          Log out or <code className="rounded bg-surface-2 px-1">/reloadui</code> in ESO with the Nirnside Snapshot
+          addon enabled — your trial, dungeon and arena achievements are read straight from the game and appear here.
+          To preview with sample data, load the demo from the home page.
         </EmptyState>
       ) : (
         <>
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <Stat
               label="Achievements"
-              value={`${earnedAch}/${totalAch}`}
-              hint={`${totalAch ? Math.round((earnedAch / totalAch) * 100) : 0}% earned`}
+              value={`${stats.earned}/${stats.total}`}
+              hint={`${stats.total ? Math.round((stats.earned / stats.total) * 100) : 0}% earned`}
             />
-            <Stat label="Trifectas" value={`${trifectasEarned}/${trifectas.length}`} />
-            <Stat label="Content tracked" value={rows.length} />
-            <Stat label="Source" value={meta?.source === "ingame" ? "In-game" : "Reference"} />
+            <Stat label="Trifectas" value={`${stats.trifectas.earned}/${stats.trifectas.total}`} />
+            <Stat label="Titles" value={`${stats.titles.earned}/${stats.titles.total}`} />
+            <Stat
+              label="Points"
+              value={`${stats.points.earned.toLocaleString()}`}
+              hint={`of ${stats.points.total.toLocaleString()}`}
+            />
+            <Stat label="Content tracked" value={stats.contentTracked} />
           </div>
           <p className="mb-4 text-xs text-fg-subtle">
-            ESO exposes achievements at the account level, not per character, so Nirnside shows account-wide completion
-            and does not fabricate which character earned each one.
+            {inGame
+              ? "Completion, points and names are read directly from your game — nothing is inferred. ESO exposes achievements at the account level, not per character, so Nirnside shows account-wide completion."
+              : "Showing reference content (demo). Log in with the Snapshot addon to replace this with your real, game-verified completion."}
           </p>
           <AchievementsBoard rows={rows} />
         </>
       )}
     </div>
   );
+}
+
+/** Build board items from real, game-exported achievement records. */
+function fromGame(): { items: BoardItem[]; source: CatalogSource } {
+  const records = safe(() => getAchievementRecords()) ?? [];
+  const items: BoardItem[] = records.map((r) => ({
+    content: r.content || normalizeCategory(r.category),
+    category: normalizeCategory(r.category),
+    column: classifyAchievement(r),
+    name: r.name,
+    completed: r.completed,
+    points: r.points,
+    title: r.title,
+  }));
+  return { items, source: "ingame" };
+}
+
+/**
+ * Fallback for demo/empty state: derive from the reference catalog, using the
+ * curated subtype for the column and matching earned status by name. This is the
+ * old (less accurate) path, only used when no game data is present.
+ */
+function fromReference(): { items: BoardItem[]; source: CatalogSource } {
+  const earned = safe(() => getEarnedAchievements()) ?? new Set<string>();
+  const list = safe(() => getAchievements()) ?? [];
+  const meta = safe(() => getCatalogMeta());
+  const items: BoardItem[] = list.map(({ entry }) => ({
+    content: entry.content,
+    category: normalizeCategory(entry.category),
+    column: entry.subtype,
+    name: entry.name,
+    completed: earned.has(entry.name.toLowerCase()),
+    points: 0,
+    title: null,
+  }));
+  return { items, source: (meta?.source as CatalogSource) ?? "reference" };
 }
 
 function safe<T>(fn: () => T): T | null {

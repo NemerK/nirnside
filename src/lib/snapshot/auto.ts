@@ -201,7 +201,7 @@ export function loadSampleData(): boolean {
 export function clearAccountData(): void {
   try {
     const db = getDb();
-    db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook;");
+    db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook; DELETE FROM achievements;");
     db.prepare("DELETE FROM meta WHERE key IN ('account','dataSource')").run();
   } catch (err) {
     console.error(`[nirnside] clear failed: ${err instanceof Error ? err.message : err}`);

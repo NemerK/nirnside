@@ -364,17 +364,40 @@ NirnsideData =
                 ["achievements"] =
                 {
                     "Aetherian Archive Conqueror", "Aetherian Archive Vanquisher",
-                    "Hel Ra Citadel Conqueror", "Hel Ra Citadel Vanquisher",
-                    "Sanctum Ophidia Conqueror",
-                    "Cloudrest Conqueror", "Cloudrest Hard Mode", "Immortal Redeemer",
-                    "Sunspire Conqueror", "Sunspire Hard Mode",
+                    "Cloudrest Conqueror", "Cloudrest Hard Mode",
                     "Rockgrove Conqueror",
-                    "Dreadsail Reef Conqueror", "Dreadsail Reef Hard Mode",
-                    "Maelstrom Arena Conqueror", "Flawless Conqueror", "Spirit Slayer",
-                    "Vateshran Hollows Conqueror",
-                    "Fungal Grotto I Vanquisher", "Fungal Grotto II Vanquisher", "Fungal Grotto II Hard Mode",
-                    "White-Gold Tower Vanquisher", "White-Gold Tower Hard Mode",
-                    "Oathsworn Pit Vanquisher",
+                    "Maelstrom Arena Conqueror", "Flawless Conqueror",
+                    "Moongrave Fane Vanquisher", "Moongrave Fane Conqueror",
+                },
+                -- Structured records exactly as the addon exports them: name,
+                -- description, points, completion, category and content all come
+                -- straight from the game. The board is built from THIS, so
+                -- completion is never inferred from a guessed name.
+                ["achievementRecords"] =
+                {
+                    { ["id"] = 1001, ["name"] = "Aetherian Archive Conqueror", ["description"] = "Defeat the final boss of the Aetherian Archive.", ["points"] = 50, ["completed"] = true, ["category"] = "Trials", ["content"] = "Aetherian Archive" },
+                    { ["id"] = 1002, ["name"] = "Aetherian Archive Vanquisher", ["description"] = "Defeat the final boss of Veteran Aetherian Archive with hard mode active.", ["points"] = 50, ["completed"] = true, ["category"] = "Trials", ["content"] = "Aetherian Archive" },
+                    { ["id"] = 1003, ["name"] = "The Unchained", ["description"] = "Complete Veteran Aetherian Archive with hard mode active, without suffering a group member death, in under 30 minutes.", ["points"] = 50, ["completed"] = false, ["category"] = "Trials", ["content"] = "Aetherian Archive", ["title"] = "the Unchained" },
+
+                    { ["id"] = 1010, ["name"] = "Cloudrest Conqueror", ["description"] = "Defeat Z'Maja in Cloudrest.", ["points"] = 50, ["completed"] = true, ["category"] = "Trials", ["content"] = "Cloudrest" },
+                    { ["id"] = 1011, ["name"] = "Cloudrest Hard Mode", ["description"] = "Defeat Z'Maja in Veteran Cloudrest with all three Welkynars alive (hard mode).", ["points"] = 50, ["completed"] = true, ["category"] = "Trials", ["content"] = "Cloudrest" },
+                    { ["id"] = 1012, ["name"] = "Immortal Redeemer", ["description"] = "Complete Veteran Cloudrest with hard mode active, without suffering a group member death, in under 30 minutes.", ["points"] = 50, ["completed"] = false, ["category"] = "Trials", ["content"] = "Cloudrest", ["title"] = "Immortal Redeemer" },
+
+                    { ["id"] = 1020, ["name"] = "Rockgrove Conqueror", ["description"] = "Defeat Xalvakka in Rockgrove.", ["points"] = 50, ["completed"] = true, ["category"] = "Trials", ["content"] = "Rockgrove" },
+                    { ["id"] = 1021, ["name"] = "Rockgrove Hard Mode", ["description"] = "Defeat Xalvakka in Veteran Rockgrove with hard mode active.", ["points"] = 50, ["completed"] = false, ["category"] = "Trials", ["content"] = "Rockgrove" },
+                    { ["id"] = 1022, ["name"] = "Rockgrove Trifecta", ["description"] = "Complete Veteran Rockgrove with hard mode active, without suffering a group member death, in under 33 minutes.", ["points"] = 50, ["completed"] = false, ["category"] = "Trials", ["content"] = "Rockgrove", ["title"] = "Oxblood Reaper" },
+
+                    { ["id"] = 2001, ["name"] = "Maelstrom Arena Conqueror", ["description"] = "Complete all nine arenas of Maelstrom Arena.", ["points"] = 50, ["completed"] = true, ["category"] = "Solo Arenas", ["content"] = "Maelstrom Arena" },
+                    { ["id"] = 2002, ["name"] = "Flawless Conqueror", ["description"] = "Complete all nine arenas of Veteran Maelstrom Arena.", ["points"] = 50, ["completed"] = true, ["category"] = "Solo Arenas", ["content"] = "Maelstrom Arena", ["title"] = "the Flawless" },
+                    { ["id"] = 2003, ["name"] = "Spirit Slayer", ["description"] = "Complete Veteran Maelstrom Arena with hard mode active on every arena, without dying, in under 42 minutes.", ["points"] = 50, ["completed"] = false, ["category"] = "Solo Arenas", ["content"] = "Maelstrom Arena", ["title"] = "Spirit Slayer" },
+
+                    { ["id"] = 3001, ["name"] = "Moongrave Fane Vanquisher", ["description"] = "Defeat the final boss of Veteran Moongrave Fane.", ["points"] = 50, ["completed"] = true, ["category"] = "Dungeons", ["content"] = "Moongrave Fane" },
+                    { ["id"] = 3002, ["name"] = "Moongrave Fane Conqueror", ["description"] = "Defeat all bosses in Veteran Moongrave Fane with hard mode active.", ["points"] = 50, ["completed"] = true, ["category"] = "Dungeons", ["content"] = "Moongrave Fane" },
+                    { ["id"] = 3003, ["name"] = "Moongrave Fane Survivor", ["description"] = "Complete Veteran Moongrave Fane without suffering a group member death.", ["points"] = 50, ["completed"] = false, ["category"] = "Dungeons", ["content"] = "Moongrave Fane" },
+                    { ["id"] = 3004, ["name"] = "Moongrave Fane Speed Run", ["description"] = "Complete Veteran Moongrave Fane in under 20 minutes.", ["points"] = 50, ["completed"] = false, ["category"] = "Dungeons", ["content"] = "Moongrave Fane" },
+                    { ["id"] = 3005, ["name"] = "Moongrave Fane Trifecta", ["description"] = "Complete Veteran Moongrave Fane with hard mode active, without a group member death, in under 20 minutes.", ["points"] = 50, ["completed"] = false, ["category"] = "Dungeons", ["content"] = "Moongrave Fane", ["title"] = "Bahsei's Bane" },
+
+                    { ["id"] = 3101, ["name"] = "Fungal Grotto I Vanquisher", ["description"] = "Defeat the final boss of Veteran Fungal Grotto I.", ["points"] = 10, ["completed"] = true, ["category"] = "Dungeons", ["content"] = "Fungal Grotto I" },
                 },
             },
         },
