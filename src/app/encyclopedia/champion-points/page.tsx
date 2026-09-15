@@ -5,6 +5,7 @@ import { getCharacters } from "@/lib/db/queries";
 import { getCatalogMeta } from "@/lib/catalog/import";
 import { PageHeader } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
+import { CatalogScanCallout } from "@/components/catalog-scan-callout";
 import { CPView, type CPDiscipline, type CPCharacterAlloc } from "@/components/cp-view";
 import type { CatalogSource } from "@/lib/catalog/schema";
 
@@ -47,6 +48,7 @@ export default function ChampionPointsPage() {
         subtitle="The live constellation. Browse the tree with your investments overlaid, or plan a build."
         action={meta ? <SourceBadge source={meta.source as CatalogSource} /> : undefined}
       />
+      <CatalogScanCallout source={meta?.source as CatalogSource | undefined} />
       <CPView disciplines={disciplines} characters={characters} />
     </div>
   );

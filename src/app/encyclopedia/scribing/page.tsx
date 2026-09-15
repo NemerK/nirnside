@@ -5,6 +5,7 @@ import { knownScriptNames } from "@/lib/db/overlay";
 import { getCatalogMeta } from "@/lib/catalog/import";
 import { PageHeader } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
+import { CatalogScanCallout } from "@/components/catalog-scan-callout";
 import { ScribingMatrix, type GrimoireLite, type ScriptLite } from "@/components/scribing-matrix";
 import type { CatalogSource } from "@/lib/catalog/schema";
 
@@ -40,6 +41,7 @@ export default function ScribingPage() {
         subtitle="Every grimoire and its full Focus × Signature × Affix combination matrix. Scripts your account knows are marked."
         action={meta ? <SourceBadge source={meta.source as CatalogSource} /> : undefined}
       />
+      <CatalogScanCallout source={meta?.source as CatalogSource | undefined} />
       {grimoires.length === 0 ? (
         <p className="text-sm text-fg-muted">No grimoires in the catalog yet.</p>
       ) : (

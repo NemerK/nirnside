@@ -4,6 +4,7 @@ import { Badge, Card, PageHeader } from "@/components/ui";
 import { catalogCount } from "@/lib/db/catalog-queries";
 import { getCatalogMeta } from "@/lib/catalog/import";
 import { SourceBadge } from "@/components/source-badge";
+import { CatalogScanCallout } from "@/components/catalog-scan-callout";
 import type { CatalogSource } from "@/lib/catalog/schema";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,8 @@ export default function EncyclopediaPage() {
         subtitle="Live Tamriel reference, sharing one database with your account. In-game data always wins."
         action={meta ? <SourceBadge source={meta.source as CatalogSource} /> : undefined}
       />
+
+      <CatalogScanCallout source={meta?.source as CatalogSource | undefined} />
 
       <Card className="mb-6 flex items-start gap-3 p-4">
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent-soft text-accent">
