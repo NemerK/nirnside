@@ -84,7 +84,7 @@ localized Documents names, and every environment folder (`liveeu`, `live`, `pts`
 or any custom one with a `SavedVariables` subdir):
 
 ```
-Documents/Elder Scrolls Online/live/SavedVariables/NirnsideData.lua
+Documents/Elder Scrolls Online/live/SavedVariables/NirnsideSnapshot.lua
 …plus OneDrive-redirected + other-drive variants on Windows.
 ```
 

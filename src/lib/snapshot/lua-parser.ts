@@ -10,8 +10,9 @@
  *   booleans: true / false, and nil
  *   comments: -- line   and   --[[ block ]]
  *
- * Tables whose entries are all positional become JS arrays; otherwise objects
- * (numeric keys are stringified). This is intentionally strict and dependency
+ * Tables whose keys are exactly 1..N (ESO's explicit [1]=,[2]= list dumps as
+ * well as positional literals) — and empty tables — become JS arrays; tables
+ * with string keys become objects. This is intentionally strict and dependency
  * free so it stays auditable — the data path from game to disk to app matters.
  */
 
@@ -87,14 +88,26 @@ class Parser {
     }
     this.expect("}");
 
-    const allPositional = entries.every((e) => e.key === null);
-    if (allPositional) return entries.map((e) => e.value);
+    // Empty Lua table. In ESO SavedVariables + our schema, empty tables are
+    // always empty *lists* (guilds, items, characters, skillLines, ...). The
+    // object-typed fields (currencies, attributes) are never emitted empty by
+    // the addon, so representing {} as [] lets array schemas validate.
+    if (entries.length === 0) return [];
+
+    // Assign implicit 1-based indices to positional entries; keep explicit keys.
     const obj: Record<string, LuaValue> = {};
     let idx = 1;
     for (const e of entries) {
       if (e.key === null) obj[String(idx++)] = e.value;
       else obj[e.key] = e.value;
     }
+
+    // ESO serialises lists with explicit numeric keys ([1]=..,[2]=..) and Lua
+    // literals use positional values. In both cases the keys end up exactly
+    // 1..N, so treat those as arrays. Anything with string keys stays an object.
+    const keys = Object.keys(obj);
+    const isSequential = keys.every((k, n) => k === String(n + 1));
+    if (isSequential) return keys.map((k) => obj[k]);
     return obj;
   }
 
