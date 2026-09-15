@@ -10,7 +10,13 @@
  * names never matched the game's real names. Here there is nothing to match.
  */
 
-export const ACH_COLUMNS = ["Completion", "Hard Mode", "Speed", "No Death", "Trifecta"] as const;
+/**
+ * Board columns, matching the Pithka Achievement Tracker windows:
+ *   - Dungeons/Arenas: Vet · Hard Mode · Speed · No Death · Trifecta · Extras
+ *   - Trials:          Vet · Hard Mode (per-boss) · Trifecta · Extras
+ * (Which columns a tab actually shows is decided in the board UI.)
+ */
+export const ACH_COLUMNS = ["Vet", "Hard Mode", "Speed", "No Death", "Trifecta", "Extras"] as const;
 export type AchColumn = (typeof ACH_COLUMNS)[number];
 
 /** Top-level content buckets the board groups categories into. */
@@ -34,13 +40,19 @@ const RE_HARD_MODE = /hard mode/;
 const RE_NO_DEATH =
   /without (?:suffering|any|a single).{0,40}?(?:death|dying|die)|no[- ]death|without dying|no group member (?:dies|dying|died)|without (?:a )?group member (?:death|dying)/;
 const RE_SPEED = /in under|in less than|less than .{0,20}?(?:minute|second)|within .{0,20}?(?:minute|second)|speed ?run/;
+// A base veteran clear: mentions Veteran and is a completion (not a special
+// challenge, which is caught earlier). Covers "Veteran <X>", "<X> Conqueror",
+// "…Vanquisher", "complete … on Veteran", etc.
+const RE_VET = /\bveteran\b/;
+const RE_COMPLETE = /\b(complete[d]?|completion|conquer(?:ed|or)?|vanquish(?:er|ed)?|clear(?:ed)?|defeat(?:ed)? all)\b/;
 
 /**
  * Decide which board column an achievement belongs to, from its name +
- * description. A "flawless"/trifecta clear is one that requires hard mode AND
- * no deaths AND a time limit — many are literally named "…Trifecta", but the
- * unique-title ones (Immortal Redeemer, Dawnbringer, …) are caught by the
- * combined-requirement check instead.
+ * description (both exported verbatim from ESO). A trifecta requires hard mode
+ * AND no deaths AND a time limit — many are literally named "…Trifecta", but
+ * the unique-title ones (Immortal Redeemer, Dawnbringer, …) are caught by the
+ * combined-requirement check. Anything that isn't a standard challenge or a
+ * plain veteran clear lands in Extras — exactly Pithka's "Extras" column.
  */
 export function classifyAchievement(a: { name: string; description?: string | null }): AchColumn {
   const hay = `${a.name} ${a.description ?? ""}`.toLowerCase();
@@ -51,5 +63,6 @@ export function classifyAchievement(a: { name: string; description?: string | nu
   if (speed) return "Speed";
   if (noDeath) return "No Death";
   if (hard) return "Hard Mode";
-  return "Completion";
+  if (RE_VET.test(hay) && RE_COMPLETE.test(hay)) return "Vet";
+  return "Extras";
 }

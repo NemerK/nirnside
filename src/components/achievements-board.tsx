@@ -1,22 +1,50 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Minus, Search, Trophy, Award } from "lucide-react";
-import { ACH_COLUMNS, CONTENT_ORDER, type AchColumn, type ContentCategory } from "@/lib/achievements/classify";
-import type { BoardRow, Cell } from "@/lib/achievements/board";
+import { Check, Crown, Minus, Search, Trophy } from "lucide-react";
+import { CONTENT_ORDER, type AchColumn, type ContentCategory } from "@/lib/achievements/classify";
+import type { BoardRow, Cell, CellItem } from "@/lib/achievements/board";
 
 type Filter = "all" | "earned" | "partial" | "missing";
+type RenderMode = "check" | "named";
 
-/** Short header labels so the grid stays readable. */
-const COL_LABEL: Record<AchColumn, string> = {
-  Completion: "Clear",
-  "Hard Mode": "Hard Mode",
-  Speed: "Speed",
-  "No Death": "No Death",
-  Trifecta: "Trifecta",
+interface ColSpec {
+  col: AchColumn;
+  /** Header label, matching the in-game Pithka windows. */
+  label: string;
+  mode: RenderMode;
+}
+
+/**
+ * Column layouts mirror the two Pithka windows you shared:
+ *  - Dungeons/Arenas: Vet · HM · SR · ND as check columns, then the named
+ *    "Challenger & Trifecta" and "Extras" columns.
+ *  - Trials: Vet (check), then Hard Mode listed per-boss, Trifecta and Extra
+ *    as named columns.
+ */
+const DUNGEON_COLS: ColSpec[] = [
+  { col: "Vet", label: "Vet", mode: "check" },
+  { col: "Hard Mode", label: "HM", mode: "check" },
+  { col: "Speed", label: "SR", mode: "check" },
+  { col: "No Death", label: "ND", mode: "check" },
+  { col: "Trifecta", label: "Challenger & Trifecta", mode: "named" },
+  { col: "Extras", label: "Extras", mode: "named" },
+];
+
+const TRIAL_COLS: ColSpec[] = [
+  { col: "Vet", label: "Vet", mode: "check" },
+  { col: "Hard Mode", label: "Hard Mode", mode: "named" },
+  { col: "Trifecta", label: "Trifecta", mode: "named" },
+  { col: "Extras", label: "Extra", mode: "named" },
+];
+
+const COLS_BY_CATEGORY: Record<ContentCategory, ColSpec[]> = {
+  Trial: TRIAL_COLS,
+  Dungeon: DUNGEON_COLS,
+  Arena: DUNGEON_COLS,
+  Other: DUNGEON_COLS,
 };
 
-/** Pithka's tab order. Plural labels like the in-game tracker. */
 const TAB_LABEL: Record<ContentCategory, string> = {
   Trial: "Trials",
   Dungeon: "Dungeons",
@@ -25,7 +53,6 @@ const TAB_LABEL: Record<ContentCategory, string> = {
 };
 
 export function AchievementsBoard({ rows }: { rows: BoardRow[] }) {
-  // Which content categories actually have data → these become the tabs.
   const tabs = useMemo<ContentCategory[]>(
     () => CONTENT_ORDER.filter((c) => rows.some((r) => r.category === c)),
     [rows],
@@ -38,19 +65,18 @@ export function AchievementsBoard({ rows }: { rows: BoardRow[] }) {
 
   const tabRows = useMemo(() => rows.filter((r) => r.category === activeTab), [rows, activeTab]);
 
-  // Only show columns this tab actually uses (dungeons vs trials differ).
-  const activeCols = useMemo<AchColumn[]>(() => {
-    const cols = ACH_COLUMNS.filter((c) => tabRows.some((r) => r.cells[c].total > 0));
-    return cols.length ? cols : ["Completion"];
-  }, [tabRows]);
-
-  const showExtras = useMemo(() => tabRows.some((r) => r.titles.length > 0), [tabRows]);
+  // Only render columns this tab actually has data for (keeps the grid tidy).
+  const cols = useMemo<ColSpec[]>(() => {
+    const spec = COLS_BY_CATEGORY[activeTab] ?? DUNGEON_COLS;
+    const used = spec.filter((c) => tabRows.some((r) => r.cells[c.col].total > 0));
+    return used.length ? used : spec.slice(0, 1);
+  }, [activeTab, tabRows]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return tabRows.filter((r) => {
       if (q && !r.content.toLowerCase().includes(q)) return false;
-      const done = r.earnedCount === r.totalCount && r.totalCount > 0;
+      const done = r.totalCount > 0 && r.earnedCount === r.totalCount;
       if (filter === "earned" && !done) return false;
       if (filter === "missing" && r.earnedCount !== 0) return false;
       if (filter === "partial" && (r.earnedCount === 0 || done)) return false;
@@ -58,7 +84,7 @@ export function AchievementsBoard({ rows }: { rows: BoardRow[] }) {
     });
   }, [tabRows, search, filter]);
 
-  const tabSummary = useMemo(() => {
+  const summary = useMemo(() => {
     let earned = 0;
     let total = 0;
     let tri = 0;
@@ -74,16 +100,14 @@ export function AchievementsBoard({ rows }: { rows: BoardRow[] }) {
 
   return (
     <div>
-      {/* Tabs */}
+      {/* Tabs — separate windows in Pithka. */}
       <div className="mb-4 flex flex-wrap items-center gap-1 border-b border-border">
         {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === t
-                ? "border-accent text-fg"
-                : "border-transparent text-fg-muted hover:text-fg"
+              activeTab === t ? "border-accent text-fg" : "border-transparent text-fg-muted hover:text-fg"
             }`}
           >
             {TAB_LABEL[t]}
@@ -116,7 +140,7 @@ export function AchievementsBoard({ rows }: { rows: BoardRow[] }) {
           ))}
         </div>
         <div className="text-sm text-fg-muted">
-          {tabSummary.earned}/{tabSummary.total} · {tabSummary.tri}/{tabSummary.triTotal} trifectas
+          {summary.earned}/{summary.total} · {summary.tri}/{summary.triTotal} trifectas
         </div>
       </div>
 
@@ -124,73 +148,63 @@ export function AchievementsBoard({ rows }: { rows: BoardRow[] }) {
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-subtle">
-              <th className="px-4 py-2.5 font-medium">{TAB_LABEL[activeTab].replace(/s$/, "")}</th>
-              {activeCols.map((c) => (
-                <th key={c} className="px-3 py-2.5 text-center font-medium">
-                  {COL_LABEL[c]}
+            <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wider text-fg-subtle">
+              <th className="sticky left-0 z-10 bg-surface-2/40 px-4 py-2.5 font-medium">
+                {TAB_LABEL[activeTab].replace(/s$/, "")}
+              </th>
+              {cols.map((c) => (
+                <th
+                  key={c.col}
+                  className={`px-3 py-2.5 font-medium ${c.mode === "check" ? "text-center" : "text-left"}`}
+                >
+                  {c.label}
                 </th>
               ))}
-              {showExtras && <th className="px-3 py-2.5 font-medium">Titles</th>}
             </tr>
           </thead>
           <tbody>
             {filtered.map((r) => (
-              <tr key={r.content} className="border-b border-border/50 last:border-0 hover:bg-surface-2/40">
-                <td className="px-4 py-2.5">
+              <tr key={r.content} className="border-b border-border/50 align-top last:border-0 hover:bg-surface-2/30">
+                <td className="sticky left-0 z-10 bg-surface px-4 py-3">
                   <div className="font-medium text-fg">{r.content}</div>
-                  <div className="text-xs text-fg-subtle">
-                    {r.earnedCount}/{r.totalCount} · {r.points.earned}/{r.points.total} pts
+                  <div className="mt-0.5 text-xs text-fg-subtle">
+                    {r.earnedCount}/{r.totalCount} · {r.points.earned.toLocaleString()} pts
                   </div>
                 </td>
-                {activeCols.map((col) => (
-                  <td key={col} className="px-3 py-2.5 text-center">
-                    <CellPill cell={r.cells[col]} />
+                {cols.map((c) => (
+                  <td key={c.col} className={`px-3 py-3 ${c.mode === "check" ? "text-center" : ""}`}>
+                    {c.mode === "check" ? (
+                      <CheckCell cell={r.cells[c.col]} />
+                    ) : (
+                      <NamedCell cell={r.cells[c.col]} />
+                    )}
                   </td>
                 ))}
-                {showExtras && (
-                  <td className="px-3 py-2.5">
-                    <div className="flex flex-wrap gap-1">
-                      {r.titles.map((t) => (
-                        <span
-                          key={t.name}
-                          title={
-                            t.completed
-                              ? `${t.name} — earned${t.date ? ` (${t.date})` : ""}`
-                              : `${t.name} — not earned`
-                          }
-                          className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs ${
-                            t.completed
-                              ? "border-amber-500/40 bg-amber-500/10 text-amber-500 dark:text-amber-400"
-                              : "border-border/70 text-fg-subtle"
-                          }`}
-                        >
-                          <Award className="h-3 w-3" /> {t.name}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
       {filtered.length === 0 && (
         <div className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-border bg-surface/70 px-6 py-10 text-sm text-fg-muted">
           <Trophy className="h-4 w-4" /> No {TAB_LABEL[activeTab].toLowerCase()} match these filters.
         </div>
       )}
+
+      <p className="mt-3 text-xs text-fg-subtle">
+        Rows are each trial, dungeon and arena; every check and name is read straight from your account&apos;s
+        achievements. Trial Hard Mode lists each boss&apos;s hard-mode achievement. Leaderboard best scores aren&apos;t
+        exported by the game to add-ons, so they&apos;re not shown.
+      </p>
     </div>
   );
 }
 
-function CellPill({ cell }: { cell: Cell }) {
-  if (cell.total === 0) return <span className="text-fg-subtle/40">·</span>;
-
-  const title = cell.items
-    .map((i) => `${i.completed ? "✓" : "✗"} ${i.name}${i.completed && i.date ? ` (${i.date})` : ""}`)
-    .join("\n");
+/** A compact challenge column (Vet / HM / SR / ND): check, count, or empty. */
+function CheckCell({ cell }: { cell: Cell }) {
+  if (cell.total === 0) return <span className="text-fg-subtle/30">·</span>;
+  const title = itemsTitle(cell.items);
 
   if (cell.earned === cell.total) {
     return (
@@ -198,17 +212,10 @@ function CellPill({ cell }: { cell: Cell }) {
         title={title}
         className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md border border-accent/40 bg-accent-soft px-1 text-accent"
       >
-        {cell.total > 1 ? (
-          <span className="text-xs font-semibold">
-            {cell.total}/{cell.total}
-          </span>
-        ) : (
-          <Check className="h-3.5 w-3.5" />
-        )}
+        {cell.total > 1 ? <span className="text-xs font-semibold">{cell.total}/{cell.total}</span> : <Check className="h-3.5 w-3.5" />}
       </span>
     );
   }
-
   if (cell.earned > 0) {
     return (
       <span
@@ -219,7 +226,6 @@ function CellPill({ cell }: { cell: Cell }) {
       </span>
     );
   }
-
   return (
     <span
       title={title}
@@ -228,4 +234,44 @@ function CellPill({ cell }: { cell: Cell }) {
       {cell.total > 1 ? <span className="text-xs">0/{cell.total}</span> : <Minus className="h-3.5 w-3.5" />}
     </span>
   );
+}
+
+/** A named column (Trifecta / Extras / per-boss HM): one labeled row per achievement. */
+function NamedCell({ cell }: { cell: Cell }) {
+  if (cell.items.length === 0) return <span className="text-fg-subtle/30">—</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      {cell.items.map((it, i) => (
+        <span
+          key={`${it.name}-${i}`}
+          title={`${it.name}${it.title ? ` · title: ${it.title}` : ""} — ${
+            it.completed ? `earned${it.date ? ` (${it.date})` : ""}` : "not earned"
+          }`}
+          className={`inline-flex max-w-[15rem] items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-xs ${
+            it.completed
+              ? "border-accent/40 bg-accent-soft text-fg"
+              : "border-border/60 bg-surface-2/40 text-fg-subtle"
+          }`}
+        >
+          {it.completed ? (
+            <Check className="h-3 w-3 shrink-0 text-accent" />
+          ) : (
+            <Minus className="h-3 w-3 shrink-0 text-fg-subtle/60" />
+          )}
+          <span className="truncate">{it.name}</span>
+          {it.title && (
+            <Crown
+              className={`h-3 w-3 shrink-0 ${it.completed ? "text-amber-500 dark:text-amber-400" : "text-fg-subtle/50"}`}
+            />
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function itemsTitle(items: CellItem[]): string {
+  return items
+    .map((i) => `${i.completed ? "✓" : "✗"} ${i.name}${i.completed && i.date ? ` (${i.date})` : ""}`)
+    .join("\n");
 }

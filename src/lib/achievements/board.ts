@@ -25,6 +25,8 @@ export interface CellItem {
   completed: boolean;
   points: number;
   date?: string | null;
+  /** Title reward this achievement grants, if any (shown in Extras). */
+  title?: string | null;
 }
 
 export interface Cell {
@@ -70,7 +72,7 @@ export function buildRows(items: BoardItem[]): BoardRow[] {
 
     const cell = row.cells[it.column];
     cell.total += 1;
-    cell.items.push({ name: it.name, completed: it.completed, points: it.points, date: it.date });
+    cell.items.push({ name: it.name, completed: it.completed, points: it.points, date: it.date, title: it.title });
     if (it.completed) cell.earned += 1;
 
     row.totalCount += 1;
@@ -81,10 +83,13 @@ export function buildRows(items: BoardItem[]): BoardRow[] {
     if (it.title) row.titles.push({ name: it.title, completed: it.completed, date: it.date });
   }
 
-  // Sort cell items so earned-then-alpha is stable in tooltips.
+  // Within a cell, list earned achievements first, then alphabetical — stable
+  // for both the compact pills and the named lists (Extras / per-boss HM).
   for (const row of byContent.values()) {
     for (const col of ACH_COLUMNS) {
-      row.cells[col].items.sort((a, b) => a.name.localeCompare(b.name));
+      row.cells[col].items.sort(
+        (a, b) => Number(b.completed) - Number(a.completed) || a.name.localeCompare(b.name),
+      );
     }
     row.titles.sort((a, b) => a.name.localeCompare(b.name));
   }

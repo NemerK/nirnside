@@ -22,7 +22,7 @@ export default function AchievementsPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Trial & Dungeon Achievements"
-        subtitle="Pithka-style completion board across trials, arenas and dungeons. Achievements are account-wide."
+        subtitle="A Pithka-style board: one row per trial, dungeon and arena, with Vet/HM/Speed/No-Death and the named Trifecta & Extras. Achievements are account-wide."
         action={<SourceBadge source={source} />}
       />
 
@@ -89,7 +89,7 @@ function fromReference(): { items: BoardItem[]; source: CatalogSource } {
   const items: BoardItem[] = list.map(({ entry }) => ({
     content: entry.content,
     category: normalizeCategory(entry.category),
-    column: entry.subtype,
+    column: classifyAchievement(entry),
     name: entry.name,
     completed: earned.has(entry.name.toLowerCase()),
     points: 0,
