@@ -176,6 +176,13 @@ export type Character = z.infer<typeof Character>;
 export const StickerbookPiece = z.object({
   /** Gear slot label (Head, Chest, …) or a fallback like "Slot 1". */
   slot: z.string().default(""),
+  /**
+   * Human-readable item type incl. weight/weapon, e.g. "Heavy Head",
+   * "Restoration Staff", "Necklace". This is what the UI shows.
+   */
+  type: z.string().default(""),
+  /** Armor weight ("Light" | "Medium" | "Heavy") when applicable, else null. */
+  weight: z.string().nullable().default(null),
   /** The actual item name for this piece, e.g. "Ancient Dragonguard Helm". */
   name: z.string().default(""),
   /** In-game .dds icon path for the piece's item, resolved by GameIcon. */
@@ -194,6 +201,8 @@ const StickerbookPieces = z.preprocess((v) => {
   if (v && typeof v === "object") {
     return Object.entries(v as Record<string, unknown>).map(([slot, collected]) => ({
       slot,
+      type: slot,
+      weight: null,
       name: slot,
       icon: null,
       collected: Boolean(collected),

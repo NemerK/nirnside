@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Check, Search } from "lucide-react";
+import { Check, Minus, Search } from "lucide-react";
 import type { StickerbookSet } from "@/lib/snapshot/schema";
 import { GameIcon } from "./game-icon";
 
@@ -119,7 +119,7 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
             No sets match these filters.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {filtered.map((s) => (
               <SetCard key={s.setId} set={s} />
             ))}
@@ -196,21 +196,33 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {s.pieces.map((p, i) => (
-          <span
-            key={`${p.slot}-${i}`}
-            title={`${p.name || p.slot} — ${p.collected ? "collected" : "missing"}`}
-            className={`relative ${p.collected ? "" : "opacity-35 grayscale"}`}
-          >
-            <GameIcon name={p.name || p.slot} icon={p.icon} size={30} />
-            {p.collected && (
-              <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-surface bg-accent text-accent-fg">
-                <Check className="h-2.5 w-2.5" />
+      <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+        {s.pieces.map((p, i) => {
+          const label = p.type || p.slot;
+          return (
+            <span
+              key={`${p.slot}-${i}`}
+              title={`${label}${p.name && p.name !== label ? ` — ${p.name}` : ""} · ${
+                p.collected ? "collected" : "missing"
+              }`}
+              className={`flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-xs ${
+                p.collected
+                  ? "border-accent/40 bg-accent-soft text-fg"
+                  : "border-border/70 bg-surface-2/50 text-fg-subtle"
+              }`}
+            >
+              <span className={`relative shrink-0 ${p.collected ? "" : "opacity-40 grayscale"}`}>
+                <GameIcon name={label} icon={p.icon} size={22} />
               </span>
-            )}
-          </span>
-        ))}
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              {p.collected ? (
+                <Check className="h-3 w-3 shrink-0 text-accent" />
+              ) : (
+                <Minus className="h-3 w-3 shrink-0 text-fg-subtle/60" />
+              )}
+            </span>
+          );
+        })}
       </div>
 
       <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">

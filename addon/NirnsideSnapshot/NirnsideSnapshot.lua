@@ -76,6 +76,63 @@ local function traitString(link)
   return safe(function() return GetString("SI_ITEMTRAITTYPE", t) end, nil)
 end
 
+-- Readable English labels for a stickerbook piece's item type. English-only by
+-- design (see rules), so we keep an explicit map rather than relying on locale
+-- strings. buildLookup skips any constant missing in the current API.
+local WEAPON_NAME = buildLookup({
+  { WEAPONTYPE_AXE,               "Axe" },
+  { WEAPONTYPE_HAMMER,            "Mace" },
+  { WEAPONTYPE_SWORD,             "Sword" },
+  { WEAPONTYPE_DAGGER,            "Dagger" },
+  { WEAPONTYPE_TWO_HANDED_SWORD,  "Greatsword" },
+  { WEAPONTYPE_TWO_HANDED_AXE,    "Battle Axe" },
+  { WEAPONTYPE_TWO_HANDED_HAMMER, "Maul" },
+  { WEAPONTYPE_BOW,               "Bow" },
+  { WEAPONTYPE_FIRE_STAFF,        "Inferno Staff" },
+  { WEAPONTYPE_FROST_STAFF,       "Ice Staff" },
+  { WEAPONTYPE_LIGHTNING_STAFF,   "Lightning Staff" },
+  { WEAPONTYPE_HEALING_STAFF,     "Restoration Staff" },
+  { WEAPONTYPE_SHIELD,            "Shield" },
+})
+
+local EQUIP_SLOT_NAME = buildLookup({
+  { EQUIP_TYPE_HEAD,      "Head" },
+  { EQUIP_TYPE_CHEST,     "Chest" },
+  { EQUIP_TYPE_SHOULDERS, "Shoulders" },
+  { EQUIP_TYPE_HAND,      "Hands" },
+  { EQUIP_TYPE_WAIST,     "Waist" },
+  { EQUIP_TYPE_LEGS,      "Legs" },
+  { EQUIP_TYPE_FEET,      "Feet" },
+  { EQUIP_TYPE_NECK,      "Necklace" },
+  { EQUIP_TYPE_RING,      "Ring" },
+})
+
+local ARMOR_WEIGHT = buildLookup({
+  { ARMORTYPE_LIGHT,  "Light" },
+  { ARMORTYPE_MEDIUM, "Medium" },
+  { ARMORTYPE_HEAVY,  "Heavy" },
+})
+
+-- Returns (typeLabel, weight) for the item behind a link, e.g.
+-- ("Heavy Head", "Heavy"), ("One-Handed Sword" ->) "Sword", ("Necklace", nil).
+local function pieceTypeInfo(link)
+  -- Weapons/shields first (shields report as armor itemType but have a weapon type).
+  local wt = safe(function() return GetItemLinkWeaponType(link) end, nil)
+  if wt and wt ~= 0 and wt ~= WEAPONTYPE_NONE then
+    return WEAPON_NAME[wt] or "Weapon", nil
+  end
+  local et = safe(function() return GetItemLinkEquipType(link) end, nil)
+  local slot = et and EQUIP_SLOT_NAME[et] or nil
+  if not slot then return nil, nil end
+  if et == EQUIP_TYPE_NECK or et == EQUIP_TYPE_RING then
+    return slot, nil -- jewelry has no weight
+  end
+  local at = safe(function() return GetItemLinkArmorType(link) end, nil)
+  local weight = at and ARMOR_WEIGHT[at] or nil
+  if weight then return weight .. " " .. slot, weight end
+  return slot, nil
+end
+
 ----------------------------------------------------------------------
 -- Bags / items
 ----------------------------------------------------------------------
@@ -379,9 +436,14 @@ local function gatherStickerbook()
             end, nil)
             local itemName = link and safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, nil)
             local icon = link and safe(function() return stickerNormIcon(GetItemLinkIcon(link)) end, nil)
+            local typeLabel, weight
+            if link then typeLabel, weight = pieceTypeInfo(link) end
+            local fallback = stickerSlotLabel(slot)
             pieces[#pieces + 1] = {
-              slot = stickerSlotLabel(slot),
-              name = (itemName and itemName ~= "") and itemName or stickerSlotLabel(slot),
+              slot = fallback,
+              type = (typeLabel and typeLabel ~= "") and typeLabel or fallback,
+              weight = weight,
+              name = (itemName and itemName ~= "") and itemName or (typeLabel or fallback),
               icon = icon,
               collected = pieceUnlocked(pieceId, slot),
             }
