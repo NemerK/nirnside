@@ -20,6 +20,8 @@ export default function HomePage() {
   const itemCount = safe(() => getItemCount()) ?? 0;
   const sticker = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
   const stickerPct = sticker.total ? Math.round((sticker.collected / sticker.total) * 100) : 0;
+  // Champion Points are account-wide, so show one number for the whole account.
+  const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -32,8 +34,9 @@ export default function HomePage() {
 
       <DataSourceBanner source={dataSource} setup={autoSetup} />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Stat label="Characters" value={characters.length} />
+        <Stat label="Champion Points" value={accountCP.toLocaleString("en-US")} hint="account-wide" />
         <Stat label="Items tracked" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
         <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
         <Stat label="Gold" value={formatGold(account.gold)} />

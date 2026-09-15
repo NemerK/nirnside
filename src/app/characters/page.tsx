@@ -1,7 +1,7 @@
 import { Users } from "lucide-react";
 import { getCharacters } from "@/lib/db/queries";
 import { CharacterCard } from "@/components/character-card";
-import { EmptyState, PageHeader } from "@/components/ui";
+import { Badge, EmptyState, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +13,18 @@ export default function CharactersPage() {
     characters = [];
   }
 
+  const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
+
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Characters"
         subtitle="Every character on the account. Empty ones fill in the first time you log them out."
+        action={
+          accountCP > 0 ? (
+            <Badge tone="accent">CP {accountCP.toLocaleString("en-US")} · account-wide</Badge>
+          ) : undefined
+        }
       />
       {characters.length === 0 ? (
         <EmptyState title="No characters yet" icon={<Users className="h-8 w-8" />}>

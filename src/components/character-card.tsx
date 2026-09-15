@@ -23,7 +23,7 @@ export function CharacterCard({ character: c }: { character: Character }) {
         </div>
         <div className="shrink-0 text-right">
           <div className="text-sm font-semibold text-fg">
-            {c.level >= 50 ? `CP ${c.championPoints}` : `Lv ${c.level}`}
+            {c.level >= 50 ? "Max" : `Lv ${c.level}`}
           </div>
           <div className="text-xs" style={{ color: accent }}>
             {c.alliance.split(" ")[0]}
