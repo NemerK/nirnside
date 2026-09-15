@@ -1,4 +1,4 @@
-import { Trophy } from "lucide-react";
+import { RefreshCw, Trophy } from "lucide-react";
 import { getCompletedAchievementIds, getDataSource, hasData } from "@/lib/db/queries";
 import { PageHeader, Stat, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
@@ -26,6 +26,11 @@ export default function AchievementsPage() {
   const uniqueIds = Array.from(new Set(allIds));
   const earned = uniqueIds.filter((id) => done.has(id)).length;
 
+  // Account exists, but this board's data (completed achievement ids) is missing
+  // — the snapshot was written by an older addon. Tell the user how to fix it
+  // rather than showing an all-empty board.
+  const staleAddon = populated && !isSample && completed.length === 0;
+
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
@@ -40,6 +45,21 @@ export default function AchievementsPage() {
           addon enabled — your completed achievements are read straight from the game and light up the board. To
           preview with sample data, load the demo from the home page.
         </EmptyState>
+      ) : staleAddon ? (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-500 dark:text-amber-400">
+            <RefreshCw className="h-5 w-5" />
+          </span>
+          <div className="text-sm text-fg-muted">
+            <p className="font-medium text-fg">One quick refresh needed to fill this board.</p>
+            <p className="mt-1 max-w-3xl">
+              Your account is loaded, but this snapshot came from an older version of the Snapshot addon that didn&apos;t
+              yet export completed-achievement data. The current app already installed the updated addon for you — just{" "}
+              <code className="rounded bg-surface-2 px-1 text-fg">/reloadui</code> (or log out) in ESO once, and this
+              board fills in with your real completions automatically. No re-download needed.
+            </p>
+          </div>
+        </div>
       ) : (
         <>
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
