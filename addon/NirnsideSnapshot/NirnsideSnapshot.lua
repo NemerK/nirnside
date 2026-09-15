@@ -327,31 +327,60 @@ local function gatherCurrencies()
   }
 end
 
--- Item Set Collections (stickerbook). Iterated out of combat only; changes rarely.
+-- Item Set Collections (stickerbook). Iterated out of combat only; changes
+-- rarely. Uses the real ESO collections API: walk every set id with
+-- GetNextItemSetCollectionId, then read each piece's unlock state through
+-- ITEM_SET_COLLECTIONS_DATA_MANAGER. (The old GetNumItemSetCollections /
+-- GetItemSetCollectionInfo names never existed, so this silently returned
+-- nothing -- that was the "stickerbook doesn't work" bug.)
+local function stickerSlotLabel(slot)
+  local name = safe(function() return zo_strformat("<<1>>", GetString("SI_ITEMSETCOLLECTIONSLOT", slot)) end, nil)
+  if name and name ~= "" then return name end
+  return "Slot " .. tostring(slot)
+end
+
+local function pieceUnlocked(pieceId, slot)
+  return safe(function()
+    local mgr = ITEM_SET_COLLECTIONS_DATA_MANAGER
+    if not mgr then return false end
+    local pd = mgr:GetOrCreateItemSetCollectionPieceData(pieceId, slot)
+    return (pd and pd:IsUnlocked()) == true
+  end, false)
+end
+
 local function gatherStickerbook()
   local sets = {}
   safe(function()
-    local categoryIndex = GetItemSetCollectionCategoryId and 1 or nil
-    if not GetItemSetCollectionsData then return end
-    -- Loop known set ids via the collections search API.
-    local numSets = GetNumItemSetCollections and GetNumItemSetCollections() or 0
-    for i = 1, numSets do
-      local setId = GetItemSetCollectionSetId and GetItemSetCollectionSetId(i) or i
-      local name, _, numUnlocked, numPieces = GetItemSetCollectionInfo(setId)
-      if name and name ~= "" and numPieces and numPieces > 0 then
+    if not GetNextItemSetCollectionId then return end
+    local setId = GetNextItemSetCollectionId(nil)
+    local guard = 0
+    while setId and setId ~= 0 and guard < 10000 do
+      guard = guard + 1
+      local numPieces = safe(function() return GetNumItemSetCollectionPieces(setId) end, 0) or 0
+      local name = safe(function() return zo_strformat("<<1>>", GetItemSetName(setId)) end, nil)
+      if name and name ~= "" and numPieces > 0 then
+        local catId = safe(function() return GetItemSetCollectionCategoryId(setId) end, nil)
+        local category = catId
+          and safe(function() return zo_strformat("<<1>>", GetItemSetCollectionCategoryName(catId)) end, "Unknown")
+          or "Unknown"
         local pieces = {}
-        for p = 1, numPieces do
-          local pieceId = GetItemSetCollectionPieceId(setId, p)
-          local slotName = safe(function() return zo_strformat("<<1>>", GetItemSetCollectionSlotName(setId, p)) end, "Piece " .. p)
-          pieces[slotName] = safe(function() return IsItemSetCollectionPieceUnlocked(pieceId) end, false)
+        for i = 1, numPieces do
+          local ok, pieceId, slot = pcall(GetItemSetCollectionPieceInfo, setId, i)
+          if ok and pieceId then
+            local label = stickerSlotLabel(slot)
+            -- Avoid clobbering when two pieces share a slot label.
+            if pieces[label] ~= nil then label = label .. " " .. i end
+            pieces[label] = pieceUnlocked(pieceId, slot)
+          end
         end
         sets[#sets + 1] = {
           setId = setId,
-          name = zo_strformat("<<1>>", name),
-          category = "Unknown",
+          name = name,
+          category = category ~= "" and category or "Unknown",
           pieces = pieces,
         }
       end
+      setId = safe(function() return GetNextItemSetCollectionId(setId) end, nil)
     end
   end)
   return sets

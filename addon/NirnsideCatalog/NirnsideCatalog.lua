@@ -120,21 +120,27 @@ end
 local function gatherSets()
   local out = {}
   safe(function()
-    if not GetNumItemSetCollections then return end
-    local num = GetNumItemSetCollections()
-    for i = 1, num do
-      local setId = GetItemSetCollectionSetId and GetItemSetCollectionSetId(i) or i
-      local name = safe(function() return zo_strformat("<<1>>", (GetItemSetCollectionInfo(setId))) end, nil)
+    if not GetNextItemSetCollectionId then return end
+    local setId = GetNextItemSetCollectionId(nil)
+    local guard = 0
+    while setId and setId ~= 0 and guard < 10000 do
+      guard = guard + 1
+      local name = safe(function() return zo_strformat("<<1>>", GetItemSetName(setId)) end, nil)
       if name and name ~= "" then
+        local catId = safe(function() return GetItemSetCollectionCategoryId(setId) end, nil)
+        local category = catId
+          and safe(function() return zo_strformat("<<1>>", GetItemSetCollectionCategoryName(catId)) end, "Unknown")
+          or "Unknown"
         out[#out + 1] = {
           id = "set-" .. slug(name),
           name = name,
           setId = setId,
-          category = "Overland",
+          category = category ~= "" and category or "Unknown",
           bonuses = {},
           source = "ingame",
         }
       end
+      setId = safe(function() return GetNextItemSetCollectionId(setId) end, nil)
     end
   end)
   return out
