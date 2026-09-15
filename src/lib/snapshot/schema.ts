@@ -205,6 +205,8 @@ export const AchievementRecord = z.object({
   category: z.string().default(""),
   content: z.string().default(""),
   title: z.string().nullable().default(null),
+  /** Date earned as the game reports it (e.g. "2024-11-05"), or null. */
+  date: z.string().nullable().default(null),
 });
 export type AchievementRecord = z.infer<typeof AchievementRecord>;
 

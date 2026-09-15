@@ -72,6 +72,7 @@ function fromGame(): { items: BoardItem[]; source: CatalogSource } {
     completed: r.completed,
     points: r.points,
     title: r.title,
+    date: r.date,
   }));
   return { items, source: "ingame" };
 }

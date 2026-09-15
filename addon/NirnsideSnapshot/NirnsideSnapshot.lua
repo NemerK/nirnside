@@ -406,16 +406,17 @@ end
 local function recordAchievement(out, seen, id, category, content)
   if not id or id == 0 or seen[id] then return end
   seen[id] = true
-  local name, description, points, completed = safe(function()
-    local n, d, p, _, c = GetAchievementInfo(id)
-    return n, d, p, c
-  end, nil, nil, 0, false)
+  local name, description, points, completed, date = safe(function()
+    local n, d, p, _, c, dt = GetAchievementInfo(id)
+    return n, d, p, c, dt
+  end, nil, nil, 0, false, nil)
   if not name or name == "" then return end
   -- Cross-check completion with the dedicated getter when present.
   completed = safe(function()
     if IsAchievementComplete then return IsAchievementComplete(id) == true end
     return completed == true
   end, completed == true)
+  if date == "" then date = nil end
   local title = safe(function()
     local t = GetAchievementRewardTitle and GetAchievementRewardTitle(id) or nil
     if t and t ~= "" then return zo_strformat("<<1>>", t) end
@@ -430,6 +431,7 @@ local function recordAchievement(out, seen, id, category, content)
     category = category,
     content = content,
     title = title,
+    date = date,
   }
 end
 

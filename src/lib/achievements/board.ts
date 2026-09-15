@@ -16,12 +16,15 @@ export interface BoardItem {
   points: number;
   /** Title reward granted by this achievement, if any. */
   title?: string | null;
+  /** Date earned, as the game reports it, or null. */
+  date?: string | null;
 }
 
 export interface CellItem {
   name: string;
   completed: boolean;
   points: number;
+  date?: string | null;
 }
 
 export interface Cell {
@@ -35,7 +38,7 @@ export interface BoardRow {
   category: ContentCategory;
   cells: Record<AchColumn, Cell>;
   /** Earned titles for this content (the "Extras" column). */
-  titles: { name: string; completed: boolean }[];
+  titles: { name: string; completed: boolean; date?: string | null }[];
   earnedCount: number;
   totalCount: number;
   points: { earned: number; total: number };
@@ -67,7 +70,7 @@ export function buildRows(items: BoardItem[]): BoardRow[] {
 
     const cell = row.cells[it.column];
     cell.total += 1;
-    cell.items.push({ name: it.name, completed: it.completed, points: it.points });
+    cell.items.push({ name: it.name, completed: it.completed, points: it.points, date: it.date });
     if (it.completed) cell.earned += 1;
 
     row.totalCount += 1;
@@ -75,7 +78,7 @@ export function buildRows(items: BoardItem[]): BoardRow[] {
     row.points.total += it.points;
     if (it.completed) row.points.earned += it.points;
 
-    if (it.title) row.titles.push({ name: it.title, completed: it.completed });
+    if (it.title) row.titles.push({ name: it.title, completed: it.completed, date: it.date });
   }
 
   // Sort cell items so earned-then-alpha is stable in tooltips.
