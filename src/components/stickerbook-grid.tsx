@@ -130,6 +130,30 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
   );
 }
 
+// Older snapshots stored a meaningless slot code (e.g. "Slot 1.97e-3"); never
+// show that. Prefer the real item name, trimmed of the redundant set prefix.
+const SLOT_CODE = /^slot\s+[-\d.eE+]+$/i;
+
+function pieceLabel(
+  p: { name?: string; type?: string; slot?: string },
+  setName: string,
+): string {
+  const clean = (v?: string) => {
+    const t = (v ?? "").trim();
+    return !t || SLOT_CODE.test(t) ? "" : t;
+  };
+  let name = clean(p.name);
+  if (name) {
+    const setLower = setName.trim().toLowerCase();
+    if (setLower && name.toLowerCase().startsWith(setLower)) {
+      const stripped = name.slice(setName.length).replace(/^[\s'’\-–]+/, "").trim();
+      if (stripped) name = stripped;
+    }
+    return name;
+  }
+  return clean(p.type);
+}
+
 function CategoryButton({
   label,
   collected,
@@ -198,13 +222,11 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
 
       <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         {s.pieces.map((p, i) => {
-          const label = p.type || p.slot;
+          const label = pieceLabel(p, s.name);
           return (
             <span
               key={`${p.slot}-${i}`}
-              title={`${label}${p.name && p.name !== label ? ` — ${p.name}` : ""} · ${
-                p.collected ? "collected" : "missing"
-              }`}
+              title={`${label || p.name || "Piece"} · ${p.collected ? "collected" : "missing"}`}
               className={`flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-xs ${
                 p.collected
                   ? "border-accent/40 bg-accent-soft text-fg"
@@ -212,7 +234,7 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
               }`}
             >
               <span className={`relative shrink-0 ${p.collected ? "" : "opacity-40 grayscale"}`}>
-                <GameIcon name={label} icon={p.icon} size={22} />
+                <GameIcon name={label || p.name || "?"} icon={p.icon} size={22} />
               </span>
               <span className="min-w-0 flex-1 truncate">{label}</span>
               {p.collected ? (
