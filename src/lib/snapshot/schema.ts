@@ -12,6 +12,26 @@ import { z } from "zod";
  * ticking buffs, food timers, or combat math (see .cursor/rules/nirnside.mdc).
  */
 
+/**
+ * Resilient array: parses each element independently and keeps only the ones
+ * that validate, dropping (not rejecting-the-whole-import) anything malformed.
+ * Real game data has occasional surprises; one odd ability must never throw away
+ * an entire character — let alone the whole account. Non-array input degrades to
+ * an empty list. This is applied at every level so failures stay contained to
+ * the smallest possible piece.
+ */
+export function lenientArray<T extends z.ZodTypeAny>(element: T) {
+  return z
+    .array(z.unknown())
+    .transform((arr) =>
+      arr.flatMap((el) => {
+        const r = element.safeParse(el);
+        return r.success ? [r.data as z.infer<T>] : [];
+      }),
+    )
+    .catch([] as z.infer<T>[]);
+}
+
 export const Region = z.enum(["EU", "NA"]);
 export type Region = z.infer<typeof Region>;
 
@@ -70,9 +90,9 @@ export type Item = z.infer<typeof Item>;
 export const SkillMorph = z.object({
   name: z.string(),
   abilityId: z.number().int().nonnegative().optional(),
-  rank: z.number().int().min(0).max(4).default(0),
+  rank: z.number().int().default(0),
   /** 0 = base, 1 = first morph, 2 = second morph. null = not morphed. */
-  morph: z.number().int().min(0).max(2).nullable().default(null),
+  morph: z.number().int().nullable().default(null),
   purchased: z.boolean().default(false),
   /** Applied skill style / skill styling collectible name, if any. */
   skillStyle: z.string().nullable().default(null),
@@ -81,23 +101,23 @@ export const SkillMorph = z.object({
 export const SkillLine = z.object({
   name: z.string(),
   category: z.string(),
-  rank: z.number().int().min(0).default(0),
+  rank: z.number().int().default(0),
   /** True if this line comes from subclassing (borrowed from another class). */
   subclassed: z.boolean().default(false),
-  abilities: z.array(SkillMorph).default([]),
+  abilities: lenientArray(SkillMorph).default([]),
 });
 export type SkillLine = z.infer<typeof SkillLine>;
 
 export const ChampionStar = z.object({
   name: z.string(),
-  points: z.number().int().nonnegative().default(0),
+  points: z.number().int().default(0),
   slotted: z.boolean().default(false),
 });
 
 export const ChampionDiscipline = z.object({
   /** Warfare / Fitness / Craft. */
   name: z.string(),
-  stars: z.array(ChampionStar).default([]),
+  stars: lenientArray(ChampionStar).default([]),
 });
 
 export const EquippedItem = z.object({
@@ -127,8 +147,8 @@ export const Character = z.object({
   race: z.string(),
   alliance: Alliance,
   gender: z.string().nullable().default(null),
-  level: z.number().int().min(1).max(50).default(1),
-  championPoints: z.number().int().nonnegative().default(0),
+  level: z.number().int().default(1),
+  championPoints: z.number().int().default(0),
   mundus: z.string().nullable().default(null),
   /** Attribute point spend. */
   attributes: z
@@ -136,18 +156,18 @@ export const Character = z.object({
     .partial()
     .default({}),
   vampire: z
-    .object({ isVampire: z.boolean().default(false), stage: z.number().int().min(0).max(4).default(0) })
+    .object({ isVampire: z.boolean().default(false), stage: z.number().int().default(0) })
     .default({ isVampire: false, stage: 0 }),
   werewolf: z.object({ isWerewolf: z.boolean().default(false) }).default({ isWerewolf: false }),
   /** True if this char uses Class Mastery (pure class, no subclassing). */
   classMastery: z.boolean().default(false),
-  skillLines: z.array(SkillLine).default([]),
-  champion: z.array(ChampionDiscipline).default([]),
-  equipped: z.array(EquippedItem).default([]),
-  companions: z.array(Companion).default([]),
+  skillLines: lenientArray(SkillLine).default([]),
+  champion: lenientArray(ChampionDiscipline).default([]),
+  equipped: lenientArray(EquippedItem).default([]),
+  companions: lenientArray(Companion).default([]),
   /** Known scribing scripts (names) for this character. */
   scribingScripts: z.array(z.string()).default([]),
-  research: z.array(z.object({ craft: z.string(), trait: z.string(), remaining: z.string() })).default([]),
+  research: lenientArray(z.object({ craft: z.string(), trait: z.string(), remaining: z.string() })).default([]),
   /** Unix seconds of this character's last logout snapshot. null = never logged since install. */
   lastSeen: z.number().int().nonnegative().nullable().default(null),
 });
@@ -178,10 +198,10 @@ export const AccountSnapshot = z.object({
   lastSnapshot: z.number().int().nonnegative().default(0),
   gold: z.number().int().nonnegative().default(0),
   currencies: z.record(z.string(), z.number().int().nonnegative()).default({}),
-  guilds: z.array(Guild).default([]),
-  items: z.array(Item).default([]),
-  characters: z.array(Character).default([]),
-  stickerbook: z.array(StickerbookSet).default([]),
+  guilds: lenientArray(Guild).default([]),
+  items: lenientArray(Item).default([]),
+  characters: lenientArray(Character).default([]),
+  stickerbook: lenientArray(StickerbookSet).default([]),
   /**
    * Account-wide earned achievement names (Pithka-style trial/dungeon/arena
    * tracking). ESO achievements are account-wide; the API does not expose which
