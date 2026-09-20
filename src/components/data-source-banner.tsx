@@ -67,7 +67,7 @@ export function DataSourceBanner({ source, setup }: { source: DataSource | null;
     <div className="mb-6 flex items-center gap-2 text-sm text-fg-muted">
       <CheckCircle2 className="h-4 w-4 text-ok" />
       Reading your account automatically from{" "}
-      <code className="rounded bg-surface-2 px-1 text-fg">{source.path}</code>
+      <code className="max-w-full break-all rounded bg-surface-2 px-1 text-fg">{source.path}</code>
       <span className="text-fg-subtle">({source.label})</span>
       <Link href="/setup" className="ml-1 text-accent hover:underline">
         Setup
