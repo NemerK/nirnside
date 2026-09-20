@@ -91,7 +91,7 @@ function SearchBox({ onSubmit }: { onSubmit?: () => void }) {
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search sets, skills, CP, your bags…"
+            placeholder="Search characters, roles, sets, skills…"
         className="w-full rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
       />
     </form>

@@ -111,6 +111,20 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_catalog_domain ON catalog(domain);
     CREATE INDEX IF NOT EXISTS idx_catalog_name ON catalog(domain, name);
     CREATE INDEX IF NOT EXISTS idx_catalog_cat ON catalog(domain, category);
+
+    -- Player-authored labels (Tank / Healer / …). Not game data; keyed by
+    -- character id so a snapshot re-import cannot wipe them.
+    CREATE TABLE IF NOT EXISTS roles (
+      id         TEXT PRIMARY KEY,
+      name       TEXT NOT NULL,
+      color      TEXT NOT NULL,
+      sortOrder  INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS character_roles (
+      characterId  TEXT PRIMARY KEY,
+      roleId       TEXT NOT NULL,
+      FOREIGN KEY (roleId) REFERENCES roles(id) ON DELETE CASCADE
+    );
   `);
 }
 

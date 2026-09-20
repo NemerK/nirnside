@@ -24,8 +24,8 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
 
       {!q ? (
         <EmptyState title="Search everything" icon={<SearchIcon className="h-8 w-8" />}>
-          Find sets, skills, Champion stars, scribing scripts, achievements, your characters and items — all from one
-          box in the header.
+          Find sets, skills, Champion stars, scribing scripts, achievements, your characters (name, class, race, role)
+          and items — all from one box in the header.
         </EmptyState>
       ) : results.total === 0 ? (
         <EmptyState title="No matches" icon={<SearchIcon className="h-8 w-8" />}>

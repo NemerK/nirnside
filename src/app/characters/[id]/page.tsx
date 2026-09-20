@@ -13,10 +13,12 @@ import {
   Users,
 } from "lucide-react";
 import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
+import { getRole, listAssignments, listRoles } from "@/lib/db/roles";
 import { getSkillLineByName, setHref } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { Badge, Card, SectionTitle } from "@/components/ui";
+import { RolePicker } from "@/components/role-picker";
 import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 
 function skillLineHref(name: string): string | null {
@@ -48,6 +50,15 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     } catch {
       bags = [];
     }
+  }
+  let roles: ReturnType<typeof listRoles> = [];
+  let assigned = null as ReturnType<typeof getRole>;
+  try {
+    roles = listRoles();
+    const rid = listAssignments()[c.id];
+    assigned = rid ? getRole(rid) : null;
+  } catch {
+    roles = [];
   }
   const accent = ALLIANCE_ACCENT[c.alliance] ?? "var(--accent)";
   const front = c.equipped.filter((e) => e.bar === "front");
@@ -91,6 +102,9 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               )}
               {c.classMastery && <Badge tone="muted">Class Mastery</Badge>}
               {c.mundus && <Badge tone="muted">{c.mundus}</Badge>}
+            </div>
+            <div className="mt-3">
+              <RolePicker characterId={c.id} role={assigned} roles={roles} />
             </div>
           </div>
           <div className="text-right">

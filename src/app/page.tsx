@@ -1,14 +1,8 @@
 import Link from "next/link";
 import { Backpack, BookMarked, Coins, Library, Shield, Sparkles, Trophy, Users } from "lucide-react";
-import {
-  getAccount,
-  getArchivedCharacters,
-  getAutoSetup,
-  getCharacters,
-  getDataSource,
-  getItemCount,
-  getStickerbookStats,
-} from "@/lib/db/queries";
+import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
+import { listAssignments, listRoles } from "@/lib/db/roles";
+import { roleForCharacter } from "@/lib/roles/filter";
 import { goldBreakdown } from "@/lib/snapshot/roster";
 import { candidatePaths } from "@/lib/snapshot/locate";
 import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
@@ -31,6 +25,8 @@ export default function HomePage() {
   const itemCount = safe(() => getItemCount()) ?? 0;
   const sticker = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
   const stickerPct = sticker.total ? Math.round((sticker.collected / sticker.total) * 100) : 0;
+  const roles = safe(() => listRoles()) ?? [];
+  const assignments = safe(() => listAssignments()) ?? {};
   // Champion Points are account-wide, so show one number for the whole account.
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
   const gold = goldBreakdown({
@@ -85,7 +81,12 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {characters.map((c) => (
-              <CharacterCard key={c.id} character={c} />
+              <CharacterCard
+                key={c.id}
+                character={c}
+                role={roleForCharacter(c.id, roles, assignments)}
+                roles={roles}
+              />
             ))}
           </div>
         )}
