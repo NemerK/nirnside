@@ -1,7 +1,6 @@
-name: Pack download zip
+name: Pack download
 
-# Builds a clean zip on every push to main so people can download
-# Nirnside from GitHub → Releases without using git.
+# Builds a Windows app (Nirnside.exe) and a zip on every push to main.
 
 on:
   push:
@@ -16,6 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Test installer
+        run: go test
+        working-directory: installer
+      - name: Build Windows app
+        working-directory: installer
+        run: |
+          mkdir -p ../dist
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w" -o ../dist/Nirnside.exe .
       - name: Zip (no node_modules, no account data)
         run: |
           mkdir -p dist
@@ -27,17 +37,24 @@ jobs:
             -x 'data/*.db-*' \
             -x 'data/incoming/*.lua' \
             -x '.nirnside-revision' \
-            -x '.nirnside-restart'
+            -x '.nirnside-restart' \
+            -x 'dist/*' \
+            -x 'installer/Nirnside.exe'
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: Nirnside
           body: |
-            Unzip, then open **START-HERE.txt**.
+            **Windows:** download **Nirnside.exe** and double-click it.
+            It installs Nirnside on this PC and opens a browser. You do not install Node.js, Visual Studio, or Python.
 
-            Requires [Node.js LTS](https://nodejs.org) (green button). Double-click `start-nirnside.cmd`.
-            Visual Studio / Python / C++ tools are not required.
-            Nirnside updates itself on every start. Your `data` folder is never overwritten.
-          files: dist/nirnside.zip
+            If Windows SmartScreen appears: More info → Run anyway.
+
+            The zip + `start-nirnside.cmd` is for people who already have Node, and for macOS/Linux (`start-nirnside.sh`).
+
+            Your `data` folder is never overwritten. Nirnside never uploads your account.
+          files: |
+            dist/Nirnside.exe
+            dist/nirnside.zip
           make_latest: true
-          allowUpdates: true
+          overwrite_files: true

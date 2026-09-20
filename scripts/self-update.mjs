@@ -18,6 +18,9 @@ export function shouldSkip(relPath) {
   if (n === "node_modules" || n.startsWith("node_modules/")) return true;
   if (n === ".next" || n.startsWith(".next/")) return true;
   if (n === ".git" || n.startsWith(".git/")) return true;
+  if (n === "runtime" || n.startsWith("runtime/")) return true;
+  if (/(^|\/)Nirnside\.exe$/i.test(n)) return true;
+  if (n === "nirnside-installer.log") return true;
   if (n === REVISION_NAME || n === RESTART_NAME) return true;
   if (n === ".env" || n.startsWith(".env.")) return true;
   if (/(^|\/)[^/]+\.db(-wal|-shm)?$/i.test(n)) return true;

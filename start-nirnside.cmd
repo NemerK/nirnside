@@ -8,6 +8,12 @@ REM ============================================================
 setlocal
 cd /d "%~dp0"
 
+REM Prefer the runtime the Windows app installer downloads into this folder
+REM so a friend never has to install Node.js system-wide.
+if exist "%~dp0runtime\node.exe" (
+  set "PATH=%~dp0runtime;%PATH%"
+)
+
 where node >nul 2>nul
 if errorlevel 1 (
   echo.

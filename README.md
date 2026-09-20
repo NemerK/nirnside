@@ -56,24 +56,24 @@ The project is public: **https://github.com/NemerK/nirnside**
 
 ### For you, or anyone else (Windows)
 
-1. Install **Node.js LTS** from <https://nodejs.org> (green button). One time.
-   That is the only extra program. Visual Studio, Python, and C++ build tools
-   are not required.
-2. Download the zip: <https://github.com/NemerK/nirnside/archive/refs/heads/main.zip>
-   (or GitHub → **Code → Download ZIP**). Unzip it anywhere.
-3. Open **START-HERE.txt** if you want the short version, or just double-click
-   **`start-nirnside.cmd`**.
-4. The browser opens at **http://127.0.0.1:43219**. Use **Setup** if it does not
-   find `Documents\Elder Scrolls Online` by itself. Enable **Nirnside Snapshot**
-   in the game AddOns menu, then log out.
-
-macOS / Linux: same zip (or `git clone`), then `chmod +x start-nirnside.sh && ./start-nirnside.sh`.
+1. Download **Nirnside.exe** from
+   <https://github.com/NemerK/nirnside/releases/latest>
+2. Double-click it. A short wizard puts Nirnside on this PC and opens a
+   browser. You do not install Node.js, Visual Studio, or Python.
+3. If Windows SmartScreen appears: **More info → Run anyway**.
+4. In ESO: character select → AddOns → enable **Nirnside Snapshot**, then
+   log out (or `/reloadui`). Use **Setup** in the app if it does not find
+   `Documents\Elder Scrolls Online` by itself.
 
 That is the whole install. No Nirnside account, no extra server, nothing uploaded.
 
+macOS / Linux, or a zip if you already use Node: download
+<https://github.com/NemerK/nirnside/archive/refs/heads/main.zip>, then
+`start-nirnside.cmd` / `./start-nirnside.sh`.
+
 ### Updates (you and everyone who downloaded it)
 
-Every start via `start-nirnside.cmd` / `.sh`:
+Every start via **Nirnside.exe**, `start-nirnside.cmd`, or `.sh`:
 
 - **Git clone** — `git pull` on the branch you checked out (app + `addon/`).
 - **ZIP download** — fetches the latest `main` from GitHub and overlays it
@@ -89,9 +89,8 @@ To skip an update: `NIRNSIDE_SKIP_UPDATE=1` then start as usual.
 If you use git: `git clone https://github.com/NemerK/nirnside.git` and the start
 script still updates for you.
 
-After GitHub **Releases** has a **Nirnside** zip (published on each push to
-`main`), you can also grab that from the Releases page — same start script,
-same updater.
+GitHub **Releases** publishes **Nirnside.exe** (Windows, double-click) and a zip
+on each push to `main`. The exe is the install. The zip is optional.
 
 To try the UI without ESO: Home → **Explore a demo account**. That sample is
 labelled as sample data, never as your account.
@@ -202,4 +201,5 @@ mail, PvP ranks, and quest logs are out of scope by design. See the rules file.
 ## Tech
 
 Next.js (App Router) · TypeScript · Tailwind CSS · better-sqlite3 · Zod · chokidar.
+Windows install is a single Go exe that downloads a private Node runtime.
 Everything runs locally.

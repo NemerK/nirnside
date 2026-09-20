@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nirnside</title>
+  <style>
+    :root {
+      --bg: #0d0f13;
+      --surface: #161b26;
+      --border: #2a3240;
+      --fg: #e8e3d6;
+      --muted: #9aa4b2;
+      --subtle: #6b7686;
+      --accent: #c8a35a;
+      --accent-fg: #1a1409;
+      --ok: #4ba36a;
+      --danger: #e0574b;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+      font: 16px/1.5 "Segoe UI", system-ui, sans-serif; }
+    main { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card { width: min(34rem, 100%); background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px 28px 24px; }
+    h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 4px; letter-spacing: 0.02em; }
+    .gold { color: var(--accent); }
+    .lead { color: var(--muted); margin: 0 0 20px; }
+    ul { margin: 0 0 20px; padding-left: 1.1rem; color: var(--muted); }
+    li { margin: 6px 0; }
+    .path { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; color: var(--fg);
+      background: #0d0f13; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+      word-break: break-all; margin-bottom: 16px; }
+    label { display: flex; gap: 8px; align-items: flex-start; color: var(--muted); margin-bottom: 20px; cursor: pointer; }
+    input[type=checkbox] { margin-top: 4px; accent-color: var(--accent); }
+    button { appearance: none; border: 0; background: var(--accent); color: var(--accent-fg);
+      font: inherit; font-weight: 600; padding: 12px 18px; border-radius: 10px; cursor: pointer; width: 100%; }
+    button:disabled { opacity: 0.55; cursor: default; }
+    .fine { color: var(--subtle); font-size: 0.82rem; margin: 14px 0 0; }
+    .bar { height: 8px; background: #0d0f13; border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+    .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s; }
+    .step { margin: 12px 0 6px; font-weight: 600; }
+    .detail { color: var(--muted); min-height: 1.5em; }
+    .err { color: var(--danger); white-space: pre-wrap; font-size: 0.9rem; margin: 12px 0; }
+    .ok { color: var(--ok); }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <section id="welcome">
+        <h1>Nirnside</h1>
+        <p class="lead">Your Elder Scrolls Online account, on <span class="gold">this PC only</span>.</p>
+        <ul>
+          <li>Nothing is uploaded. There is no Nirnside account.</li>
+          <li>It never asks for your ESO password.</li>
+          <li>It installs a private runtime for itself — you do not install Node.js, Visual Studio, or Python.</li>
+        </ul>
+        <div class="fine">Install location</div>
+        <div class="path" id="dest"></div>
+        <label><input type="checkbox" id="shortcut" checked /> Create a desktop shortcut</label>
+        <button type="button" id="go">Install Nirnside</button>
+        <p class="fine">Windows may warn that this app is unsigned. Choose More info → Run anyway. That warning is about a missing publisher certificate, not about ESO.</p>
+      </section>
+      <section id="progress" class="hidden">
+        <h1>Installing Nirnside</h1>
+        <p class="lead" id="progress-lead">Sit tight. This stays on your machine.</p>
+        <div class="bar"><i id="pct"></i></div>
+        <div class="step" id="step">Starting…</div>
+        <div class="detail" id="detail"></div>
+        <p class="err hidden" id="err"></p>
+        <button type="button" id="retry" class="hidden">Try again</button>
+      </section>
+    </div>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const welcome = $("welcome");
+    const progress = $("progress");
+    let dest = "";
+    let polling = false;
+
+    async function defaults() {
+      const r = await fetch("/api/defaults");
+      const j = await r.json();
+      dest = j.dest;
+      $("dest").textContent = dest;
+    }
+
+    function showProgress() {
+      welcome.classList.add("hidden");
+      progress.classList.remove("hidden");
+    }
+
+    async function tick() {
+      const r = await fetch("/api/state");
+      const s = await r.json();
+      if (s.dest) $("dest").textContent = s.dest;
+      if (s.phase === "welcome") return;
+      showProgress();
+      $("pct").style.width = (s.percent || 0) + "%";
+      $("step").textContent = s.step || "";
+      $("detail").textContent = s.detail || "";
+      if (s.phase === "error") {
+        $("err").textContent = s.error || "Install did not finish.";
+        $("err").classList.remove("hidden");
+        $("retry").classList.remove("hidden");
+        $("progress-lead").textContent = "Nothing was sent anywhere. You can retry.";
+        return false;
+      }
+      $("err").classList.add("hidden");
+      $("retry").classList.add("hidden");
+      if (s.ready && s.appUrl) {
+        $("step").classList.add("ok");
+        $("step").textContent = "Nirnside is ready — opening it.";
+        location.replace(s.appUrl);
+        return false;
+      }
+      return true;
+    }
+
+    async function loop() {
+      if (polling) return;
+      polling = true;
+      while (await tick()) await new Promise((r) => setTimeout(r, 400));
+      polling = false;
+    }
+
+    $("go").addEventListener("click", async () => {
+      $("go").disabled = true;
+      showProgress();
+      await fetch("/api/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dest, shortcut: $("shortcut").checked }),
+      });
+      loop();
+    });
+    $("retry").addEventListener("click", async () => {
+      $("retry").classList.add("hidden");
+      $("err").classList.add("hidden");
+      await fetch("/api/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dest, shortcut: $("shortcut").checked }),
+      });
+      loop();
+    });
+
+    defaults().then(tick).then((more) => { if (more === true || more === undefined) loop(); }).catch(() => {});
+  </script>
+</body>
+</html>

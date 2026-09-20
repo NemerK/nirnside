@@ -13,6 +13,8 @@ describe("self-update overlay", () => {
     assert.equal(shouldSkip("data/catalog/sets.json"), false);
     assert.equal(shouldSkip("addon/NirnsideSnapshot/NirnsideSnapshot.lua"), false);
     assert.equal(shouldSkip("node_modules/next/index.js"), true);
+    assert.equal(shouldSkip("runtime/node.exe"), true);
+    assert.equal(shouldSkip("Nirnside.exe"), true);
     assert.equal(shouldSkip(".npmrc"), false);
   });
 

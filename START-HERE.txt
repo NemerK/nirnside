@@ -1,34 +1,30 @@
 Nirnside — start here
 =====================
 
-1. Install Node.js LTS (one time)
-   https://nodejs.org   ← click the green “LTS” button, install, finish.
-   That is the only extra program. Visual Studio, Python, and C++ tools
-   are not required (and installing them will not help).
+Windows (the usual way)
+  Download Nirnside.exe from GitHub Releases and double-click it.
+  https://github.com/NemerK/nirnside/releases/latest
 
-2. Start Nirnside
-   Windows:  double-click  start-nirnside.cmd
-   Mac/Linux:  chmod +x start-nirnside.sh && ./start-nirnside.sh
+  A short wizard installs Nirnside on this PC and opens a browser.
+  You do not install Node.js, Visual Studio, or Python.
 
-   The first run installs what it needs and opens
-   http://127.0.0.1:43219  in your browser.
+  If Windows says it protected your PC: More info → Run anyway.
 
-3. Point it at ESO (usually automatic)
-   Run Nirnside on the same PC you play on.
-   If it does not find your files, open Setup in the sidebar and
-   pick Documents\Elder Scrolls Online  (liveeu = EU, live = NA).
-   Nirnside copies its own addons there. It never uploads anything.
+macOS / Linux, or if you already have Node
+  Windows:  double-click  start-nirnside.cmd
+  Mac/Linux:  chmod +x start-nirnside.sh && ./start-nirnside.sh
 
-4. In the game, once
-   Character select → AddOns → enable Nirnside Snapshot.
-   Log out (or /reloadui).  That writes your account to disk.
-   Zoning / instances do not snapshot.
+In the game, once
+  Character select → AddOns → enable Nirnside Snapshot.
+  Log out (or /reloadui). Zoning / instances do not snapshot.
+
+  If Setup did not find ESO by itself, pick
+  Documents\Elder Scrolls Online  (liveeu = EU, live = NA).
 
 Updates
-  Double-click start-nirnside.cmd whenever you want Nirnside.
-  It pulls whatever is on GitHub main (app AND addons), then copies
-  Nirnside Snapshot + Catalog into your ESO AddOns folder.
-  Your account database in the data folder is never overwritten.
-  In game, /reloadui after an update so the new Lua loads.
+  Open Nirnside again (the desktop shortcut, the exe, or start-nirnside).
+  It pulls the latest app and addons from GitHub. Your account database
+  in the data folder is never overwritten. In game, /reloadui after an
+  addon update.
 
-Skip an update: set NIRNSIDE_SKIP_UPDATE=1 before starting.
+Nirnside never asks for an ESO password and never uploads anything.
