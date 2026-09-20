@@ -23,9 +23,10 @@ Nirnside — start here
    Zoning / instances do not snapshot.
 
 Updates
-  Every time you start Nirnside it pulls the latest code from GitHub
-  and copies Nirnside Snapshot + Catalog into your ESO AddOns folder.
+  Double-click start-nirnside.cmd whenever you want Nirnside.
+  It pulls whatever is on GitHub main (app AND addons), then copies
+  Nirnside Snapshot + Catalog into your ESO AddOns folder.
   Your account database in the data folder is never overwritten.
-  In game, /reloadui after an addon copy so the new Lua loads.
+  In game, /reloadui after an update so the new Lua loads.
 
 Skip an update: set NIRNSIDE_SKIP_UPDATE=1 before starting.

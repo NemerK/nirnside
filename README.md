@@ -73,8 +73,9 @@ That is the whole install. No Nirnside account, no extra server, nothing uploade
 
 Every start via `start-nirnside.cmd` / `.sh`:
 
-- **Git clone** — `git pull` on the branch you checked out.
-- **ZIP download** — fetches the latest `main` from GitHub and overlays it.
+- **Git clone** — `git pull` on the branch you checked out (app + `addon/`).
+- **ZIP download** — fetches the latest `main` from GitHub and overlays it
+  (app + `addon/`). It will not replace a newer copy with an older `main`.
 
 Your `data/` folder (the SQLite account database, and any `.lua` you dropped in
 `data/incoming`) is **never overwritten**. Every start also copies

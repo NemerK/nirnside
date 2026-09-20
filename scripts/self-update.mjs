@@ -11,6 +11,7 @@ export const DEFAULT_REF = "main";
 
 const RESTART_NAME = ".nirnside-restart";
 const REVISION_NAME = ".nirnside-revision";
+const CHANNEL_NAME = "nirnside-channel.json";
 
 export function shouldSkip(relPath) {
   const n = relPath.replace(/\\/g, "/");
@@ -49,6 +50,64 @@ export function overlayCopy(fromDir, toDir) {
   }
   walk(fromDir);
   return files;
+}
+
+export function parseAddonVersion(dir) {
+  const txt = join(dir, "addon", "NirnsideSnapshot", "NirnsideSnapshot.txt");
+  if (!existsSync(txt)) return null;
+  try {
+    const m = readFileSync(txt, "utf8").match(/^##\s*Version:\s*(.+)$/im);
+    if (!m) return null;
+    return m[1].trim().split(".").map((n) => Number.parseInt(n, 10) || 0);
+  } catch {
+    return null;
+  }
+}
+
+function versionLess(a, b) {
+  if (!a || !b) return false;
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const av = a[i] ?? 0;
+    const bv = b[i] ?? 0;
+    if (av < bv) return true;
+    if (av > bv) return false;
+  }
+  return false;
+}
+
+/**
+ * Refuse to overlay GitHub main onto a newer local copy (e.g. this PR zip
+ * before main has caught up). Overlay does not delete extra files, but it
+ * *would* overwrite addon Lua and start scripts with the older tree.
+ */
+export function wouldDowngrade(fromDir, toDir) {
+  const incomingHasUpdater = existsSync(join(fromDir, "scripts", "self-update.mjs"));
+  const localHasUpdater = existsSync(join(toDir, "scripts", "self-update.mjs"));
+  if (localHasUpdater && !incomingHasUpdater) {
+    return "GitHub copy is older (no self-updater). Not replacing this install. Merge to main, then start again.";
+  }
+  const incomingVer = parseAddonVersion(fromDir);
+  const localVer = parseAddonVersion(toDir);
+  if (versionLess(incomingVer, localVer)) {
+    return `GitHub addon is older (${(incomingVer || []).join(".")} < ${(localVer || []).join(".")}). Not replacing this install.`;
+  }
+  return null;
+}
+
+export function readChannel(root) {
+  const p = join(root, CHANNEL_NAME);
+  const fallback = { repo: DEFAULT_REPO, ref: DEFAULT_REF };
+  if (!existsSync(p)) return fallback;
+  try {
+    const parsed = JSON.parse(readFileSync(p, "utf8"));
+    return {
+      repo: typeof parsed.repo === "string" && parsed.repo ? parsed.repo : fallback.repo,
+      ref: typeof parsed.ref === "string" && parsed.ref ? parsed.ref : fallback.ref,
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 export function revisionPath(root) {
@@ -131,7 +190,7 @@ function markRestart(root) {
 }
 
 async function updateFromGit(root) {
-  log("Git clone detected — pulling the latest commit on this branch.");
+  log("Git clone detected — pulling the latest commit on this branch (app + addons).");
   const before = git(root, ["rev-parse", "HEAD"]).stdout.trim();
   const fetch = git(root, ["fetch", "--quiet"]);
   if (fetch.status !== 0) {
@@ -180,7 +239,19 @@ async function updateFromZip(root, repo, ref) {
   await download(`https://codeload.github.com/${repo}/zip/${sha}`, zipPath);
   extractZip(zipPath, extractDir);
   const from = extractedRoot(extractDir);
+  const downgrade = wouldDowngrade(from, root);
+  if (downgrade) {
+    log(downgrade);
+    try {
+      rmSync(zipPath, { force: true });
+      rmSync(extractDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+    return 0;
+  }
   const files = overlayCopy(from, root);
+  const addonLua = existsSync(join(root, "addon", "NirnsideSnapshot", "NirnsideSnapshot.lua"));
   writeRevision(root, {
     source: "zip",
     repo,
@@ -194,7 +265,10 @@ async function updateFromZip(root, repo, ref) {
   } catch {
     /* temp cleanup is best-effort */
   }
-  log(`Applied ${files} files from ${sha.slice(0, 7)}. Your data folder was left alone.`);
+  log(
+    `Applied ${files} files from ${sha.slice(0, 7)} (app + addon source). Your data folder was left alone.` +
+      (addonLua ? " Next: copy those addons into ESO AddOns." : ""),
+  );
   markRestart(root);
   return 2;
 }
@@ -204,8 +278,9 @@ export async function runSelfUpdate(root = process.cwd()) {
     log("Skipped (NIRNSIDE_SKIP_UPDATE or CI).");
     return 0;
   }
-  const repo = process.env.NIRNSIDE_UPDATE_REPO || DEFAULT_REPO;
-  const ref = process.env.NIRNSIDE_UPDATE_REF || DEFAULT_REF;
+  const channel = readChannel(root);
+  const repo = process.env.NIRNSIDE_UPDATE_REPO || channel.repo;
+  const ref = process.env.NIRNSIDE_UPDATE_REF || channel.ref;
   try {
     if (isGitClone(root)) return await updateFromGit(root);
     return await updateFromZip(root, repo, ref);

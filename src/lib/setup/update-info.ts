@@ -19,8 +19,18 @@ const DEFAULT_REF = "main";
  */
 export function getUpdateInfo(): UpdateInfo {
   const skipped = process.env.NIRNSIDE_SKIP_UPDATE === "1";
-  const repo = process.env.NIRNSIDE_UPDATE_REPO || DEFAULT_REPO;
-  const fallbackRef = process.env.NIRNSIDE_UPDATE_REF || DEFAULT_REF;
+  let repo = process.env.NIRNSIDE_UPDATE_REPO || DEFAULT_REPO;
+  let fallbackRef = process.env.NIRNSIDE_UPDATE_REF || DEFAULT_REF;
+  const channelFile = join(process.cwd(), "nirnside-channel.json");
+  if (existsSync(channelFile) && !process.env.NIRNSIDE_UPDATE_REPO) {
+    try {
+      const ch = JSON.parse(readFileSync(channelFile, "utf8")) as { repo?: string; ref?: string };
+      if (ch.repo) repo = ch.repo;
+      if (ch.ref && !process.env.NIRNSIDE_UPDATE_REF) fallbackRef = ch.ref;
+    } catch {
+      /* ignore */
+    }
+  }
   const git = existsSync(join(process.cwd(), ".git"));
 
   let sha: string | null = null;
