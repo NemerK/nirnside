@@ -46,7 +46,7 @@ field**, so a scan upgrades entries without dropping detail.
 | Lua parser | `src/lib/snapshot/lua-parser.ts` | Reads ESO `SavedVariables` Lua from disk |
 | Local DB | `src/lib/db` | SQLite schema, importer, queries, and account↔catalog overlays |
 | Importer / watcher | `scripts/` | One-shot import and a background auto-import watcher |
-| Snapshot addon | `addon/NirnsideSnapshot` | Writes account/character data on login & ReloadUI |
+| Snapshot addon | `addon/NirnsideSnapshot` | Writes account/character data on logout, ReloadUI, or a manual command/keybind |
 | Catalog addon | `addon/NirnsideCatalog` | OPT-IN `/nirncatalog` scan of the live game catalog (AFK) |
 | Sample data | `data/sample/Nirnside.lua` | A realistic snapshot so you can try it without the game |
 
@@ -114,8 +114,9 @@ Nirnside remembers that choice.
 
 1. At character select, open **AddOns** and enable **Nirnside Snapshot**.
 2. Log a character in, then log out — or type `/reloadui`.
-   The addon only runs at login / ReloadUI, **never during combat**.
-   Force a capture anytime with `/nirnside`.
+   The addon runs **only** on logout, ReloadUI, or a manual `/nirnside` / keybind —
+   never on zone or instance changes, never during combat. Bind **Save Nirnside
+   snapshot** under Controls → Keybindings.
 3. Repeat logout on each character you want in Nirnside. Account-wide bags
    (bank, craft bag) come from any character; a character’s own bag/skills/CP
    only appear after *that* character has been snapshotted.

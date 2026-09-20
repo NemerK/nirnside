@@ -316,9 +316,10 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
             </li>
             <li>
               Log into a character, then log out — or type{" "}
-              <code className="rounded bg-surface-2 px-1">/reloadui</code>. The addon only runs at login / ReloadUI,
-              never during combat. You can force a capture with{" "}
-              <code className="rounded bg-surface-2 px-1">/nirnside</code>.
+              <code className="rounded bg-surface-2 px-1">/reloadui</code>. The addon runs only on logout, ReloadUI, or
+              a manual <code className="rounded bg-surface-2 px-1">/nirnside</code> / keybind — never on zone or
+              instance changes, never during combat. Bind{" "}
+              <span className="font-medium">Save Nirnside snapshot</span> under Controls → Keybindings.
             </li>
             <li>This page picks up the file on its own. Repeat logout on each character you want in Nirnside.</li>
           </ol>
