@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { getUserConfig } from "../setup/config";
 
 /**
  * Zero-config discovery of the ESO SavedVariables file the NirnsideSnapshot
@@ -11,14 +12,17 @@ import { join } from "node:path";
  * Precedence:
  *   1. NIRNSIDE_SV_FILE  (explicit file, escape hatch)
  *   2. NIRNSIDE_SV_DIR   (explicit SavedVariables dir)
- *   3. Standard ESO install locations (liveeu preferred, then live, then pts)
- *   4. The bundled sample fixture (so a fresh clone still shows something)
+ *   3. Path chosen in Setup (a snapshot file or ESO folder)
+ *   4. Standard ESO data locations (liveeu preferred, then live, then pts)
+ *   5. data/incoming drop-in (machines without ESO)
+ *   6. The bundled sample fixture (opt-in demo only)
  */
 
 // ESO names the SavedVariables file after the ADDON (NirnsideSnapshot.lua) and
 // stores the declared variable (NirnsideData) *inside* it. So the file on disk
 // is <env>/SavedVariables/NirnsideSnapshot.lua.
 export const SNAPSHOT_FILENAME = "NirnsideSnapshot.lua";
+export const CATALOG_FILENAME = "NirnsideCatalog.lua";
 
 export type SnapshotSource =
   | { kind: "env"; path: string; label: string }
@@ -33,6 +37,10 @@ export type SnapshotSource =
  */
 export function incomingPath(): string {
   return join(process.cwd(), "data", "incoming", SNAPSHOT_FILENAME);
+}
+
+export function incomingCatalogPath(): string {
+  return join(process.cwd(), "data", "incoming", CATALOG_FILENAME);
 }
 
 /** ESO "live" environment folders, most-preferred first. */
@@ -106,11 +114,13 @@ function windowsUserRoots(): string[] {
 /** Roots under which the "Elder Scrolls Online" folder typically lives. */
 export function esoRoots(): string[] {
   const roots: string[] = [];
+  // Chosen folder first so a Setup pick always wins over other copies (OneDrive vs local, NA vs EU).
+  const chosen = getUserConfig().esoDir;
+  if (chosen) roots.push(chosen);
+  if (process.env.NIRNSIDE_ESO_DIR) roots.push(process.env.NIRNSIDE_ESO_DIR);
   for (const docs of [...documentsDirs(), ...windowsUserRoots()]) {
     roots.push(join(docs, ESO_DIRNAME));
   }
-  // Explicit override: a directory that directly contains liveeu/live/pts.
-  if (process.env.NIRNSIDE_ESO_DIR) roots.push(process.env.NIRNSIDE_ESO_DIR);
   return Array.from(new Set(roots)).filter(isDir);
 }
 
@@ -123,18 +133,26 @@ export function envFolders(root: string): string[] {
   const extra = safeReaddir(root).filter(
     (e) => !ESO_ENVS.includes(e as (typeof ESO_ENVS)[number]) && isDir(join(root, e, "SavedVariables")),
   );
-  return [...known, ...extra];
+  const found = [...known, ...extra];
+  // The user pointed at live / liveeu itself rather than the parent ESO folder.
+  if (found.length === 0 && (isDir(join(root, "SavedVariables")) || isDir(join(root, "AddOns")))) {
+    return [""];
+  }
+  return found;
 }
 
 /** Every candidate SavedVariables file path we'd consider, in priority order. */
 export function candidatePaths(): string[] {
-  const out: string[] = [incomingPath()];
+  const out: string[] = [];
+  const cfg = getUserConfig();
+  if (cfg.snapshotFile) out.push(cfg.snapshotFile);
+  out.push(incomingPath());
   for (const root of esoRoots()) {
     for (const env of envFolders(root)) {
       out.push(join(root, env, "SavedVariables", SNAPSHOT_FILENAME));
     }
   }
-  return out;
+  return Array.from(new Set(out));
 }
 
 const SAMPLE_PATH = join(process.cwd(), "data", "sample", "Nirnside.lua");
@@ -155,20 +173,38 @@ export function locateSnapshot(includeSample = true): SnapshotSource | null {
     if (existsSync(p)) return { kind: "env", path: p, label: "NIRNSIDE_SV_DIR" };
   }
 
-  const incoming = incomingPath();
-  if (existsSync(incoming)) {
-    return { kind: "uploaded", path: incoming, label: "uploaded file (data/incoming)" };
+  const cfg = getUserConfig();
+  if (cfg.snapshotFile && existsSync(cfg.snapshotFile)) {
+    return { kind: "eso", path: cfg.snapshotFile, label: "chosen file" };
   }
 
   for (const root of esoRoots()) {
     for (const env of envFolders(root)) {
       const p = join(root, env, "SavedVariables", SNAPSHOT_FILENAME);
-      if (existsSync(p)) return { kind: "eso", path: p, label: env };
+      if (existsSync(p)) {
+        const envLabel = env || basenameLabel(root);
+        const chosen = cfg.esoDir && samePath(root, cfg.esoDir);
+        return { kind: "eso", path: p, label: chosen ? `chosen folder (${envLabel})` : envLabel };
+      }
     }
+  }
+
+  const incoming = incomingPath();
+  if (existsSync(incoming)) {
+    return { kind: "uploaded", path: incoming, label: "uploaded file (data/incoming)" };
   }
 
   if (includeSample && existsSync(SAMPLE_PATH)) {
     return { kind: "sample", path: SAMPLE_PATH, label: "sample data" };
   }
   return null;
+}
+
+function basenameLabel(root: string): string {
+  return basename(root) || root;
+}
+
+function samePath(a: string, b: string): boolean {
+  const norm = (s: string) => s.replace(/[\\/]+$/, "").toLowerCase();
+  return norm(a) === norm(b);
 }

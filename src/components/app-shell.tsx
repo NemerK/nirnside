@@ -6,6 +6,7 @@ import { useState } from "react";
 import {
   Backpack,
   BookMarked,
+  FolderCog,
   Home,
   Library,
   Menu,
@@ -32,6 +33,7 @@ const NAV = [
   { href: "/stickerbook", label: "Stickerbook", icon: BookMarked },
   { href: "/achievements", label: "Achievements", icon: Trophy },
   { href: "/encyclopedia", label: "Encyclopedia", icon: Library },
+  { href: "/setup", label: "Setup", icon: FolderCog },
 ];
 
 function Wordmark() {

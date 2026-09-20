@@ -1,12 +1,21 @@
-import { existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { watch, type FSWatcher } from "chokidar";
 import { loadSnapshotFromFile } from "./load";
-import { locateSnapshot, candidatePaths, type SnapshotSource } from "./locate";
+import {
+  locateSnapshot,
+  candidatePaths,
+  incomingPath,
+  incomingCatalogPath,
+  CATALOG_FILENAME,
+  type SnapshotSource,
+} from "./locate";
 import { importSnapshot } from "../db/import";
-import { getDb, setMeta } from "../db";
+import { getDb, getMeta, setMeta } from "../db";
 import { loadReferenceCatalog, loadCatalogFromLua } from "../catalog/load";
 import { installAddons } from "../setup/install-addons";
+import { clearUserConfig, setUserConfig } from "../setup/config";
+import { resolveUserPath } from "../setup/resolve-path";
 
 /**
  * The "work-free" engine. Started once when the app boots (see instrumentation).
@@ -14,9 +23,9 @@ import { installAddons } from "../setup/install-addons";
  * watches it so every logout / ReloadUI refreshes the app on its own — no env
  * vars, no second terminal.
  *
- * If no ESO file exists yet (addon not run, or — like the cloud preview — no ESO
- * on this machine), it keeps looking on an interval and picks it up the moment
- * it appears.
+ * If no ESO file exists yet (addon not run, or no ESO on this machine), it keeps
+ * looking on an interval and picks it up the moment it appears. Setup can point
+ * it at a folder/file at any time via rescanNow().
  */
 
 export interface DataSourceStatus {
@@ -30,7 +39,10 @@ export interface DataSourceStatus {
 
 let started = false;
 let watcher: FSWatcher | null = null;
+let catalogWatcher: FSWatcher | null = null;
 let debounce: NodeJS.Timeout | null = null;
+let pollTimer: NodeJS.Timeout | null = null;
+let catalogLoaded = false;
 
 function doImport(src: SnapshotSource, reason: string) {
   try {
@@ -55,13 +67,19 @@ function doImport(src: SnapshotSource, reason: string) {
   }
 }
 
-function beginWatch(src: SnapshotSource) {
-  doImport(src, "startup");
+function stopPoll() {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+function beginWatch(src: SnapshotSource, reason = "startup") {
+  doImport(src, reason);
 
   // Sample data is static — no need to watch it.
   if (src.kind === "sample") {
     console.log("[nirnside] Using bundled sample data. Run the app on your ESO PC to load your real account.");
-    // Still keep looking for a real ESO file appearing later.
     pollForRealFile();
     return;
   }
@@ -71,65 +89,68 @@ function beginWatch(src: SnapshotSource) {
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 400, pollInterval: 100 },
   });
-  const trigger = (reason: string) => {
+  const trigger = (why: string) => {
     if (debounce) clearTimeout(debounce);
-    debounce = setTimeout(() => doImport(src, reason), 600);
+    debounce = setTimeout(() => doImport(src, why), 600);
   };
   watcher.on("change", () => trigger("change")).on("add", () => trigger("add"));
   console.log(`[nirnside] Watching ${src.path} — logout or /reloadui in ESO to refresh automatically.`);
 }
 
-/** When only sample data exists, keep checking for a real ESO file to appear. */
 function pollForRealFile() {
-  const iv = setInterval(() => {
+  stopPoll();
+  pollTimer = setInterval(() => {
     const real = locateSnapshot(false);
-    if (real) {
-      clearInterval(iv);
+    if (real && real.kind !== "sample") {
+      stopPoll();
       console.log(`[nirnside] Detected real account file at ${real.path}.`);
-      beginWatch(real);
+      beginWatch(real, "detected");
     }
   }, 20_000);
-  if (typeof iv.unref === "function") iv.unref();
+  if (pollTimer && typeof pollTimer.unref === "function") pollTimer.unref();
+}
+
+function catalogCandidates(): string[] {
+  const snap = locateSnapshot(false);
+  return [
+    process.env.NIRNSIDE_CATALOG_FILE,
+    incomingCatalogPath(),
+    snap ? join(dirname(snap.path), CATALOG_FILENAME) : undefined,
+  ].filter((p): p is string => !!p);
+}
+
+function applyCatalogFile(catalogPath: string, reason: string) {
+  try {
+    loadCatalogFromLua(catalogPath);
+    console.log(`[nirnside] catalog: applied in-game dump from ${catalogPath} (${reason})`);
+  } catch (err) {
+    console.error(`[nirnside] in-game catalog import failed: ${err instanceof Error ? err.message : err}`);
+  }
 }
 
 /** Load the bundled reference catalog, then overlay an in-game dump if present. */
 function loadCatalog() {
-  try {
-    const ref = loadReferenceCatalog();
-    console.log(`[nirnside] catalog: loaded ${ref.files} reference file(s).`);
-  } catch (err) {
-    console.error(`[nirnside] reference catalog failed: ${err instanceof Error ? err.message : err}`);
+  if (!catalogLoaded) {
+    try {
+      const ref = loadReferenceCatalog();
+      console.log(`[nirnside] catalog: loaded ${ref.files} reference file(s).`);
+    } catch (err) {
+      console.error(`[nirnside] reference catalog failed: ${err instanceof Error ? err.message : err}`);
+    }
+    catalogLoaded = true;
   }
 
-  // An in-game catalog dump (from the NirnsideCatalog addon) sits next to the
-  // snapshot file, or can be dropped into data/incoming. If present, import it
-  // (it overrides reference data) and watch it.
-  const snap = locateSnapshot(false);
-  const candidates = [
-    process.env.NIRNSIDE_CATALOG_FILE,
-    join(process.cwd(), "data", "incoming", "NirnsideCatalog.lua"),
-    snap ? join(dirname(snap.path), "NirnsideCatalog.lua") : undefined,
-  ].filter((p): p is string => !!p);
-  const catalogPath = candidates.find((p) => existsSync(p));
-  if (catalogPath && existsSync(catalogPath)) {
-    try {
-      loadCatalogFromLua(catalogPath);
-      console.log(`[nirnside] catalog: applied in-game dump from ${catalogPath}`);
-    } catch (err) {
-      console.error(`[nirnside] in-game catalog import failed: ${err instanceof Error ? err.message : err}`);
-    }
-    watch(catalogPath, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 400, pollInterval: 100 } }).on(
-      "all",
-      () => {
-        try {
-          loadCatalogFromLua(catalogPath);
-          console.log("[nirnside] catalog: re-applied in-game dump.");
-        } catch (err) {
-          console.error(`[nirnside] in-game catalog re-import failed: ${err instanceof Error ? err.message : err}`);
-        }
-      },
-    );
-  }
+  const catalogPath = catalogCandidates().find((p) => existsSync(p));
+  catalogWatcher?.close();
+  catalogWatcher = null;
+  if (!catalogPath) return;
+
+  applyCatalogFile(catalogPath, "startup");
+  catalogWatcher = watch(catalogPath, {
+    ignoreInitial: true,
+    awaitWriteFinish: { stabilityThreshold: 400, pollInterval: 100 },
+  });
+  catalogWatcher.on("all", () => applyCatalogFile(catalogPath, "change"));
 }
 
 /** Install/update our addons into any ESO AddOns folder found on this machine. */
@@ -158,35 +179,88 @@ function autoSetup() {
   }
 }
 
-export function startAutoImport() {
-  if (started) return;
-  started = true;
-
+/**
+ * Re-run addon install, catalog overlay, and snapshot locate/watch.
+ * Safe to call from Setup after the user points at a folder.
+ */
+export function rescanNow(reason = "rescan"): DataSourceStatus | null {
   autoSetup();
   loadCatalog();
 
-  // Real data only. We never auto-load the sample account — showing fabricated
-  // data as if it were yours violates the accuracy rule. The demo is opt-in
-  // (see loadSampleData / the Home page button).
   const found = locateSnapshot(false);
   if (found) {
-    beginWatch(found);
-    return;
+    stopPoll();
+    beginWatch(found, reason);
+    return getMeta<DataSourceStatus>("dataSource");
   }
 
   console.log(
     "[nirnside] No SavedVariables found yet. Looking in:\n  " +
-      candidatePaths().slice(0, 6).join("\n  ") +
-      "\nInstall the addon and log out once; it'll be picked up automatically.",
+      candidatePaths().slice(0, 8).join("\n  ") +
+      "\nPoint Nirnside at your ESO folder in Setup, or enable the addon and log out once.",
   );
-  const iv = setInterval(() => {
-    const src = locateSnapshot(false);
-    if (src) {
-      clearInterval(iv);
-      beginWatch(src);
+  pollForRealFile();
+  return getMeta<DataSourceStatus>("dataSource");
+}
+
+export function startAutoImport() {
+  if (started) return;
+  started = true;
+  rescanNow("startup");
+}
+
+/** Point Nirnside at a folder or SavedVariables file the user chose. */
+export function applyUserPath(raw: string): { ok: boolean; error?: string } {
+  const resolved = resolveUserPath(raw);
+  if (!resolved.ok) return { ok: false, error: resolved.error };
+
+  if (resolved.kind === "catalog") {
+    try {
+      loadCatalogFromLua(resolved.file);
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
-  }, 20_000);
-  if (typeof iv.unref === "function") iv.unref();
+    const root = dirname(dirname(resolved.file));
+    setUserConfig({ esoDir: existsSync(root) ? root : undefined });
+    rescanNow("setup-catalog");
+    return { ok: true };
+  }
+
+  if (resolved.kind === "snapshot") {
+    setUserConfig({ snapshotFile: resolved.file, esoDir: resolved.esoRoot });
+    rescanNow("setup-file");
+    return { ok: true };
+  }
+
+  setUserConfig({ esoDir: resolved.esoRoot });
+  rescanNow("setup-folder");
+  return { ok: true };
+}
+
+/** Drop a SavedVariables lua into data/incoming and import it. */
+export function applyUploadedLua(filename: string, bytes: Buffer): { ok: boolean; error?: string } {
+  const lower = filename.toLowerCase();
+  if (!lower.endsWith(".lua")) return { ok: false, error: "Please drop a .lua SavedVariables file." };
+
+  const dest = /catalog/i.test(filename) ? incomingCatalogPath() : incomingPath();
+  mkdirSync(dirname(dest), { recursive: true });
+  writeFileSync(dest, bytes);
+  if (/catalog/i.test(filename)) {
+    try {
+      loadCatalogFromLua(dest);
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  } else {
+    setUserConfig({ snapshotFile: dest });
+  }
+  rescanNow("upload");
+  return { ok: true };
+}
+
+export function resetSetupPath(): void {
+  clearUserConfig();
+  rescanNow("reset-setup");
 }
 
 /** Opt-in: import the bundled sample account so users can tour a populated app. */

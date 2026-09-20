@@ -161,17 +161,25 @@ function Onboarding({
             </li>
             <li>Your account appears here within seconds, and refreshes on every logout after that.</li>
           </ol>
+          <p className="mt-4">
+            <Link href="/setup" className="text-accent hover:underline">
+              Change ESO folder or see setup details
+            </Link>
+          </p>
         </EmptyState>
       ) : (
-        <EmptyState title="Looking for your account…" icon={<Users className="h-8 w-8" />}>
+        <EmptyState title="Point Nirnside at your ESO folder" icon={<Users className="h-8 w-8" />}>
           <p className="mb-4">
-            Nirnside sets itself up: on the PC where you play ESO it finds your install, installs its own addon, then
-            auto-detects and live-refreshes your account. Nothing is uploaded anywhere.
+            Nirnside looks in the usual Documents folders by itself. If it didn&apos;t find ESO here — unusual path,
+            another drive, or this machine doesn&apos;t have the game — tell it where to look. It then installs its
+            addons and reads the files the game writes. Nothing is uploaded anywhere.
           </p>
-          <p className="text-fg-subtle">
-            This preview is running on a remote machine with no ESO, so there&apos;s nothing to detect here. Run Nirnside
-            on your gaming PC for the automatic experience.
-          </p>
+          <Link
+            href="/setup"
+            className="inline-flex items-center rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg"
+          >
+            Open Setup
+          </Link>
         </EmptyState>
       )}
 
@@ -185,9 +193,12 @@ function Onboarding({
       <details className="mt-8 rounded-xl border border-border bg-surface/60 p-4 text-sm">
         <summary className="cursor-pointer text-fg-muted">Where Nirnside looked ({scanned.length} locations)</summary>
         <p className="mt-3 text-xs text-fg-subtle">
-          You don&apos;t need to configure any of these — Nirnside checks them all automatically. OneDrive appears
-          because Windows often redirects your Documents folder into it. If your file is somewhere unusual, set{" "}
-          <code className="rounded bg-surface-2 px-1">NIRNSIDE_SV_FILE</code>.
+          Nirnside checks these automatically (including OneDrive-redirected Documents). If your files live somewhere
+          unusual, pick the folder in{" "}
+          <Link href="/setup" className="text-accent hover:underline">
+            Setup
+          </Link>
+          .
         </p>
         {setup?.addOnsDirs.length ? (
           <div className="mt-3">

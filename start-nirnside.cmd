@@ -15,7 +15,20 @@ if errorlevel 1 (
   echo.
   echo Node.js is required and was not found.
   echo Install the LTS version from https://nodejs.org then run this again.
+  echo ^(That's the only extra program Nirnside needs.^)
   echo.
+  start "" https://nodejs.org
+  pause
+  exit /b 1
+)
+
+for /f "tokens=1 delims=." %%v in ('node -p "process.versions.node"') do set NODE_MAJOR=%%v
+if %NODE_MAJOR% LSS 20 (
+  echo.
+  echo Node.js 20 or newer is required.
+  echo Install the current LTS from https://nodejs.org then run this again.
+  echo.
+  start "" https://nodejs.org
   pause
   exit /b 1
 )

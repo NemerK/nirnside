@@ -14,6 +14,15 @@ if ! command -v node >/dev/null 2>&1; then
   echo
   echo "Node.js is required and was not found."
   echo "Install the LTS version from https://nodejs.org then run this again."
+  echo "(That's the only extra program Nirnside needs.)"
+  exit 1
+fi
+
+NODE_MAJOR=$(node -p "process.versions.node.split('.')[0]")
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  echo
+  echo "Node.js 20 or newer is required (you have $(node -v))."
+  echo "Install the current LTS from https://nodejs.org then run this again."
   exit 1
 fi
 

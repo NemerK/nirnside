@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CheckCircle2, FolderSearch, PackageCheck, TriangleAlert } from "lucide-react";
 import type { AutoSetup, DataSource } from "@/lib/db/queries";
 import { Card } from "./ui";
@@ -27,13 +28,18 @@ export function DataSourceBanner({ source, setup }: { source: DataSource | null;
               <code className="rounded bg-surface-2 px-1">{setup!.addOnsDirs.length}</code> AddOns folder(s) for you.
               Enable <span className="font-medium text-fg">Nirnside Snapshot</span> in the in-game AddOns menu once,
               then log a character out or <code className="rounded bg-surface-2 px-1">/reloadui</code> — your real
-              account loads here automatically within seconds.
+              account loads here automatically within seconds.{" "}
+              <Link href="/setup" className="text-accent hover:underline">
+                Setup
+              </Link>
             </span>
           ) : (
             <span className="text-fg-muted">
-              No ESO <code className="rounded bg-surface-2 px-1">SavedVariables</code> was found on this machine (this
-              preview runs on a remote server with no ESO). Run Nirnside on the PC where you play and it installs its
-              own addon, detects your account, and refreshes on every logout — no manual setup.
+              No ESO SavedVariables file was found yet. Open{" "}
+              <Link href="/setup" className="text-accent hover:underline">
+                Setup
+              </Link>{" "}
+              to point Nirnside at your Documents\Elder Scrolls Online folder, or run it on the PC where you play.
             </span>
           )}
         </div>
@@ -63,6 +69,9 @@ export function DataSourceBanner({ source, setup }: { source: DataSource | null;
       Reading your account automatically from{" "}
       <code className="rounded bg-surface-2 px-1 text-fg">{source.path}</code>
       <span className="text-fg-subtle">({source.label})</span>
+      <Link href="/setup" className="ml-1 text-accent hover:underline">
+        Setup
+      </Link>
     </div>
   );
 }
