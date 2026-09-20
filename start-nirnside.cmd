@@ -14,6 +14,7 @@ if errorlevel 1 (
   echo Node.js is required and was not found.
   echo Install the LTS version from https://nodejs.org then run this again.
   echo ^(That's the only extra program Nirnside needs.^)
+  echo Visual Studio, Python, and C++ build tools are not required.
   echo.
   start "" https://nodejs.org
   pause
@@ -21,10 +22,11 @@ if errorlevel 1 (
 )
 
 for /f "tokens=1 delims=." %%v in ('node -p "process.versions.node"') do set NODE_MAJOR=%%v
-if %NODE_MAJOR% LSS 20 (
+if %NODE_MAJOR% LSS 22 (
   echo.
-  echo Node.js 20 or newer is required.
+  echo Node.js 22 or newer is required ^(you have v%NODE_MAJOR%^).
   echo Install the current LTS from https://nodejs.org then run this again.
+  echo Visual Studio is not required.
   echo.
   start "" https://nodejs.org
   pause
@@ -41,8 +43,31 @@ if exist ".nirnside-restart" (
 )
 
 echo Installing / updating dependencies...
-call npm install
-if errorlevel 1 ( echo npm install failed. & pause & exit /b 1 )
+REM better-sqlite3 already ships a Windows binary. --ignore-scripts stops npm
+REM from compiling it with Visual Studio / node-gyp, which fails on most PCs.
+set npm_config_build_from_source=false
+call npm install --ignore-scripts --no-audit --no-fund
+if errorlevel 1 (
+  echo.
+  echo npm install failed.
+  echo Nirnside does not need Visual Studio, Python, or C++ build tools.
+  echo If the text above mentions node-gyp, MSBuild, or better-sqlite3,
+  echo delete the node_modules folder in this directory and run this again.
+  echo Otherwise install Node.js LTS from https://nodejs.org and try again.
+  echo.
+  pause
+  exit /b 1
+)
+
+node scripts\check-sqlite.mjs
+if errorlevel 1 (
+  echo.
+  echo Visual Studio is not required. Install Node.js LTS from https://nodejs.org
+  echo ^(green LTS button^), delete the node_modules folder, and run this again.
+  echo.
+  pause
+  exit /b 1
+)
 
 echo Copying Nirnside addons into your ESO AddOns folder...
 call npx tsx scripts/install-addons.ts

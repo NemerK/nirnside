@@ -3,6 +3,8 @@ Nirnside — start here
 
 1. Install Node.js LTS (one time)
    https://nodejs.org   ← click the green “LTS” button, install, finish.
+   That is the only extra program. Visual Studio, Python, and C++ tools
+   are not required (and installing them will not help).
 
 2. Start Nirnside
    Windows:  double-click  start-nirnside.cmd

@@ -35,7 +35,8 @@ jobs:
           body: |
             Unzip, then open **START-HERE.txt**.
 
-            Requires [Node.js LTS](https://nodejs.org). Double-click `start-nirnside.cmd`.
+            Requires [Node.js LTS](https://nodejs.org) (green button). Double-click `start-nirnside.cmd`.
+            Visual Studio / Python / C++ tools are not required.
             Nirnside updates itself on every start. Your `data` folder is never overwritten.
           files: dist/nirnside.zip
           make_latest: true

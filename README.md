@@ -57,6 +57,8 @@ The project is public: **https://github.com/NemerK/nirnside**
 ### For you, or anyone else (Windows)
 
 1. Install **Node.js LTS** from <https://nodejs.org> (green button). One time.
+   That is the only extra program. Visual Studio, Python, and C++ build tools
+   are not required.
 2. Download the zip: <https://github.com/NemerK/nirnside/archive/refs/heads/main.zip>
    (or GitHub → **Code → Download ZIP**). Unzip it anywhere.
 3. Open **START-HERE.txt** if you want the short version, or just double-click
