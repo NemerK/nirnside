@@ -25,8 +25,8 @@ export function RolePicker({
     function onDoc(e: MouseEvent) {
       if (root.current && !root.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
   }, [open]);
 
   async function pick(roleId: string | null) {
@@ -67,8 +67,9 @@ export function RolePicker({
       </button>
       {open && (
         <div
-          className="absolute left-0 z-30 mt-1 min-w-[11rem] overflow-hidden rounded-lg border border-border bg-bg-elev py-1 shadow-lg"
+          className="absolute left-0 z-50 mt-1 min-w-[11rem] overflow-hidden rounded-lg border border-border bg-bg-elev py-1 shadow-lg"
           role="listbox"
+          onMouseDown={(e) => e.preventDefault()}
         >
           {roles.length === 0 ? (
             <div className="px-3 py-2 text-xs text-fg-muted">Create a role first, then assign it here.</div>

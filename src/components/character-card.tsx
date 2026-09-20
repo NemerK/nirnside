@@ -22,11 +22,11 @@ export function CharacterCard({
 
   return (
     <article
-      className={`group relative flex flex-col overflow-hidden rounded-xl border bg-surface/70 transition-colors hover:border-accent/50 hover:bg-surface-2 ${
+      className={`group relative flex flex-col rounded-xl border bg-surface/70 transition-colors hover:border-accent/50 hover:bg-surface-2 ${
         archived ? "border-border/70 opacity-90" : "border-border"
       }`}
     >
-      <span className="absolute inset-x-0 top-0 h-0.5" style={{ background: accent }} aria-hidden />
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-0.5 rounded-t-xl" style={{ background: accent }} aria-hidden />
       <Link href={`/characters/${encodeURIComponent(c.id)}`} className="flex flex-1 flex-col p-4 pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
