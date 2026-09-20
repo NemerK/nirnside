@@ -1,0 +1,6 @@
+To restore the original gold + left-sidebar layout after the live-update test:
+
+  cp src/layout-baseline/globals.css src/app/globals.css
+  cp src/layout-baseline/app-shell.tsx src/components/app-shell.tsx
+
+Those two files are an exact copy of the UI as of the test.

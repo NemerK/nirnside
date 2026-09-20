@@ -1,40 +1,42 @@
 @import "tailwindcss";
 
 /*
- * LIVE-UPDATE TEST LAYOUT (teal + top nav).
- * Original gold + left-sidebar tokens are saved in src/layout-baseline/.
+ * Nirnside theming.
+ * Semantic tokens live as CSS variables and switch by a class on <html>
+ * (.theme-dark / .theme-light). Tailwind utilities (bg-surface, text-fg, ...)
+ * are mapped from those tokens below, so multiple themes need no utility churn.
  */
 
 .theme-dark {
-  --bg: #07131c;
-  --bg-elev: #0c1c28;
-  --surface: #102433;
-  --surface-2: #163044;
-  --border: #1e4a5c;
-  --border-strong: #2a6a80;
-  --fg: #e4f4f6;
-  --fg-muted: #8fb4bc;
-  --fg-subtle: #5e8790;
-  --accent: #3ee0c8;
-  --accent-fg: #04221c;
-  --accent-soft: #3ee0c833;
+  --bg: #0d0f13;
+  --bg-elev: #141821;
+  --surface: #161b26;
+  --surface-2: #1d2430;
+  --border: #2a3240;
+  --border-strong: #3a4557;
+  --fg: #e8e3d6;
+  --fg-muted: #9aa4b2;
+  --fg-subtle: #6b7686;
+  --accent: #c8a35a;
+  --accent-fg: #1a1409;
+  --accent-soft: #c8a35a22;
   --danger: #e0574b;
   --ok: #4ba36a;
 }
 
 .theme-light {
-  --bg: #dceef0;
-  --bg-elev: #e7f5f6;
-  --surface: #f2fbfb;
-  --surface-2: #d4ecee;
-  --border: #b3d4d8;
-  --border-strong: #7eb8bf;
-  --fg: #0c2a30;
-  --fg-muted: #3d6670;
-  --fg-subtle: #5e8790;
-  --accent: #0f7f74;
-  --accent-fg: #f3fffc;
-  --accent-soft: #0f7f741a;
+  --bg: #ece4d3;
+  --bg-elev: #f4eee0;
+  --surface: #f7f2e7;
+  --surface-2: #efe7d5;
+  --border: #d8ccb2;
+  --border-strong: #c3b490;
+  --fg: #2a2318;
+  --fg-muted: #6a5f49;
+  --fg-subtle: #8a7d63;
+  --accent: #9a6b1f;
+  --accent-fg: #fbf6ea;
+  --accent-soft: #9a6b1f1a;
   --danger: #b23a2c;
   --ok: #2f7a4a;
 }
@@ -57,6 +59,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
+  /* ESO item quality colors (fixed across themes). */
   --color-q-trash: #9d9d9d;
   --color-q-normal: #c8c6bf;
   --color-q-fine: #4cd12a;
@@ -79,10 +82,11 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+/* Subtle parchment/obsidian depth on the page background. */
 .app-bg {
   background-image:
-    radial-gradient(1000px 520px at 10% -20%, var(--accent-soft), transparent 55%),
-    radial-gradient(800px 480px at 110% 120%, var(--accent-soft), transparent 50%);
+    radial-gradient(1200px 600px at 80% -10%, var(--accent-soft), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, var(--accent-soft), transparent 55%);
 }
 
 ::-webkit-scrollbar {
