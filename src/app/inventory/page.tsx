@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Backpack, Ban, Hand } from "lucide-react";
-import { getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
+import { getArchivedCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
 import { setHref } from "@/lib/db/catalog-queries";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
@@ -27,9 +27,13 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
     traits: [],
     owners: [],
   };
+  let archivedOwner = false;
   try {
     items = getItems(filters);
     facets = getItemFacets();
+    if (filters.owner) {
+      archivedOwner = getArchivedCharacters().some((c) => c.name === filters.owner);
+    }
   } catch {
     // leave defaults
   }
@@ -41,8 +45,14 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Inventory"
-        subtitle="Everything across worn gear, backpacks, bank, subscriber bank and craft bag — with where each item lives."
+        subtitle="Live bags only — worn gear, backpacks, bank, subscriber bank and craft bag. Deleted characters' last-known stacks live on their Archive page."
       />
+
+      {archivedOwner && (
+        <Card className="mb-4 px-4 py-3 text-sm text-fg-muted">
+          Showing last-known bags for a deleted character. These stacks are not part of the live inventory.
+        </Card>
+      )}
 
       <InventoryFilters facets={facets} />
 

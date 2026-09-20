@@ -1,5 +1,7 @@
 import "server-only";
 import { getDb } from "./index";
+import { archivedOwnerNames, isArchived } from "../snapshot/roster";
+import type { Character } from "../snapshot/schema";
 
 export interface SearchHit {
   kind: string; // Set, Skill line, Ability, Champion star, Grimoire, Script, Achievement, Character, Item
@@ -76,18 +78,35 @@ export function globalSearch(q: string, limit = 40): SearchResults {
   const account: SearchHit[] = [];
 
   const chars = db
-    .prepare("SELECT id, name, class, race FROM characters WHERE name LIKE ? LIMIT 10")
-    .all(like) as { id: string; name: string; class: string; race: string }[];
+    .prepare("SELECT id, name, class, race, json FROM characters WHERE name LIKE ? LIMIT 10")
+    .all(like) as { id: string; name: string; class: string; race: string; json: string }[];
   for (const c of chars) {
-    account.push({ kind: "Character", name: c.name, detail: `${c.race} ${c.class}`, href: `/characters/${encodeURIComponent(c.id)}` });
+    const full = safeParse(c.json) as Character | null;
+    const archived = full ? isArchived(full) : false;
+    account.push({
+      kind: archived ? "Archived" : "Character",
+      name: c.name,
+      detail: archived ? `${c.race} ${c.class} · last known` : `${c.race} ${c.class}`,
+      href: `/characters/${encodeURIComponent(c.id)}`,
+    });
   }
+
+  const allCharRows = db.prepare("SELECT json FROM characters").all() as { json: string }[];
+  const hiddenOwners = archivedOwnerNames(
+    allCharRows.map((r) => JSON.parse(r.json) as Character),
+  );
 
   const items = db
     .prepare(
-      "SELECT name, setName, location FROM items WHERE name LIKE ? OR setName LIKE ? GROUP BY name LIMIT 15",
+      "SELECT name, setName, location, ownerCharacter FROM items WHERE name LIKE ? OR setName LIKE ? LIMIT 40",
     )
-    .all(like, like) as { name: string; setName: string | null; location: string }[];
+    .all(like, like) as { name: string; setName: string | null; location: string; ownerCharacter: string | null }[];
+  const seenItems = new Set<string>();
   for (const it of items) {
+    if (it.ownerCharacter && hiddenOwners.has(it.ownerCharacter)) continue;
+    if (seenItems.has(it.name)) continue;
+    seenItems.add(it.name);
+    if (seenItems.size > 15) break;
     account.push({
       kind: "Item",
       name: it.name,

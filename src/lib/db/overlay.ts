@@ -1,19 +1,24 @@
 import "server-only";
 import { getDb } from "./index";
-import { getCharacters } from "./queries";
+import { getArchivedCharacters, getCharacters } from "./queries";
+import { archivedOwnerNames } from "../snapshot/roster";
 
 /** How much of a set the account owns: inventory stacks + stickerbook progress. */
 export function setOwnership(setName: string): {
   inventoryCount: number;
   sticker: { collected: number; total: number } | null;
 } {
-  const inv = getDb()
-    .prepare("SELECT COUNT(*) c FROM items WHERE setName = ? COLLATE NOCASE")
-    .get(setName) as { c: number };
+  const archived = archivedOwnerNames(getArchivedCharacters());
+  const invRows = getDb()
+    .prepare("SELECT ownerCharacter FROM items WHERE setName = ? COLLATE NOCASE")
+    .all(setName) as { ownerCharacter: string | null }[];
+  const inventoryCount = invRows.filter(
+    (r) => !r.ownerCharacter || !archived.has(r.ownerCharacter),
+  ).length;
   const sb = getDb()
     .prepare("SELECT collected, total FROM stickerbook WHERE name = ? COLLATE NOCASE")
     .get(setName) as { collected: number; total: number } | undefined;
-  return { inventoryCount: inv.c, sticker: sb ? { collected: sb.collected, total: sb.total } : null };
+  return { inventoryCount, sticker: sb ? { collected: sb.collected, total: sb.total } : null };
 }
 
 export interface CharRef {

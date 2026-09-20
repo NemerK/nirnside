@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { Backpack, BookMarked, Coins, Library, Shield, Sparkles, Trophy, Users } from "lucide-react";
-import { getAccount, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
+import {
+  getAccount,
+  getArchivedCharacters,
+  getAutoSetup,
+  getCharacters,
+  getDataSource,
+  getItemCount,
+  getStickerbookStats,
+} from "@/lib/db/queries";
+import { goldBreakdown } from "@/lib/snapshot/roster";
 import { candidatePaths } from "@/lib/snapshot/locate";
 import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
 import { CharacterCard } from "@/components/character-card";
@@ -17,11 +26,22 @@ export default function HomePage() {
   if (!account) return <Onboarding setup={autoSetup} scanned={safe(() => candidatePaths()) ?? []} />;
 
   const characters = safe(() => getCharacters()) ?? [];
+  const archived = safe(() => getArchivedCharacters()) ?? [];
   const itemCount = safe(() => getItemCount()) ?? 0;
   const sticker = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
   const stickerPct = sticker.total ? Math.round((sticker.collected / sticker.total) * 100) : 0;
   // Champion Points are account-wide, so show one number for the whole account.
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
+  const gold = goldBreakdown({
+    characters,
+    bankGold: account.currencies?.bankGold,
+    legacyGold: account.gold,
+  });
+  const goldHint = gold.usedLegacy
+    ? "as of last snapshot"
+    : gold.bank > 0
+      ? `${formatGold(gold.wallets)} wallets · ${formatGold(gold.bank)} bank`
+      : "character wallets";
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -39,14 +59,16 @@ export default function HomePage() {
         <Stat label="Champion Points" value={accountCP.toLocaleString("en-US")} hint="account-wide" />
         <Stat label="Items tracked" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
         <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
-        <Stat label="Gold" value={formatGold(account.gold)} />
+        <Stat label="Gold" value={formatGold(gold.total)} hint={goldHint} />
       </div>
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-subtle">Characters</h2>
           <Link href="/characters" className="text-sm text-accent hover:underline">
-            View all
+            {archived.length > 0
+              ? `View all · ${archived.length} archived`
+              : "View all"}
           </Link>
         </div>
         {characters.length === 0 ? (

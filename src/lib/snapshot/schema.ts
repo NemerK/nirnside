@@ -70,6 +70,8 @@ export const Item = z.object({
   count: z.number().int().nonnegative().default(1),
   /** Which character owns this stack, or null for account-wide bags. */
   ownerCharacter: z.string().nullable().default(null),
+  /** GetCurrentCharacterId of the owner, when known. Survives a reused name. */
+  ownerCharacterId: z.string().nullable().default(null),
   location: ItemLocation,
   /** Set name if the item belongs to an item set, else null. */
   setName: z.string().nullable().default(null),
@@ -170,6 +172,13 @@ export const Character = z.object({
   research: lenientArray(z.object({ craft: z.string(), trait: z.string(), remaining: z.string() })).default([]),
   /** Unix seconds of this character's last logout snapshot. null = never logged since install. */
   lastSeen: z.number().int().nonnegative().nullable().default(null),
+  /** Character wallet gold as of last snapshot. Not account-wide. */
+  gold: z.number().int().nonnegative().default(0),
+  /**
+   * Set when this character is gone from the live ESO roster (deleted).
+   * The last snapshot is kept in Archive; it must not appear as a current toon.
+   */
+  archivedAt: z.number().int().nonnegative().nullable().default(null),
 });
 export type Character = z.infer<typeof Character>;
 
@@ -266,6 +275,11 @@ export const AccountSnapshot = z.object({
   guilds: lenientArray(Guild).default([]),
   items: lenientArray(Item).default([]),
   characters: lenientArray(Character).default([]),
+  /**
+   * Characters that were on the account and have since been deleted.
+   * Last-known snapshot only; they are not the live roster.
+   */
+  archivedCharacters: lenientArray(Character).default([]),
   stickerbook: lenientArray(StickerbookSet).default([]),
   /**
    * Legacy: account-wide earned achievement NAMES only. Kept for back-compat

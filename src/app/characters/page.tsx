@@ -1,16 +1,19 @@
-import { Users } from "lucide-react";
-import { getCharacters } from "@/lib/db/queries";
+import { Archive, Users } from "lucide-react";
+import { getArchivedCharacters, getCharacters } from "@/lib/db/queries";
 import { CharacterCard } from "@/components/character-card";
-import { Badge, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default function CharactersPage() {
   let characters: ReturnType<typeof getCharacters> = [];
+  let archived: ReturnType<typeof getArchivedCharacters> = [];
   try {
     characters = getCharacters();
+    archived = getArchivedCharacters();
   } catch {
     characters = [];
+    archived = [];
   }
 
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
@@ -19,7 +22,7 @@ export default function CharactersPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Characters"
-        subtitle="Every character on the account. Empty ones fill in the first time you log them out."
+        subtitle="The live ESO roster. Deleted toons are kept in Archive with their last-known snapshot."
         action={
           accountCP > 0 ? (
             <Badge tone="accent">CP {accountCP.toLocaleString("en-US")} · account-wide</Badge>
@@ -37,6 +40,25 @@ export default function CharactersPage() {
             <CharacterCard key={c.id} character={c} />
           ))}
         </div>
+      )}
+
+      {archived.length > 0 && (
+        <section id="archive" className="mt-10">
+          <div className="mb-3 flex items-center gap-2">
+            <Archive className="h-4 w-4 text-fg-subtle" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-subtle">Archive</h2>
+            <Badge tone="muted">{archived.length}</Badge>
+          </div>
+          <Card className="mb-4 px-4 py-3 text-sm text-fg-muted">
+            These characters are gone from the live ESO roster. Their last snapshot stays here so the current roster
+            stays honest — last-known bags and gold are not mixed into Inventory or the account total.
+          </Card>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {archived.map((c) => (
+              <CharacterCard key={c.id} character={c} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

@@ -150,7 +150,7 @@ local BAGS = {
   { bag = BAG_VIRTUAL,         location = "craftBag",       accountWide = true  },
 }
 
-local function readItem(bagId, slotIndex, location, owner)
+local function readItem(bagId, slotIndex, location, owner, ownerId)
   local link = safe(function() return GetItemLink(bagId, slotIndex) end, "")
   if not link or link == "" then return nil end
 
@@ -165,6 +165,7 @@ local function readItem(bagId, slotIndex, location, owner)
     quality   = qualityString(link),
     count     = safe(function() return select(1, GetSlotStackSize(bagId, slotIndex)) end, 1),
     ownerCharacter = owner,
+    ownerCharacterId = ownerId,
     location  = location,
     setName   = hasSet and setName ~= "" and setName or nil,
     setId     = hasSet and setId or nil,
@@ -179,14 +180,15 @@ local function readItem(bagId, slotIndex, location, owner)
   return item
 end
 
-local function gatherItems(charName)
+local function gatherItems(charName, charId)
   local items = {}
   for _, entry in ipairs(BAGS) do
     local bagId = entry.bag
     local size = safe(function() return GetBagSize(bagId) end, 0) or 0
     local owner = entry.accountWide and nil or charName
+    local ownerId = entry.accountWide and nil or charId
     for slot = 0, size - 1 do
-      local item = safe(function() return readItem(bagId, slot, entry.location, owner) end, nil)
+      local item = safe(function() return readItem(bagId, slot, entry.location, owner, ownerId) end, nil)
       if item then items[#items + 1] = item end
     end
   end
@@ -356,6 +358,8 @@ local function gatherCharacter()
     scribingScripts = {},
     research = {},
     lastSeen = GetTimeStamp(),
+    gold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0),
+    archivedAt = nil,
   }
 end
 
@@ -386,6 +390,7 @@ local function gatherCurrencies()
     writVouchers      = safe(function() return GetCurrencyAmount(CURT_WRIT_VOUCHERS, CURRENCY_LOCATION_ACCOUNT) end, 0),
     eventTickets      = safe(function() return GetCurrencyAmount(CURT_EVENT_TICKETS, CURRENCY_LOCATION_ACCOUNT) end, 0),
     undauntedKeys     = safe(function() return GetCurrencyAmount(CURT_UNDAUNTED_KEYS, CURRENCY_LOCATION_ACCOUNT) end, 0),
+    bankGold          = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_BANK) end, 0),
   }
 end
 
@@ -662,15 +667,170 @@ end
 -- Snapshot orchestration
 ----------------------------------------------------------------------
 
-local function upsertCharacter(char)
-  sv.characters = sv.characters or {}
-  for i, existing in ipairs(sv.characters) do
+local function upsertById(list, char)
+  for i, existing in ipairs(list) do
     if existing.id == char.id then
-      sv.characters[i] = char
+      list[i] = char
       return
     end
   end
-  sv.characters[#sv.characters + 1] = char
+  list[#list + 1] = char
+end
+
+local function upsertCharacter(char)
+  sv.characters = sv.characters or {}
+  upsertById(sv.characters, char)
+end
+
+-- Live account roster from the game. Returns nil if the API looks unusable, so
+-- we never archive everyone by accident.
+local function collectLiveRoster()
+  local okN, n = pcall(GetNumCharacters)
+  if not okN or type(n) ~= "number" or n < 1 then return nil end
+
+  local byId = {}
+  local rows = {}
+  for i = 1, n do
+    local packed = { pcall(GetCharacterInfo, i) }
+    if packed[1] then
+      local name = packed[2]
+      local formattedName = name and zo_strformat("<<1>>", name) or name
+      local ids = {}
+      for k = 3, #packed do
+        local v = packed[k]
+        if type(v) == "string" and v ~= "" then
+          ids[v] = true
+          local formatted = zo_strformat("<<1>>", v)
+          if formatted then ids[formatted] = true end
+        elseif type(v) == "number" and v > 1000 then
+          ids[tostring(v)] = true
+        end
+      end
+      local row = { name = formattedName, ids = ids, raw = packed }
+      rows[#rows + 1] = row
+      for id in pairs(ids) do byId[id] = row end
+      if formattedName then byId["name:" .. formattedName] = row end
+    end
+  end
+
+  local me = safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, nil)
+  if me and not byId[me] then
+    return nil
+  end
+  return { rows = rows, byId = byId }
+end
+
+local function pickLiveId(row)
+  local best = nil
+  for id in pairs(row.ids) do
+    if id ~= row.name and #tostring(id) >= 6 then
+      if not best or #tostring(id) > #tostring(best) then best = id end
+    end
+  end
+  return best or row.name
+end
+
+local function stubFromLive(row)
+  local packed = row.raw
+  local gender, f4, f5, f6 = packed[3], packed[5], packed[6], packed[7]
+  local class, race = "Unknown", "Unknown"
+  local allianceVal = f6
+  if type(f4) == "number" and type(f5) == "number" then
+    class = safe(function() return zo_strformat("<<1>>", GetClassName(gender, f4)) end, "Unknown")
+    race = safe(function() return zo_strformat("<<1>>", GetRaceName(gender, f5)) end, "Unknown")
+  elseif type(packed[5]) == "number" and type(packed[6]) == "string" then
+    -- Character-select shape: name, gender, level, championPoints, class, race, alliance, id
+    class = zo_strformat("<<1>>", packed[6])
+    race = type(packed[7]) == "string" and zo_strformat("<<1>>", packed[7]) or "Unknown"
+    allianceVal = packed[8]
+  end
+  local level = type(packed[4]) == "number" and packed[4] or 1
+  return {
+    id = pickLiveId(row),
+    name = row.name,
+    class = class ~= "" and class or "Unknown",
+    race = race ~= "" and race or "Unknown",
+    alliance = ALLIANCE[allianceVal] or "Aldmeri Dominion",
+    gender = nil,
+    level = level,
+    championPoints = 0,
+    mundus = nil,
+    attributes = {},
+    vampire = { isVampire = false, stage = 0 },
+    werewolf = { isWerewolf = false },
+    classMastery = false,
+    skillLines = {},
+    champion = {},
+    equipped = {},
+    companions = {},
+    scribingScripts = {},
+    research = {},
+    lastSeen = nil,
+    gold = 0,
+    archivedAt = nil,
+  }
+end
+
+local function isLiveCharacter(char, live)
+  if live.byId[char.id] then return true end
+  if char.name and live.byId["name:" .. char.name] then return true end
+  return false
+end
+
+-- Move deleted toons to archive; add never-logged stubs so the roster matches ESO.
+local function syncRosterWithGame()
+  local live = collectLiveRoster()
+  if not live then return end
+
+  sv.characters = sv.characters or {}
+  sv.archivedCharacters = sv.archivedCharacters or {}
+
+  local roster = {}
+  for _, char in ipairs(sv.characters) do
+    if isLiveCharacter(char, live) then
+      char.archivedAt = nil
+      roster[#roster + 1] = char
+    else
+      char.archivedAt = char.archivedAt or GetTimeStamp()
+      upsertById(sv.archivedCharacters, char)
+    end
+  end
+
+  -- A deleted toon that was already archived stays archived.
+  -- If they somehow exist again (same id), pull them back.
+  local stillArchived = {}
+  for _, char in ipairs(sv.archivedCharacters) do
+    if isLiveCharacter(char, live) then
+      char.archivedAt = nil
+      upsertById(roster, char)
+    else
+      stillArchived[#stillArchived + 1] = char
+    end
+  end
+  sv.archivedCharacters = stillArchived
+
+  local onRoster = {}
+  for _, char in ipairs(roster) do
+    onRoster[char.id] = true
+    if char.name then onRoster["name:" .. char.name] = true end
+  end
+  for _, row in ipairs(live.rows) do
+    local id = pickLiveId(row)
+    if not onRoster[id] and not (row.name and onRoster["name:" .. row.name]) then
+      roster[#roster + 1] = stubFromLive(row)
+    end
+  end
+
+  sv.characters = roster
+end
+
+local function totalLiveGold()
+  local total = 0
+  for _, c in ipairs(sv.characters or {}) do
+    total = total + (c.gold or 0)
+  end
+  local bank = (sv.currencies and sv.currencies.bankGold) or 0
+  return total + bank
 end
 
 local function takeSnapshot(reason)
@@ -681,13 +841,13 @@ local function takeSnapshot(reason)
   end
 
   local charName = safe(function() return zo_strformat("<<1>>", GetUnitName("player")) end, "Unknown")
+  local charId = safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, charName)
 
   sv.displayName = safe(function() return GetDisplayName() end, "@unknown")
   sv.region      = safe(function() return (GetWorldName() == "NA Megaserver") and "NA" or "EU" end, "EU")
   sv.apiVersion  = safe(function() return GetAPIVersion() end, 0)
   sv.esoPlus     = safe(function() return IsESOPlusSubscriber() end, false)
   sv.lastSnapshot = GetTimeStamp()
-  sv.gold        = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0)
   sv.currencies  = gatherCurrencies()
   sv.guilds      = gatherGuilds()
 
@@ -697,11 +857,13 @@ local function takeSnapshot(reason)
   local kept = {}
   for _, it in ipairs(sv.items) do
     local isAccountBag = it.location == "bank" or it.location == "subscriberBank" or it.location == "craftBag"
-    if not isAccountBag and it.ownerCharacter ~= charName then
+    local mine = (it.ownerCharacterId and it.ownerCharacterId == charId)
+      or (not it.ownerCharacterId and it.ownerCharacter == charName)
+    if not isAccountBag and not mine then
       kept[#kept + 1] = it
     end
   end
-  local fresh = gatherItems(charName)
+  local fresh = gatherItems(charName, charId)
   for _, it in ipairs(fresh) do kept[#kept + 1] = it end
   sv.items = kept
 
@@ -712,6 +874,9 @@ local function takeSnapshot(reason)
   sv.completedAchievementIds = gatherCompletedAchievementIds()
 
   upsertCharacter(gatherCharacter())
+  syncRosterWithGame()
+  -- Account gold is live wallets + bank, never "whoever logged out last".
+  sv.gold = totalLiveGold()
 
   -- Logout / ReloadUI / Quit hooks run *before* the game writes SavedVariables,
   -- so those captures land on disk in the same action. A manual/keybind capture
@@ -753,6 +918,7 @@ local function onAddOnLoaded(_, name)
     guilds = {},
     items = {},
     characters = {},
+    archivedCharacters = {},
     stickerbook = {},
     achievements = {},
     achievementRecords = {},

@@ -1,6 +1,7 @@
 import "server-only";
 import { getDb, getMeta } from "./index";
 import type { AccountSnapshot, AchievementRecord, Character, Item, StickerbookSet } from "../snapshot/schema";
+import { archivedCharacters, archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
 
 export type AccountMeta = Pick<
   AccountSnapshot,
@@ -82,11 +83,20 @@ export function hasData(): boolean {
   return getAccount() !== null;
 }
 
-export function getCharacters(): Character[] {
+function loadAllCharacters(): Character[] {
   const rows = getDb()
     .prepare("SELECT json FROM characters ORDER BY sortOrder ASC")
     .all() as { json: string }[];
   return rows.map((r) => JSON.parse(r.json) as Character);
+}
+
+/** Live ESO roster only. Deleted characters are in getArchivedCharacters(). */
+export function getCharacters(): Character[] {
+  return liveCharacters(loadAllCharacters());
+}
+
+export function getArchivedCharacters(): Character[] {
+  return archivedCharacters(loadAllCharacters());
 }
 
 export function getCharacter(id: string): Character | null {
@@ -103,6 +113,8 @@ export interface ItemFilters {
   setName?: string;
   trait?: string;
   owner?: string;
+  /** When true, include bags that belonged to deleted (archived) characters. */
+  includeArchived?: boolean;
 }
 
 export function getItems(filters: ItemFilters = {}): Item[] {
@@ -137,7 +149,18 @@ export function getItems(filters: ItemFilters = {}): Item[] {
     (where.length ? " WHERE " + where.join(" AND ") : "") +
     " ORDER BY name ASC, location ASC LIMIT 5000";
   const rows = getDb().prepare(sql).all(params) as { json: string }[];
-  return rows.map((r) => JSON.parse(r.json) as Item);
+  let items = rows.map((r) => JSON.parse(r.json) as Item);
+  if (!filters.includeArchived && !filters.owner) {
+    const all = loadAllCharacters();
+    const names = archivedOwnerNames(all);
+    const ids = archivedOwnerIds(all);
+    items = items.filter(
+      (it) =>
+        !it.ownerCharacter ||
+        (!names.has(it.ownerCharacter) && (!it.ownerCharacterId || !ids.has(it.ownerCharacterId))),
+    );
+  }
+  return items;
 }
 
 export interface FacetValues {
@@ -154,13 +177,22 @@ export function getItemFacets(): FacetValues {
     (db
       .prepare(`SELECT DISTINCT ${c} AS v FROM items WHERE ${c} IS NOT NULL AND ${c} <> '' ORDER BY v ASC`)
       .all() as { v: string }[]).map((r) => r.v);
+  const archived = archivedOwnerNames(loadAllCharacters());
   return {
     locations: col("location"),
     qualities: col("quality"),
     sets: col("setName"),
     traits: col("trait"),
-    owners: col("ownerCharacter"),
+    owners: col("ownerCharacter").filter((name) => !archived.has(name)),
   };
+}
+
+/** Last-known bags for one character (live or archived), matching id when present. */
+export function getItemsForCharacter(c: Character): Item[] {
+  return getItems({ owner: c.name, includeArchived: true }).filter((it) => {
+    if (it.ownerCharacterId) return it.ownerCharacterId === c.id;
+    return it.ownerCharacter === c.name;
+  });
 }
 
 export function getStickerbook(): (StickerbookSet & { total: number; collected: number })[] {
@@ -178,6 +210,5 @@ export function getStickerbookStats(): { total: number; collected: number; sets:
 }
 
 export function getItemCount(): number {
-  const row = getDb().prepare("SELECT COUNT(*) c FROM items").get() as { c: number };
-  return row.c;
+  return getItems().length;
 }

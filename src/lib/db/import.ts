@@ -1,5 +1,6 @@
 import { getDb } from "./index";
 import type { AccountSnapshot } from "../snapshot/schema";
+import { accountGold } from "../snapshot/roster";
 
 /**
  * Replace the entire local DB with a fresh snapshot. Because Nirnside only ever
@@ -15,6 +16,7 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
     db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook; DELETE FROM achievements;");
     db.prepare("DELETE FROM meta WHERE key = 'account'").run();
 
+    const rosterForGold = [...snap.characters, ...snap.archivedCharacters];
     const setMeta = db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)");
     setMeta.run(
       "account",
@@ -24,7 +26,11 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         apiVersion: snap.apiVersion,
         esoPlus: snap.esoPlus,
         lastSnapshot: snap.lastSnapshot,
-        gold: snap.gold,
+        gold: accountGold({
+          characters: rosterForGold,
+          bankGold: snap.currencies.bankGold,
+          legacyGold: snap.gold,
+        }),
         currencies: snap.currencies,
         guilds: snap.guilds,
         achievements: snap.achievements,
@@ -39,7 +45,14 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
       VALUES (@id, @name, @class, @race, @alliance, @level, @championPoints,
               @isVampire, @vampireStage, @isWerewolf, @lastSeen, @sortOrder, @json)
     `);
-    snap.characters.forEach((c, i) => {
+    const allChars = [
+      ...snap.characters.map((c) => ({ ...c, archivedAt: c.archivedAt ?? null })),
+      ...snap.archivedCharacters.map((c) => ({
+        ...c,
+        archivedAt: c.archivedAt ?? snap.lastSnapshot ?? 1,
+      })),
+    ];
+    allChars.forEach((c, i) => {
       insChar.run({
         id: c.id,
         name: c.name,

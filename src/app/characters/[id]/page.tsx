@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  Archive,
   ArrowLeft,
+  Backpack,
   Droplet,
   Moon,
   ShieldQuestion,
@@ -10,11 +12,12 @@ import {
   Swords,
   Users,
 } from "lucide-react";
-import { getCharacter } from "@/lib/db/queries";
+import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { getSkillLineByName, setHref } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
+import { isArchived } from "@/lib/snapshot/roster";
 import { Badge, Card, SectionTitle } from "@/components/ui";
-import { ALLIANCE_ACCENT, formatDateTime, qualityText, timeAgo } from "@/lib/format";
+import { ALLIANCE_ACCENT, formatDateTime, formatGold, locationLabel, qualityText, timeAgo } from "@/lib/format";
 
 function skillLineHref(name: string): string | null {
   try {
@@ -37,6 +40,15 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   }
   if (!c) notFound();
 
+  const archived = isArchived(c);
+  let bags: ReturnType<typeof getItemsForCharacter> = [];
+  if (archived) {
+    try {
+      bags = getItemsForCharacter(c);
+    } catch {
+      bags = [];
+    }
+  }
   const accent = ALLIANCE_ACCENT[c.alliance] ?? "var(--accent)";
   const front = c.equipped.filter((e) => e.bar === "front");
   const back = c.equipped.filter((e) => e.bar === "back");
@@ -44,8 +56,11 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link href="/characters" className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg">
-        <ArrowLeft className="h-4 w-4" /> All characters
+      <Link
+        href={archived ? "/characters#archive" : "/characters"}
+        className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
+      >
+        <ArrowLeft className="h-4 w-4" /> {archived ? "Archive" : "All characters"}
       </Link>
 
       <Card className="mb-6 overflow-hidden">
@@ -69,6 +84,11 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
                 </Badge>
               )}
               {!c.vampire.isVampire && !c.werewolf.isWerewolf && <Badge tone="muted">Mortal</Badge>}
+              {archived && (
+                <Badge tone="muted">
+                  <Archive className="h-3 w-3" /> Archived
+                </Badge>
+              )}
               {c.classMastery && <Badge tone="muted">Class Mastery</Badge>}
               {c.mundus && <Badge tone="muted">{c.mundus}</Badge>}
             </div>
@@ -80,11 +100,28 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             <div className="text-xs uppercase tracking-wider text-fg-subtle">
               {c.level >= 50 ? "Champion Points" : "Level"}
             </div>
+            {c.lastSeen ? (
+              <div className="mt-2 text-sm tabular-nums text-fg-muted">
+                {formatGold(c.gold ?? 0)}
+                <div className="text-xs uppercase tracking-wider text-fg-subtle">
+                  {archived ? "Last-known wallet" : "Wallet"}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </Card>
 
-      {!c.lastSeen && (
+      {archived && (
+        <Card className="mb-6 flex items-start gap-3 border-border bg-surface-2 p-4">
+          <Archive className="mt-0.5 h-5 w-5 shrink-0 text-fg-muted" />
+          <div className="text-sm text-fg">
+            <span className="font-medium">This character is no longer on the live ESO roster.</span> The snapshot
+            below is last-known only — gold and bags here are not counted in the account total or Inventory.
+          </div>
+        </Card>
+      )}
+      {!c.lastSeen && !archived && (
         <Card className="mb-6 flex items-start gap-3 border-accent/40 bg-accent-soft p-4">
           <ShieldQuestion className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
           <div className="text-sm text-fg">
@@ -98,6 +135,39 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         <p className="mb-6 text-sm text-fg-subtle">
           Snapshot taken {formatDateTime(c.lastSeen)} · {timeAgo(c.lastSeen)}
         </p>
+      )}
+
+      {archived && (
+        <section className="mb-6">
+          <SectionTitle>Last-known bags</SectionTitle>
+          {bags.length === 0 ? (
+            <Card className="px-4 py-6 text-sm text-fg-muted">No backpack or worn items were captured before deletion.</Card>
+          ) : (
+            <Card className="overflow-hidden">
+              <ul className="divide-y divide-border">
+                {bags.map((it, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                    <div className="min-w-0">
+                      <div className={`truncate text-sm font-medium ${qualityText(it.quality)}`}>{it.name}</div>
+                      <div className="text-xs text-fg-subtle">{locationLabel(it.location)}</div>
+                    </div>
+                    <span className="shrink-0 tabular-nums text-sm text-fg-muted">
+                      {it.count.toLocaleString("en-US")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-border px-4 py-2.5 text-xs text-fg-subtle">
+                <Backpack className="mr-1 inline h-3 w-3" />
+                Not included in{" "}
+                <Link href="/inventory" className="text-accent hover:underline">
+                  Inventory
+                </Link>
+                . These stacks left the account when the character was deleted.
+              </div>
+            </Card>
+          )}
+        </section>
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

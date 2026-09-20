@@ -20,6 +20,7 @@ NirnsideData =
                 ["currencies"] =
                 {
                     ["transmuteCrystals"] = 812,
+                    ["bankGold"] = 500000,
                     ["telVar"] = 15230,
                     ["alliancePoints"] = 402118,
                     ["writVouchers"] = 6640,
@@ -55,6 +56,8 @@ NirnsideData =
                         ["gender"] = "Female",
                         ["level"] = 50,
                         ["championPoints"] = 3600,
+                        ["gold"] = 2718764,
+                        ["archivedAt"] = nil,
                         ["mundus"] = "The Shadow",
                         ["attributes"] = { ["magicka"] = 0, ["health"] = 15, ["stamina"] = 49 },
                         ["vampire"] = { ["isVampire"] = true, ["stage"] = 3 },
@@ -183,6 +186,8 @@ NirnsideData =
                         ["gender"] = "Male",
                         ["level"] = 50,
                         ["championPoints"] = 3600,
+                        ["gold"] = 1000000,
+                        ["archivedAt"] = nil,
                         ["mundus"] = "The Lord",
                         ["attributes"] = { ["magicka"] = 0, ["health"] = 64, ["stamina"] = 0 },
                         ["vampire"] = { ["isVampire"] = false, ["stage"] = 0 },
@@ -255,6 +260,8 @@ NirnsideData =
                         ["gender"] = "Female",
                         ["level"] = 32,
                         ["championPoints"] = 0,
+                        ["gold"] = 0,
+                        ["archivedAt"] = nil,
                         ["mundus"] = "The Atronach",
                         ["attributes"] = { ["magicka"] = 20, ["health"] = 0, ["stamina"] = 0 },
                         ["vampire"] = { ["isVampire"] = false, ["stage"] = 0 },
@@ -289,6 +296,49 @@ NirnsideData =
                     { ["itemId"] = 88035, ["name"] = "Grand Repair Kit", ["quality"] = "superior", ["count"] = 8, ["ownerCharacter"] = "Sings-With-Shadows", ["location"] = "backpack" },
                     { ["itemId"] = 194513, ["name"] = "Coral Riptide Sash", ["quality"] = "epic", ["count"] = 1, ["ownerCharacter"] = nil, ["location"] = "bank", ["setName"] = "Coral Riptide", ["setId"] = 693, ["trait"] = "Divines", ["level"] = 160, ["equipSlot"] = "Waist" },
                     { ["itemId"] = 166149, ["name"] = "Stolen Silverware", ["quality"] = "fine", ["count"] = 4, ["ownerCharacter"] = "Sings-With-Shadows", ["location"] = "backpack", ["stolen"] = true },
+                    { ["itemId"] = 134678, ["name"] = "Old Homestead Invitation", ["quality"] = "fine", ["count"] = 1, ["ownerCharacter"] = "Whispers-of-Moon", ["ownerCharacterId"] = "char-000", ["location"] = "backpack" },
+                },
+                ["archivedCharacters"] =
+                {
+                    {
+                        ["id"] = "char-000",
+                        ["name"] = "Whispers-of-Moon",
+                        ["class"] = "Warden",
+                        ["race"] = "Argonian",
+                        ["alliance"] = "Ebonheart Pact",
+                        ["gender"] = "Female",
+                        ["level"] = 50,
+                        ["championPoints"] = 2100,
+                        ["gold"] = 999999,
+                        ["archivedAt"] = 1757000000,
+                        ["mundus"] = "The Lady",
+                        ["attributes"] = { ["magicka"] = 0, ["health"] = 32, ["stamina"] = 32 },
+                        ["vampire"] = { ["isVampire"] = false, ["stage"] = 0 },
+                        ["werewolf"] = { ["isWerewolf"] = false },
+                        ["classMastery"] = true,
+                        ["lastSeen"] = 1756990000,
+                        ["skillLines"] =
+                        {
+                            {
+                                ["name"] = "Animal Companions",
+                                ["category"] = "Class",
+                                ["rank"] = 50,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Growing Swarm", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                },
+                            },
+                        },
+                        ["champion"] = {},
+                        ["equipped"] =
+                        {
+                            { ["slot"] = "Chest", ["bar"] = nil, ["name"] = "Hunding's Rage Jack", ["quality"] = "epic", ["setName"] = "Hunding's Rage", ["trait"] = "Well-fitted", ["enchant"] = "Max Stamina" },
+                        },
+                        ["companions"] = {},
+                        ["scribingScripts"] = {},
+                        ["research"] = {},
+                    },
                 },
                 ["stickerbook"] =
                 {
