@@ -157,7 +157,9 @@ function Onboarding({
               <span className="font-medium">Nirnside Snapshot</span>.
             </li>
             <li>
-              Log a character out, or type <code className="rounded bg-surface-2 px-1">/reloadui</code>.
+              Log a character out, or type <code className="rounded bg-surface-2 px-1">/reloadui</code>. Zoning and
+              instances do not snapshot. Optional: <code className="rounded bg-surface-2 px-1">/nirnside</code> or the{" "}
+              <span className="font-medium">Save Nirnside snapshot</span> keybind, then log out to write it.
             </li>
             <li>Your account appears here within seconds, and refreshes on every logout after that.</li>
           </ol>

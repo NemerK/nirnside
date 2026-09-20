@@ -5,8 +5,9 @@
   Nirnside app can read it. Design rules (see .cursor/rules/nirnside.mdc):
 
     * NEVER run during combat.
-    * Only snapshot on login / ReloadUI (the `initial` PLAYER_ACTIVATED), plus a
-      manual /nirnside command. No timers, no per-item bag events during play.
+    * Only snapshot on logout / ReloadUI / Quit, plus a manual /nirnside command
+      or keybind. NEVER on zone or instance changes (PLAYER_ACTIVATED `initial`
+      is true for those too — do not use it). No timers, no bag events in play.
     * NEVER throw a Lua error: every gather step is wrapped in pcall, so a bad
       API call degrades to empty data instead of erroring in your game.
     * Reads only. Never touches the game state. Never uploads anything — it just
@@ -19,6 +20,10 @@
 
 local ADDON_NAME = "NirnsideSnapshot"
 local sv -- ZO_SavedVars account-wide handle
+
+-- Bindings.xml is loaded after this file; these names must exist at parse time.
+ZO_CreateStringId("SI_KEYBINDINGS_CATEGORY_NIRNSIDE", "Nirnside")
+ZO_CreateStringId("SI_BINDING_NAME_NIRNSIDE_SNAPSHOT", "Save Nirnside snapshot")
 
 -- Wrap a gather step so it can never error the game; return fallback on failure.
 local function safe(fn, fallback)
@@ -669,8 +674,9 @@ local function upsertCharacter(char)
 end
 
 local function takeSnapshot(reason)
+  if not sv then return end
   if IsUnitInCombat("player") then
-    d("[Nirnside] In combat — snapshot skipped (will run next login/ReloadUI).")
+    d("[Nirnside] In combat — snapshot skipped.")
     return
   end
 
@@ -707,17 +713,28 @@ local function takeSnapshot(reason)
 
   upsertCharacter(gatherCharacter())
 
-  d(string.format("[Nirnside] Snapshot saved (%s). Log out or /reloadui to write to disk.", reason or "manual"))
+  -- Logout / ReloadUI / Quit hooks run *before* the game writes SavedVariables,
+  -- so those captures land on disk in the same action. A manual/keybind capture
+  -- stays in memory until the next logout or ReloadUI.
+  if reason == "manual" or reason == "keybind" then
+    d("[Nirnside] Snapshot saved. Log out or /reloadui to write it to disk.")
+  end
 end
 
 ----------------------------------------------------------------------
 -- Lifecycle
 ----------------------------------------------------------------------
 
-local function onPlayerActivated(_, initial)
-  -- `initial` is true only on login and after /reloadui — never on zone changes.
-  if not initial then return end
-  zo_callLater(function() safe(function() takeSnapshot("login/reloadui") end) end, 2000)
+-- Called from Bindings.xml (must be global).
+function Nirnside_TakeSnapshot()
+  safe(function() takeSnapshot("keybind") end)
+end
+
+local function hookUnload(fnName, reason)
+  if type(ZO_PreHook) ~= "function" then return end
+  ZO_PreHook(fnName, function()
+    safe(function() takeSnapshot(reason) end)
+  end)
 end
 
 local function onAddOnLoaded(_, name)
@@ -742,7 +759,11 @@ local function onAddOnLoaded(_, name)
     completedAchievementIds = {},
   })
 
-  EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_PLAYER_ACTIVATED, onPlayerActivated)
+  -- Do not use EVENT_PLAYER_ACTIVATED: its `initial` flag is true on login *and*
+  -- on every zone/instance load screen, which is exactly the hitch we must avoid.
+  hookUnload("ReloadUI", "reloadui")
+  hookUnload("Logout", "logout")
+  hookUnload("Quit", "quit")
 
   SLASH_COMMANDS["/nirnside"] = function() safe(function() takeSnapshot("manual") end) end
 end

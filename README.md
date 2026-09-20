@@ -46,7 +46,7 @@ field**, so a scan upgrades entries without dropping detail.
 | Lua parser | `src/lib/snapshot/lua-parser.ts` | Reads ESO `SavedVariables` Lua from disk |
 | Local DB | `src/lib/db` | SQLite schema, importer, queries, and account↔catalog overlays |
 | Importer / watcher | `scripts/` | One-shot import and a background auto-import watcher |
-| Snapshot addon | `addon/NirnsideSnapshot` | Writes account/character data on login & ReloadUI |
+| Snapshot addon | `addon/NirnsideSnapshot` | Writes account/character data on logout, ReloadUI, or a manual command/keybind |
 | Catalog addon | `addon/NirnsideCatalog` | OPT-IN `/nirncatalog` scan of the live game catalog (AFK) |
 | Sample data | `data/sample/Nirnside.lua` | A realistic snapshot so you can try it without the game |
 
@@ -69,8 +69,9 @@ Run Nirnside **on the same PC you play ESO on**. It sets *itself* up:
 2. On startup Nirnside **searches your drives** for your ESO install and **installs
    its own addon into every ESO AddOns folder it finds** — you don't copy anything.
 3. In game, enable **Nirnside Snapshot** in the AddOns menu once, then log a
-   character out or type `/reloadui`. The addon only ever runs at login / ReloadUI
-   and **never during combat**; force a capture anytime with `/nirnside`.
+   character out or type `/reloadui`. The addon runs **only** on logout, ReloadUI,
+   or a manual `/nirnside` / keybind — never on zone or instance changes, never
+   during combat. Bind **Save Nirnside snapshot** under Controls → Keybindings.
 4. Nirnside detects the file, imports it, and **watches it** — every logout or
    `/reloadui` refreshes the app on its own. No env vars, no manual import.
 
