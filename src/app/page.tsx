@@ -13,6 +13,7 @@ import { goldBreakdown } from "@/lib/snapshot/roster";
 import { candidatePaths } from "@/lib/snapshot/locate";
 import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
 import { CharacterCard } from "@/components/character-card";
+import { CurrencyTable } from "@/components/currency-table";
 import { DataSourceBanner } from "@/components/data-source-banner";
 import { LoadDemoButton } from "@/components/demo-controls";
 import { formatDateTime, formatGold, timeAgo } from "@/lib/format";
@@ -61,6 +62,12 @@ export default function HomePage() {
         <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
         <Stat label="Gold" value={formatGold(gold.total)} hint={goldHint} />
       </div>
+
+      {characters.length > 0 && (
+        <div className="mb-8">
+          <CurrencyTable characters={characters} bankGold={account.currencies?.bankGold ?? 0} gold={gold} />
+        </div>
+      )}
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">

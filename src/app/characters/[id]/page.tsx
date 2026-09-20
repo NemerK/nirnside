@@ -17,7 +17,7 @@ import { getSkillLineByName, setHref } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { Badge, Card, SectionTitle } from "@/components/ui";
-import { ALLIANCE_ACCENT, formatDateTime, formatGold, locationLabel, qualityText, timeAgo } from "@/lib/format";
+import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 
 function skillLineHref(name: string): string | null {
   try {
@@ -106,6 +106,9 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
                 <div className="text-xs uppercase tracking-wider text-fg-subtle">
                   {archived ? "Last-known wallet" : "Wallet"}
                 </div>
+                {(c.telVar ?? 0) > 0 && (
+                  <div className="mt-1 text-xs text-fg-subtle">{formatNumber(c.telVar ?? 0)} Tel Var</div>
+                )}
               </div>
             ) : null}
           </div>

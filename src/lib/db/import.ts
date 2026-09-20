@@ -1,6 +1,6 @@
 import { getDb } from "./index";
 import type { AccountSnapshot } from "../snapshot/schema";
-import { accountGold } from "../snapshot/roster";
+import { accountGold, accountTelVar } from "../snapshot/roster";
 
 /**
  * Replace the entire local DB with a fresh snapshot. Because Nirnside only ever
@@ -31,7 +31,13 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
           bankGold: snap.currencies.bankGold,
           legacyGold: snap.gold,
         }),
-        currencies: snap.currencies,
+        currencies: {
+          ...snap.currencies,
+          telVar: accountTelVar({
+            characters: rosterForGold,
+            legacyTelVar: snap.currencies.telVar,
+          }),
+        },
         guilds: snap.guilds,
         achievements: snap.achievements,
         completedAchievementIds: snap.completedAchievementIds,

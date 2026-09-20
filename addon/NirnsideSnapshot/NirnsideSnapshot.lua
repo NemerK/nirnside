@@ -359,6 +359,7 @@ local function gatherCharacter()
     research = {},
     lastSeen = GetTimeStamp(),
     gold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0),
+    telVar = safe(function() return GetCurrencyAmount(CURT_TELVAR_STONES, CURRENCY_LOCATION_CHARACTER) end, 0),
     archivedAt = nil,
   }
 end
@@ -767,6 +768,7 @@ local function stubFromLive(row)
     research = {},
     lastSeen = nil,
     gold = 0,
+    telVar = 0,
     archivedAt = nil,
   }
 end
@@ -833,6 +835,14 @@ local function totalLiveGold()
   return total + bank
 end
 
+local function totalLiveTelVar()
+  local total = 0
+  for _, c in ipairs(sv.characters or {}) do
+    total = total + (c.telVar or 0)
+  end
+  return total
+end
+
 local function takeSnapshot(reason)
   if not sv then return end
   if IsUnitInCombat("player") then
@@ -875,8 +885,10 @@ local function takeSnapshot(reason)
 
   upsertCharacter(gatherCharacter())
   syncRosterWithGame()
-  -- Account gold is live wallets + bank, never "whoever logged out last".
+  -- Account gold / Tel Var are live wallets (+ bank for gold), never last logout.
   sv.gold = totalLiveGold()
+  sv.currencies = sv.currencies or {}
+  sv.currencies.telVar = totalLiveTelVar()
 
   -- Logout / ReloadUI / Quit hooks run *before* the game writes SavedVariables,
   -- so those captures land on disk in the same action. A manual/keybind capture

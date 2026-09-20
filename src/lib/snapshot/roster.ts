@@ -57,3 +57,10 @@ export function accountGold(opts: {
 }): number {
   return goldBreakdown(opts).total;
 }
+
+/** Live roster Tel Var. Same last-logout trap as gold if stored only on the account. */
+export function accountTelVar(opts: { characters: Character[]; legacyTelVar?: number }): number {
+  const fromChars = liveCharacters(opts.characters).reduce((sum, c) => sum + (c.telVar ?? 0), 0);
+  if (fromChars > 0) return fromChars;
+  return opts.legacyTelVar ?? 0;
+}

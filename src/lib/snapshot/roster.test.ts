@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import type { Character } from "./schema";
 import { loadSnapshotFromFile } from "./load";
-import { accountGold, archivedCharacters, goldBreakdown, liveCharacters } from "./roster";
+import { accountGold, accountTelVar, archivedCharacters, goldBreakdown, liveCharacters } from "./roster";
 
 function char(partial: Partial<Character> & { id: string; name: string }): Character {
   return {
@@ -26,6 +26,7 @@ function char(partial: Partial<Character> & { id: string; name: string }): Chara
     research: [],
     lastSeen: 1,
     gold: 0,
+    telVar: 0,
     archivedAt: null,
     ...partial,
   };
@@ -97,5 +98,21 @@ describe("roster gold and archive", () => {
       500000,
     );
     assert.ok(snap.items.some((it) => it.ownerCharacter === "Whispers-of-Moon"));
+    assert.equal(
+      accountTelVar({
+        characters: [...snap.characters, ...snap.archivedCharacters],
+        legacyTelVar: snap.currencies.telVar,
+      }),
+      15230,
+    );
+  });
+
+  it("sums live Tel Var instead of last-logout Tel Var", () => {
+    const characters = [
+      char({ id: "a", name: "Rich", telVar: 100 }),
+      char({ id: "b", name: "Broke", telVar: 20 }),
+      char({ id: "c", name: "Deleted", telVar: 9999, archivedAt: 1 }),
+    ];
+    assert.equal(accountTelVar({ characters, legacyTelVar: 1 }), 120);
   });
 });

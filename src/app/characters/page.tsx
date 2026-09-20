@@ -1,6 +1,8 @@
 import { Archive, Users } from "lucide-react";
-import { getArchivedCharacters, getCharacters } from "@/lib/db/queries";
+import { getAccount, getArchivedCharacters, getCharacters } from "@/lib/db/queries";
+import { goldBreakdown } from "@/lib/snapshot/roster";
 import { CharacterCard } from "@/components/character-card";
+import { CurrencyTable } from "@/components/currency-table";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -8,9 +10,18 @@ export const dynamic = "force-dynamic";
 export default function CharactersPage() {
   let characters: ReturnType<typeof getCharacters> = [];
   let archived: ReturnType<typeof getArchivedCharacters> = [];
+  let bankGold = 0;
+  let gold = goldBreakdown({ characters: [] });
   try {
     characters = getCharacters();
     archived = getArchivedCharacters();
+    const account = getAccount();
+    bankGold = account?.currencies?.bankGold ?? 0;
+    gold = goldBreakdown({
+      characters,
+      bankGold,
+      legacyGold: account?.gold,
+    });
   } catch {
     characters = [];
     archived = [];
@@ -35,11 +46,16 @@ export default function CharactersPage() {
           import. Or run <code className="rounded bg-surface-2 px-1">npm run seed</code> to preview.
         </EmptyState>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {characters.map((c) => (
-            <CharacterCard key={c.id} character={c} />
-          ))}
-        </div>
+        <>
+          <div className="mb-8">
+            <CurrencyTable characters={characters} bankGold={bankGold} gold={gold} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {characters.map((c) => (
+              <CharacterCard key={c.id} character={c} />
+            ))}
+          </div>
+        </>
       )}
 
       {archived.length > 0 && (
