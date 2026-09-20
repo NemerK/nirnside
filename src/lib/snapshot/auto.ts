@@ -158,7 +158,7 @@ function autoSetup() {
   try {
     const res = installAddons();
     if (res.addOnsDirs.length > 0) {
-      const changed = res.installed.length + res.updated.length;
+      const changed = res.installed.length + res.updated.length + res.upToDate.length;
       console.log(
         `[nirnside] auto-setup: ${res.addOnsDirs.length} AddOns folder(s); ` +
           `${res.installed.length} installed, ${res.updated.length} updated, ${res.upToDate.length} up-to-date.`,

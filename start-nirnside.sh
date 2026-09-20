@@ -35,6 +35,9 @@ fi
 echo "Installing / updating dependencies..."
 npm install
 
+echo "Copying Nirnside addons into your ESO AddOns folder..."
+npx tsx scripts/install-addons.ts || true
+
 URL="http://127.0.0.1:43219"
 echo "Starting Nirnside... opening $URL"
 ( sleep 3; (open "$URL" >/dev/null 2>&1 || xdg-open "$URL" >/dev/null 2>&1 || true) ) &

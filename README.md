@@ -77,8 +77,9 @@ Every start via `start-nirnside.cmd` / `.sh`:
 - **ZIP download** — fetches the latest `main` from GitHub and overlays it.
 
 Your `data/` folder (the SQLite account database, and any `.lua` you dropped in
-`data/incoming`) is **never overwritten**. Addons in the ESO AddOns folder are
-refreshed on the next start when their version changes.
+`data/incoming`) is **never overwritten**. Every start also copies
+`NirnsideSnapshot` and `NirnsideCatalog` into each ESO `AddOns` folder it finds
+(only those two folders). `/reloadui` in game so the new Lua actually loads.
 
 To skip an update: `NIRNSIDE_SKIP_UPDATE=1` then start as usual.
 

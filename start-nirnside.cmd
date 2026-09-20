@@ -44,6 +44,10 @@ echo Installing / updating dependencies...
 call npm install
 if errorlevel 1 ( echo npm install failed. & pause & exit /b 1 )
 
+echo Copying Nirnside addons into your ESO AddOns folder...
+call npx tsx scripts/install-addons.ts
+echo.
+
 echo Starting Nirnside... a browser tab will open shortly.
 start "" http://127.0.0.1:43219
 call npm run dev

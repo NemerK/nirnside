@@ -72,13 +72,16 @@ export function installAddons(): AddonInstallResult {
       try {
         const existed = existsSync(dest);
         const destVer = existed ? manifestVersion(join(dest, `${addon}.txt`)) : null;
-
-        if (existed && destVer === srcVer && srcVer !== null) {
-          result.upToDate.push(`${addon} -> ${dir}`);
-          continue;
-        }
+        // Always copy. A matching Version: line used to skip, which left missing
+        // files (e.g. Bindings.xml) and no "modified today" on disk.
         cpSync(src, dest, { recursive: true });
-        (existed ? result.updated : result.installed).push(`${addon} -> ${dir}`);
+        if (!existed) {
+          result.installed.push(`${addon} ${srcVer ?? "?"} -> ${dir}`);
+        } else if (destVer === srcVer && srcVer !== null) {
+          result.upToDate.push(`${addon} ${srcVer} -> ${dir}`);
+        } else {
+          result.updated.push(`${addon} ${destVer ?? "?"} → ${srcVer ?? "?"} -> ${dir}`);
+        }
       } catch (err) {
         result.errors.push(`${addon} -> ${dir}: ${err instanceof Error ? err.message : String(err)}`);
       }

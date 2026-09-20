@@ -13,6 +13,7 @@
     "lint": "eslint",
     "test": "tsx --test src/lib/setup/resolve-path.test.ts && node --test scripts/self-update.test.mjs",
     "update": "node scripts/self-update.mjs",
+    "addons": "tsx scripts/install-addons.ts",
     "import": "tsx scripts/import.ts",
     "watch": "tsx scripts/watch.ts",
     "seed": "tsx scripts/seed.ts"
