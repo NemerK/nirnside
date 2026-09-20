@@ -1,0 +1,29 @@
+Nirnside — start here
+=====================
+
+1. Install Node.js LTS (one time)
+   https://nodejs.org   ← click the green “LTS” button, install, finish.
+
+2. Start Nirnside
+   Windows:  double-click  start-nirnside.cmd
+   Mac/Linux:  chmod +x start-nirnside.sh && ./start-nirnside.sh
+
+   The first run installs what it needs and opens
+   http://127.0.0.1:43219  in your browser.
+
+3. Point it at ESO (usually automatic)
+   Run Nirnside on the same PC you play on.
+   If it does not find your files, open Setup in the sidebar and
+   pick Documents\Elder Scrolls Online  (liveeu = EU, live = NA).
+   Nirnside copies its own addons there. It never uploads anything.
+
+4. In the game, once
+   Character select → AddOns → enable Nirnside Snapshot.
+   Log out (or /reloadui).  That writes your account to disk.
+   Zoning / instances do not snapshot.
+
+Updates
+  Every time you start Nirnside it pulls the latest code from GitHub.
+  Your account database in the data folder is never overwritten.
+
+Skip an update: set NIRNSIDE_SKIP_UPDATE=1 before starting.

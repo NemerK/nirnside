@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================
 #  Nirnside launcher (macOS / Linux)
-#  Run this file. If this folder is a git clone it auto-updates to
-#  the latest code, installs anything new, starts Nirnside, and opens
-#  it in your browser. Nirnside then finds your ESO install, installs
-#  its own addon, and loads your account automatically once you
-#  enable the addon and /reloadui.
+#  Run this file. It updates itself from GitHub (git pull if this is a clone,
+#  otherwise the latest main zip), installs anything new, starts Nirnside, and
+#  opens your browser. Your data/ folder is never overwritten.
 # ============================================================
 set -e
 cd "$(dirname "$0")"
@@ -26,10 +24,12 @@ if [ "$NODE_MAJOR" -lt 20 ]; then
   exit 1
 fi
 
-# Auto-update: only if this folder was set up with git.
-if [ -d .git ] && command -v git >/dev/null 2>&1; then
-  echo "Checking for updates..."
-  git pull --ff-only || true
+echo "Checking for updates..."
+node scripts/self-update.mjs || true
+if [ -f .nirnside-restart ]; then
+  rm -f .nirnside-restart
+  echo "Restarting with the new version..."
+  exec "$0" "$@"
 fi
 
 echo "Installing / updating dependencies..."

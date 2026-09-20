@@ -1,0 +1,42 @@
+name: Pack download zip
+
+# Builds a clean zip on every push to main so people can download
+# Nirnside from GitHub → Releases without using git.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zip (no node_modules, no account data)
+        run: |
+          mkdir -p dist
+          zip -r dist/nirnside.zip . \
+            -x '.git/*' \
+            -x 'node_modules/*' \
+            -x '.next/*' \
+            -x 'data/*.db' \
+            -x 'data/*.db-*' \
+            -x 'data/incoming/*.lua' \
+            -x '.nirnside-revision' \
+            -x '.nirnside-restart'
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Nirnside
+          body: |
+            Unzip, then open **START-HERE.txt**.
+
+            Requires [Node.js LTS](https://nodejs.org). Double-click `start-nirnside.cmd`.
+            Nirnside updates itself on every start. Your `data` folder is never overwritten.
+          files: dist/nirnside.zip
+          make_latest: true
+          allowUpdates: true

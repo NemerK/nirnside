@@ -1,11 +1,9 @@
 @echo off
 REM ============================================================
 REM  Nirnside launcher (Windows)
-REM  Double-click this file. If this folder is a git clone it
-REM  auto-updates to the latest code, installs anything new,
-REM  starts Nirnside, and opens it in your browser. Nirnside then
-REM  finds your ESO install, installs its own addon, and loads your
-REM  account automatically once you enable the addon and /reloadui.
+REM  Double-click this file. It updates itself from GitHub (git pull if this
+REM  is a clone, otherwise the latest main zip), installs anything new, starts
+REM  Nirnside, and opens your browser. Your data/ folder is never overwritten.
 REM ============================================================
 setlocal
 cd /d "%~dp0"
@@ -33,13 +31,13 @@ if %NODE_MAJOR% LSS 20 (
   exit /b 1
 )
 
-REM --- Auto-update: only if this folder was set up with git ---
-if exist ".git" (
-  where git >nul 2>nul
-  if not errorlevel 1 (
-    echo Checking for updates...
-    git pull --ff-only
-  )
+echo Checking for updates...
+node scripts\self-update.mjs
+if exist ".nirnside-restart" (
+  del ".nirnside-restart"
+  echo Restarting with the new version...
+  start "" "%~f0"
+  exit /b 0
 )
 
 echo Installing / updating dependencies...

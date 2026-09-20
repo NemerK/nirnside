@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { getAutoSetup, getDataSource } from "../db/queries";
 import { getUserConfig } from "./config";
+import { getUpdateInfo, type UpdateInfo } from "./update-info";
 import {
   CATALOG_FILENAME,
   SNAPSHOT_FILENAME,
@@ -29,6 +30,7 @@ export interface SetupStatus {
   incomingSnapshot: boolean;
   incomingCatalog: boolean;
   lookingIn: string[];
+  update: UpdateInfo;
 }
 
 export function getSetupStatus(): SetupStatus {
@@ -65,5 +67,6 @@ export function getSetupStatus(): SetupStatus {
     incomingSnapshot: existsSync(incomingPath()),
     incomingCatalog: existsSync(incomingCatalogPath()),
     lookingIn: candidatePaths(),
+    update: getUpdateInfo(),
   };
 }

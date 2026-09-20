@@ -11,6 +11,7 @@ import {
   PackageCheck,
   RotateCcw,
   ScanLine,
+  RefreshCw,
   Upload,
 } from "lucide-react";
 import { Card } from "./ui";
@@ -39,6 +40,14 @@ type SetupStatus = {
   catalogFound: boolean;
   catalogPath: string | null;
   lookingIn: string[];
+  update: {
+    repo: string;
+    ref: string;
+    source: string;
+    sha: string | null;
+    at: string | null;
+    skipped: boolean;
+  };
 };
 
 type BrowseResult = {
@@ -352,6 +361,24 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
           )}
         </Step>
       </ol>
+
+      <Card className="p-4">
+        <div className="mb-1 flex items-center gap-2 text-sm font-medium text-fg">
+          <RefreshCw className="h-4 w-4 text-accent" />
+          Updates
+        </div>
+        <p className="text-sm text-fg-muted">
+          Each time you start Nirnside with <code className="rounded bg-surface-2 px-1">start-nirnside.cmd</code> (or
+          the .sh), it pulls the latest code from GitHub. Your account database in{" "}
+          <code className="rounded bg-surface-2 px-1">data/</code> is never overwritten, and nothing is uploaded.
+        </p>
+        <p className="mt-2 font-mono text-xs text-fg-subtle">
+          Tracking {status.update.repo}
+          {status.update.source === "git" ? " (git pull on this branch)" : ` @ ${status.update.ref}`}
+          {status.update.sha ? ` · ${status.update.sha.slice(0, 7)}` : ""}
+          {status.update.skipped ? " · updates skipped" : ""}
+        </p>
+      </Card>
 
       <Card className="p-4">
         <div className="mb-2 text-sm font-medium text-fg">No ESO on this machine?</div>

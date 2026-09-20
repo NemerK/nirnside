@@ -45,5 +45,9 @@ next-env.d.ts
 /data/*.db-shm
 /data/*.db-wal
 
+# self-update bookkeeping (machine-local)
+.nirnside-revision
+.nirnside-restart
+
 # nirnside local icon cache (fetched on demand, never committed)
 /.cache/

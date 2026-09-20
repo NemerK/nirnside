@@ -50,28 +50,44 @@ field**, so a scan upgrades entries without dropping detail.
 | Catalog addon | `addon/NirnsideCatalog` | OPT-IN `/nirncatalog` scan of the live game catalog (AFK) |
 | Sample data | `data/sample/Nirnside.lua` | A realistic snapshot so you can try it without the game |
 
-## Download & install (Windows first)
+## Download & install
 
-The repo is public: **https://github.com/NemerK/nirnside**
+The project is public: **https://github.com/NemerK/nirnside**
 
-The only extra program you need is **Node.js LTS** from <https://nodejs.org>
-(the green “LTS” button). Then:
+### For you, or anyone else (Windows)
 
-1. **Get the code**
-   - Easiest: on GitHub click **Code → Download ZIP**, unzip it anywhere you like.
-   - Or, if you have git: `git clone https://github.com/NemerK/nirnside.git`
-2. **Start Nirnside**
-   - Windows: double-click **`start-nirnside.cmd`**
-   - macOS / Linux: `chmod +x start-nirnside.sh && ./start-nirnside.sh`
-3. Your browser opens at **http://127.0.0.1:43219**. First run installs
-   dependencies; after that it just starts.
+1. Install **Node.js LTS** from <https://nodejs.org> (green button). One time.
+2. Download the zip: <https://github.com/NemerK/nirnside/archive/refs/heads/main.zip>
+   (or GitHub → **Code → Download ZIP**). Unzip it anywhere.
+3. Open **START-HERE.txt** if you want the short version, or just double-click
+   **`start-nirnside.cmd`**.
+4. The browser opens at **http://127.0.0.1:43219**. Use **Setup** if it does not
+   find `Documents\Elder Scrolls Online` by itself. Enable **Nirnside Snapshot**
+   in the game AddOns menu, then log out.
 
-That’s the whole install. There is no account, no installer wizard, no extra
-terminal to leave open besides the one the start script uses.
+macOS / Linux: same zip (or `git clone`), then `chmod +x start-nirnside.sh && ./start-nirnside.sh`.
 
-A git clone will `git pull` on each start so you pick up updates. A ZIP
-download will not — grab a new ZIP (or switch to git) when you want a newer
-build.
+That is the whole install. No Nirnside account, no extra server, nothing uploaded.
+
+### Updates (you and everyone who downloaded it)
+
+Every start via `start-nirnside.cmd` / `.sh`:
+
+- **Git clone** — `git pull` on the branch you checked out.
+- **ZIP download** — fetches the latest `main` from GitHub and overlays it.
+
+Your `data/` folder (the SQLite account database, and any `.lua` you dropped in
+`data/incoming`) is **never overwritten**. Addons in the ESO AddOns folder are
+refreshed on the next start when their version changes.
+
+To skip an update: `NIRNSIDE_SKIP_UPDATE=1` then start as usual.
+
+If you use git: `git clone https://github.com/NemerK/nirnside.git` and the start
+script still updates for you.
+
+After GitHub **Releases** has a **Nirnside** zip (published on each push to
+`main`), you can also grab that from the Releases page — same start script,
+same updater.
 
 To try the UI without ESO: Home → **Explore a demo account**. That sample is
 labelled as sample data, never as your account.
