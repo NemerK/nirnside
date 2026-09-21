@@ -94,9 +94,13 @@ function AbilityCard({ ability, lastSeen }: { ability: AbilityView; lastSeen: nu
     const box = ref.current?.getBoundingClientRect();
     if (box) {
       const width = 320;
-      const left = Math.min(box.left, Math.max(8, window.innerWidth - width - 8));
-      const top = box.bottom + 8;
-      setPos({ top, left });
+    const estimatedHeight = 260;
+    const left = Math.min(Math.max(8, box.left), Math.max(8, window.innerWidth - width - 8));
+    let top = box.bottom + 8;
+    if (top + estimatedHeight > window.innerHeight - 8) {
+      top = Math.max(8, box.top - estimatedHeight - 8);
+    }
+    setPos({ top, left });
     }
     setOpen(true);
   }
