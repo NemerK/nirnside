@@ -112,6 +112,12 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_catalog_name ON catalog(domain, name);
     CREATE INDEX IF NOT EXISTS idx_catalog_cat ON catalog(domain, category);
 
+    -- Earned Pithka ids. Never deleted: Maelstrom Arena clears are still
+    -- per-character, so a later toon's snapshot must not uncheck them.
+    CREATE TABLE IF NOT EXISTS completed_achievements (
+      id INTEGER PRIMARY KEY
+    );
+
     -- Player-authored labels (Tank / Healer / …). Not game data; keyed by
     -- character id so a snapshot re-import cannot wipe them.
     CREATE TABLE IF NOT EXISTS roles (

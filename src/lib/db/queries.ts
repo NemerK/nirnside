@@ -23,10 +23,14 @@ export function getAccount(): AccountMeta | null {
 
 /**
  * Account-wide set of completed achievement ids — the authoritative input for
- * the Pithka-style board. Straight from the game (IsAchievementComplete);
- * nothing inferred.
+ * the Pithka-style board. Never shrinks: Maelstrom Arena clears are still
+ * per-character in the game, so we persist every id we have ever seen.
  */
 export function getCompletedAchievementIds(): number[] {
+  const rows = getDb()
+    .prepare("SELECT id FROM completed_achievements ORDER BY id")
+    .all() as { id: number }[];
+  if (rows.length > 0) return rows.map((r) => r.id);
   return getAccount()?.completedAchievementIds ?? [];
 }
 

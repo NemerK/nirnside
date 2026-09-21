@@ -2,10 +2,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadSnapshotFromFile } from "../snapshot/load";
+import { loadSnapshotFromFile, loadSnapshotFromLua } from "../snapshot/load";
 import {
   PITHKA_ARENAS,
   allPithkaAchievementIds,
+  coerceCompletedAchievementIds,
   unionCompletedAchievementIds,
 } from "./pithka";
 
@@ -22,6 +23,38 @@ describe("Pithka arenas", () => {
     const done = new Set(snap.completedAchievementIds);
     assert.equal(done.has(1305), true);
     assert.equal(done.has(1330), true);
+  });
+
+  it("accepts SavedVariables that store completed ids as a set map", () => {
+    const snap = loadSnapshotFromLua(`
+      NirnsideData = {
+        ["Default"] = {
+          ["@Test"] = {
+            ["$AccountWide"] = {
+              displayName = "@Test",
+              completedAchievementIds = { [1305] = true, [1140] = true },
+            },
+          },
+        },
+      }
+    `);
+    assert.deepEqual(snap.completedAchievementIds, [1140, 1305]);
+  });
+});
+
+describe("coerceCompletedAchievementIds", () => {
+  it("reads a dense list", () => {
+    assert.deepEqual(coerceCompletedAchievementIds([1140, 1305]), [1140, 1305]);
+  });
+
+  it("reads an id-keyed map the way SavedVariables sometimes writes sets", () => {
+    assert.deepEqual(coerceCompletedAchievementIds({ 1305: true, 1140: true }), [1140, 1305]);
+    assert.deepEqual(coerceCompletedAchievementIds({ 1: 1305, 2: 1140 }), [1140, 1305]);
+  });
+
+  it("treats missing data as empty, not as a wipe", () => {
+    assert.deepEqual(coerceCompletedAchievementIds(undefined), []);
+    assert.deepEqual(coerceCompletedAchievementIds({}), []);
   });
 });
 
@@ -43,5 +76,12 @@ describe("addon tracked ids", () => {
     assert.ok(block, "TRACKED_ACHIEVEMENT_IDS table is missing");
     const luaIds = [...block[1].matchAll(/\d+/g)].map((m) => Number(m[0])).sort((a, b) => a - b);
     assert.deepEqual(luaIds, allPithkaAchievementIds());
+  });
+
+  it("unions per-character completions so MSA vet survives an alt logout", () => {
+    const lua = readFileSync(resolve("addon/NirnsideSnapshot/NirnsideSnapshot.lua"), "utf8");
+    assert.match(lua, /characterCompletedIds/);
+    assert.match(lua, /gatherCompletedAchievementIds\(charId\)/);
+    assert.match(lua, /pairs\(sv\.characterCompletedIds\)/);
   });
 });

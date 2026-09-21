@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { coerceCompletedAchievementIds } from "../achievements/pithka";
 
 /**
  * The Nirnside snapshot contract.
@@ -339,6 +340,9 @@ export const AccountSnapshot = z.object({
    * we simply check membership here — exactly what the in-game add-on does with
    * IsAchievementComplete. Sparse and cheap; written on logout/ReloadUI only.
    */
-  completedAchievementIds: z.array(z.number().int().nonnegative()).default([]),
+    completedAchievementIds: z.preprocess(
+      (v) => coerceCompletedAchievementIds(v),
+      z.array(z.number().int().nonnegative()),
+    ),
 });
 export type AccountSnapshot = z.infer<typeof AccountSnapshot>;

@@ -10,10 +10,17 @@ import { unionCompletedAchievementIds } from "../achievements/pithka";
  */
 export function importSnapshot(snap: AccountSnapshot): { items: number; characters: number; sets: number } {
   const db = getDb();
-  // Read before the replace: ESO achievements are account-wide and never
-  // un-complete, so a later toon's incomplete id list must not uncheck the board.
-  const previousIds = getMeta<{ completedAchievementIds?: number[] }>("account")?.completedAchievementIds;
-  const completedAchievementIds = unionCompletedAchievementIds(previousIds, snap.completedAchievementIds);
+  // Maelstrom Arena clears are still character-bound. IsAchievementComplete(1305)
+  // is false on a toon that has not run it, so a later snapshot's id list can
+  // omit vet MSA. Persist every id we have ever seen; never delete.
+  const persisted = (db.prepare("SELECT id FROM completed_achievements").all() as { id: number }[]).map(
+    (r) => r.id,
+  );
+  const previousMeta = getMeta<{ completedAchievementIds?: number[] }>("account")?.completedAchievementIds;
+  const completedAchievementIds = unionCompletedAchievementIds(
+    unionCompletedAchievementIds(persisted, previousMeta),
+    snap.completedAchievementIds,
+  );
 
   const tx = db.transaction(() => {
     // Note: only clear account-scoped rows. The catalog table and its meta
@@ -48,6 +55,9 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         completedAchievementIds,
       }),
     );
+
+    const insDone = db.prepare("INSERT OR IGNORE INTO completed_achievements (id) VALUES (?)");
+    for (const id of completedAchievementIds) insDone.run(id);
 
     const insChar = db.prepare(`
       INSERT INTO characters

@@ -767,28 +767,41 @@ local TRACKED_ACHIEVEMENT_IDS = {
   4517
 }
 
--- Flat set of EVERY completed achievement id on the account. This is what the
--- Pithka-style board runs on: the app holds Pithka's curated id-per-column table
--- and simply checks membership here, exactly like the in-game add-on does with
--- IsAchievementComplete. We query tracked ids directly, then also sweep all
--- categories (and walk each achievement line so every tier is covered) out of
--- combat on logout/ReloadUI only. Previously recorded ids are never dropped —
--- achievements do not un-complete, and a toon whose journal omits a category
--- must not uncheck the board.
-local function gatherCompletedAchievementIds()
-  local done = {}
-  -- Keep what we already wrote. Achievements never un-complete; a later toon's
-  -- incomplete journal sweep must not erase ids we already recorded.
-  if sv and type(sv.completedAchievementIds) == "table" then
-    for _, id in ipairs(sv.completedAchievementIds) do
-      if type(id) == "number" and id > 0 then done[id] = true end
+-- Maelstrom Arena clears (vet Conqueror 1305, Perfect Run 1330, and the rest
+-- of that tiny leftover set) are still CHARACTER-BOUND in live ESO.
+-- IsAchievementComplete(1305) is false on a toon that has not run it, even if
+-- another toon on the account has. We keep a per-character id list and union
+-- them so the board cannot uncheck MSA vet when you log an alt.
+local function collectIdsFromTable(t, done)
+  if type(t) ~= "table" then return end
+  for k, v in pairs(t) do
+    if type(v) == "number" and v > 0 then
+      done[v] = true
+    elseif (v == true or v == 1) and type(k) == "number" and k > 0 then
+      done[k] = true
+    elseif type(v) == "string" then
+      local n = tonumber(v)
+      if n and n > 0 then done[n] = true end
+    elseif type(k) == "string" then
+      local n = tonumber(k)
+      if n and n > 0 and (v == true or v == 1) then done[n] = true end
     end
   end
+end
+
+local function idsToArray(done)
+  local ids = {}
+  for id in pairs(done) do ids[#ids + 1] = id end
+  return ids
+end
+
+local function gatherLiveCompletedIds()
+  local mine = {}
   safe(function()
     if not IsAchievementComplete then return end
     for i = 1, #TRACKED_ACHIEVEMENT_IDS do
       local id = TRACKED_ACHIEVEMENT_IDS[i]
-      if safe(function() return IsAchievementComplete(id) end, false) then done[id] = true end
+      if safe(function() return IsAchievementComplete(id) end, false) then mine[id] = true end
     end
     if not GetNumAchievementCategories then return end
     local function scanId(id)
@@ -797,7 +810,7 @@ local function gatherCompletedAchievementIds()
       local cur = (first and first ~= 0) and first or id
       local guard = 0
       while cur and cur ~= 0 and guard < 60 do
-        if safe(function() return IsAchievementComplete(cur) end, false) then done[cur] = true end
+        if safe(function() return IsAchievementComplete(cur) end, false) then mine[cur] = true end
         cur = safe(function() return GetNextAchievementInLine(cur) end, 0)
         guard = guard + 1
       end
@@ -816,10 +829,26 @@ local function gatherCompletedAchievementIds()
       end
     end
   end)
-  -- SavedVariables serialize integer-keyed maps awkwardly; emit a plain array.
-  local ids = {}
-  for id in pairs(done) do ids[#ids + 1] = id end
-  return ids
+  return mine
+end
+
+local function gatherCompletedAchievementIds(charId)
+  local live = gatherLiveCompletedIds()
+  sv.characterCompletedIds = sv.characterCompletedIds or {}
+  if charId and charId ~= "" then
+    sv.characterCompletedIds[charId] = idsToArray(live)
+  end
+  local done = {}
+  -- Keep previously written account ids (pairs, not ipairs: ZO_SavedVars
+  -- proxies often skip ipairs).
+  collectIdsFromTable(sv.completedAchievementIds, done)
+  collectIdsFromTable(live, done)
+  if type(sv.characterCompletedIds) == "table" then
+    for _, set in pairs(sv.characterCompletedIds) do
+      collectIdsFromTable(set, done)
+    end
+  end
+  return idsToArray(done)
 end
 
 local function gatherAchievements()
@@ -1074,7 +1103,7 @@ local function takeSnapshot(reason)
   local achRecords, achNames = gatherAchievements()
   sv.achievementRecords = achRecords
   sv.achievements = achNames
-  sv.completedAchievementIds = gatherCompletedAchievementIds()
+  sv.completedAchievementIds = gatherCompletedAchievementIds(charId)
 
   upsertCharacter(gatherCharacter())
   syncRosterWithGame()
@@ -1128,6 +1157,7 @@ local function onAddOnLoaded(_, name)
     achievements = {},
     achievementRecords = {},
     completedAchievementIds = {},
+    characterCompletedIds = {},
   })
 
   -- Do not use EVENT_PLAYER_ACTIVATED: its `initial` flag is true on login *and*

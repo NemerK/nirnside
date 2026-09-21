@@ -67,9 +67,9 @@ export const PITHKA_TRIALS: PithkaInstance[] = [
 
 export const PITHKA_ARENAS: PithkaInstance[] = [
   // 1305 = Maelstrom Arena Conqueror (veteran clear). 1330 = Maelstrom Arena:
-  // Perfect Run, which grants the title The Flawless Conqueror. Pithka's own
-  // MSA row only listed vet; 1330 is the same id Dungeon Tracker uses for MSA
-  // no-death, and that addon's BRP/VSA ids match Pithka's exactly.
+  // Perfect Run, which grants the title The Flawless Conqueror. MSA clears are
+  // still per-character in live ESO — the board unions every toon's snapshot
+  // so logging an alt cannot uncheck vet.
   { name: "Maelstrom Arena", abbv: "MSA", type: "arena", vet: 1305, tri: 1330, triName: "Flawless Conqueror" },
   { name: "Dragonstar Arena", abbv: "DSA", type: "arena", vet: 1140 },
   { name: "Blackrose Prison", abbv: "BRP", type: "arena", vet: 2363, hm: 2364, sr: 2366, nd: 2365, tri: 2368, triName: "Unchained", ext: 2372, extName: "A Thrilling Trifecta", alsoInDungeons: true },
@@ -172,20 +172,39 @@ export function allPithkaAchievementIds(): number[] {
 }
 
 /**
- * Achievements never un-complete. A later snapshot can miss ids (a toon whose
- * journal doesn't list every category, or an incomplete sweep), so we union
- * what we already knew with what the new snapshot reports.
+ * Pull achievement ids out of either a dense list or an id-keyed map
+ * (`{ [1305] = true }` as ESO SavedVariables sometimes writes).
+ */
+export function coerceCompletedAchievementIds(value: unknown): number[] {
+  const set = new Set<number>();
+  const add = (n: unknown) => {
+    const id = typeof n === "number" ? n : typeof n === "string" && n.trim() !== "" ? Number(n) : NaN;
+    if (Number.isInteger(id) && id > 0) set.add(id);
+  };
+  if (value == null) return [];
+  if (Array.isArray(value)) {
+    for (const el of value) add(el);
+    return [...set].sort((a, b) => a - b);
+  }
+  if (typeof value === "object") {
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === true || v === 1) add(k);
+      else add(v);
+    }
+    return [...set].sort((a, b) => a - b);
+  }
+  add(value);
+  return [...set].sort((a, b) => a - b);
+}
+
+/**
+ * Achievements never un-complete. Maelstrom Arena clears are still per-character
+ * in the live game (IsAchievementComplete(1305) is false on a toon that has not
+ * run it), so a later snapshot must not drop ids we already recorded.
  */
 export function unionCompletedAchievementIds(
   previous: readonly number[] | undefined,
   incoming: readonly number[] | undefined,
 ): number[] {
-  const set = new Set<number>();
-  for (const id of previous ?? []) {
-    if (Number.isInteger(id) && id >= 0) set.add(id);
-  }
-  for (const id of incoming ?? []) {
-    if (Number.isInteger(id) && id >= 0) set.add(id);
-  }
-  return [...set].sort((a, b) => a - b);
+  return coerceCompletedAchievementIds([...(previous ?? []), ...(incoming ?? [])]);
 }
