@@ -108,9 +108,9 @@ export function AppShell({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="app-bg flex min-h-full flex-col md:flex-row">
-      {/* Sidebar (desktop) */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-bg-elev/70 p-4 md:flex">
+    <div className="app-bg flex h-full flex-col overflow-hidden md:flex-row">
+      {/* Sidebar (desktop) — stays put while the page list scrolls */}
+      <aside className="hidden h-full w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-bg-elev/70 p-4 md:flex">
         <div className="mb-8 px-1">
           <Wordmark />
         </div>
@@ -124,7 +124,7 @@ export function AppShell({
       </aside>
 
       {/* Mobile top bar */}
-      <div className="flex items-center justify-between border-b border-border bg-bg-elev/80 px-4 py-3 md:hidden">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-bg-elev/80 px-4 py-3 md:hidden">
         <Wordmark />
         <button
           onClick={() => setOpen((v) => !v)}
@@ -135,7 +135,7 @@ export function AppShell({
         </button>
       </div>
       {open && (
-        <div className="border-b border-border bg-bg-elev p-4 md:hidden">
+        <div className="shrink-0 overflow-y-auto border-b border-border bg-bg-elev p-4 md:hidden">
           <div className="mb-3">
             <SearchBox onSubmit={() => setOpen(false)} />
           </div>
@@ -147,8 +147,8 @@ export function AppShell({
       )}
 
       {/* Main column */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="hidden items-center justify-between border-b border-border bg-bg-elev/40 px-8 py-3 md:flex">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="hidden shrink-0 items-center justify-between border-b border-border bg-bg-elev/40 px-8 py-3 md:flex">
           <div className="flex items-center gap-3 text-sm">
             {account ? (
               <>
@@ -180,7 +180,7 @@ export function AppShell({
             </div>
           )}
         </header>
-        <main className="flex-1 px-5 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto px-5 py-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
   );

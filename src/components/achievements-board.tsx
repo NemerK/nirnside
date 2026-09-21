@@ -96,6 +96,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
 
   return (
     <div>
+      <div className="sticky top-0 z-20 bg-bg/90 pb-3 pt-1 backdrop-blur-md">
       {/* Tabs — one per Pithka window. */}
       <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-border">
         {PITHKA_TABS.map((t) => (
@@ -112,7 +113,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
       </div>
 
       {/* Controls */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
           <input
@@ -150,6 +151,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
             </>
           )}
         </div>
+      </div>
       </div>
 
       {/* Grid */}

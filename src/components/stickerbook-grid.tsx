@@ -116,9 +116,9 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      {/* Category tree */}
-      <aside className="lg:w-64 lg:shrink-0">
-        <div className="max-h-[75vh] overflow-y-auto pr-1">
+      {/* Category tree stays on screen while the set list scrolls */}
+      <aside className="bg-bg/90 lg:sticky lg:top-0 lg:w-64 lg:shrink-0 lg:self-start">
+        <div className="max-h-[40vh] overflow-y-auto pr-1 lg:max-h-[calc(100dvh-8rem)]">
           <button
             onClick={selectAll}
             className={`mb-1 flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
@@ -204,7 +204,7 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
 
       {/* Sets */}
       <div className="min-w-0 flex-1">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-2 bg-bg/90 py-3 backdrop-blur-md">
           <div className="relative min-w-[200px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
             <input

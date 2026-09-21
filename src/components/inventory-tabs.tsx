@@ -11,7 +11,7 @@ export function InventoryTabs({ current }: { current: "items" | "currency" }) {
     { id: "currency" as const, href: `${pathname}?view=currency`, label: "Currency", icon: Coins },
   ];
   return (
-    <div className="mb-6 inline-flex rounded-lg border border-border bg-surface p-1">
+    <div className="inline-flex rounded-lg border border-border bg-surface p-1">
       {tabs.map(({ id, href, label, icon: Icon }) => {
         const active = current === id;
         return (

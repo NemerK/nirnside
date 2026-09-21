@@ -59,7 +59,7 @@ export function ScribingMatrix({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="sticky top-0 z-20 mb-4 flex flex-wrap items-center gap-2 bg-bg/90 py-3 backdrop-blur-md">
         <select
           value={grimId}
           onChange={(e) => {

@@ -15,6 +15,20 @@ export function Card({
   );
 }
 
+export function StickyMenu({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`sticky top-0 z-20 bg-bg/90 py-3 backdrop-blur-md ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 export function PageHeader({
   title,
   subtitle,

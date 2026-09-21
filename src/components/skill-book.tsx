@@ -237,6 +237,7 @@ export function SkillBook({
     <section>
       <SectionTitle>Skills</SectionTitle>
       <Card className="overflow-visible p-4">
+      <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 border-b border-border bg-surface/95 px-4 pb-3 pt-4 backdrop-blur-md">
         <div role="tablist" aria-label="Skill type" className="flex flex-wrap gap-1">
           {categories.map((c) => (
             <TabButton
@@ -261,6 +262,7 @@ export function SkillBook({
             ))}
           </div>
         )}
+        </div>
         {line && (
           <div className="mt-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

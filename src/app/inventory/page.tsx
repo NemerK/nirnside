@@ -6,7 +6,7 @@ import { goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryTabs } from "@/components/inventory-tabs";
 import { CurrencyTable } from "@/components/currency-table";
-import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, Card, EmptyState, PageHeader, StickyMenu } from "@/components/ui";
 import { locationLabel, qualityText } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +56,10 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
         }
       />
 
-      <InventoryTabs current={view} />
+      <StickyMenu className="space-y-3">
+        <InventoryTabs current={view} />
+        {view === "items" ? <InventoryFilters facets={facets} /> : null}
+      </StickyMenu>
 
       {view === "currency" ? <CurrencyView /> : (
         <>
@@ -65,8 +68,6 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
               Showing last-known bags for a deleted character. These stacks are not part of the live inventory.
             </Card>
           )}
-
-          <InventoryFilters facets={facets} />
 
           {items.length === 0 ? (
             <EmptyState title="No items match" icon={<Backpack className="h-8 w-8" />}>

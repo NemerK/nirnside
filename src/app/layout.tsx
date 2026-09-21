@@ -43,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full">
+      <body className="h-full overflow-hidden">
         <ThemeProvider>
           <AppShell account={account}>{children}</AppShell>
         </ThemeProvider>

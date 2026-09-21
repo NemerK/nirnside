@@ -37,7 +37,7 @@ export function CPView({
 
   return (
     <div>
-      <div className="mb-5 inline-flex rounded-lg border border-border bg-surface p-0.5">
+      <div className="sticky top-0 z-20 mb-5 inline-flex rounded-lg border border-border bg-bg/90 p-0.5 backdrop-blur-md">
         {(["tree", "planner"] as const).map((t) => (
           <button
             key={t}
