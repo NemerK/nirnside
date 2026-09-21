@@ -1,9 +1,7 @@
 import { Users } from "lucide-react";
-import { getAccount, getArchivedCharacters, getCharacters } from "@/lib/db/queries";
+import { getArchivedCharacters, getCharacters } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
-import { goldBreakdown } from "@/lib/snapshot/roster";
 import { CharacterRoster } from "@/components/character-roster";
-import { CurrencyTable } from "@/components/currency-table";
 import { RoleManager } from "@/components/role-manager";
 import { Badge, EmptyState, PageHeader } from "@/components/ui";
 
@@ -12,20 +10,11 @@ export const dynamic = "force-dynamic";
 export default function CharactersPage() {
   let characters: ReturnType<typeof getCharacters> = [];
   let archived: ReturnType<typeof getArchivedCharacters> = [];
-  let bankGold = 0;
-  let gold = goldBreakdown({ characters: [] });
   let roles: ReturnType<typeof listRoles> = [];
   let assignments: Record<string, string> = {};
   try {
     characters = getCharacters();
     archived = getArchivedCharacters();
-    const account = getAccount();
-    bankGold = account?.currencies?.bankGold ?? 0;
-    gold = goldBreakdown({
-      characters,
-      bankGold,
-      legacyGold: account?.gold,
-    });
     roles = listRoles();
     assignments = listAssignments();
   } catch {
@@ -54,11 +43,6 @@ export default function CharactersPage() {
       ) : (
         <>
           <RoleManager roles={roles} />
-          {characters.length > 0 && (
-            <div className="mb-8">
-              <CurrencyTable characters={characters} bankGold={bankGold} gold={gold} />
-            </div>
-          )}
           <CharacterRoster
             characters={characters}
             archived={archived}
