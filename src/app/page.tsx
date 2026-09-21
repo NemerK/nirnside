@@ -1,16 +1,14 @@
 import Link from "next/link";
-import { Backpack, BookMarked, Coins, Library, Shield, Sparkles, Trophy, Users } from "lucide-react";
+import { Backpack, BookMarked, Library, Trophy, Users } from "lucide-react";
 import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
-import { roleForCharacter } from "@/lib/roles/filter";
-import { goldBreakdown } from "@/lib/snapshot/roster";
+import { rolesForCharacter } from "@/lib/roles/filter";
 import { candidatePaths } from "@/lib/snapshot/locate";
 import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
 import { CharacterCard } from "@/components/character-card";
-import { CurrencyTable } from "@/components/currency-table";
 import { DataSourceBanner } from "@/components/data-source-banner";
 import { LoadDemoButton } from "@/components/demo-controls";
-import { formatDateTime, formatGold, timeAgo } from "@/lib/format";
+import { formatDateTime, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -29,16 +27,6 @@ export default function HomePage() {
   const assignments = safe(() => listAssignments()) ?? {};
   // Champion Points are account-wide, so show one number for the whole account.
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
-  const gold = goldBreakdown({
-    characters,
-    bankGold: account.currencies?.bankGold,
-    legacyGold: account.gold,
-  });
-  const goldHint = gold.usedLegacy
-    ? "as of last snapshot"
-    : gold.bank > 0
-      ? `${formatGold(gold.wallets)} wallets · ${formatGold(gold.bank)} bank`
-      : "character wallets";
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -51,19 +39,12 @@ export default function HomePage() {
 
       <DataSourceBanner source={dataSource} setup={autoSetup} />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Characters" value={characters.length} />
         <Stat label="Champion Points" value={accountCP.toLocaleString("en-US")} hint="account-wide" />
         <Stat label="Items tracked" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
         <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
-        <Stat label="Gold" value={formatGold(gold.total)} hint={goldHint} />
       </div>
-
-      {characters.length > 0 && (
-        <div className="mb-8">
-          <CurrencyTable characters={characters} bankGold={account.currencies?.bankGold ?? 0} gold={gold} />
-        </div>
-      )}
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
@@ -84,7 +65,7 @@ export default function HomePage() {
               <CharacterCard
                 key={c.id}
                 character={c}
-                role={roleForCharacter(c.id, roles, assignments)}
+                assigned={rolesForCharacter(c.id, roles, assignments)}
                 roles={roles}
               />
             ))}
@@ -98,7 +79,7 @@ export default function HomePage() {
           <TileLink
             href="/inventory"
             title="Inventory"
-            description="Every item, every bag, with filters."
+            description="Bags, bank, and currencies."
             icon={<Backpack className="h-5 w-5" />}
           />
           <TileLink
@@ -122,12 +103,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <MiniInfo icon={<Coins className="h-4 w-4" />} label="Transmute crystals" value={account.currencies?.transmuteCrystals ?? 0} />
-        <MiniInfo icon={<Sparkles className="h-4 w-4" />} label="Writ vouchers" value={account.currencies?.writVouchers ?? 0} />
-        <MiniInfo icon={<Shield className="h-4 w-4" />} label="Alliance points" value={account.currencies?.alliancePoints ?? 0} />
-      </div>
-
       {account.guilds?.length > 0 && (
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-fg-subtle">Guilds</h2>
@@ -143,20 +118,6 @@ export default function HomePage() {
         </section>
       )}
     </div>
-  );
-}
-
-function MiniInfo({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <Card className="flex items-center gap-3 px-4 py-3">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-2 text-accent">
-        {icon}
-      </span>
-      <div>
-        <div className="text-xs uppercase tracking-wider text-fg-subtle">{label}</div>
-        <div className="text-base font-semibold text-fg">{value.toLocaleString("en-US")}</div>
-      </div>
-    </Card>
   );
 }
 

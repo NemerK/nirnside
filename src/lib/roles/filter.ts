@@ -1,39 +1,38 @@
 import type { Character } from "../snapshot/schema";
-import type { CharacterFilters, Role } from "./types";
+import type { CharacterFilters, Role, RoleAssignments } from "./types";
 
-export function roleForCharacter(
+export function rolesForCharacter(
   characterId: string,
   roles: Role[],
-  assignments: Record<string, string>,
-): Role | null {
-  const id = assignments[characterId];
-  if (!id) return null;
-  return roles.find((r) => r.id === id) ?? null;
+  assignments: RoleAssignments,
+): Role[] {
+  const ids = assignments[characterId] ?? [];
+  if (ids.length === 0) return [];
+  const byId = new Map(roles.map((r) => [r.id, r]));
+  return ids.map((id) => byId.get(id)).filter((r): r is Role => r != null);
 }
 
 export function characterMatches(
   c: Pick<Character, "id" | "name" | "class" | "race">,
-  role: Role | null,
+  assigned: Role[],
   filters: CharacterFilters,
 ): boolean {
   if (filters.className && c.class !== filters.className) return false;
   if (filters.race && c.race !== filters.race) return false;
-  if (filters.role === "none" && role) return false;
-  if (filters.role && filters.role !== "none" && role?.id !== filters.role) return false;
+  if (filters.role === "none" && assigned.length > 0) return false;
+  if (filters.role && filters.role !== "none" && !assigned.some((r) => r.id === filters.role)) return false;
 
   const q = filters.q?.trim().toLowerCase();
   if (!q) return true;
-  const hay = [c.name, c.class, c.race, role?.name ?? ""].join(" ").toLowerCase();
+  const hay = [c.name, c.class, c.race, ...assigned.map((r) => r.name)].join(" ").toLowerCase();
   return hay.includes(q);
 }
 
 export function filterCharacters<T extends Pick<Character, "id" | "name" | "class" | "race">>(
   characters: T[],
   roles: Role[],
-  assignments: Record<string, string>,
+  assignments: RoleAssignments,
   filters: CharacterFilters,
 ): T[] {
-  return characters.filter((c) =>
-    characterMatches(c, roleForCharacter(c.id, roles, assignments), filters),
-  );
+  return characters.filter((c) => characterMatches(c, rolesForCharacter(c.id, roles, assignments), filters));
 }

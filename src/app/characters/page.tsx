@@ -1,8 +1,9 @@
 import { Users } from "lucide-react";
 import { getArchivedCharacters, getCharacters } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
+import type { RoleAssignments } from "@/lib/roles/types";
 import { CharacterRoster } from "@/components/character-roster";
-import { RoleManager } from "@/components/role-manager";
+import { RoleManagerButton } from "@/components/role-manager";
 import { Badge, EmptyState, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default function CharactersPage() {
   let characters: ReturnType<typeof getCharacters> = [];
   let archived: ReturnType<typeof getArchivedCharacters> = [];
   let roles: ReturnType<typeof listRoles> = [];
-  let assignments: Record<string, string> = {};
+  let assignments: RoleAssignments = {};
   try {
     characters = getCharacters();
     archived = getArchivedCharacters();
@@ -28,11 +29,14 @@ export default function CharactersPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Characters"
-        subtitle="The live ESO roster. Tag toons with your own roles, then filter by name, class, race, or role."
+        subtitle="The live ESO roster. Tag toons with one or more roles, then filter by name, class, race, or role."
         action={
-          accountCP > 0 ? (
-            <Badge tone="accent">CP {accountCP.toLocaleString("en-US")} · account-wide</Badge>
-          ) : undefined
+          <div className="flex flex-wrap items-center gap-2">
+            {accountCP > 0 ? (
+              <Badge tone="accent">CP {accountCP.toLocaleString("en-US")} · account-wide</Badge>
+            ) : null}
+            <RoleManagerButton roles={roles} />
+          </div>
         }
       />
       {characters.length === 0 && archived.length === 0 ? (
@@ -41,15 +45,12 @@ export default function CharactersPage() {
           import. Or run <code className="rounded bg-surface-2 px-1">npm run seed</code> to preview.
         </EmptyState>
       ) : (
-        <>
-          <RoleManager roles={roles} />
-          <CharacterRoster
-            characters={characters}
-            archived={archived}
-            roles={roles}
-            assignments={assignments}
-          />
-        </>
+        <CharacterRoster
+          characters={characters}
+          archived={archived}
+          roles={roles}
+          assignments={assignments}
+        />
       )}
     </div>
   );

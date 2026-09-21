@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { Archive, Search, X } from "lucide-react";
 import type { Character } from "@/lib/snapshot/schema";
-import type { Role } from "@/lib/roles/types";
-import { filterCharacters } from "@/lib/roles/filter";
+import type { Role, RoleAssignments } from "@/lib/roles/types";
+import { filterCharacters, rolesForCharacter } from "@/lib/roles/filter";
 import { CharacterCard } from "./character-card";
 import { Badge, Card } from "./ui";
 
@@ -17,7 +17,7 @@ export function CharacterRoster({
   characters: Character[];
   archived?: Character[];
   roles: Role[];
-  assignments: Record<string, string>;
+  assignments: RoleAssignments;
 }) {
   const [q, setQ] = useState("");
   const [className, setClassName] = useState("");
@@ -93,7 +93,7 @@ export function CharacterRoster({
             <CharacterCard
               key={c.id}
               character={c}
-              role={roles.find((r) => r.id === assignments[c.id]) ?? null}
+              assigned={rolesForCharacter(c.id, roles, assignments)}
               roles={roles}
             />
           ))}
@@ -124,7 +124,7 @@ export function CharacterRoster({
                 <CharacterCard
                   key={c.id}
                   character={c}
-                  role={roles.find((r) => r.id === assignments[c.id]) ?? null}
+                  assigned={rolesForCharacter(c.id, roles, assignments)}
                   roles={roles}
                 />
               ))}

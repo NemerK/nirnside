@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "./index";
-import { ROLE_COLOR_RE, type Role } from "../roles/types";
+import { ROLE_COLOR_RE, type Role, type RoleAssignments } from "../roles/types";
 
 export function ensureRoleTables() {
   getDb().exec(`
@@ -11,8 +11,9 @@ export function ensureRoleTables() {
       sortOrder  INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS character_roles (
-      characterId  TEXT PRIMARY KEY,
+      characterId  TEXT NOT NULL,
       roleId       TEXT NOT NULL,
+      PRIMARY KEY (characterId, roleId),
       FOREIGN KEY (roleId) REFERENCES roles(id) ON DELETE CASCADE
     );
   `);
@@ -39,13 +40,20 @@ export function listRoles(): Role[] {
     .all() as Role[];
 }
 
-/** characterId → roleId. Survives snapshot re-imports. */
-export function listAssignments(): Record<string, string> {
+/** characterId → role ids. Survives snapshot re-imports. */
+export function listAssignments(): RoleAssignments {
   const rows = db()
-    .prepare("SELECT characterId, roleId FROM character_roles")
+    .prepare(
+      `SELECT cr.characterId, cr.roleId
+       FROM character_roles cr
+       LEFT JOIN roles r ON r.id = cr.roleId
+       ORDER BY r.sortOrder ASC, r.name ASC`,
+    )
     .all() as { characterId: string; roleId: string }[];
-  const out: Record<string, string> = {};
-  for (const r of rows) out[r.characterId] = r.roleId;
+  const out: RoleAssignments = {};
+  for (const r of rows) {
+    (out[r.characterId] ??= []).push(r.roleId);
+  }
   return out;
 }
 
@@ -94,18 +102,20 @@ export function deleteRole(id: string): void {
   db().prepare("DELETE FROM roles WHERE id = ?").run(id);
 }
 
-export function assignCharacterRole(characterId: string, roleId: string | null): void {
+export function setCharacterRole(characterId: string, roleId: string, assigned: boolean): void {
   const id = characterId.trim();
   if (!id) throw new Error("Missing character.");
   const conn = db();
-  if (!roleId) {
-    conn.prepare("DELETE FROM character_roles WHERE characterId = ?").run(id);
+  if (!assigned) {
+    conn.prepare("DELETE FROM character_roles WHERE characterId = ? AND roleId = ?").run(id, roleId);
     return;
   }
   if (!getRole(roleId)) throw new Error("That role is gone.");
-  conn
-    .prepare(
-      "INSERT INTO character_roles (characterId, roleId) VALUES (?, ?) ON CONFLICT(characterId) DO UPDATE SET roleId = excluded.roleId",
-    )
-    .run(id, roleId);
+  conn.prepare("INSERT OR IGNORE INTO character_roles (characterId, roleId) VALUES (?, ?)").run(id, roleId);
+}
+
+export function clearCharacterRoles(characterId: string): void {
+  const id = characterId.trim();
+  if (!id) throw new Error("Missing character.");
+  db().prepare("DELETE FROM character_roles WHERE characterId = ?").run(id);
 }

@@ -9,11 +9,11 @@ import { RolePicker } from "./role-picker";
 
 export function CharacterCard({
   character: c,
-  role,
+  assigned = [],
   roles,
 }: {
   character: Character;
-  role?: Role | null;
+  assigned?: Role[];
   roles?: Role[];
 }) {
   const accent = ALLIANCE_ACCENT[c.alliance] ?? "var(--accent)";
@@ -77,7 +77,7 @@ export function CharacterCard({
       </Link>
       {roles && (
         <div className="px-4 pb-3">
-          <RolePicker characterId={c.id} role={role ?? null} roles={roles} />
+          <RolePicker characterId={c.id} assigned={assigned} roles={roles} />
         </div>
       )}
     </article>

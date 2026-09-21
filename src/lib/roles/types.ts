@@ -5,6 +5,9 @@ export interface Role {
   sortOrder: number;
 }
 
+/** characterId → one or more role ids. Survives snapshot re-imports. */
+export type RoleAssignments = Record<string, string[]>;
+
 export interface CharacterFilters {
   /** Matches name, class, race, or assigned role name. */
   q?: string;

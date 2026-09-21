@@ -13,10 +13,11 @@ import {
   Users,
 } from "lucide-react";
 import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
-import { getRole, listAssignments, listRoles } from "@/lib/db/roles";
+import { listAssignments, listRoles } from "@/lib/db/roles";
 import { getSkillLineByName, setHref, catalogAbilityLore } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
+import { rolesForCharacter } from "@/lib/roles/filter";
 import { presentSkillBook } from "@/lib/skills/present";
 import { Badge, Card, SectionTitle } from "@/components/ui";
 import { SkillBook } from "@/components/skill-book";
@@ -54,11 +55,10 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     }
   }
   let roles: ReturnType<typeof listRoles> = [];
-  let assigned = null as ReturnType<typeof getRole>;
+  let assigned: ReturnType<typeof rolesForCharacter> = [];
   try {
     roles = listRoles();
-    const rid = listAssignments()[c.id];
-    assigned = rid ? getRole(rid) : null;
+    assigned = rolesForCharacter(c.id, roles, listAssignments());
   } catch {
     roles = [];
   }
@@ -113,7 +113,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               {c.mundus && <Badge tone="muted">{c.mundus}</Badge>}
             </div>
             <div className="mt-3">
-              <RolePicker characterId={c.id} role={assigned} roles={roles} />
+              <RolePicker characterId={c.id} assigned={assigned} roles={roles} />
             </div>
           </div>
           <div className="text-right">

@@ -127,10 +127,36 @@ function migrate(db: Database.Database) {
       sortOrder  INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS character_roles (
-      characterId  TEXT PRIMARY KEY,
+      characterId  TEXT NOT NULL,
       roleId       TEXT NOT NULL,
+      PRIMARY KEY (characterId, roleId),
       FOREIGN KEY (roleId) REFERENCES roles(id) ON DELETE CASCADE
     );
+  `);
+  migrateCharacterRolesToMany(db);
+}
+
+/** Old DBs keyed assignments by character id only (one role). Keep existing rows. */
+function migrateCharacterRolesToMany(db: Database.Database) {
+  const cols = db.prepare("PRAGMA table_info(character_roles)").all() as { name: string; pk: number }[];
+  if (cols.length === 0) return;
+  const pk = cols
+    .filter((c) => c.pk > 0)
+    .sort((a, b) => a.pk - b.pk)
+    .map((c) => c.name);
+  if (pk.length === 2 && pk[0] === "characterId" && pk[1] === "roleId") return;
+
+  db.exec(`
+    CREATE TABLE character_roles_new (
+      characterId  TEXT NOT NULL,
+      roleId       TEXT NOT NULL,
+      PRIMARY KEY (characterId, roleId),
+      FOREIGN KEY (roleId) REFERENCES roles(id) ON DELETE CASCADE
+    );
+    INSERT OR IGNORE INTO character_roles_new (characterId, roleId)
+      SELECT characterId, roleId FROM character_roles;
+    DROP TABLE character_roles;
+    ALTER TABLE character_roles_new RENAME TO character_roles;
   `);
 }
 

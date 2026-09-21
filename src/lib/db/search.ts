@@ -81,11 +81,18 @@ export function globalSearch(q: string, limit = 40): SearchResults {
 
   const chars = db
     .prepare(
-      `SELECT c.id, c.name, c.class, c.race, c.json, r.name AS roleName
+      `SELECT c.id, c.name, c.class, c.race, c.json,
+         (SELECT GROUP_CONCAT(r.name, ' · ')
+          FROM character_roles cr
+          JOIN roles r ON r.id = cr.roleId
+          WHERE cr.characterId = c.id) AS roleNames
        FROM characters c
-       LEFT JOIN character_roles cr ON cr.characterId = c.id
-       LEFT JOIN roles r ON r.id = cr.roleId
-       WHERE c.name LIKE ? OR c.class LIKE ? OR c.race LIKE ? OR IFNULL(r.name, '') LIKE ?
+       WHERE c.name LIKE ? OR c.class LIKE ? OR c.race LIKE ?
+         OR EXISTS (
+           SELECT 1 FROM character_roles cr
+           JOIN roles r ON r.id = cr.roleId
+           WHERE cr.characterId = c.id AND r.name LIKE ?
+         )
        ORDER BY c.name ASC
        LIMIT 15`,
     )
@@ -95,12 +102,12 @@ export function globalSearch(q: string, limit = 40): SearchResults {
     class: string;
     race: string;
     json: string;
-    roleName: string | null;
+    roleNames: string | null;
   }[];
   for (const c of chars) {
     const full = safeParse(c.json) as Character | null;
     const archived = full ? isArchived(full) : false;
-    const bits = [c.race, c.class, c.roleName].filter(Boolean);
+    const bits = [c.race, c.class, c.roleNames].filter(Boolean);
     account.push({
       kind: archived ? "Archived" : "Character",
       name: c.name,
