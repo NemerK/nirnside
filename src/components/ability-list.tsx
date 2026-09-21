@@ -66,7 +66,7 @@ function AbilityRow({ ability }: { ability: SkillMorph }) {
       {!ability.passive && slots.length > 0 && (
         <ul className="mt-2 space-y-1">
           {slots.map((slot) => {
-            const current = face.morphSlot === slot.slot;
+            const current = known && face.morphSlot === slot.slot;
             const xp = slot.purchased ? xpProgress(slot) : null;
             return (
               <li
