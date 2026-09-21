@@ -725,15 +725,72 @@ local function recordLine(out, seen, listedId, category, content)
   end
 end
 
+-- Pithka-tracked achievement ids (keep in sync with src/lib/achievements/pithka.ts).
+-- Querying these directly with IsAchievementComplete is how the in-game tracker
+-- works: it does not depend on the current character's journal listing every
+-- category. A toon that has never entered Maelstrom still reports account-wide
+-- MSA completions this way.
+local TRACKED_ACHIEVEMENT_IDS = {
+  340, 342, 343, 421, 446, 448, 449, 451, 459, 461, 463, 464,
+  465, 467, 545, 678, 679, 681, 876, 878, 880, 941, 942, 1084,
+  1107, 1108, 1114, 1120, 1128, 1129, 1136, 1137, 1138, 1140, 1275, 1276,
+  1279, 1303, 1305, 1330, 1344, 1368, 1391, 1462, 1474, 1503, 1505, 1506,
+  1507, 1508, 1523, 1524, 1525, 1526, 1549, 1552, 1553, 1554, 1556, 1559,
+  1560, 1561, 1563, 1564, 1565, 1568, 1569, 1570, 1572, 1573, 1576, 1577,
+  1578, 1580, 1581, 1584, 1585, 1586, 1588, 1589, 1592, 1593, 1594, 1596,
+  1597, 1600, 1601, 1602, 1604, 1607, 1608, 1609, 1610, 1613, 1614, 1615,
+  1617, 1620, 1621, 1622, 1623, 1626, 1627, 1628, 1629, 1632, 1633, 1634,
+  1635, 1638, 1639, 1640, 1641, 1644, 1645, 1646, 1647, 1650, 1651, 1652,
+  1653, 1656, 1657, 1658, 1691, 1694, 1695, 1696, 1699, 1702, 1703, 1704,
+  1810, 1829, 1836, 1838, 1960, 1963, 1964, 1965, 1966, 1967, 1976, 1979,
+  1980, 1981, 1982, 1983, 1991, 2075, 2077, 2079, 2085, 2086, 2087, 2102,
+  2133, 2134, 2135, 2136, 2139, 2140, 2153, 2154, 2155, 2156, 2158, 2159,
+  2163, 2164, 2165, 2166, 2167, 2168, 2261, 2262, 2263, 2264, 2266, 2267,
+  2271, 2272, 2273, 2274, 2275, 2276, 2301, 2305, 2363, 2364, 2365, 2366,
+  2368, 2372, 2384, 2395, 2416, 2417, 2418, 2419, 2421, 2422, 2426, 2427,
+  2428, 2429, 2430, 2431, 2435, 2466, 2467, 2468, 2469, 2470, 2540, 2541,
+  2542, 2543, 2545, 2546, 2550, 2551, 2552, 2553, 2554, 2555, 2575, 2581,
+  2677, 2679, 2695, 2697, 2698, 2700, 2701, 2705, 2706, 2707, 2708, 2709,
+  2710, 2734, 2736, 2737, 2739, 2740, 2746, 2755, 2824, 2828, 2832, 2833,
+  2834, 2835, 2837, 2838, 2842, 2843, 2844, 2845, 2846, 2847, 2883, 2886,
+  2908, 2912, 2913, 2987, 3003, 3004, 3005, 3006, 3007, 3017, 3018, 3019,
+  3020, 3022, 3023, 3027, 3028, 3029, 3030, 3031, 3032, 3035, 3042, 3105,
+  3107, 3108, 3110, 3111, 3115, 3117, 3118, 3119, 3120, 3153, 3154, 3224,
+  3226, 3244, 3248, 3249, 3250, 3251, 3252, 3376, 3377, 3378, 3379, 3380,
+  3381, 3391, 3395, 3396, 3397, 3398, 3399, 3400, 3410, 3469, 3470, 3471,
+  3472, 3473, 3474, 3484, 3530, 3531, 3532, 3533, 3534, 3535, 3538, 3560,
+  3564, 3565, 3566, 3567, 3568, 3811, 3812, 3813, 3814, 3815, 3816, 3826,
+  3852, 3853, 3854, 3855, 3856, 3857, 3867, 4015, 4019, 4020, 4021, 4022,
+  4023, 4110, 4111, 4112, 4113, 4114, 4115, 4120, 4129, 4130, 4131, 4132,
+  4133, 4134, 4139, 4268, 4272, 4273, 4274, 4275, 4276, 4312, 4313, 4314,
+  4315, 4316, 4317, 4327, 4335, 4336, 4337, 4338, 4339, 4340, 4350, 4485,
+  4517
+}
+
 -- Flat set of EVERY completed achievement id on the account. This is what the
 -- Pithka-style board runs on: the app holds Pithka's curated id-per-column table
 -- and simply checks membership here, exactly like the in-game add-on does with
--- IsAchievementComplete. We sweep all categories (and walk each achievement line
--- so every tier is covered) out of combat on logout/ReloadUI only.
+-- IsAchievementComplete. We query tracked ids directly, then also sweep all
+-- categories (and walk each achievement line so every tier is covered) out of
+-- combat on logout/ReloadUI only. Previously recorded ids are never dropped —
+-- achievements do not un-complete, and a toon whose journal omits a category
+-- must not uncheck the board.
 local function gatherCompletedAchievementIds()
   local done = {}
+  -- Keep what we already wrote. Achievements never un-complete; a later toon's
+  -- incomplete journal sweep must not erase ids we already recorded.
+  if sv and type(sv.completedAchievementIds) == "table" then
+    for _, id in ipairs(sv.completedAchievementIds) do
+      if type(id) == "number" and id > 0 then done[id] = true end
+    end
+  end
   safe(function()
-    if not (GetNumAchievementCategories and IsAchievementComplete) then return end
+    if not IsAchievementComplete then return end
+    for i = 1, #TRACKED_ACHIEVEMENT_IDS do
+      local id = TRACKED_ACHIEVEMENT_IDS[i]
+      if safe(function() return IsAchievementComplete(id) end, false) then done[id] = true end
+    end
+    if not GetNumAchievementCategories then return end
     local function scanId(id)
       if not id or id == 0 then return end
       local first = safe(function() return GetFirstAchievementInLine(id) end, 0)

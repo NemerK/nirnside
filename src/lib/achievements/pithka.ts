@@ -1,12 +1,17 @@
 /**
  * Pithka Achievement Tracker — authoritative dataset.
  *
- * Transcribed verbatim from the in-game add-on's own database
+ * Transcribed from the in-game add-on's own database
  * (PithkaAchievementTracker/data/achievements.lua, v9.17), so the board matches
- * Pithka exactly: the same instances, the same columns, and the same real
- * achievement ids per column. Completion is decided the same way Pithka does it
+ * Pithka: the same instances, the same columns, and the same real achievement
+ * ids per column. Completion is decided the same way Pithka does it
  * — membership in the account's set of completed achievement ids
  * (IsAchievementComplete). Nothing here is guessed.
+ *
+ * One addition: Maelstrom Arena's Perfect Run (id 1330, title The Flawless
+ * Conqueror). Pithka's MSA row only listed the veteran clear (1305); 1330 is
+ * the same id Dungeon Tracker uses for MSA no-death, and that addon's BRP/VSA
+ * ids match Pithka's exactly.
  *
  * Column meaning:
  *   vet  — Veteran clear            hm  — Hard Mode (final/full)
@@ -61,7 +66,11 @@ export const PITHKA_TRIALS: PithkaInstance[] = [
 ];
 
 export const PITHKA_ARENAS: PithkaInstance[] = [
-  { name: "Maelstrom Arena", abbv: "MSA", type: "arena", vet: 1305 },
+  // 1305 = Maelstrom Arena Conqueror (veteran clear). 1330 = Maelstrom Arena:
+  // Perfect Run, which grants the title The Flawless Conqueror. Pithka's own
+  // MSA row only listed vet; 1330 is the same id Dungeon Tracker uses for MSA
+  // no-death, and that addon's BRP/VSA ids match Pithka's exactly.
+  { name: "Maelstrom Arena", abbv: "MSA", type: "arena", vet: 1305, tri: 1330, triName: "Flawless Conqueror" },
   { name: "Dragonstar Arena", abbv: "DSA", type: "arena", vet: 1140 },
   { name: "Blackrose Prison", abbv: "BRP", type: "arena", vet: 2363, hm: 2364, sr: 2366, nd: 2365, tri: 2368, triName: "Unchained", ext: 2372, extName: "A Thrilling Trifecta", alsoInDungeons: true },
   { name: "Vateshran Arena", abbv: "VSA", type: "arena", vet: 2908, tri: 2912, triName: "Spirit Slayer", ext: 2913, extName: "Hero of Undying Song" },
@@ -155,4 +164,28 @@ export function allTrackedIds(rows: PithkaInstance[]): number[] {
     }
   }
   return ids;
+}
+
+/** Unique ids across every Pithka window, sorted. */
+export function allPithkaAchievementIds(): number[] {
+  return [...new Set(PITHKA_TABS.flatMap((t) => allTrackedIds(t.rows)))].sort((a, b) => a - b);
+}
+
+/**
+ * Achievements never un-complete. A later snapshot can miss ids (a toon whose
+ * journal doesn't list every category, or an incomplete sweep), so we union
+ * what we already knew with what the new snapshot reports.
+ */
+export function unionCompletedAchievementIds(
+  previous: readonly number[] | undefined,
+  incoming: readonly number[] | undefined,
+): number[] {
+  const set = new Set<number>();
+  for (const id of previous ?? []) {
+    if (Number.isInteger(id) && id >= 0) set.add(id);
+  }
+  for (const id of incoming ?? []) {
+    if (Number.isInteger(id) && id >= 0) set.add(id);
+  }
+  return [...set].sort((a, b) => a - b);
 }

@@ -605,7 +605,7 @@ NirnsideData =
                     "Aetherian Archive Conqueror", "Aetherian Archive Vanquisher",
                     "Cloudrest Conqueror", "Cloudrest Hard Mode",
                     "Rockgrove Conqueror",
-                    "Maelstrom Arena Conqueror", "Flawless Conqueror",
+                    "Maelstrom Arena Conqueror", "Maelstrom Arena: Perfect Run",
                     "Moongrave Fane Vanquisher", "Moongrave Fane Conqueror",
                 },
                 -- Structured records exactly as the addon exports them: name,
@@ -626,8 +626,8 @@ NirnsideData =
                     { ["id"] = 1021, ["name"] = "Rockgrove Hard Mode", ["description"] = "Defeat Xalvakka in Veteran Rockgrove with hard mode active.", ["points"] = 50, ["completed"] = false, ["category"] = "Trials", ["content"] = "Rockgrove" },
                     { ["id"] = 1022, ["name"] = "Rockgrove Trifecta", ["description"] = "Complete Veteran Rockgrove with hard mode active, without suffering a group member death, in under 33 minutes.", ["points"] = 50, ["completed"] = false, ["category"] = "Trials", ["content"] = "Rockgrove", ["title"] = "Oxblood Reaper" },
 
-                    { ["id"] = 2001, ["name"] = "Maelstrom Arena Conqueror", ["description"] = "Complete all nine arenas of Maelstrom Arena.", ["points"] = 50, ["completed"] = true, ["category"] = "Solo Arenas", ["content"] = "Maelstrom Arena" },
-                    { ["id"] = 2002, ["name"] = "Flawless Conqueror", ["description"] = "Complete all nine arenas of Veteran Maelstrom Arena.", ["points"] = 50, ["completed"] = true, ["category"] = "Solo Arenas", ["content"] = "Maelstrom Arena", ["title"] = "the Flawless" },
+                    { ["id"] = 1305, ["name"] = "Maelstrom Arena Conqueror", ["description"] = "Conquer all challengers in Veteran Maelstrom Arena.", ["points"] = 50, ["completed"] = true, ["category"] = "Solo Arenas", ["content"] = "Maelstrom Arena" },
+                    { ["id"] = 1330, ["name"] = "Maelstrom Arena: Perfect Run", ["description"] = "Complete Veteran Maelstrom Arena in a single attempt, without dying or leaving the arena.", ["points"] = 50, ["completed"] = true, ["category"] = "Solo Arenas", ["content"] = "Maelstrom Arena", ["title"] = "The Flawless Conqueror" },
                     { ["id"] = 2003, ["name"] = "Spirit Slayer", ["description"] = "Complete Veteran Maelstrom Arena with hard mode active on every arena, without dying, in under 42 minutes.", ["points"] = 50, ["completed"] = false, ["category"] = "Solo Arenas", ["content"] = "Maelstrom Arena", ["title"] = "Spirit Slayer" },
 
                     { ["id"] = 3001, ["name"] = "Moongrave Fane Vanquisher", ["description"] = "Defeat the final boss of Veteran Moongrave Fane.", ["points"] = 50, ["completed"] = true, ["category"] = "Dungeons", ["content"] = "Moongrave Fane" },
@@ -651,8 +651,8 @@ NirnsideData =
                     -- Trials: veterans + a few hard modes + one trifecta
                     1474, 1503, 1462, 1368, 1391, 1810, 1829, 2133, 2134, 2435, 2469, 2734,
                     1136, 1137, 1138, 2139,
-                    -- Arenas
-                    1305, 1140, 2363, 2364, 2366, 2365,
+                    -- Arenas (1305 veteran MSA, 1330 Perfect Run / Flawless Conqueror)
+                    1305, 1330, 1140, 2363, 2364, 2366, 2365,
                     -- Trifecta dungeons: some vets/HM/SR/ND, one complete trifecta (Depths of Malatar)
                     1960, 1965, 1963, 1966, 2416, 2417,
                     2271, 2275, 2272, 2273, 2274, 2276,

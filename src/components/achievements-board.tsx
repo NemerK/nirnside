@@ -195,7 +195,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
       )}
 
       <p className="mt-3 text-xs text-fg-subtle">
-        Every instance and achievement matches the in-game Pithka tracker exactly; a green check means done, a dash means
+        Every instance and achievement matches the in-game Pithka tracker exactly; a gold check means done, a dash means
         not yet. A blank cell means that challenge doesn&apos;t exist for that instance.
       </p>
     </div>

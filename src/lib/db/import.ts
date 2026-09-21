@@ -1,6 +1,7 @@
-import { getDb } from "./index";
+import { getDb, getMeta } from "./index";
 import type { AccountSnapshot } from "../snapshot/schema";
 import { accountGold, accountTelVar } from "../snapshot/roster";
+import { unionCompletedAchievementIds } from "../achievements/pithka";
 
 /**
  * Replace the entire local DB with a fresh snapshot. Because Nirnside only ever
@@ -9,6 +10,10 @@ import { accountGold, accountTelVar } from "../snapshot/roster";
  */
 export function importSnapshot(snap: AccountSnapshot): { items: number; characters: number; sets: number } {
   const db = getDb();
+  // Read before the replace: ESO achievements are account-wide and never
+  // un-complete, so a later toon's incomplete id list must not uncheck the board.
+  const previousIds = getMeta<{ completedAchievementIds?: number[] }>("account")?.completedAchievementIds;
+  const completedAchievementIds = unionCompletedAchievementIds(previousIds, snap.completedAchievementIds);
 
   const tx = db.transaction(() => {
     // Note: only clear account-scoped rows. The catalog table and its meta
@@ -40,7 +45,7 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         },
         guilds: snap.guilds,
         achievements: snap.achievements,
-        completedAchievementIds: snap.completedAchievementIds,
+        completedAchievementIds,
       }),
     );
 

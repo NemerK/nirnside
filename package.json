@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start -p 43219",
     "lint": "eslint",
-    "test": "tsx --test src/lib/setup/resolve-path.test.ts src/lib/snapshot/roster.test.ts src/lib/roles/filter.test.ts src/lib/skills/ability.test.ts src/lib/skills/present.test.ts && node --test scripts/self-update.test.mjs scripts/install-windows.test.mjs && go -C installer test",
+    "test": "tsx --test src/lib/setup/resolve-path.test.ts src/lib/snapshot/roster.test.ts src/lib/roles/filter.test.ts src/lib/skills/ability.test.ts src/lib/skills/present.test.ts src/lib/achievements/pithka.test.ts && node --test scripts/self-update.test.mjs scripts/install-windows.test.mjs && go -C installer test",
     "update": "node scripts/self-update.mjs",
     "addons": "tsx scripts/install-addons.ts",
     "import": "tsx scripts/import.ts",
