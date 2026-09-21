@@ -727,9 +727,9 @@ end
 
 -- Pithka-tracked achievement ids (keep in sync with src/lib/achievements/pithka.ts).
 -- Querying these directly with IsAchievementComplete is how the in-game tracker
--- works: it does not depend on the current character's journal listing every
--- category. A toon that has never entered Maelstrom still reports account-wide
--- MSA completions this way.
+-- works. Maelstrom Arena clears (1305 / 1330) are still CHARACTER-BOUND: an alt
+-- that has not run them reports false. We remember each toon's completions and
+-- union them so one clear checks the whole account.
 local TRACKED_ACHIEVEMENT_IDS = {
   340, 342, 343, 421, 446, 448, 449, 451, 459, 461, 463, 464,
   465, 467, 545, 678, 679, 681, 876, 878, 880, 941, 942, 1084,
@@ -789,10 +789,12 @@ local function collectIdsFromTable(t, done)
   end
 end
 
-local function idsToArray(done)
-  local ids = {}
-  for id in pairs(done) do ids[#ids + 1] = id end
-  return ids
+local function idsToSet(done)
+  local set = {}
+  for id, v in pairs(done) do
+    if type(id) == "number" and id > 0 and v then set[id] = true end
+  end
+  return set
 end
 
 local function gatherLiveCompletedIds()
@@ -832,11 +834,16 @@ local function gatherLiveCompletedIds()
   return mine
 end
 
-local function gatherCompletedAchievementIds(charId)
+local function gatherCompletedAchievementIds(charId, records)
   local live = gatherLiveCompletedIds()
   sv.characterCompletedIds = sv.characterCompletedIds or {}
   if charId and charId ~= "" then
-    sv.characterCompletedIds[charId] = idsToArray(live)
+    -- Never shrink this toon's list. MSA is character-bound; if we once saw
+    -- 1305 here, keep it even if this pass misses it.
+    local mine = {}
+    collectIdsFromTable(sv.characterCompletedIds[charId], mine)
+    collectIdsFromTable(live, mine)
+    sv.characterCompletedIds[charId] = idsToSet(mine)
   end
   local done = {}
   -- Keep previously written account ids (pairs, not ipairs: ZO_SavedVars
@@ -848,7 +855,14 @@ local function gatherCompletedAchievementIds(charId)
       collectIdsFromTable(set, done)
     end
   end
-  return idsToArray(done)
+  if type(records) == "table" then
+    for _, rec in pairs(records) do
+      if type(rec) == "table" and rec.completed and type(rec.id) == "number" and rec.id > 0 then
+        done[rec.id] = true
+      end
+    end
+  end
+  return idsToSet(done)
 end
 
 local function gatherAchievements()
@@ -1103,7 +1117,7 @@ local function takeSnapshot(reason)
   local achRecords, achNames = gatherAchievements()
   sv.achievementRecords = achRecords
   sv.achievements = achNames
-  sv.completedAchievementIds = gatherCompletedAchievementIds(charId)
+  sv.completedAchievementIds = gatherCompletedAchievementIds(charId, achRecords)
 
   upsertCharacter(gatherCharacter())
   syncRosterWithGame()

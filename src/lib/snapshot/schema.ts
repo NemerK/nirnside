@@ -344,5 +344,19 @@ export const AccountSnapshot = z.object({
       (v) => coerceCompletedAchievementIds(v),
       z.array(z.number().int().nonnegative()),
     ),
+  /**
+   * Per-character completed ids. Maelstrom Arena clears are still character-bound
+   * in live ESO; we keep each toon's list and union them so the board stays
+   * checked if any character has earned it.
+   */
+  characterCompletedIds: z.preprocess((v) => {
+    if (v == null || typeof v !== "object" || Array.isArray(v)) return {};
+    const out: Record<string, number[]> = {};
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      const ids = coerceCompletedAchievementIds(val);
+      if (ids.length > 0) out[k] = ids;
+    }
+    return out;
+  }, z.record(z.string(), z.array(z.number().int().nonnegative()))),
 });
 export type AccountSnapshot = z.infer<typeof AccountSnapshot>;

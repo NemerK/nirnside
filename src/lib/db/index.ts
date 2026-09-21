@@ -117,6 +117,13 @@ function migrate(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS completed_achievements (
       id INTEGER PRIMARY KEY
     );
+    -- Per-character earned ids. Never deleted. MSA vet is character-bound in
+    -- live ESO; we union every toon's list so one clear checks the account.
+    CREATE TABLE IF NOT EXISTS character_completed_achievements (
+      characterId  TEXT NOT NULL,
+      id           INTEGER NOT NULL,
+      PRIMARY KEY (characterId, id)
+    );
 
     -- Player-authored labels (Tank / Healer / …). Not game data; keyed by
     -- character id so a snapshot re-import cannot wipe them.

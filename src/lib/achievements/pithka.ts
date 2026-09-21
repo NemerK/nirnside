@@ -208,3 +208,26 @@ export function unionCompletedAchievementIds(
 ): number[] {
   return coerceCompletedAchievementIds([...(previous ?? []), ...(incoming ?? [])]);
 }
+
+/**
+ * Every completed id a snapshot can prove — account list, per-character lists,
+ * and structured records marked complete. Used so Maelstrom Arena (still
+ * character-bound in live ESO) stays checked if any toon has earned it.
+ */
+export function collectCompletedAchievementIdsFromSnapshot(snap: {
+  completedAchievementIds?: unknown;
+  characterCompletedIds?: unknown;
+  achievementRecords?: readonly { id?: number; completed?: boolean }[];
+}): number[] {
+  const parts: number[] = [];
+  parts.push(...coerceCompletedAchievementIds(snap.completedAchievementIds));
+  if (snap.characterCompletedIds && typeof snap.characterCompletedIds === "object") {
+    for (const set of Object.values(snap.characterCompletedIds as Record<string, unknown>)) {
+      parts.push(...coerceCompletedAchievementIds(set));
+    }
+  }
+  for (const rec of snap.achievementRecords ?? []) {
+    if (rec.completed && typeof rec.id === "number") parts.push(rec.id);
+  }
+  return coerceCompletedAchievementIds(parts);
+}

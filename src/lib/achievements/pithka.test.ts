@@ -7,6 +7,7 @@ import {
   PITHKA_ARENAS,
   allPithkaAchievementIds,
   coerceCompletedAchievementIds,
+  collectCompletedAchievementIdsFromSnapshot,
   unionCompletedAchievementIds,
 } from "./pithka";
 
@@ -69,6 +70,44 @@ describe("unionCompletedAchievementIds", () => {
   });
 });
 
+describe("collectCompletedAchievementIdsFromSnapshot", () => {
+  it("unions an account list, per-character lists, and completed records", () => {
+    assert.deepEqual(
+      collectCompletedAchievementIdsFromSnapshot({
+        completedAchievementIds: [1140],
+        characterCompletedIds: { "char-msa": [1305], "char-alt": [2363] },
+        achievementRecords: [
+          { id: 1330, completed: true },
+          { id: 9999, completed: false },
+        ],
+      }),
+      [1140, 1305, 1330, 2363],
+    );
+  });
+
+  it("keeps MSA vet stored on another character when the account list omitted it", () => {
+    const snap = loadSnapshotFromLua(`
+      NirnsideData = {
+        ["Default"] = {
+          ["@Test"] = {
+            ["$AccountWide"] = {
+              displayName = "@Test",
+              completedAchievementIds = { 1140 },
+              characterCompletedIds = { ["char-msa"] = { [1305] = true, [1330] = true } },
+            },
+          },
+        },
+      }
+    `);
+    assert.equal(snap.completedAchievementIds.includes(1305), false);
+    assert.deepEqual(snap.characterCompletedIds["char-msa"], [1305, 1330]);
+    const done = collectCompletedAchievementIdsFromSnapshot(snap);
+    assert.equal(done.includes(1305), true);
+    assert.equal(done.includes(1330), true);
+    assert.equal(done.includes(1140), true);
+  });
+});
+
 describe("addon tracked ids", () => {
   it("lists every Pithka id so IsAchievementComplete is queried directly", () => {
     const lua = readFileSync(resolve("addon/NirnsideSnapshot/NirnsideSnapshot.lua"), "utf8");
@@ -81,7 +120,9 @@ describe("addon tracked ids", () => {
   it("unions per-character completions so MSA vet survives an alt logout", () => {
     const lua = readFileSync(resolve("addon/NirnsideSnapshot/NirnsideSnapshot.lua"), "utf8");
     assert.match(lua, /characterCompletedIds/);
-    assert.match(lua, /gatherCompletedAchievementIds\(charId\)/);
+    assert.match(lua, /gatherCompletedAchievementIds\(charId, achRecords\)/);
     assert.match(lua, /pairs\(sv\.characterCompletedIds\)/);
+    assert.match(lua, /collectIdsFromTable\(sv\.characterCompletedIds\[charId\]/);
+    assert.match(lua, /Never shrink this toon's list/);
   });
 });

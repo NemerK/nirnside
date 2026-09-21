@@ -1,30 +1,55 @@
 import { getDb, getMeta } from "./index";
 import type { AccountSnapshot } from "../snapshot/schema";
 import { accountGold, accountTelVar } from "../snapshot/roster";
-import { unionCompletedAchievementIds } from "../achievements/pithka";
+import {
+  collectCompletedAchievementIdsFromSnapshot,
+  unionCompletedAchievementIds,
+} from "../achievements/pithka";
 
 /**
  * Replace the entire local DB with a fresh snapshot. Because Nirnside only ever
  * holds one account's data, a full replace inside a transaction is the simplest
  * correct strategy: no partial/stale rows can survive.
+ *
+ * Exception: completed achievement ids never shrink. Maelstrom Arena clears are
+ * still character-bound in live ESO — if any toon has earned one, it stays
+ * checked for the whole account.
  */
 export function importSnapshot(snap: AccountSnapshot): { items: number; characters: number; sets: number } {
   const db = getDb();
-  // Maelstrom Arena clears are still character-bound. IsAchievementComplete(1305)
-  // is false on a toon that has not run it, so a later snapshot's id list can
-  // omit vet MSA. Persist every id we have ever seen; never delete.
   const persisted = (db.prepare("SELECT id FROM completed_achievements").all() as { id: number }[]).map(
     (r) => r.id,
   );
+  let fromCharsTable: number[] = [];
+  try {
+    fromCharsTable = (
+      db.prepare("SELECT DISTINCT id FROM character_completed_achievements").all() as { id: number }[]
+    ).map((r) => r.id);
+  } catch {
+    fromCharsTable = [];
+  }
+  const previouslyCompletedRecords = (
+    db.prepare("SELECT id FROM achievements WHERE completed = 1").all() as { id: number }[]
+  ).map((r) => r.id);
   const previousMeta = getMeta<{ completedAchievementIds?: number[] }>("account")?.completedAchievementIds;
+  const fromSnap = collectCompletedAchievementIdsFromSnapshot(snap);
   const completedAchievementIds = unionCompletedAchievementIds(
-    unionCompletedAchievementIds(persisted, previousMeta),
-    snap.completedAchievementIds,
+    unionCompletedAchievementIds(unionCompletedAchievementIds(persisted, fromCharsTable), previouslyCompletedRecords),
+    unionCompletedAchievementIds(previousMeta, fromSnap),
   );
+  const completedSet = new Set(completedAchievementIds);
 
   const tx = db.transaction(() => {
+    const insCharDone = db.prepare(
+      "INSERT OR IGNORE INTO character_completed_achievements (characterId, id) VALUES (?, ?)",
+    );
+    for (const [characterId, ids] of Object.entries(snap.characterCompletedIds ?? {})) {
+      for (const id of ids) insCharDone.run(characterId, id);
+    }
+
     // Note: only clear account-scoped rows. The catalog table and its meta
     // (source/patch) are a separate, shared dataset and must survive re-imports.
+    // completed_achievements and character_completed_achievements are never deleted.
     db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook; DELETE FROM achievements;");
     db.prepare("DELETE FROM meta WHERE key = 'account'").run();
 
@@ -141,17 +166,20 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
     `);
     // Deduplicate by id (the game can surface the same achievement via multiple
     // category paths); last write wins, which is fine since they're identical.
+    // If this account has ever completed the id, keep it completed even when the
+    // current toon's journal reports false (Maelstrom Arena).
     for (const a of snap.achievementRecords) {
+      const completed = a.completed || completedSet.has(a.id);
       insAch.run({
         id: a.id,
         name: a.name,
         description: a.description,
         points: a.points,
-        completed: a.completed ? 1 : 0,
+        completed: completed ? 1 : 0,
         category: a.category,
         content: a.content,
         title: a.title,
-        json: JSON.stringify(a),
+        json: JSON.stringify({ ...a, completed }),
       });
     }
   });

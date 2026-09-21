@@ -71,7 +71,7 @@ export default function AchievementsPage() {
           <p className="mb-3 text-xs text-fg-subtle">
             {isSample
               ? "Showing sample data (demo). Log in with the Snapshot addon to replace this with your real, game-verified completion."
-              : "Completion is read directly from your game. Most ESO achievements are account-wide; Maelstrom Arena clears are still per-character, so a check stays if any of your toons has earned it."}
+              : "A check means done. If any of your characters earned it — including Maelstrom Arena — it stays checked for the whole account. Logging an alt will not uncheck it."}
           </p>
           <AchievementsBoard completedIds={completed} />
         </>

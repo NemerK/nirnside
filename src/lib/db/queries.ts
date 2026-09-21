@@ -2,6 +2,7 @@ import "server-only";
 import { getDb, getMeta } from "./index";
 import type { AccountSnapshot, AchievementRecord, Character, Item, StickerbookSet } from "../snapshot/schema";
 import { archivedCharacters, archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
+import { unionCompletedAchievementIds } from "../achievements/pithka";
 
 export type AccountMeta = Pick<
   AccountSnapshot,
@@ -27,11 +28,20 @@ export function getAccount(): AccountMeta | null {
  * per-character in the game, so we persist every id we have ever seen.
  */
 export function getCompletedAchievementIds(): number[] {
-  const rows = getDb()
-    .prepare("SELECT id FROM completed_achievements ORDER BY id")
-    .all() as { id: number }[];
-  if (rows.length > 0) return rows.map((r) => r.id);
-  return getAccount()?.completedAchievementIds ?? [];
+  const db = getDb();
+  const fromTable = (db.prepare("SELECT id FROM completed_achievements").all() as { id: number }[]).map(
+    (r) => r.id,
+  );
+  let fromChars: number[] = [];
+  try {
+    fromChars = (
+      db.prepare("SELECT DISTINCT id FROM character_completed_achievements").all() as { id: number }[]
+    ).map((r) => r.id);
+  } catch {
+    fromChars = [];
+  }
+  const fromMeta = getAccount()?.completedAchievementIds ?? [];
+  return unionCompletedAchievementIds(unionCompletedAchievementIds(fromTable, fromChars), fromMeta);
 }
 
 /** Account-wide earned achievement names, lowercased for matching. */
