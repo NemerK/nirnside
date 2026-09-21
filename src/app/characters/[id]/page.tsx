@@ -18,6 +18,7 @@ import { getSkillLineByName, setHref } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { Badge, Card, SectionTitle } from "@/components/ui";
+import { AbilityList } from "@/components/ability-list";
 import { RolePicker } from "@/components/role-picker";
 import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 
@@ -228,23 +229,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
                       </div>
                       <span className="text-xs text-fg-subtle">Rank {line.rank}</span>
                     </div>
-                    {line.abilities.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {line.abilities.map((a, j) => (
-                          <span
-                            key={j}
-                            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${
-                              a.purchased ? "border-border bg-surface-2 text-fg" : "border-border/60 text-fg-subtle"
-                            }`}
-                            title={a.skillStyle ? `Skill style: ${a.skillStyle}` : undefined}
-                          >
-                            {a.name}
-                            {a.morph !== null && a.morph > 0 && <span className="text-accent">◆</span>}
-                            {a.skillStyle && <Sparkles className="h-3 w-3 text-accent" />}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <AbilityList abilities={line.abilities} />
                   </Card>
                   );
                 })}

@@ -89,16 +89,45 @@ export const Item = z.object({
 });
 export type Item = z.infer<typeof Item>;
 
+/**
+ * One morph slot on an active/ultimate ability. Ranks are independent: the
+ * base can be IV while morph 1 is III and morph 2 is IV. `rank` is null when
+ * this slot has never been purchased — never invent a rank.
+ */
+export const MorphSlot = z.object({
+  /** 0 = base ability, 1 = first morph, 2 = second morph. */
+  slot: z.number().int(),
+  name: z.string(),
+  abilityId: z.number().int().nonnegative().optional(),
+  rank: z.number().int().nullable().optional().default(null),
+  purchased: z.boolean().default(false),
+  /** XP into the current rank, as the game reports it. Omitted if unavailable. */
+  xp: z.number().int().nonnegative().optional(),
+  xpMin: z.number().int().nonnegative().optional(),
+  xpMax: z.number().int().nonnegative().optional(),
+});
+export type MorphSlot = z.infer<typeof MorphSlot>;
+
 export const SkillMorph = z.object({
   name: z.string(),
   abilityId: z.number().int().nonnegative().optional(),
   rank: z.number().int().default(0),
-  /** 0 = base, 1 = first morph, 2 = second morph. null = not morphed. */
+  /** Currently selected slot: 0 = base, 1 = first morph, 2 = second morph. */
   morph: z.number().int().nullable().default(null),
   purchased: z.boolean().default(false),
   /** Applied skill style / skill styling collectible name, if any. */
   skillStyle: z.string().nullable().default(null),
+  /** Passive abilities have upgrade ranks, not morphs. */
+  passive: z.boolean().default(false),
+  /** Passive upgrade cap (e.g. 2). Omitted when unknown or not a passive. */
+  maxRank: z.number().int().nullable().optional(),
+  /**
+   * Per-slot rank for base + both morphs. Empty on older snapshots that only
+   * recorded the currently selected morph.
+   */
+  morphs: lenientArray(MorphSlot).default([]),
 });
+export type SkillMorph = z.infer<typeof SkillMorph>;
 
 export const SkillLine = z.object({
   name: z.string(),

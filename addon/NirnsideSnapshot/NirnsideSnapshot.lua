@@ -225,6 +225,118 @@ local function gatherCurse()
   return vampire, werewolf
 end
 
+-- Morph-slot constants (U46+ progression API). Numeric fallbacks match
+-- MORPH_SLOT_BASE / MORPH_SLOT_MORPH_1 / MORPH_SLOT_MORPH_2 so a missing
+-- global never becomes a nil table key.
+local function morphSlotBegin()
+  return MORPH_SLOT_ITERATION_BEGIN or MORPH_SLOT_BASE or 0
+end
+
+local function morphSlotEnd()
+  return MORPH_SLOT_ITERATION_END or MORPH_SLOT_MORPH_2 or 2
+end
+
+-- One ability: passives keep their upgrade rank; actives/ultimates snapshot
+-- independent ranks for base + both morphs via the live progression API.
+-- Skip crafted/scribing skills — GetSkillAbilityInfo can error on those.
+-- Rank is omitted (nil) when a morph slot has never been purchased; we never
+-- invent I–IV.
+local function gatherOneAbility(skillType, lineIndex, skillIndex)
+  if IsCraftedAbilitySkill and IsCraftedAbilitySkill(skillType, lineIndex, skillIndex) then
+    return nil
+  end
+
+  local aName, _, _, passive, _, purchased, _, currentRank =
+    GetSkillAbilityInfo(skillType, lineIndex, skillIndex)
+  aName = zo_strformat("<<1>>", aName)
+  if not aName or aName == "" then return nil end
+
+  local entry = {
+    name = aName,
+    rank = currentRank or 0,
+    morph = nil,
+    purchased = purchased == true,
+    skillStyle = nil,
+    passive = passive == true,
+    morphs = {},
+  }
+
+  if passive then
+    local cur, maxUpgrade = GetSkillAbilityUpgradeInfo(skillType, lineIndex, skillIndex)
+    if cur ~= nil then entry.rank = cur end
+    if maxUpgrade ~= nil then entry.maxRank = maxUpgrade end
+    return entry
+  end
+
+  if not GetProgressionSkillProgressionId then
+    return entry
+  end
+
+  local progressionId = GetProgressionSkillProgressionId(skillType, lineIndex, skillIndex)
+  if not progressionId or progressionId == 0 then
+    return entry
+  end
+
+  local currentMorph = GetProgressionSkillCurrentMorphSlot
+    and GetProgressionSkillCurrentMorphSlot(progressionId)
+    or nil
+  entry.morph = currentMorph
+
+  entry.skillStyle = safe(function()
+    local id
+    if GetProgressionSkillCurrentSkillStyleId then
+      id = GetProgressionSkillCurrentSkillStyleId(progressionId)
+    end
+    if (not id or id == 0) and GetSkillAbilitySkillStyleId then
+      id = GetSkillAbilitySkillStyleId(skillType, lineIndex, skillIndex)
+    end
+    if not id or id == 0 then return nil end
+    local n = GetCollectibleName and GetCollectibleName(id)
+    if n and n ~= "" then return zo_strformat("<<1>>", n) end
+    return nil
+  end, nil)
+
+  for slot = morphSlotBegin(), morphSlotEnd() do
+    local morph = safe(function()
+      local abilityId = GetProgressionSkillMorphSlotAbilityId
+        and GetProgressionSkillMorphSlotAbilityId(progressionId, slot)
+      if not abilityId or abilityId == 0 then return nil end
+      local slotName = zo_strformat("<<1>>", GetAbilityName(abilityId))
+      local slotRank = GetAbilityProgressionRankFromAbilityId
+        and GetAbilityProgressionRankFromAbilityId(abilityId)
+        or nil
+      local row = {
+        slot = slot,
+        name = (slotName ~= "" and slotName) or aName,
+        abilityId = abilityId,
+        purchased = slotRank ~= nil,
+      }
+      if slotRank ~= nil then row.rank = slotRank end
+      -- XP toward the next rank, only if the game reports extents. Never guess.
+      if slotRank and GetProgressionSkillMorphSlotCurrentXP then
+        local xp = GetProgressionSkillMorphSlotCurrentXP(progressionId, slot)
+        if type(xp) == "number" then row.xp = xp end
+        if GetProgressionSkillMorphSlotRankXPExtents then
+          local startXP, endXP = GetProgressionSkillMorphSlotRankXPExtents(progressionId, slot, slotRank)
+          if type(startXP) == "number" then row.xpMin = startXP end
+          if type(endXP) == "number" then row.xpMax = endXP end
+        end
+      end
+      return row
+    end, nil)
+    if morph then
+      entry.morphs[#entry.morphs + 1] = morph
+      if currentMorph ~= nil and slot == currentMorph then
+        entry.name = morph.name
+        if morph.rank ~= nil then entry.rank = morph.rank end
+        entry.abilityId = morph.abilityId
+      end
+    end
+  end
+
+  return entry
+end
+
 local function gatherSkills()
   local lines = {}
   safe(function()
@@ -237,15 +349,11 @@ local function gatherSkills()
           local abilities = {}
           local numAbilities = GetNumSkillAbilities(skillType, lineIndex)
           for a = 1, numAbilities do
-            local aName, _, earnedRank, passive, _, purchased, progressionIndex, currentRank =
-              GetSkillAbilityInfo(skillType, lineIndex, a)
-            abilities[#abilities + 1] = {
-              name = zo_strformat("<<1>>", aName),
-              rank = currentRank or 0,
-              morph = nil,
-              purchased = purchased == true,
-              skillStyle = nil,
-            }
+            -- Per-ability pcall: one bad skill must not drop the rest of the line.
+            local ability = safe(function()
+              return gatherOneAbility(skillType, lineIndex, a)
+            end, nil)
+            if ability then abilities[#abilities + 1] = ability end
           end
           lines[#lines + 1] = {
             name = zo_strformat("<<1>>", name),

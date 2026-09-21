@@ -2,6 +2,7 @@ import "server-only";
 import { getDb } from "./index";
 import { getArchivedCharacters, getCharacters } from "./queries";
 import { archivedOwnerNames } from "../snapshot/roster";
+import { abilityIsKnown, displayAbility, knownAbilityNames, romanRank } from "../skills/ability";
 
 /** How much of a set the account owns: inventory stacks + stickerbook progress. */
 export function setOwnership(setName: string): {
@@ -43,9 +44,21 @@ export function charactersKnowingSkill(names: string[]): CharRef[] {
   const out: CharRef[] = [];
   for (const c of getCharacters()) {
     for (const line of c.skillLines) {
-      const hit = line.abilities.find((a) => lc.includes(a.name.toLowerCase()));
+      const hit = line.abilities.find((a) => {
+        if (!abilityIsKnown(a)) return false;
+        return knownAbilityNames(a).some((n) => lc.includes(n.toLowerCase()));
+      });
       if (hit) {
-        out.push({ id: c.id, name: c.name, detail: hit.morph && hit.morph > 0 ? "morphed" : undefined });
+        const face = displayAbility(hit);
+        const rank = face.showingMorph
+          ? hit.morphs.find((m) => m.slot === face.morphSlot)?.rank
+          : (hit.morphs.find((m) => m.slot === 0)?.rank ?? (hit.rank > 0 ? hit.rank : null));
+        const rankLabel = rank ? ` ${romanRank(rank)}` : "";
+        out.push({
+          id: c.id,
+          name: c.name,
+          detail: face.showingMorph ? `${face.name}${rankLabel}` : rankLabel.trim() || undefined,
+        });
         break;
       }
     }

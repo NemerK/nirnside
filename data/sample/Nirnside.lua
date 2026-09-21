@@ -74,9 +74,51 @@ NirnsideData =
                                 ["subclassed"] = false,
                                 ["abilities"] =
                                 {
-                                    { ["name"] = "Merciless Resolve", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true, ["skillStyle"] = "Order of the Hour" },
-                                    { ["name"] = "Killer's Blade", ["rank"] = 4, ["morph"] = 2, ["purchased"] = true },
-                                    { ["name"] = "Relentless Focus", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                    {
+                                        ["name"] = "Merciless Resolve",
+                                        ["rank"] = 4,
+                                        ["morph"] = 2,
+                                        ["purchased"] = true,
+                                        ["skillStyle"] = "Order of the Hour",
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Grim Focus", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Relentless Focus", ["rank"] = 3, ["purchased"] = true, ["xp"] = 1200, ["xpMin"] = 800, ["xpMax"] = 2000 },
+                                            { ["slot"] = 2, ["name"] = "Merciless Resolve", ["rank"] = 4, ["purchased"] = true },
+                                        },
+                                    },
+                                    {
+                                        ["name"] = "Killer's Blade",
+                                        ["rank"] = 4,
+                                        ["morph"] = 1,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Assassin's Blade", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Killer's Blade", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Impale", ["rank"] = 4, ["purchased"] = true },
+                                        },
+                                    },
+                                    {
+                                        ["name"] = "Death Stroke",
+                                        ["rank"] = 4,
+                                        ["morph"] = 0,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Death Stroke", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Incapacitating Strike", ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "Soul Harvest", ["purchased"] = false },
+                                        },
+                                    },
+                                    {
+                                        ["name"] = "Master Assassin",
+                                        ["rank"] = 2,
+                                        ["morph"] = nil,
+                                        ["purchased"] = true,
+                                        ["passive"] = true,
+                                        ["maxRank"] = 2,
+                                    },
                                 },
                             },
                             {
@@ -86,8 +128,30 @@ NirnsideData =
                                 ["subclassed"] = true,
                                 ["abilities"] =
                                 {
-                                    { ["name"] = "Fatecarver", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
-                                    { ["name"] = "The Unblinking Eye", ["rank"] = 3, ["morph"] = 0, ["purchased"] = true },
+                                    {
+                                        ["name"] = "Exhausting Fatecarver",
+                                        ["rank"] = 4,
+                                        ["morph"] = 1,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Fatecarver", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Exhausting Fatecarver", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Pragmatic Fatecarver", ["purchased"] = false },
+                                        },
+                                    },
+                                    {
+                                        ["name"] = "The Unblinking Eye",
+                                        ["rank"] = 3,
+                                        ["morph"] = 0,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "The Unblinking Eye", ["rank"] = 3, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "The Languid Eye", ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "The Tide King's Gaze", ["purchased"] = false },
+                                        },
+                                    },
                                 },
                             },
                             {
@@ -97,7 +161,18 @@ NirnsideData =
                                 ["subclassed"] = false,
                                 ["abilities"] =
                                 {
-                                    { ["name"] = "Flurry", ["rank"] = 4, ["morph"] = 2, ["purchased"] = true },
+                                    {
+                                        ["name"] = "Bloodthirst",
+                                        ["rank"] = 4,
+                                        ["morph"] = 2,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Flurry", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Rapid Strikes", ["rank"] = 2, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Bloodthirst", ["rank"] = 4, ["purchased"] = true },
+                                        },
+                                    },
                                 },
                             },
                             {
@@ -107,8 +182,30 @@ NirnsideData =
                                 ["subclassed"] = false,
                                 ["abilities"] =
                                 {
-                                    { ["name"] = "Blood Scion", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
-                                    { ["name"] = "Mesmerize", ["rank"] = 2, ["morph"] = 0, ["purchased"] = false },
+                                    {
+                                        ["name"] = "Swarming Scion",
+                                        ["rank"] = 4,
+                                        ["morph"] = 1,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Blood Scion", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Swarming Scion", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Perfect Scion", ["purchased"] = false },
+                                        },
+                                    },
+                                    {
+                                        ["name"] = "Vampiric Drain",
+                                        ["rank"] = 0,
+                                        ["morph"] = 0,
+                                        ["purchased"] = false,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Vampiric Drain", ["purchased"] = false },
+                                            { ["slot"] = 1, ["name"] = "Drain Vigor", ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "Exhilarating Drain", ["purchased"] = false },
+                                        },
+                                    },
                                 },
                             },
                             {
@@ -205,8 +302,18 @@ NirnsideData =
                                 ["subclassed"] = false,
                                 ["abilities"] =
                                 {
-                                    { ["name"] = "Dragon Blood", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
-                                    { ["name"] = "Green Dragon Blood", ["rank"] = 4, ["morph"] = 2, ["purchased"] = true },
+                                    {
+                                        ["name"] = "Green Dragon Blood",
+                                        ["rank"] = 4,
+                                        ["morph"] = 1,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Dragon Blood", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Green Dragon Blood", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Coagulating Blood", ["rank"] = 2, ["purchased"] = true },
+                                        },
+                                    },
                                 },
                             },
                             {
@@ -216,8 +323,30 @@ NirnsideData =
                                 ["subclassed"] = false,
                                 ["abilities"] =
                                 {
-                                    { ["name"] = "Pack Leader", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
-                                    { ["name"] = "Hircine's Fortitude", ["rank"] = 4, ["morph"] = 2, ["purchased"] = true },
+                                    {
+                                        ["name"] = "Pack Leader",
+                                        ["rank"] = 4,
+                                        ["morph"] = 1,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Werewolf Transformation", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Pack Leader", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Werewolf Berserker", ["purchased"] = false },
+                                        },
+                                    },
+                                    {
+                                        ["name"] = "Hircine's Fortitude",
+                                        ["rank"] = 4,
+                                        ["morph"] = 2,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Hircine's Bounty", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Hircine's Rage", ["rank"] = 3, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Hircine's Fortitude", ["rank"] = 4, ["purchased"] = true },
+                                        },
+                                    },
                                 },
                             },
                             {
@@ -227,7 +356,18 @@ NirnsideData =
                                 ["subclassed"] = false,
                                 ["abilities"] =
                                 {
-                                    { ["name"] = "Pierce Armor", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                    {
+                                        ["name"] = "Pierce Armor",
+                                        ["rank"] = 4,
+                                        ["morph"] = 1,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Puncture", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Pierce Armor", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Ransack", ["purchased"] = false },
+                                        },
+                                    },
                                 },
                             },
                         },
@@ -330,7 +470,18 @@ NirnsideData =
                                 ["subclassed"] = false,
                                 ["abilities"] =
                                 {
-                                    { ["name"] = "Growing Swarm", ["rank"] = 4, ["morph"] = 1, ["purchased"] = true },
+                                    {
+                                        ["name"] = "Growing Swarm",
+                                        ["rank"] = 4,
+                                        ["morph"] = 1,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Swarm", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Growing Swarm", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Fetcher Infection", ["purchased"] = false },
+                                        },
+                                    },
                                 },
                             },
                         },
