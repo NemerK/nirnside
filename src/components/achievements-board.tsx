@@ -195,7 +195,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
       )}
 
       <p className="mt-3 text-xs text-fg-subtle">
-        Every instance and achievement matches the in-game Pithka tracker exactly; a gold check means done, a dash means
+        Every instance and achievement matches the in-game Pithka tracker exactly; a green check means done, a dash means
         not yet. A blank cell means that challenge doesn&apos;t exist for that instance.
       </p>
     </div>
@@ -206,7 +206,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
 function CheckCell({ id, done }: { id?: number | null; done: Set<number> }) {
   if (typeof id !== "number") return <span className="text-fg-subtle/25">·</span>;
   return done.has(id) ? (
-    <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-accent/40 bg-accent-soft text-accent">
+    <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-ok/40 bg-ok/10 text-ok">
       <Check className="h-3 w-3" />
     </span>
   ) : (
@@ -224,11 +224,11 @@ function NamedCell({ id, name, done }: { id?: number | null; name: string; done:
     <span
       title={`${name || "Achievement"} — ${isDone ? "done" : "not done"}`}
       className={`inline-flex max-w-[16rem] items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-xs ${
-        isDone ? "border-accent/40 bg-accent-soft text-fg" : "border-border/60 bg-surface-2/40 text-fg-subtle"
+        isDone ? "border-ok/40 bg-ok/10 text-fg" : "border-border/60 bg-surface-2/40 text-fg-subtle"
       }`}
     >
       {isDone ? (
-        <Check className="h-3 w-3 shrink-0 text-accent" />
+        <Check className="h-3 w-3 shrink-0 text-ok" />
       ) : (
         <Minus className="h-3 w-3 shrink-0 text-fg-subtle/60" />
       )}
