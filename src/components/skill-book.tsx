@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Badge, Card, SectionTitle } from "@/components/ui";
@@ -85,10 +86,30 @@ function TooltipBody({
 }
 
 function AbilityCard({ ability, lastSeen }: { ability: AbilityView; lastSeen: number | null }) {
+  const ref = useRef<HTMLElement>(null);
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  function show() {
+    const box = ref.current?.getBoundingClientRect();
+    if (box) {
+      const width = 320;
+      const left = Math.min(box.left, Math.max(8, window.innerWidth - width - 8));
+      const top = box.bottom + 8;
+      setPos({ top, left });
+    }
+    setOpen(true);
+  }
+
   return (
     <article
+      ref={ref}
       tabIndex={0}
-      className={`group relative rounded-lg border p-3 outline-none focus-visible:border-accent ${
+      onMouseEnter={show}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={show}
+      onBlur={() => setOpen(false)}
+      className={`relative rounded-lg border p-3 outline-none focus-visible:border-accent ${
         ability.purchased ? "border-border bg-surface-2/50" : "border-border/60"
       }`}
     >
@@ -140,9 +161,17 @@ function AbilityCard({ ability, lastSeen }: { ability: AbilityView; lastSeen: nu
           )}
         </div>
       </div>
-      <div className="pointer-events-none invisible absolute left-0 top-full z-50 mt-2 group-hover:visible group-focus-within:visible">
-        <TooltipBody ability={ability} lastSeen={lastSeen} />
-      </div>
+      {open &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[80]"
+            style={{ top: pos.top, left: pos.left }}
+            role="tooltip"
+          >
+            <TooltipBody ability={ability} lastSeen={lastSeen} />
+          </div>,
+          document.body,
+        )}
     </article>
   );
 }
