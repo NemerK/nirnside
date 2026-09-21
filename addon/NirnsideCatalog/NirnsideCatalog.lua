@@ -100,29 +100,66 @@ local function gatherSkills()
           lines[#lines + 1] = line
           local numAbilities = GetNumSkillAbilities(skillType, lineIndex)
           for a = 1, numAbilities do
-            local aName, _, _, passive = GetSkillAbilityInfo(skillType, lineIndex, a)
+            if IsCraftedAbilitySkill and IsCraftedAbilitySkill(skillType, lineIndex, a) then
+              -- skip: GetSkillAbilityInfo can error on scribing skills
+            else
+            local aName, texture, _, passive = GetSkillAbilityInfo(skillType, lineIndex, a)
             aName = zo_strformat("<<1>>", aName)
             if aName and aName ~= "" then
               local abilityId = safe(function()
                 return GetSkillAbilityId(skillType, lineIndex, a, false)
               end, nil)
               local icon = safe(function()
-                return abilityId and normIcon(GetAbilityIcon(abilityId)) or nil
+                return (abilityId and GetAbilityIcon and normIcon(GetAbilityIcon(abilityId)))
+                  or normIcon(texture)
               end, nil)
               -- First active ability's icon represents the line in the list view.
               if icon and not line.icon and not passive then line.icon = icon end
+              local morphs = {}
+              safe(function()
+                if passive or not GetProgressionSkillProgressionId then return end
+                local progressionId = GetProgressionSkillProgressionId(skillType, lineIndex, a)
+                if not progressionId or progressionId == 0 then return end
+                local baseSlot = MORPH_SLOT_BASE or 0
+                local baseId = GetProgressionSkillMorphSlotAbilityId
+                  and GetProgressionSkillMorphSlotAbilityId(progressionId, baseSlot)
+                if baseId and baseId > 0 then
+                  local baseName = zo_strformat("<<1>>", GetAbilityName(baseId))
+                  if baseName ~= "" then aName = baseName end
+                  abilityId = baseId
+                  if GetAbilityIcon then icon = normIcon(GetAbilityIcon(baseId)) or icon end
+                end
+                local beginSlot = MORPH_SLOT_MORPH_1 or 1
+                local endSlot = MORPH_SLOT_ITERATION_END or MORPH_SLOT_MORPH_2 or 2
+                for slot = beginSlot, endSlot do
+                  local morphId = GetProgressionSkillMorphSlotAbilityId
+                    and GetProgressionSkillMorphSlotAbilityId(progressionId, slot)
+                  if morphId and morphId > 0 then
+                    morphs[#morphs + 1] = {
+                      name = zo_strformat("<<1>>", GetAbilityName(morphId)),
+                      abilityId = morphId,
+                      isMorph = true,
+                      icon = GetAbilityIcon and normIcon(GetAbilityIcon(morphId)) or nil,
+                      description = GetAbilityDescription
+                        and zo_strformat("<<1>>", GetAbilityDescription(morphId))
+                        or "",
+                    }
+                  end
+                end
+              end)
               skills[#skills + 1] = {
                 id = "sk-" .. slug(aName),
                 name = aName,
                 lineId = lineId,
                 type = passive and "passive" or "active",
                 description = safe(function()
-                  return abilityId and zo_strformat("<<1>>", GetAbilityDescription(abilityId)) or ""
+                  return abilityId and GetAbilityDescription and zo_strformat("<<1>>", GetAbilityDescription(abilityId)) or ""
                 end, ""),
                 icon = icon,
-                morphs = {},
+                morphs = morphs,
                 source = "ingame",
               }
+            end
             end
           end
         end

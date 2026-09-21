@@ -14,11 +14,12 @@ import {
 } from "lucide-react";
 import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { getRole, listAssignments, listRoles } from "@/lib/db/roles";
-import { getSkillLineByName, setHref } from "@/lib/db/catalog-queries";
+import { getSkillLineByName, setHref, catalogAbilityLore } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
+import { presentSkillBook } from "@/lib/skills/present";
 import { Badge, Card, SectionTitle } from "@/components/ui";
-import { AbilityList } from "@/components/ability-list";
+import { SkillBook } from "@/components/skill-book";
 import { RolePicker } from "@/components/role-picker";
 import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 
@@ -65,6 +66,13 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   const front = c.equipped.filter((e) => e.bar === "front");
   const back = c.equipped.filter((e) => e.bar === "back");
   const armorJewelry = c.equipped.filter((e) => e.bar === null);
+  let lore = new Map() as ReturnType<typeof catalogAbilityLore>;
+  try {
+    lore = catalogAbilityLore();
+  } catch {
+    lore = new Map();
+  }
+  const skillBook = presentSkillBook(c.skillLines, lore, skillLineHref);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -203,39 +211,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               </div>
             )}
           </section>
-
-          {/* Skill lines */}
-          <section>
-            <SectionTitle>Skill Lines</SectionTitle>
-            {c.skillLines.length === 0 ? (
-              <Card className="px-4 py-6 text-sm text-fg-muted">No skills captured yet.</Card>
-            ) : (
-              <div className="space-y-3">
-                {c.skillLines.map((line, i) => {
-                  const href = skillLineHref(line.name);
-                  return (
-                  <Card key={i} className="p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        {href ? (
-                          <Link href={href} className="font-medium text-fg hover:text-accent hover:underline">
-                            {line.name}
-                          </Link>
-                        ) : (
-                          <span className="font-medium text-fg">{line.name}</span>
-                        )}
-                        <Badge tone="muted">{line.category}</Badge>
-                        {line.subclassed && <Badge tone="accent">Subclassed</Badge>}
-                      </div>
-                      <span className="text-xs text-fg-subtle">Rank {line.rank}</span>
-                    </div>
-                    <AbilityList abilities={line.abilities} />
-                  </Card>
-                  );
-                })}
-              </div>
-            )}
-          </section>
         </div>
 
         <div className="space-y-6">
@@ -340,6 +315,10 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             </section>
           )}
         </div>
+      </div>
+
+      <div className="mt-6">
+        <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
       </div>
     </div>
   );

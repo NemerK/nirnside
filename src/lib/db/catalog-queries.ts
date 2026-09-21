@@ -87,12 +87,33 @@ export function setHref(opts: { name?: string | null; setId?: number | null }): 
   return `/encyclopedia/sets?search=${encodeURIComponent(opts.name ?? "")}`;
 }
 
+export const getSkills = (f?: Filters) => query<CatalogSkill>("skill", f);
 export const getSkillLines = (f?: Filters) => query<CatalogSkillLine>("skillline", f);
 export const getSkillLine = (id: string) => one<CatalogSkillLine>("skillline", id);
 export const getSkillLineByName = (name: string) => byName<CatalogSkillLine>("skillline", name);
 export const skillLineCategories = () => categories("skillline");
 export const getSkillsForLine = (lineId: string) => query<CatalogSkill>("skill", { category: lineId });
 export const getSkillByName = (name: string) => byName<CatalogSkill>("skill", name);
+
+/** Name → icon/description from the encyclopedia (base + morph names). */
+export function catalogAbilityLore(): Map<
+  string,
+  { icon: string | null; description: string; source: CatalogSource }
+> {
+  const map = new Map<string, { icon: string | null; description: string; source: CatalogSource }>();
+  for (const { entry, source } of getSkills()) {
+    const baseIcon = entry.icon ?? null;
+    map.set(entry.name.toLowerCase(), { icon: baseIcon, description: entry.description, source });
+    for (const m of entry.morphs) {
+      map.set(m.name.toLowerCase(), {
+        icon: m.icon ?? baseIcon,
+        description: m.description || entry.description,
+        source,
+      });
+    }
+  }
+  return map;
+}
 
 export const getCPStars = (f?: Filters) => query<CatalogCPStar>("cp", f);
 export const getCPStarByName = (name: string) => byName<CatalogCPStar>("cp", name);

@@ -1,8 +1,8 @@
 ## Title: Nirnside Snapshot
 ## Author: Nirnside
-## Version: 0.9.3
+## Version: 0.9.4
 ## APIVersion: 101046
-## AddOnVersion: 5
+## AddOnVersion: 6
 ## SavedVariables: NirnsideData
 ## Description: Writes your ESO account/character data to disk on logout, ReloadUI, or a manual /nirnside / keybind. Never on zone or instance changes. Never during combat. Never uploads anything.
 

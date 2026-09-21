@@ -32,6 +32,26 @@ local function safe(fn, fallback)
   return fallback
 end
 
+-- In-game .dds path as ESO returns it (e.g. /esoui/art/icons/ability_x.dds).
+local function normIcon(path)
+  if not path or path == "" then return nil end
+  path = tostring(path):gsub("\\", "/")
+  if path == "" then return nil end
+  return path
+end
+
+local function abilityDescription(abilityId)
+  if not abilityId or abilityId == 0 or not GetAbilityDescription then return nil end
+  local desc = GetAbilityDescription(abilityId)
+  if not desc or desc == "" then return nil end
+  return zo_strformat("<<1>>", desc)
+end
+
+local function abilityIcon(abilityId)
+  if not abilityId or abilityId == 0 or not GetAbilityIcon then return nil end
+  return normIcon(GetAbilityIcon(abilityId))
+end
+
 ----------------------------------------------------------------------
 -- Value mappers
 ----------------------------------------------------------------------
@@ -246,7 +266,7 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     return nil
   end
 
-  local aName, _, _, passive, _, purchased, _, currentRank =
+  local aName, texture, _, passive, _, purchased, _, currentRank =
     GetSkillAbilityInfo(skillType, lineIndex, skillIndex)
   aName = zo_strformat("<<1>>", aName)
   if not aName or aName == "" then return nil end
@@ -258,6 +278,7 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     purchased = purchased == true,
     skillStyle = nil,
     passive = passive == true,
+    icon = normIcon(texture),
     morphs = {},
   }
 
@@ -265,6 +286,9 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     local cur, maxUpgrade = GetSkillAbilityUpgradeInfo(skillType, lineIndex, skillIndex)
     if cur ~= nil then entry.rank = cur end
     if maxUpgrade ~= nil then entry.maxRank = maxUpgrade end
+    local abilityId = GetSkillAbilityId and GetSkillAbilityId(skillType, lineIndex, skillIndex, false)
+    entry.icon = abilityIcon(abilityId) or entry.icon
+    entry.description = abilityDescription(abilityId)
     return entry
   end
 
@@ -310,6 +334,8 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
         name = (slotName ~= "" and slotName) or aName,
         abilityId = abilityId,
         purchased = slotRank ~= nil,
+        icon = abilityIcon(abilityId),
+        description = abilityDescription(abilityId),
       }
       if slotRank ~= nil then row.rank = slotRank end
       -- XP toward the next rank, only if the game reports extents. Never guess.
@@ -330,6 +356,8 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
         entry.name = morph.name
         if morph.rank ~= nil then entry.rank = morph.rank end
         entry.abilityId = morph.abilityId
+        if morph.icon then entry.icon = morph.icon end
+        if morph.description then entry.description = morph.description end
       end
     end
   end

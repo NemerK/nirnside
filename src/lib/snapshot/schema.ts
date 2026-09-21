@@ -101,6 +101,10 @@ export const MorphSlot = z.object({
   abilityId: z.number().int().nonnegative().optional(),
   rank: z.number().int().nullable().optional().default(null),
   purchased: z.boolean().default(false),
+  /** In-game .dds icon path (GetAbilityIcon). */
+  icon: z.string().nullable().optional(),
+  /** In-game tooltip text for this slot (GetAbilityDescription). */
+  description: z.string().optional(),
   /** XP into the current rank, as the game reports it. Omitted if unavailable. */
   xp: z.number().int().nonnegative().optional(),
   xpMin: z.number().int().nonnegative().optional(),
@@ -117,6 +121,10 @@ export const SkillMorph = z.object({
   purchased: z.boolean().default(false),
   /** Applied skill style / skill styling collectible name, if any. */
   skillStyle: z.string().nullable().default(null),
+  /** In-game .dds icon path for the currently shown morph/base. */
+  icon: z.string().nullable().optional(),
+  /** In-game tooltip text for the currently shown morph/base. */
+  description: z.string().optional(),
   /** Passive abilities have upgrade ranks, not morphs. */
   passive: z.boolean().default(false),
   /** Passive upgrade cap (e.g. 2). Omitted when unknown or not a passive. */

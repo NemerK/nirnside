@@ -44,6 +44,7 @@ export const CatalogMorph = z.object({
   name: z.string(),
   abilityId: z.number().int().nonnegative().nullable().default(null),
   description: z.string().default(""),
+  icon: z.string().nullable().default(null),
   /** true = a morph of a base ability; false = the base skill. */
   isMorph: z.boolean().default(false),
 });
