@@ -8,6 +8,7 @@ import {
   slotLabel,
   xpProgress,
 } from "./ability";
+import { resolveSkillIcon, skillIconByName } from "../icons/skill-icons";
 
 export type LoreHit = {
   icon: string | null;
@@ -104,6 +105,7 @@ export function presentAbility(ability: SkillMorph, lore: LoreIndex): AbilityVie
   const slots = ability.morphs ?? [];
   const currentSlot = slots.find((s) => s.slot === face.morphSlot);
   const anySlotIcon = slots.find((s) => s.icon && s.icon.trim())?.icon;
+  const morphNames = slots.map((s) => s.name);
   const merged = mergeLore(
     {
       icon: currentSlot?.icon ?? ability.icon ?? anySlotIcon,
@@ -111,6 +113,9 @@ export function presentAbility(ability: SkillMorph, lore: LoreIndex): AbilityVie
     },
     faceHit,
   );
+  // Last resort: the bundled community name→icon map. Never overrides a real
+  // snapshot or catalog icon, so in-game data still wins.
+  const icon = merged.icon ?? resolveSkillIcon(face.name, [...morphNames, ability.name]);
 
   const morphs: AbilitySlotView[] = (ability.morphs ?? []).map((slot) => presentSlot(slot, face.morphSlot, known, lore));
 
@@ -122,7 +127,7 @@ export function presentAbility(ability: SkillMorph, lore: LoreIndex): AbilityVie
     skillStyle: ability.skillStyle,
     rank: ability.rank,
     maxRank: ability.maxRank ?? null,
-    icon: merged.icon,
+    icon,
     description: merged.description,
     descriptionSource: merged.source,
     morphs,
@@ -132,6 +137,7 @@ export function presentAbility(ability: SkillMorph, lore: LoreIndex): AbilityVie
 function presentSlot(slot: MorphSlot, currentSlot: number | null, abilityKnown: boolean, lore: LoreIndex): AbilitySlotView {
   const hit = lore.get(loreKey(slot.name));
   const merged = mergeLore({ icon: slot.icon, description: slot.description }, hit);
+  const icon = merged.icon ?? skillIconByName(slot.name);
   return {
     slot: slot.slot,
     label: slotLabel(slot.slot),
@@ -140,7 +146,7 @@ function presentSlot(slot: MorphSlot, currentSlot: number | null, abilityKnown: 
     rank: morphSlotPurchased(slot) ? (slot.rank ?? null) : null,
     rankLabel: romanRank(morphSlotPurchased(slot) ? slot.rank : null),
     current: abilityKnown && currentSlot === slot.slot,
-    icon: merged.icon,
+    icon,
     description: merged.description,
     xp: morphSlotPurchased(slot) ? xpProgress(slot) : null,
   };
