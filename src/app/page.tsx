@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { Backpack, BookMarked, Library, Trophy, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
-import { listAssignments, listRoles } from "@/lib/db/roles";
-import { rolesForCharacter } from "@/lib/roles/filter";
+import { listGoals, skillLineChoices } from "@/lib/db/goals";
+import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { candidatePaths } from "@/lib/snapshot/locate";
-import { Card, PageHeader, Stat, TileLink, EmptyState, Badge } from "@/components/ui";
-import { CharacterCard } from "@/components/character-card";
+import { Card, PageHeader, Stat, EmptyState, Badge } from "@/components/ui";
 import { DataSourceBanner } from "@/components/data-source-banner";
 import { LoadDemoButton } from "@/components/demo-controls";
+import { GoalsBoard } from "@/components/goals-board";
+import { toGoalSubject } from "@/lib/goals/progress";
+import type { Goal } from "@/lib/goals/types";
 import { formatDateTime, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -23,8 +25,8 @@ export default function HomePage() {
   const itemCount = safe(() => getItemCount()) ?? 0;
   const sticker = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
   const stickerPct = sticker.total ? Math.round((sticker.collected / sticker.total) * 100) : 0;
-  const roles = safe(() => listRoles()) ?? [];
-  const assignments = safe(() => listAssignments()) ?? {};
+  const goals = safe(() => listGoals()) ?? [];
+  const lines = safe(() => skillLineChoices()) ?? [];
   // Champion Points are account-wide, so show one number for the whole account.
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
 
@@ -40,68 +42,29 @@ export default function HomePage() {
       <DataSourceBanner source={dataSource} setup={autoSetup} />
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Characters" value={characters.length} />
+        <Link href="/characters" className="block rounded-xl transition-colors hover:brightness-110">
+          <Stat
+            label="Characters"
+            value={characters.length}
+            hint={archived.length > 0 ? `${archived.length} archived` : undefined}
+          />
+        </Link>
         <Stat label="Champion Points" value={accountCP.toLocaleString("en-US")} hint="account-wide" />
-        <Stat label="Items tracked" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
-        <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
+        <Link href="/inventory" className="block rounded-xl transition-colors hover:brightness-110">
+          <Stat label="Items tracked" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
+        </Link>
+        <Link href="/stickerbook" className="block rounded-xl transition-colors hover:brightness-110">
+          <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
+        </Link>
       </div>
 
-      <section className="mb-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-fg-subtle">Characters</h2>
-          <Link href="/characters" className="text-sm text-accent hover:underline">
-            {archived.length > 0
-              ? `View all · ${archived.length} archived`
-              : "View all"}
-          </Link>
-        </div>
-        {characters.length === 0 ? (
-          <Card className="px-5 py-8 text-center text-sm text-fg-muted">
-            No characters captured yet. Log a character out (or ReloadUI) with the addon installed.
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {characters.map((c) => (
-              <CharacterCard
-                key={c.id}
-                character={c}
-                assigned={rolesForCharacter(c.id, roles, assignments)}
-                roles={roles}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-fg-subtle">Jump in</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <TileLink
-            href="/inventory"
-            title="Inventory"
-            description="Bags, bank, and currencies."
-            icon={<Backpack className="h-5 w-5" />}
-          />
-          <TileLink
-            href="/stickerbook"
-            title="Stickerbook"
-            description="What you've collected and what's missing."
-            icon={<BookMarked className="h-5 w-5" />}
-          />
-          <TileLink
-            href="/achievements"
-            title="Achievements"
-            description="Trial, arena & dungeon completion board."
-            icon={<Trophy className="h-5 w-5" />}
-          />
-          <TileLink
-            href="/encyclopedia"
-            title="Encyclopedia"
-            description="Live Tamriel data: sets, skills, CP, scribing."
-            icon={<Library className="h-5 w-5" />}
-          />
-        </div>
-      </section>
+      <GoalsBoard
+        goals={goals}
+        live={characters.map(toGoalSubject)}
+        roster={[...characters, ...archived].map(toGoalSubject)}
+        lines={lines}
+        hrefForLine={lineHrefs(goals)}
+      />
 
       {account.guilds?.length > 0 && (
         <section className="mt-8">
@@ -119,6 +82,21 @@ export default function HomePage() {
       )}
     </div>
   );
+}
+
+function lineHrefs(goals: Goal[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const g of goals) {
+    const key = g.lineName.toLowerCase();
+    if (out[key]) continue;
+    try {
+      const row = getSkillLineByName(g.lineName);
+      if (row) out[key] = `/encyclopedia/skills/${encodeURIComponent(row.entry.id)}`;
+    } catch {
+      // catalog missing this line
+    }
+  }
+  return out;
 }
 
 function Onboarding({

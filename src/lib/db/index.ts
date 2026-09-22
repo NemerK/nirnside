@@ -139,6 +139,19 @@ function migrate(db: Database.Database) {
       PRIMARY KEY (characterId, roleId),
       FOREIGN KEY (roleId) REFERENCES roles(id) ON DELETE CASCADE
     );
+
+    -- Player-authored skill-line rank targets. Not game data; keyed so a
+    -- snapshot re-import cannot wipe them. scope=account applies to every
+    -- live character; scope=character is one toon.
+    CREATE TABLE IF NOT EXISTS goals (
+      id            TEXT PRIMARY KEY,
+      scope         TEXT NOT NULL,
+      characterId   TEXT,
+      lineName      TEXT NOT NULL,
+      targetRank    INTEGER NOT NULL,
+      note          TEXT NOT NULL DEFAULT '',
+      createdAt     INTEGER NOT NULL
+    );
   `);
   migrateCharacterRolesToMany(db);
 }

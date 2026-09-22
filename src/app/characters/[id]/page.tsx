@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
+import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName, setHref, catalogAbilityLore } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
@@ -22,6 +23,8 @@ import { presentSkillBook } from "@/lib/skills/present";
 import { Badge, Card, SectionTitle } from "@/components/ui";
 import { SkillBook } from "@/components/skill-book";
 import { RolePicker } from "@/components/role-picker";
+import { CharacterGoals } from "@/components/goals-board";
+import { toGoalSubject } from "@/lib/goals/progress";
 import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 
 function skillLineHref(name: string): string | null {
@@ -73,6 +76,15 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     lore = new Map();
   }
   const skillBook = presentSkillBook(c.skillLines, lore, skillLineHref);
+  const goals = safeList(() => listGoals());
+  const lines = safeList(() => skillLineChoices());
+  const hrefForLine: Record<string, string> = {};
+  for (const g of goals) {
+    const key = g.lineName.toLowerCase();
+    if (hrefForLine[key]) continue;
+    const dest = skillLineHref(g.lineName);
+    if (dest) hrefForLine[key] = dest;
+  }
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -162,6 +174,8 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           Snapshot taken {formatDateTime(c.lastSeen)} · {timeAgo(c.lastSeen)}
         </p>
       )}
+
+      <CharacterGoals goals={goals} subject={toGoalSubject(c)} lines={lines} hrefForLine={hrefForLine} />
 
       {archived && (
         <section className="mb-6">
@@ -362,4 +376,12 @@ function GearGroup({
       </ul>
     </Card>
   );
+}
+
+function safeList<T>(fn: () => T[]): T[] {
+  try {
+    return fn();
+  } catch {
+    return [];
+  }
 }
