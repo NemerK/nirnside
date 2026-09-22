@@ -115,10 +115,9 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
     sub ?? parent ?? "All Sets";
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      {/* Category tree stays on screen while the set list scrolls */}
-      <aside className="bg-bg/90 lg:sticky lg:top-0 lg:w-64 lg:shrink-0 lg:self-start">
-        <div className="max-h-[40vh] overflow-y-auto pr-1 lg:max-h-[calc(100dvh-8rem)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+      {/* Category tree has its own scroll; it never overlays the set cards. */}
+      <aside className="max-h-[36vh] shrink-0 overflow-y-auto bg-bg pr-1 lg:max-h-none lg:min-h-0 lg:w-64 lg:self-stretch">
           <button
             onClick={selectAll}
             className={`mb-1 flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
@@ -199,12 +198,11 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
               </div>
             );
           })}
-        </div>
       </aside>
 
-      {/* Sets */}
-      <div className="min-w-0 flex-1">
-        <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-2 bg-bg/90 py-3 backdrop-blur-md">
+      {/* Sets — search stays put; only the card list scrolls. */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 bg-bg pb-3">
           <div className="relative min-w-[200px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
             <input
@@ -229,24 +227,26 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
           </div>
         </div>
 
-        <div className="mb-3 flex items-center gap-2 text-sm">
+        <div className="mb-3 flex shrink-0 items-center gap-2 text-sm">
           <span className="font-medium text-fg">{heading}</span>
           <span className="text-fg-subtle">
             · {filtered.length} {filtered.length === 1 ? "set" : "sets"}
           </span>
         </div>
 
-        {filtered.length === 0 ? (
-          <div className="rounded-xl border border-border bg-surface/70 px-6 py-12 text-center text-sm text-fg-muted">
-            No sets match these filters.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {filtered.map((s) => (
-              <SetCard key={s.setId} set={s} />
-            ))}
-          </div>
-        )}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="rounded-xl border border-border bg-surface/70 px-6 py-12 text-center text-sm text-fg-muted">
+              No sets match these filters.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {filtered.map((s) => (
+                <SetCard key={s.setId} set={s} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

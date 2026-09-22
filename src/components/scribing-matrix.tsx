@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, Feather } from "lucide-react";
+import { PageScroll, StickyMenu } from "@/components/ui";
 
 export interface ScriptLite {
   id: string;
@@ -58,8 +59,8 @@ export function ScribingMatrix({
   const selA = grim.affix.find((x) => x.id === affix);
 
   return (
-    <div>
-      <div className="sticky top-0 z-20 mb-4 flex flex-wrap items-center gap-2 bg-bg/90 py-3 backdrop-blur-md">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <StickyMenu className="flex flex-wrap items-center gap-2">
         <select
           value={grimId}
           onChange={(e) => {
@@ -85,8 +86,9 @@ export function ScribingMatrix({
         >
           Craftable by you
         </button>
-      </div>
+      </StickyMenu>
 
+      <PageScroll>
       <div className="mb-5 rounded-xl border border-border bg-surface/70 p-4">
         <div className="flex items-center gap-2 text-fg">
           <Feather className="h-4 w-4 text-accent" />
@@ -147,6 +149,7 @@ export function ScribingMatrix({
           </tbody>
         </table>
       </div>
+      </PageScroll>
     </div>
   );
 }

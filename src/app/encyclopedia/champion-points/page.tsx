@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { getCPStars } from "@/lib/db/catalog-queries";
 import { getCharacters } from "@/lib/db/queries";
 import { getCatalogMeta } from "@/lib/catalog/import";
-import { PageHeader } from "@/components/ui";
+import { PageFrame, PageHeader } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { CatalogScanCallout } from "@/components/catalog-scan-callout";
 import { CPView, type CPDiscipline, type CPCharacterAlloc } from "@/components/cp-view";
@@ -39,8 +39,8 @@ export default function ChampionPointsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <Link href="/encyclopedia" className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg">
+    <PageFrame>
+      <Link href="/encyclopedia" className="mb-4 inline-flex shrink-0 items-center gap-1.5 text-sm text-fg-muted hover:text-fg">
         <ArrowLeft className="h-4 w-4" /> Encyclopedia
       </Link>
       <PageHeader
@@ -50,7 +50,7 @@ export default function ChampionPointsPage() {
       />
       <CatalogScanCallout source={meta?.source as CatalogSource | undefined} />
       <CPView disciplines={disciplines} characters={characters} />
-    </div>
+    </PageFrame>
   );
 }
 

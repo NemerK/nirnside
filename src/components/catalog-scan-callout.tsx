@@ -10,7 +10,7 @@ import type { CatalogSource } from "@/lib/catalog/schema";
 export function CatalogScanCallout({ source }: { source: CatalogSource | undefined }) {
   if (source === "ingame") return null;
   return (
-    <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+    <div className="mb-6 flex shrink-0 items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
       <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-500 dark:text-amber-400">
         <ScanLine className="h-5 w-5" />
       </span>

@@ -2,7 +2,7 @@ import { BookMarked } from "lucide-react";
 import { getStickerbook, getStickerbookStats } from "@/lib/db/queries";
 import { setHref } from "@/lib/db/catalog-queries";
 import { StickerbookGrid } from "@/components/stickerbook-grid";
-import { EmptyState, PageHeader, Stat } from "@/components/ui";
+import { EmptyState, PageFrame, PageHeader, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export default function StickerbookPage() {
   const completeSets = sets.filter((s) => s.total > 0 && s.collected === s.total).length;
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageFrame>
       <PageHeader
         title="Stickerbook"
         subtitle="Your item set collection — what you've reconstructed and what's still missing."
@@ -33,7 +33,7 @@ export default function StickerbookPage() {
         </EmptyState>
       ) : (
         <>
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Overall" value={`${pct}%`} hint={`${stats.collected}/${stats.total} pieces`} />
             <Stat label="Sets tracked" value={stats.sets} />
             <Stat label="Complete sets" value={completeSets} />
@@ -44,6 +44,6 @@ export default function StickerbookPage() {
           />
         </>
       )}
-    </div>
+    </PageFrame>
   );
 }

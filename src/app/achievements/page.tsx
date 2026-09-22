@@ -1,6 +1,6 @@
 import { RefreshCw, Trophy } from "lucide-react";
 import { getCompletedAchievementIds, getDataSource, hasData } from "@/lib/db/queries";
-import { PageHeader, Stat, EmptyState } from "@/components/ui";
+import { PageFrame, PageHeader, Stat, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { AchievementsBoard } from "@/components/achievements-board";
 import { PITHKA_TABS, allTrackedIds } from "@/lib/achievements/pithka";
@@ -32,7 +32,7 @@ export default function AchievementsPage() {
   const staleAddon = populated && !isSample && completed.length === 0;
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageFrame>
       <PageHeader
         title="Trial & Dungeon Achievements"
         subtitle="The Pithka tracker, out of game: every trial, dungeon and arena challenge — done or not done."
@@ -62,13 +62,13 @@ export default function AchievementsPage() {
         </div>
       ) : (
         <>
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Challenges done" value={`${earned}/${uniqueIds.length}`} />
             <Stat label="Trifectas" value={`${trifectas}/${triIds.length}`} />
             <Stat label="Trials" value={trials.length} />
             <Stat label="Dungeons" value={triDungeons.length} />
           </div>
-          <p className="mb-3 text-xs text-fg-subtle">
+          <p className="mb-3 shrink-0 text-xs text-fg-subtle">
             {isSample
               ? "Showing sample data (demo). Log in with the Snapshot addon to replace this with your real, game-verified completion."
               : "A check means done. If any of your characters earned it — including Maelstrom Arena — it stays checked for the whole account. Logging an alt will not uncheck it."}
@@ -76,7 +76,7 @@ export default function AchievementsPage() {
           <AchievementsBoard completedIds={completed} />
         </>
       )}
-    </div>
+    </PageFrame>
   );
 }
 

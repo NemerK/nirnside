@@ -6,7 +6,7 @@ import { goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryTabs } from "@/components/inventory-tabs";
 import { CurrencyTable } from "@/components/currency-table";
-import { Badge, Card, EmptyState, PageHeader, StickyMenu } from "@/components/ui";
+import { Badge, Card, EmptyState, PageFrame, PageHeader, PageScroll, StickyMenu } from "@/components/ui";
 import { locationLabel, qualityText } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
   const totalCount = items.reduce((sum, it) => sum + it.count, 0);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageFrame>
       <PageHeader
         title="Inventory"
         subtitle={
@@ -61,6 +61,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
         {view === "items" ? <InventoryFilters facets={facets} /> : null}
       </StickyMenu>
 
+      <PageScroll>
       {view === "currency" ? <CurrencyView /> : (
         <>
           {archivedOwner && (
@@ -140,7 +141,8 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
           )}
         </>
       )}
-    </div>
+      </PageScroll>
+    </PageFrame>
   );
 }
 

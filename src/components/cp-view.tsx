@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Star } from "lucide-react";
+import { PageScroll, StickyMenu } from "@/components/ui";
 
 export interface CPStarLite {
   id: string;
@@ -36,8 +37,9 @@ export function CPView({
   const [tab, setTab] = useState<"tree" | "planner">("tree");
 
   return (
-    <div>
-      <div className="sticky top-0 z-20 mb-5 inline-flex rounded-lg border border-border bg-bg/90 p-0.5 backdrop-blur-md">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <StickyMenu>
+      <div className="inline-flex rounded-lg border border-border bg-bg p-0.5">
         {(["tree", "planner"] as const).map((t) => (
           <button
             key={t}
@@ -50,12 +52,15 @@ export function CPView({
           </button>
         ))}
       </div>
+      </StickyMenu>
 
+      <PageScroll>
       {tab === "tree" ? (
         <Tree disciplines={disciplines} characters={characters} />
       ) : (
         <Planner disciplines={disciplines} characters={characters} />
       )}
+      </PageScroll>
     </div>
   );
 }

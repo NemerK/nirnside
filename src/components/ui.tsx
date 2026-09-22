@@ -15,7 +15,8 @@ export function Card({
   );
 }
 
-export function StickyMenu({
+/** Fills the app main pane so chrome can sit above a scrolling list instead of overlaying it. */
+export function PageFrame({
   children,
   className = "",
 }: {
@@ -23,23 +24,47 @@ export function StickyMenu({
   className?: string;
 }) {
   return (
-    <div className={`sticky top-0 z-20 bg-bg/90 py-3 backdrop-blur-md ${className}`}>
+    <div className={`mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden ${className}`}>
       {children}
     </div>
   );
+}
+
+/** The scrolling region under persisted menus. Content never paints through the chrome above. */
+export function PageScroll({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={`min-h-0 flex-1 overflow-y-auto ${className}`}>{children}</div>;
+}
+
+/** Solid, non-overlay page chrome (tabs, search, filters). Pair with PageFrame + PageScroll. */
+export function StickyMenu({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={`shrink-0 bg-bg pb-3 ${className}`}>{children}</div>;
 }
 
 export function PageHeader({
   title,
   subtitle,
   action,
+  className = "",
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className={`mb-6 flex shrink-0 flex-wrap items-end justify-between gap-3 ${className}`}>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-fg-muted">{subtitle}</p>}

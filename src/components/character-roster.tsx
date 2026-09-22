@@ -6,7 +6,7 @@ import type { Character } from "@/lib/snapshot/schema";
 import type { Role, RoleAssignments } from "@/lib/roles/types";
 import { filterCharacters, rolesForCharacter } from "@/lib/roles/filter";
 import { CharacterCard } from "./character-card";
-import { Badge, Card } from "./ui";
+import { Badge, Card, PageScroll, StickyMenu } from "./ui";
 
 export function CharacterRoster({
   characters,
@@ -39,8 +39,8 @@ export function CharacterRoster({
   const hasFilters = !!q.trim() || !!className || !!race || !!role;
 
   return (
-    <div>
-      <div className="sticky top-0 z-20 mb-4 flex flex-wrap items-center gap-2 bg-bg/90 py-3 backdrop-blur-md">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <StickyMenu className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
           <input
@@ -81,8 +81,9 @@ export function CharacterRoster({
             <X className="h-4 w-4" /> Clear
           </button>
         )}
-      </div>
+      </StickyMenu>
 
+      <PageScroll>
       {liveShown.length === 0 ? (
         <p className="rounded-xl border border-border bg-surface/70 px-4 py-8 text-center text-sm text-fg-muted">
           {characters.length === 0 ? "No live characters." : "No characters match those filters."}
@@ -132,6 +133,7 @@ export function CharacterRoster({
           )}
         </section>
       )}
+      </PageScroll>
     </div>
   );
 }

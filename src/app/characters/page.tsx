@@ -4,7 +4,7 @@ import { listAssignments, listRoles } from "@/lib/db/roles";
 import type { RoleAssignments } from "@/lib/roles/types";
 import { CharacterRoster } from "@/components/character-roster";
 import { RoleManagerButton } from "@/components/role-manager";
-import { Badge, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, EmptyState, PageFrame, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export default function CharactersPage() {
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageFrame>
       <PageHeader
         title="Characters"
         subtitle="The live ESO roster. Tag toons with one or more roles, then filter by name, class, race, or role."
@@ -52,6 +52,6 @@ export default function CharactersPage() {
           assignments={assignments}
         />
       )}
-    </div>
+    </PageFrame>
   );
 }

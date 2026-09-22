@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, Minus, Search, Trophy } from "lucide-react";
+import { PageScroll, StickyMenu } from "@/components/ui";
 import {
   PITHKA_TABS,
   allTrackedIds,
@@ -95,8 +96,8 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
   }, [rows, done]);
 
   return (
-    <div>
-      <div className="sticky top-0 z-20 bg-bg/90 pb-3 pt-1 backdrop-blur-md">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <StickyMenu>
       {/* Tabs — one per Pithka window. */}
       <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-border">
         {PITHKA_TABS.map((t) => (
@@ -152,9 +153,10 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
           )}
         </div>
       </div>
-      </div>
+      </StickyMenu>
 
       {/* Grid */}
+      <PageScroll>
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -200,6 +202,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
         Every instance and achievement matches the in-game Pithka tracker exactly; a green check means done, a dash means
         not yet. A blank cell means that challenge doesn&apos;t exist for that instance.
       </p>
+      </PageScroll>
     </div>
   );
 }

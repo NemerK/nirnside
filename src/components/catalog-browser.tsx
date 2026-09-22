@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { GameIcon } from "./game-icon";
 import { SourceBadge } from "./source-badge";
+import { PageScroll, StickyMenu } from "./ui";
 import type { CatalogSource } from "@/lib/catalog/schema";
 
 export interface BrowserItem {
@@ -50,8 +51,8 @@ export function CatalogBrowser({
   }, [items, search, category, ownedOnly]);
 
   return (
-    <div>
-      <div className="sticky top-0 z-20 mb-4 flex flex-wrap items-center gap-2 bg-bg/90 py-3 backdrop-blur-md">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <StickyMenu className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
           <input
@@ -87,8 +88,9 @@ export function CatalogBrowser({
             {ownedLabel} only
           </button>
         )}
-      </div>
+      </StickyMenu>
 
+      <PageScroll>
       <div className="mb-3 text-sm text-fg-muted">{filtered.length} entries</div>
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -115,6 +117,7 @@ export function CatalogBrowser({
           </Link>
         ))}
       </div>
+      </PageScroll>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { getGrimoires, getScripts } from "@/lib/db/catalog-queries";
 import { knownScriptNames } from "@/lib/db/overlay";
 import { getCatalogMeta } from "@/lib/catalog/import";
-import { PageHeader } from "@/components/ui";
+import { PageFrame, PageHeader } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { CatalogScanCallout } from "@/components/catalog-scan-callout";
 import { ScribingMatrix, type GrimoireLite, type ScriptLite } from "@/components/scribing-matrix";
@@ -32,8 +32,8 @@ export default function ScribingPage() {
   const known = Array.from(safe(() => knownScriptNames()) ?? new Set<string>());
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <Link href="/encyclopedia" className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg">
+    <PageFrame>
+      <Link href="/encyclopedia" className="mb-4 inline-flex shrink-0 items-center gap-1.5 text-sm text-fg-muted hover:text-fg">
         <ArrowLeft className="h-4 w-4" /> Encyclopedia
       </Link>
       <PageHeader
@@ -47,7 +47,7 @@ export default function ScribingPage() {
       ) : (
         <ScribingMatrix grimoires={grimoires} knownScripts={known} />
       )}
-    </div>
+    </PageFrame>
   );
 }
 

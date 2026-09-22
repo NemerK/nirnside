@@ -180,7 +180,9 @@ export function AppShell({
             </div>
           )}
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto px-5 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-6 md:px-8 md:py-8">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
+        </main>
       </div>
     </div>
   );
