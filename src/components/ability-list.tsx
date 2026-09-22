@@ -5,6 +5,7 @@ import {
   MAX_ABILITY_RANK,
   abilityIsKnown,
   displayAbility,
+  morphSlotPurchased,
   romanRank,
   slotLabel,
   xpProgress,
@@ -67,7 +68,8 @@ function AbilityRow({ ability }: { ability: SkillMorph }) {
         <ul className="mt-2 space-y-1">
           {slots.map((slot) => {
             const current = known && face.morphSlot === slot.slot;
-            const xp = slot.purchased ? xpProgress(slot) : null;
+            const owned = morphSlotPurchased(slot);
+            const xp = owned ? xpProgress(slot) : null;
             return (
               <li
                 key={slot.slot}
@@ -76,14 +78,14 @@ function AbilityRow({ ability }: { ability: SkillMorph }) {
                 }`}
               >
                 <span className="text-fg-subtle">{slotLabel(slot.slot)}</span>
-                <span className={`truncate ${slot.purchased ? "text-fg" : "text-fg-subtle"}`}>
+                <span className={`truncate ${owned ? "text-fg" : "text-fg-subtle"}`}>
                   {slot.name}
                   {current && known && (
                     <span className="ml-1.5 text-[10px] uppercase tracking-wider text-accent">slotted</span>
                   )}
                 </span>
                 <span className="flex w-16 flex-col items-end gap-0.5">
-                  <RankPips rank={slot.purchased ? slot.rank : null} />
+                  <RankPips rank={owned ? slot.rank ?? null : null} />
                   {xp && (
                     <span className="h-1 w-full overflow-hidden rounded-full bg-border">
                       <span

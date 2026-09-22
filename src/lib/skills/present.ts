@@ -3,6 +3,7 @@ import type { MorphSlot, SkillLine, SkillMorph } from "../snapshot/schema";
 import {
   abilityIsKnown,
   displayAbility,
+  morphSlotPurchased,
   romanRank,
   slotLabel,
   xpProgress,
@@ -133,13 +134,13 @@ function presentSlot(slot: MorphSlot, currentSlot: number | null, abilityKnown: 
     slot: slot.slot,
     label: slotLabel(slot.slot),
     name: slot.name,
-    purchased: slot.purchased,
-    rank: slot.purchased ? (slot.rank ?? null) : null,
-    rankLabel: romanRank(slot.purchased ? slot.rank : null),
+    purchased: morphSlotPurchased(slot),
+    rank: morphSlotPurchased(slot) ? (slot.rank ?? null) : null,
+    rankLabel: romanRank(morphSlotPurchased(slot) ? slot.rank : null),
     current: abilityKnown && currentSlot === slot.slot,
     icon: merged.icon,
     description: merged.description,
-    xp: slot.purchased ? xpProgress(slot) : null,
+    xp: morphSlotPurchased(slot) ? xpProgress(slot) : null,
   };
 }
 

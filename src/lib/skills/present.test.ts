@@ -79,4 +79,22 @@ describe("skill book presentation", () => {
     assert.equal(view.morphs[1].rankLabel, "III");
     assert.equal(view.morphs[2].current, true);
   });
+
+  it("does not present a rank-0 base as purchased", () => {
+    const ability = SkillMorph.parse({
+      name: "Swallow Soul",
+      rank: 0,
+      morph: 0,
+      purchased: true,
+      description: "|cffffffDeals |cFFCC001500|r damage.|r",
+      morphs: [
+        { slot: 0, name: "Swallow Soul", rank: 0, purchased: true, description: "|cffffffDeals |cFFCC001500|r damage.|r" },
+        { slot: 1, name: "Funnel Health", purchased: true },
+      ],
+    });
+    const view = presentAbility(ability, new Map());
+    assert.equal(view.purchased, false);
+    assert.equal(view.morphs[0].purchased, false);
+    assert.equal(view.description.includes("|c"), true);
+  });
 });

@@ -80,11 +80,12 @@ NirnsideData =
                                         ["morph"] = 2,
                                         ["purchased"] = true,
                                         ["skillStyle"] = "Order of the Hour",
+                                        ["description"] = "|cffffffA spectral arrow that deals |cFFCC00Magic Damage|r and heals you.|r",
                                         ["morphs"] =
                                         {
                                             { ["slot"] = 0, ["name"] = "Grim Focus", ["rank"] = 4, ["purchased"] = true },
                                             { ["slot"] = 1, ["name"] = "Relentless Focus", ["rank"] = 3, ["purchased"] = true, ["xp"] = 1200, ["xpMin"] = 800, ["xpMax"] = 2000 },
-                                            { ["slot"] = 2, ["name"] = "Merciless Resolve", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Merciless Resolve", ["rank"] = 4, ["purchased"] = true, ["description"] = "|cffffffA spectral arrow that deals |cFFCC00Magic Damage|r and heals you.|r" },
                                         },
                                     },
                                     {
@@ -199,9 +200,10 @@ NirnsideData =
                                         ["rank"] = 0,
                                         ["morph"] = 0,
                                         ["purchased"] = false,
+                                        ["description"] = "|cffffffSiphon health from an enemy.|r",
                                         ["morphs"] =
                                         {
-                                            { ["slot"] = 0, ["name"] = "Vampiric Drain", ["purchased"] = false },
+                                            { ["slot"] = 0, ["name"] = "Vampiric Drain", ["purchased"] = false, ["description"] = "|cffffffSiphon health from an enemy.|r" },
                                             { ["slot"] = 1, ["name"] = "Drain Vigor", ["purchased"] = false },
                                             { ["slot"] = 2, ["name"] = "Exhilarating Drain", ["purchased"] = false },
                                         },

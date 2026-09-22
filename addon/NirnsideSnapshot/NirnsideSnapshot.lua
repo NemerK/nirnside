@@ -259,23 +259,44 @@ end
 -- One ability: passives keep their upgrade rank; actives/ultimates snapshot
 -- independent ranks for base + both morphs via the live progression API.
 -- Skip crafted/scribing skills — GetSkillAbilityInfo can error on those.
--- Rank is omitted (nil) when a morph slot has never been purchased; we never
--- invent I–IV.
+-- A morph slot is purchased only when the player has XP in it (or it is the
+-- selected morph of an ability they actually bought). GetAbilityProgressionRankFromAbilityId
+-- reports the rank of the ability id itself, which exists for skills you have
+-- never spent a point on — using that as "purchased" marked every base as owned.
+-- Rank is omitted when unknown; we never invent I–IV.
+local function morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
+  if GetProgressionSkillMorphSlotCurrentXP then
+    local xp = GetProgressionSkillMorphSlotCurrentXP(progressionId, slot)
+    if type(xp) == "number" then return true end
+    -- nil XP means not purchased. A maxed selected morph can also report nil;
+    -- only then fall back to the ability-level purchase.
+    if abilityOwned and currentMorph ~= nil and slot == currentMorph then
+      return true
+    end
+    return false
+  end
+  return abilityOwned and currentMorph ~= nil and slot == currentMorph
+end
+
 local function gatherOneAbility(skillType, lineIndex, skillIndex)
   if IsCraftedAbilitySkill and IsCraftedAbilitySkill(skillType, lineIndex, skillIndex) then
     return nil
   end
 
-  local aName, texture, _, passive, _, purchased, _, currentRank =
+  local aName, texture, earnedRank, passive, _, purchased, _, currentRank =
     GetSkillAbilityInfo(skillType, lineIndex, skillIndex)
   aName = zo_strformat("<<1>>", aName)
   if not aName or aName == "" then return nil end
+
+  -- earnedRank is 0 until a skill point is spent. `purchased` alone has been
+  -- true for abilities the player has not bought.
+  local abilityOwned = purchased == true and (earnedRank or 0) >= 1
 
   local entry = {
     name = aName,
     rank = currentRank or 0,
     morph = nil,
-    purchased = purchased == true,
+    purchased = abilityOwned,
     skillStyle = nil,
     passive = passive == true,
     icon = normIcon(texture),
@@ -286,6 +307,8 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     local cur, maxUpgrade = GetSkillAbilityUpgradeInfo(skillType, lineIndex, skillIndex)
     if cur ~= nil then entry.rank = cur end
     if maxUpgrade ~= nil then entry.maxRank = maxUpgrade end
+    entry.purchased = (cur or 0) >= 1 or abilityOwned
+    if not entry.purchased then entry.rank = 0 end
     local abilityId = GetSkillAbilityId and GetSkillAbilityId(skillType, lineIndex, skillIndex, false)
     entry.icon = abilityIcon(abilityId) or entry.icon
     entry.description = abilityDescription(abilityId)
@@ -293,11 +316,13 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
   end
 
   if not GetProgressionSkillProgressionId then
+    entry.purchased = abilityOwned and (currentRank or 0) >= 1
     return entry
   end
 
   local progressionId = GetProgressionSkillProgressionId(skillType, lineIndex, skillIndex)
   if not progressionId or progressionId == 0 then
+    entry.purchased = abilityOwned and (currentRank or 0) >= 1
     return entry
   end
 
@@ -320,29 +345,33 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     return nil
   end, nil)
 
+  local anyOwned = false
   for slot = morphSlotBegin(), morphSlotEnd() do
     local morph = safe(function()
       local abilityId = GetProgressionSkillMorphSlotAbilityId
         and GetProgressionSkillMorphSlotAbilityId(progressionId, slot)
       if not abilityId or abilityId == 0 then return nil end
       local slotName = zo_strformat("<<1>>", GetAbilityName(abilityId))
-      local slotRank = GetAbilityProgressionRankFromAbilityId
-        and GetAbilityProgressionRankFromAbilityId(abilityId)
-        or nil
+      local owned = abilityOwned and morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
+      local slotRank = nil
+      if owned and GetAbilityProgressionRankFromAbilityId then
+        local r = GetAbilityProgressionRankFromAbilityId(abilityId)
+        if type(r) == "number" and r >= 1 then slotRank = r end
+      end
       local row = {
         slot = slot,
         name = (slotName ~= "" and slotName) or aName,
         abilityId = abilityId,
-        purchased = slotRank ~= nil,
+        purchased = owned == true,
         icon = abilityIcon(abilityId),
         description = abilityDescription(abilityId),
       }
       if slotRank ~= nil then row.rank = slotRank end
       -- XP toward the next rank, only if the game reports extents. Never guess.
-      if slotRank and GetProgressionSkillMorphSlotCurrentXP then
+      if owned and GetProgressionSkillMorphSlotCurrentXP then
         local xp = GetProgressionSkillMorphSlotCurrentXP(progressionId, slot)
         if type(xp) == "number" then row.xp = xp end
-        if GetProgressionSkillMorphSlotRankXPExtents then
+        if slotRank and GetProgressionSkillMorphSlotRankXPExtents then
           local startXP, endXP = GetProgressionSkillMorphSlotRankXPExtents(progressionId, slot, slotRank)
           if type(startXP) == "number" then row.xpMin = startXP end
           if type(endXP) == "number" then row.xpMax = endXP end
@@ -352,7 +381,8 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     end, nil)
     if morph then
       entry.morphs[#entry.morphs + 1] = morph
-      if currentMorph ~= nil and slot == currentMorph then
+      if morph.purchased then anyOwned = true end
+      if currentMorph ~= nil and slot == currentMorph and morph.purchased then
         entry.name = morph.name
         if morph.rank ~= nil then entry.rank = morph.rank end
         entry.abilityId = morph.abilityId
@@ -361,6 +391,9 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
       end
     end
   end
+
+  entry.purchased = anyOwned
+  if not anyOwned then entry.rank = 0 end
 
   return entry
 end

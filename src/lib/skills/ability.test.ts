@@ -103,6 +103,27 @@ describe("ability display", () => {
     assert.deepEqual(knownAbilityNames(ability), []);
   });
 
+  it("does not treat a rank-0 base flag as a purchased skill", () => {
+    const ability = SkillMorph.parse({
+      name: "Swallow Soul",
+      rank: 0,
+      morph: 0,
+      purchased: true,
+      morphs: [
+        { slot: 0, name: "Swallow Soul", rank: 0, purchased: true },
+        { slot: 1, name: "Funnel Health", purchased: true },
+        { slot: 2, name: "Swallow Soul", rank: 0, purchased: true },
+      ],
+    });
+    assert.equal(abilityIsKnown(ability), false);
+    assert.deepEqual(displayAbility(ability), {
+      name: "Swallow Soul",
+      morphSlot: 0,
+      showingMorph: false,
+    });
+    assert.deepEqual(knownAbilityNames(ability), []);
+  });
+
   it("formats ranks without inventing numbers", () => {
     assert.equal(romanRank(1), "I");
     assert.equal(romanRank(3), "III");
