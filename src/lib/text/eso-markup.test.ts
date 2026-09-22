@@ -12,12 +12,16 @@ describe("ESO tooltip markup", () => {
     ]);
   });
 
-  it("strips icon tags and keeps link text", () => {
+  it("keeps tooltip texture icons and link text", () => {
     const runs = parseEsoMarkup(
       "Applies |t32:32:/esoui/art/icons/ability_buff_minor_fracture.dds|t Minor Fracture via |H1:item:1|hMinor Fracture|h.",
     );
     assert.equal(runs.map((r) => r.text).join(""), "Applies  Minor Fracture via Minor Fracture.");
-    assert.equal(runs.every((r) => r.color == null), true);
+    assert.deepEqual(runs.find((r) => r.icon)?.icon, {
+      path: "/esoui/art/icons/ability_buff_minor_fracture.dds",
+      width: 32,
+      height: 32,
+    });
   });
 
   it("keeps unresolved value tokens instead of inventing a number", () => {

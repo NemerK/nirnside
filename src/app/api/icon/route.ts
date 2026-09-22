@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { iconContentType, iconFetchUrls, type IconBytes } from "@/lib/icons/sources";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,8 +13,10 @@ export const dynamic = "force-dynamic";
  * ESO exposes icons as in-game .dds texture paths (e.g.
  * "/esoui/art/icons/gear_breton_heavy_helmet_a.dds"). We never extract or bundle
  * the game's art. Instead this route — running on the user's own machine —
- * fetches the PNG version from a public icon mirror, caches it to disk, and
- * serves it locally. This is strictly better than hotlinking from the browser:
+ * fetches the PNG from a public icon mirror, caches it to disk, and
+ * serves it locally. UESP is tried first; if that host challenges the request,
+ * the same filename is loaded from Warcraft Logs and ESO-Hub. This is strictly
+ * better than hotlinking from the browser:
  *
  *   - It sets a proper User-Agent/Referer, which sidesteps hotlink protection
  *     that silently blocks some cross-origin <img> loads.
@@ -48,31 +51,32 @@ function normalizePath(raw: string): string | null {
   return p;
 }
 
-function pngHeaders(): HeadersInit {
+function imageHeaders(contentType: string): HeadersInit {
   return {
-    "Content-Type": "image/png",
+    "Content-Type": contentType,
     // Immutable per URL — icon art for a given path never changes.
     "Cache-Control": "public, max-age=31536000, immutable",
   };
 }
 
-async function fetchUpstream(path: string): Promise<Buffer | null> {
-  for (const base of UPSTREAMS) {
+async function fetchUpstream(path: string): Promise<IconBytes | null> {
+  for (const url of iconFetchUrls(path, UPSTREAMS)) {
     try {
-      const res = await fetch(`${base}/${path}`, {
+      const res = await fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Nirnside local icon cache)",
-          Referer: "https://en.uesp.net/",
-          Accept: "image/png,image/*;q=0.9,*/*;q=0.5",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+          Accept: "image/png,image/webp,image/*;q=0.9,*/*;q=0.5",
         },
         cache: "no-store",
       });
       if (!res.ok) continue;
-      const ct = res.headers.get("content-type") || "";
-      const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.length > 0 && (ct.startsWith("image/") || buf.length > 64)) return buf;
+      const body = Buffer.from(await res.arrayBuffer());
+      const contentType = iconContentType(body);
+      if (!contentType) continue;
+      return { body, contentType };
     } catch {
-      // Try the next upstream.
+      // Try the next mirror.
     }
   }
   return null;
@@ -86,20 +90,22 @@ export async function GET(req: Request) {
 
   try {
     if (existsSync(file)) {
-      return new Response(new Uint8Array(await readFile(file)), { headers: pngHeaders() });
+      const cached = await readFile(file);
+      const contentType = iconContentType(cached);
+      if (contentType) return new Response(new Uint8Array(cached), { headers: imageHeaders(contentType) });
     }
   } catch {
     // Fall through to a fresh fetch.
   }
 
-  const buf = await fetchUpstream(path);
-  if (!buf) return new Response("icon not found", { status: 404 });
+  const image = await fetchUpstream(path);
+  if (!image) return new Response("icon not found", { status: 404 });
 
   try {
     await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(file, buf);
+    await writeFile(file, image.body);
   } catch {
     // Serving still works even if the cache write fails.
   }
-  return new Response(new Uint8Array(buf), { headers: pngHeaders() });
+  return new Response(new Uint8Array(image.body), { headers: imageHeaders(image.contentType) });
 }

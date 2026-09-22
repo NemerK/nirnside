@@ -1,4 +1,22 @@
-export type EsoRun = { text: string; color: string | null };
+export type EsoIcon = { path: string; width: number; height: number };
+
+export type EsoRun = { text: string; color: string | null; icon?: EsoIcon };
+
+/** `|tW:H:/esoui/...dds|t` — path is the field that looks like a texture. */
+function textureTag(inner: string): EsoIcon | null {
+  const parts = inner.split(":");
+  if (parts.length < 3) return null;
+  const width = Number(parts[0]);
+  const height = Number(parts[1]);
+  const path = parts.slice(2).find((p) => p.includes("/") || /\.dds$/i.test(p));
+  if (!path || !/\.dds$/i.test(path.split(/[?#]/)[0])) return null;
+  const clamp = (n: number) => (Number.isFinite(n) && n > 0 ? Math.min(Math.round(n), 32) : 16);
+  return {
+    path: path.startsWith("/") ? path : `/${path}`,
+    width: clamp(width),
+    height: clamp(height),
+  };
+}
 
 /**
  * Turn an in-game tooltip into colored runs.
@@ -47,6 +65,8 @@ export function parseEsoMarkup(input: string): EsoRun[] {
       const end = src.indexOf("|t", i + 2);
       if (end !== -1) {
         flush();
+        const icon = textureTag(src.slice(i + 2, end));
+        if (icon) out.push({ text: "", color: stack[stack.length - 1] ?? null, icon });
         i = end + 1;
         continue;
       }
