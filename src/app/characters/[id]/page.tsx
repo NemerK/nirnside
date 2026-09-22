@@ -225,8 +225,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               </div>
             )}
           </section>
-
-          <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
         </div>
 
         <div className="space-y-6">
@@ -331,6 +329,10 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             </section>
           )}
         </div>
+      </div>
+
+      <div className="mt-6">
+        <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
       </div>
     </div>
   );

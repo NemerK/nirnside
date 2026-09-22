@@ -108,7 +108,7 @@ function AbilityDetail({
                   <span className="block text-[10px] uppercase tracking-wider text-fg-subtle">{m.label}</span>
                   <span className={`block truncate ${m.purchased ? "text-fg" : "text-fg-subtle"}`}>{m.name}</span>
                 </span>
-                <RankPips rank={m.rank} />
+                {m.purchased ? <RankPips rank={m.rank} /> : <span className="text-[10px] text-fg-subtle">Not owned</span>}
               </button>
             );
           })}
@@ -211,13 +211,16 @@ export function SkillBook({
           ))}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[14rem_minmax(0,1fr)]">
-          <ul className="flex gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-visible" aria-label="Skill line">
+        <div className="grid gap-4 lg:h-[34rem] lg:grid-cols-[12.5rem_16rem_minmax(0,1fr)]">
+          <ul
+            className="flex gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-y-auto lg:pr-1"
+            aria-label="Skill line"
+          >
             {category?.lines.map((l) => {
               const known = l.abilities.filter((a) => a.purchased).length;
               const active = l.name === line?.name;
               return (
-                <li key={l.name}>
+                <li key={l.name} className="shrink-0 lg:shrink">
                   <button
                     type="button"
                     onClick={() => pickLine(l.name)}
@@ -241,38 +244,12 @@ export function SkillBook({
             })}
           </ul>
 
-          <div className="min-w-0">
-            {line && (
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  {line.href ? (
-                    <Link href={line.href} className="font-medium text-fg hover:text-accent hover:underline">
-                      {line.name}
-                    </Link>
-                  ) : (
-                    <span className="font-medium text-fg">{line.name}</span>
-                  )}
-                  {line.subclassed && <Badge tone="accent">Subclassed</Badge>}
-                </div>
-                <span className="text-xs text-fg-subtle">Line rank {line.rank}</span>
-              </div>
-            )}
-
-            {line && ability && (
-              <AbilityDetail
-                ability={ability}
-                lastSeen={lastSeen}
-                slot={morphSlot}
-                onPick={setMorphSlot}
-              />
-            )}
-
+          <div className="min-h-0 lg:overflow-y-auto lg:pr-1">
             {line && line.abilities.length === 0 && (
               <p className="text-sm text-fg-muted">No abilities captured for this line.</p>
             )}
-
             {line && line.abilities.length > 0 && (
-              <ul className="mt-3 divide-y divide-border/70 overflow-hidden rounded-lg border border-border">
+              <ul className="divide-y divide-border/70 overflow-hidden rounded-lg border border-border">
                 {line.abilities.map((a, i) => {
                   const selected = i === Math.min(abilityIndex, line.abilities.length - 1);
                   const face = a.morphs.find((s) => s.current) ?? a.morphs.find((s) => s.purchased);
@@ -316,6 +293,33 @@ export function SkillBook({
                   );
                 })}
               </ul>
+            )}
+          </div>
+
+          <div className="min-h-0 min-w-0 lg:overflow-y-auto">
+            {line && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {line.href ? (
+                    <Link href={line.href} className="font-medium text-fg hover:text-accent hover:underline">
+                      {line.name}
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-fg">{line.name}</span>
+                  )}
+                  {line.subclassed && <Badge tone="accent">Subclassed</Badge>}
+                </div>
+                <span className="text-xs text-fg-subtle">Line rank {line.rank}</span>
+              </div>
+            )}
+
+            {line && ability && (
+              <AbilityDetail
+                ability={ability}
+                lastSeen={lastSeen}
+                slot={morphSlot}
+                onPick={setMorphSlot}
+              />
             )}
           </div>
         </div>
