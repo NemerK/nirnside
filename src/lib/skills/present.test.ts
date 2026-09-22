@@ -97,4 +97,27 @@ describe("skill book presentation", () => {
     assert.equal(view.morphs[0].purchased, false);
     assert.equal(view.description.includes("|c"), true);
   });
+
+  it("still surfaces progression ranks on unpurchased morph slots", () => {
+    const ability = SkillMorph.parse({
+      name: "Berserker Strike",
+      rank: 4,
+      morph: 0,
+      purchased: false,
+      morphs: [
+        { slot: 0, name: "Berserker Strike", rank: 4, purchased: false },
+        { slot: 1, name: "Berserker Rage", rank: 2, purchased: false },
+        { slot: 2, name: "Onslaught", rank: 1, purchased: false },
+      ],
+    });
+    const view = presentAbility(ability, new Map());
+    assert.equal(view.purchased, false);
+    assert.equal(view.morphs[0].purchased, false);
+    assert.equal(view.morphs[0].rank, 4);
+    assert.equal(view.morphs[0].rankLabel, "IV");
+    assert.equal(view.morphs[1].rank, 2);
+    assert.equal(view.morphs[1].rankLabel, "II");
+    assert.equal(view.morphs[2].rank, 1);
+    assert.equal(view.morphs[2].rankLabel, "I");
+  });
 });

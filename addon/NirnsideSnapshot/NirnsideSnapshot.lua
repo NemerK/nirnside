@@ -263,7 +263,8 @@ end
 -- selected morph of an ability they actually bought). GetAbilityProgressionRankFromAbilityId
 -- reports the rank of the ability id itself, which exists for skills you have
 -- never spent a point on — using that as "purchased" marked every base as owned.
--- Rank is omitted when unknown; we never invent I–IV.
+-- Rank is still recorded when the API returns I+ so the UI can show levels for
+-- unpurchased abilities; purchase stays a separate flag. Never invent I–IV.
 local function morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
   if GetProgressionSkillMorphSlotCurrentXP then
     local xp = GetProgressionSkillMorphSlotCurrentXP(progressionId, slot)
@@ -313,7 +314,8 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     if cur ~= nil then entry.rank = cur end
     if maxUpgrade ~= nil then entry.maxRank = maxUpgrade end
     entry.purchased = (cur or 0) >= 1 or abilityOwned
-    if not entry.purchased then entry.rank = 0 end
+    -- Keep the upgrade rank even when not purchased so the skill book can show
+    -- which level every ability is at on this character.
     local abilityId = GetSkillAbilityId and GetSkillAbilityId(skillType, lineIndex, skillIndex, false)
     entry.icon = abilityIcon(abilityId) or entry.icon
     entry.description = abilityDescription(abilityId)
@@ -359,7 +361,9 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
       local slotName = zo_strformat("<<1>>", GetAbilityName(abilityId))
       local owned = abilityOwned and morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
       local slotRank = nil
-      if owned and GetAbilityProgressionRankFromAbilityId then
+      -- Capture progression rank whenever the game reports I+, even if this
+      -- morph slot is not owned. Purchase stays gated on XP / selected morph.
+      if GetAbilityProgressionRankFromAbilityId then
         local r = GetAbilityProgressionRankFromAbilityId(abilityId)
         if type(r) == "number" and r >= 1 then slotRank = r end
       end
@@ -398,7 +402,16 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
   end
 
   entry.purchased = anyOwned
-  if not anyOwned then entry.rank = 0 end
+  -- Prefer the selected morph's rank when owned; otherwise keep any reported
+  -- progression rank so unpurchased abilities still show a level in the UI.
+  if not anyOwned then
+    local best = 0
+    for i = 1, #entry.morphs do
+      local r = entry.morphs[i].rank
+      if type(r) == "number" and r > best then best = r end
+    end
+    entry.rank = best
+  end
   if not entry.icon or entry.icon == "" then
     for i = 1, #entry.morphs do
       local ic = entry.morphs[i].icon
