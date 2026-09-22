@@ -276,6 +276,105 @@ NirnsideData =
                             { ["craft"] = "Blacksmithing", ["trait"] = "Nirnhoned", ["remaining"] = "12d 4h" },
                             { ["craft"] = "Clothing", ["trait"] = "Infused", ["remaining"] = "6d 1h" },
                         },
+                        ["wardrobe"] =
+                        {
+                            ["accountWide"] = false,
+                            ["zones"] =
+                            {
+                                {
+                                    ["tag"] = "GEN",
+                                    ["name"] = "General",
+                                    ["pages"] =
+                                    {
+                                        {
+                                            ["name"] = "Tank",
+                                            ["setups"] =
+                                            {
+                                                {
+                                                    ["name"] = "Trash",
+                                                    ["gear"] =
+                                                    {
+                                                        { ["slot"] = "Head", ["name"] = "Nazaray Helm", ["setName"] = "Nazaray", ["trait"] = "Sturdy", ["quality"] = "legendary", ["icon"] = "/esoui/art/icons/gear_undglitteringgoad_head_a.dds" },
+                                                        { ["slot"] = "Chest", ["name"] = "Pearlescent Ward Robe", ["setName"] = "Pearlescent Ward", ["trait"] = "Sturdy", ["quality"] = "legendary" },
+                                                        { ["slot"] = "Main Hand", ["name"] = "Lucent Echoes Sword", ["setName"] = "Lucent Echoes", ["trait"] = "Infused", ["quality"] = "legendary" },
+                                                        { ["slot"] = "Ring", ["name"] = "Ring of the Pale Order", ["setName"] = "Pale Order", ["trait"] = "Healthy", ["quality"] = "legendary", ["mythic"] = true },
+                                                    },
+                                                    ["bars"] =
+                                                    {
+                                                        { ["bar"] = "front", ["skills"] = { { ["name"] = "Pierce Armor", ["icon"] = "/esoui/art/icons/ability_1handed_002_a.dds" }, { ["name"] = "Inner Rage" }, { ["name"] = "Heroic Slash" } } },
+                                                        { ["bar"] = "back", ["skills"] = { { ["name"] = "Igneous Shield" }, { ["name"] = "Hardened Armor" } } },
+                                                    },
+                                                    ["cp"] = { "Ironclad", "Bracing Anchor", "Bulwark" },
+                                                    ["food"] = { ["slot"] = "Food", ["name"] = "Bewitched Sugar Skulls" },
+                                                },
+                                                {
+                                                    ["name"] = "Boss",
+                                                    ["gear"] =
+                                                    {
+                                                        { ["slot"] = "Head", ["name"] = "Archdruid Devyric Helm", ["setName"] = "Archdruid Devyric", ["trait"] = "Sturdy", ["quality"] = "legendary" },
+                                                        { ["slot"] = "Chest", ["name"] = "Turning Tide Cuirass", ["setName"] = "Turning Tide", ["trait"] = "Reinforced", ["quality"] = "legendary" },
+                                                    },
+                                                    ["bars"] =
+                                                    {
+                                                        { ["bar"] = "front", ["skills"] = { { ["name"] = "Pierce Armor" }, { ["name"] = "Tremorscale" } } },
+                                                        { ["bar"] = "back", ["skills"] = { { ["name"] = "Aggressive Horn" } } },
+                                                    },
+                                                    ["cp"] = { "Ironclad", "Duelist's Rebuff" },
+                                                    ["food"] = nil,
+                                                },
+                                            },
+                                        },
+                                        {
+                                            ["name"] = "DPS",
+                                            ["setups"] =
+                                            {
+                                                {
+                                                    ["name"] = "Single Target",
+                                                    ["gear"] =
+                                                    {
+                                                        { ["slot"] = "Main Hand", ["name"] = "Coral Riptide Dagger", ["setName"] = "Coral Riptide", ["trait"] = "Nirnhoned", ["quality"] = "legendary" },
+                                                    },
+                                                    ["bars"] =
+                                                    {
+                                                        { ["bar"] = "front", ["skills"] = { { ["name"] = "Merciless Resolve" }, { ["name"] = "Killer's Blade" } } },
+                                                        { ["bar"] = "back", ["skills"] = { { ["name"] = "Fatecarver" } } },
+                                                    },
+                                                    ["cp"] = { "Deadly Aim", "Master-at-Arms" },
+                                                    ["food"] = { ["slot"] = "Food", ["name"] = "Lava Foot Soup-and-Saltrice" },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                                {
+                                    ["tag"] = "CR",
+                                    ["name"] = "Cloudrest",
+                                    ["pages"] =
+                                    {
+                                        {
+                                            ["name"] = "Main",
+                                            ["setups"] =
+                                            {
+                                                {
+                                                    ["name"] = "Z'Maja",
+                                                    ["gear"] =
+                                                    {
+                                                        { ["slot"] = "Head", ["name"] = "Nazaray Helm", ["setName"] = "Nazaray", ["trait"] = "Sturdy", ["quality"] = "legendary" },
+                                                    },
+                                                    ["bars"] =
+                                                    {
+                                                        { ["bar"] = "front", ["skills"] = { { ["name"] = "Pierce Armor" } } },
+                                                        { ["bar"] = "back", ["skills"] = { { ["name"] = "Aggressive Horn" } } },
+                                                    },
+                                                    ["cp"] = {},
+                                                    ["food"] = nil,
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
                     },
                     {
                         ["id"] = "char-002",

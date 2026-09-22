@@ -22,6 +22,7 @@ import { rolesForCharacter } from "@/lib/roles/filter";
 import { presentSkillBook } from "@/lib/skills/present";
 import { Badge, Card, SectionTitle } from "@/components/ui";
 import { SkillBook } from "@/components/skill-book";
+import { Wardrobe } from "@/components/wardrobe";
 import { RolePicker } from "@/components/role-picker";
 import { CharacterGoals } from "@/components/goals-board";
 import { toGoalSubject } from "@/lib/goals/progress";
@@ -84,6 +85,21 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     if (hrefForLine[key]) continue;
     const dest = skillLineHref(g.lineName);
     if (dest) hrefForLine[key] = dest;
+  }
+
+  // Cross-link every set worn in a Wizard's Wardrobe setup back to its catalog page.
+  const hrefForSet: Record<string, string> = {};
+  for (const zone of c.wardrobe?.zones ?? []) {
+    for (const page of zone.pages) {
+      for (const setup of page.setups) {
+        for (const piece of setup.gear) {
+          if (!piece.setName) continue;
+          const key = piece.setName.toLowerCase();
+          if (hrefForSet[key]) continue;
+          hrefForSet[key] = setHref({ name: piece.setName });
+        }
+      }
+    }
   }
 
   return (
@@ -180,6 +196,12 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
       <div className="mt-6">
         <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
       </div>
+
+      {c.wardrobe && (c.wardrobe.zones?.length ?? 0) > 0 && (
+        <div className="mt-6">
+          <Wardrobe wardrobe={c.wardrobe} hrefForSet={hrefForSet} />
+        </div>
+      )}
 
       {archived && (
         <section className="mb-6">

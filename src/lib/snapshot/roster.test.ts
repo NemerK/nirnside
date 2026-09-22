@@ -28,6 +28,7 @@ function char(partial: Partial<Character> & { id: string; name: string }): Chara
     gold: 0,
     telVar: 0,
     archivedAt: null,
+    wardrobe: null,
     ...partial,
   };
 }

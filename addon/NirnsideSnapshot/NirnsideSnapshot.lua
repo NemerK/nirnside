@@ -512,12 +512,183 @@ local function gatherEquipped()
   return equipped
 end
 
+-- Wizard's Wardrobe integration ------------------------------------------
+-- WW writes its own SavedVariables global `WizardsWardrobeSV`. Because we load
+-- after it (## OptionalDependsOn), that table is in memory when we snapshot.
+-- We only READ it, resolve item/skill names + icons with in-game APIs, and copy
+-- a display-ready structure into our own snapshot. Nothing is written back to
+-- WW, nothing is computed, and if WW is absent this is a silent no-op.
+
+-- WW gear keys are EQUIP_SLOT_* constants; map to readable labels.
+local WW_GEAR_SLOTS = {
+  { slot = EQUIP_SLOT_HEAD,        label = "Head" },
+  { slot = EQUIP_SLOT_SHOULDERS,   label = "Shoulders" },
+  { slot = EQUIP_SLOT_CHEST,       label = "Chest" },
+  { slot = EQUIP_SLOT_HAND,        label = "Hands" },
+  { slot = EQUIP_SLOT_WAIST,       label = "Waist" },
+  { slot = EQUIP_SLOT_LEGS,        label = "Legs" },
+  { slot = EQUIP_SLOT_FEET,        label = "Feet" },
+  { slot = EQUIP_SLOT_NECK,        label = "Necklace" },
+  { slot = EQUIP_SLOT_RING1,       label = "Ring 1" },
+  { slot = EQUIP_SLOT_RING2,       label = "Ring 2" },
+  { slot = EQUIP_SLOT_MAIN_HAND,   label = "Main Hand" },
+  { slot = EQUIP_SLOT_OFF_HAND,    label = "Off Hand" },
+  { slot = EQUIP_SLOT_BACKUP_MAIN, label = "Backup Main" },
+  { slot = EQUIP_SLOT_BACKUP_OFF,  label = "Backup Off" },
+  { slot = EQUIP_SLOT_POISON,      label = "Poison" },
+  { slot = EQUIP_SLOT_BACKUP_POISON, label = "Backup Poison" },
+}
+
+-- Readable zone names for WW's tags. Falls back to the tag if unknown.
+local WW_ZONE_NAMES = {
+  GEN = "General", PVP = "PvP", SUB = "Substitution",
+  AA = "Aetherian Archive", HRC = "Hel Ra Citadel", SO = "Sanctum Ophidia",
+  MOL = "Maw of Lorkhaj", HOF = "Halls of Fabrication", AS = "Asylum Sanctorium",
+  CR = "Cloudrest", SS = "Sunspire", KA = "Kyne's Aegis", RG = "Rockgrove",
+  DSR = "Dreadsail Reef", SE = "Sanity's Edge", LC = "Lucent Citadel",
+  OC = "Ossein Cage", IA = "Infinite Archive", BRP = "Blackrose Prison",
+}
+
+local function wwResolveGear(gearTable)
+  if type(gearTable) ~= "table" then return {} end
+  local mythicSlot = gearTable.mythic
+  local pieces = {}
+  for _, entry in ipairs(WW_GEAR_SLOTS) do
+    local g = gearTable[entry.slot]
+    local link = type(g) == "table" and g.link or nil
+    if link and link ~= "" and (g.id == nil or tostring(g.id) ~= "0") then
+      local hasSet, setName = safe(function() return GetItemLinkSetInfo(link, false) end, false)
+      pieces[#pieces + 1] = {
+        slot = entry.label,
+        name = safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, entry.label),
+        icon = safe(function() return normIcon(GetItemLinkIcon(link)) end, nil),
+        setName = (hasSet and setName ~= "") and zo_strformat("<<1>>", setName) or nil,
+        trait = traitString(link),
+        quality = qualityString(link),
+        mythic = (mythicSlot ~= nil and entry.slot == mythicSlot) or false,
+      }
+    end
+  end
+  return pieces
+end
+
+local function wwResolveBars(skillsTable)
+  if type(skillsTable) ~= "table" then return {} end
+  local bars = {}
+  local map = { [0] = "front", [1] = "back" }
+  for hotbar = 0, 1 do
+    local slots = skillsTable[hotbar]
+    if type(slots) == "table" then
+      local skills = {}
+      for slot = 3, 8 do
+        local raw = slots[slot]
+        local abilityId = type(raw) == "table" and raw.id or raw
+        abilityId = tonumber(abilityId)
+        if abilityId and abilityId > 0 then
+          skills[#skills + 1] = {
+            name = safe(function() return zo_strformat("<<1>>", GetAbilityName(abilityId)) end, nil),
+            icon = safe(function() return normIcon(GetAbilityIcon(abilityId)) end, nil),
+          }
+        end
+      end
+      if #skills > 0 then bars[#bars + 1] = { bar = map[hotbar], skills = skills } end
+    end
+  end
+  return bars
+end
+
+local function wwResolveCP(cpTable)
+  local names = {}
+  if type(cpTable) ~= "table" then return names end
+  for _, starId in pairs(cpTable) do
+    local id = tonumber(starId)
+    if id and id > 0 and GetChampionSkillName then
+      local n = safe(function() return zo_strformat("<<1>>", GetChampionSkillName(id)) end, nil)
+      if n and n ~= "" then names[#names + 1] = n end
+    end
+  end
+  return names
+end
+
+local function wwResolveFood(foodTable)
+  if type(foodTable) ~= "table" then return nil end
+  local link = foodTable.link
+  if not link or link == "" then return nil end
+  return {
+    slot = "Food",
+    name = safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, nil),
+    icon = safe(function() return normIcon(GetItemLinkIcon(link)) end, nil),
+  }
+end
+
+local function wwBuildZones(setups, pages)
+  local zones = {}
+  if type(setups) ~= "table" then return zones end
+  for tag, pageMap in pairs(setups) do
+    if type(pageMap) == "table" then
+      local zone = { tag = tag, name = WW_ZONE_NAMES[tag] or tag, pages = {} }
+      for pageId, setupList in pairs(pageMap) do
+        -- pageId 0 is WW's "current page" pointer, not a real page.
+        if type(pageId) == "number" and pageId >= 1 and type(setupList) == "table" then
+          local pageInfo = (type(pages) == "table" and pages[tag] and pages[tag][pageId]) or nil
+          local page = {
+            name = (pageInfo and pageInfo.name) or ("Page " .. tostring(pageId)),
+            setups = {},
+          }
+          for index = 1, #setupList do
+            local s = setupList[index]
+            if type(s) == "table" then
+              page.setups[#page.setups + 1] = {
+                name = s.name or "",
+                gear = wwResolveGear(s.gear),
+                bars = wwResolveBars(s.skills),
+                cp = wwResolveCP(s.cp),
+                food = wwResolveFood(s.food),
+              }
+            end
+          end
+          if #page.setups > 0 then zone.pages[#zone.pages + 1] = page end
+        end
+      end
+      if #zone.pages > 0 then zones[#zones + 1] = zone end
+    end
+  end
+  return zones
+end
+
+-- Read this character's Wizard's Wardrobe setups from WW's own SavedVariables.
+local function gatherWardrobe(charId)
+  return safe(function()
+    if type(WizardsWardrobeSV) ~= "table" then return nil end
+    local displayName = GetDisplayName()
+    local root = WizardsWardrobeSV.Default and WizardsWardrobeSV.Default[displayName]
+    if type(root) ~= "table" then return nil end
+
+    -- Prefer this character's own storage; fall back to account-wide storage.
+    local store = root[charId]
+    local accountWide = false
+    if type(store) ~= "table" or type(store.setups) ~= "table" then
+      local acc = root["$AccountWide"]
+      if type(acc) == "table" and type(acc.accountWideStorage) == "table" then
+        store = acc.accountWideStorage
+        accountWide = true
+      end
+    end
+    if type(store) ~= "table" or type(store.setups) ~= "table" then return nil end
+
+    local zones = wwBuildZones(store.setups, store.pages)
+    if #zones == 0 then return nil end
+    return { accountWide = accountWide, zones = zones }
+  end, nil)
+end
+
 local function gatherCharacter()
   local name = safe(function() return zo_strformat("<<1>>", GetUnitName("player")) end, "Unknown")
   local vampire, werewolf = gatherCurse()
   local level = safe(function() return GetUnitLevel("player") end, 1)
+  local charId = safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, name)
   return {
-    id = safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, name),
+    id = charId,
     name = name,
     class = safe(function() return zo_strformat("<<1>>", GetUnitClass("player")) end, "Unknown"),
     race = safe(function() return zo_strformat("<<1>>", GetUnitRace("player")) end, "Unknown"),
@@ -544,6 +715,7 @@ local function gatherCharacter()
     gold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0),
     telVar = safe(function() return GetCurrencyAmount(CURT_TELVAR_STONES, CURRENCY_LOCATION_CHARACTER) end, 0),
     archivedAt = nil,
+    wardrobe = gatherWardrobe(charId),
   }
 end
 

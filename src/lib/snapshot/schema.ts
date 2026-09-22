@@ -180,6 +180,64 @@ export const Companion = z.object({
   level: z.number().int().nonnegative().default(0),
 });
 
+/**
+ * Wizard's Wardrobe setups, read from that addon's own SavedVariables
+ * (`WizardsWardrobeSV`) on disk — the same sanctioned local-only data path we
+ * already use. The in-game reader resolves item/skill names and icons, so the
+ * app renders exactly what the game gave, never computed. Absent when the
+ * player does not use Wizard's Wardrobe.
+ */
+export const WardrobeGearPiece = z.object({
+  slot: z.string().default(""),
+  name: z.string().default(""),
+  icon: z.string().nullable().optional(),
+  setName: z.string().nullable().default(null),
+  trait: z.string().nullable().default(null),
+  quality: ItemQuality.nullable().optional(),
+  mythic: z.boolean().default(false),
+});
+
+export const WardrobeSkill = z.object({
+  name: z.string().default(""),
+  icon: z.string().nullable().optional(),
+});
+
+export const WardrobeBar = z.object({
+  bar: z.enum(["front", "back"]),
+  skills: lenientArray(WardrobeSkill).default([]),
+});
+
+export const WardrobeSetup = z.object({
+  name: z.string().default(""),
+  gear: lenientArray(WardrobeGearPiece).default([]),
+  bars: lenientArray(WardrobeBar).default([]),
+  /** Champion star names, as slotted in the setup. Empty when none saved. */
+  cp: z.array(z.string()).default([]),
+  food: WardrobeGearPiece.nullable().default(null),
+});
+
+export const WardrobePage = z.object({
+  name: z.string().default(""),
+  setups: lenientArray(WardrobeSetup).default([]),
+});
+
+export const WardrobeZone = z.object({
+  /** Wizard's Wardrobe zone tag (GEN, CR, AA, …). */
+  tag: z.string().default(""),
+  /** Readable zone name (Cloudrest, General, …). */
+  name: z.string().default(""),
+  pages: lenientArray(WardrobePage).default([]),
+});
+
+export const Wardrobe = z.object({
+  /** True when the setups are the account-wide Wizard's Wardrobe storage. */
+  accountWide: z.boolean().default(false),
+  zones: lenientArray(WardrobeZone).default([]),
+});
+export type Wardrobe = z.infer<typeof Wardrobe>;
+export type WardrobeSetup = z.infer<typeof WardrobeSetup>;
+export type WardrobeZone = z.infer<typeof WardrobeZone>;
+
 export const Character = z.object({
   id: z.string(),
   name: z.string(),
@@ -208,6 +266,8 @@ export const Character = z.object({
   /** Known scribing scripts (names) for this character. */
   scribingScripts: z.array(z.string()).default([]),
   research: lenientArray(z.object({ craft: z.string(), trait: z.string(), remaining: z.string() })).default([]),
+  /** Wizard's Wardrobe setups for this character, if that addon is installed. */
+  wardrobe: Wardrobe.nullable().default(null),
   /** Unix seconds of this character's last logout snapshot. null = never logged since install. */
   lastSeen: z.number().int().nonnegative().nullable().default(null),
   /** Character wallet gold as of last snapshot. Not account-wide. */
