@@ -88,8 +88,25 @@ function AbilityDetail({
         </div>
       </div>
 
+      {description ? (
+        <p className="mt-3 text-sm leading-relaxed text-fg-muted">
+          <EsoText text={description} />
+        </p>
+      ) : (
+        <p className="mt-3 text-sm text-fg-subtle">
+          Tooltip not captured
+          {lastSeen ? " in this snapshot" : " yet"}. Log this character out (or ReloadUI) with the addon to fill it
+          from the game.
+        </p>
+      )}
+      {source !== "unknown" && source !== "ingame" && (
+        <div className="mt-2">
+          <SourceBadge source={source as CatalogSource} />
+        </div>
+      )}
+
       {ability.morphs.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {ability.morphs.map((m) => {
             const active = (shown?.slot ?? -1) === m.slot;
             return (
@@ -107,28 +124,11 @@ function AbilityDetail({
                 <span className="min-w-0">
                   <span className="block text-[10px] uppercase tracking-wider text-fg-subtle">{m.label}</span>
                   <span className={`block truncate ${m.purchased ? "text-fg" : "text-fg-subtle"}`}>{m.name}</span>
+                  {m.purchased ? <RankPips rank={m.rank} /> : <span className="text-[10px] text-fg-subtle">Not owned</span>}
                 </span>
-                {m.purchased ? <RankPips rank={m.rank} /> : <span className="text-[10px] text-fg-subtle">Not owned</span>}
               </button>
             );
           })}
-        </div>
-      )}
-
-      {description ? (
-        <p className="mt-3 text-sm leading-relaxed text-fg-muted">
-          <EsoText text={description} />
-        </p>
-      ) : (
-        <p className="mt-3 text-sm text-fg-subtle">
-          Tooltip not captured
-          {lastSeen ? " in this snapshot" : " yet"}. Log this character out (or ReloadUI) with the addon to fill it
-          from the game.
-        </p>
-      )}
-      {source !== "unknown" && source !== "ingame" && (
-        <div className="mt-2">
-          <SourceBadge source={source as CatalogSource} />
         </div>
       )}
     </div>

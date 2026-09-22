@@ -177,6 +177,10 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
 
       <CharacterGoals goals={goals} subject={toGoalSubject(c)} lines={lines} hrefForLine={hrefForLine} />
 
+      <div className="mt-6">
+        <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
+      </div>
+
       {archived && (
         <section className="mb-6">
           <SectionTitle>Last-known bags</SectionTitle>
@@ -329,10 +333,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             </section>
           )}
         </div>
-      </div>
-
-      <div className="mt-6">
-        <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
       </div>
     </div>
   );

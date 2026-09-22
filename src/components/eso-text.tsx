@@ -6,17 +6,22 @@ import { parseEsoMarkup, type EsoIcon } from "@/lib/text/eso-markup";
 function TooltipIcon({ icon }: { icon: EsoIcon }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
-  const size = Math.min(icon.width, icon.height, 20);
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={`/api/icon?p=${encodeURIComponent(icon.path)}`}
       alt=""
-      width={size}
-      height={size}
+      width={16}
+      height={16}
       onError={() => setFailed(true)}
-      className="mx-0.5 inline-block align-[-3px] rounded-sm"
-      style={{ width: size, height: size }}
+      className="rounded-sm"
+      style={{
+        display: "inline-block",
+        width: "1em",
+        height: "1em",
+        margin: "0 0.15em",
+        verticalAlign: "-0.15em",
+      }}
     />
   );
 }
