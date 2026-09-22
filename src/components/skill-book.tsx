@@ -47,7 +47,7 @@ function AbilityDetail({
 }) {
   const shown = slotToShow(ability, slot);
   const name = shown?.name ?? ability.name;
-  const icon = shown?.icon ?? ability.icon;
+  const icon = shown?.icon || ability.icon || ability.morphs.find((m) => m.icon)?.icon;
   const description = shown?.description || ability.description;
   const purchased = shown ? shown.purchased : ability.purchased;
   const rank = shown ? shown.rank : ability.passive && ability.purchased ? ability.rank : null;
@@ -254,6 +254,7 @@ export function SkillBook({
                   const selected = i === Math.min(abilityIndex, line.abilities.length - 1);
                   const face = a.morphs.find((s) => s.current) ?? a.morphs.find((s) => s.purchased);
                   const label = face?.name ?? a.name;
+                  const icon = face?.icon || a.icon || a.morphs.find((m) => m.icon)?.icon;
                   const rank = face?.rank ?? (a.passive && a.purchased ? a.rank : null);
                   return (
                     <li key={`${a.name}-${i}`}>
@@ -268,7 +269,7 @@ export function SkillBook({
                         }`}
                       >
                         <span className={a.purchased ? "" : "opacity-40 grayscale"}>
-                          <GameIcon name={label} icon={face?.icon ?? a.icon} size={36} />
+                          <GameIcon name={label} icon={icon} size={36} />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className={`block truncate text-sm ${a.purchased ? "text-fg" : "text-fg-subtle"}`}>

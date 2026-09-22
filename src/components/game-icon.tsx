@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { iconImageUrls } from "@/lib/icons/sources";
 
 /**
  * Icon rendering. ESO exposes icons as in-game .dds texture paths (e.g.
@@ -14,11 +15,10 @@ import { useState } from "react";
  * If no icon path is known, or the proxy can't source the image, we fall back
  * to a tasteful deterministic placeholder from the entry's initials.
  */
-function resolveIconUrl(icon: string): string | null {
-  if (!icon) return null;
-  // Already an absolute URL (e.g. bundled/self-hosted) — use it directly.
-  if (/^https?:\/\//i.test(icon)) return icon;
-  return `/api/icon?p=${encodeURIComponent(icon)}`;
+function resolveIconUrls(icon: string): string[] {
+  if (!icon) return [];
+  if (/^https?:\/\//i.test(icon)) return [icon];
+  return iconImageUrls(icon);
 }
 
 function initials(name: string): string {
@@ -45,19 +45,26 @@ export function GameIcon({
   size?: number;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
-  const src = icon ? resolveIconUrl(icon) : null;
+  const urls = icon ? resolveIconUrls(icon) : [];
+  const [attempt, setAttempt] = useState(0);
+  const [forIcon, setForIcon] = useState(icon);
+  if (icon !== forIcon) {
+    setForIcon(icon);
+    setAttempt(0);
+  }
+  const src = icon === forIcon ? urls[attempt] : urls[0];
 
-  if (src && !failed) {
+  if (src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
+        key={src}
         src={src}
         alt={name}
         width={size}
         height={size}
-        loading="lazy"
-        onError={() => setFailed(true)}
+        loading="eager"
+        onError={() => setAttempt((n) => n + 1)}
         className={`shrink-0 rounded-md border border-border bg-surface-2 object-cover ${className}`}
         style={{ width: size, height: size }}
       />

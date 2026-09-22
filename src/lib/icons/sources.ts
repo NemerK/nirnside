@@ -25,6 +25,31 @@ export function iconContentType(body: Buffer): IconBytes["contentType"] | null {
   return null;
 }
 
+/** `ability_2handed_006` from a game path, a bare name, or a messy tooltip tag. */
+export function iconFileStem(raw: string): string | null {
+  const match = raw.match(/([a-z0-9_-]+)\.(?:dds|png|jpe?g|webp)/i);
+  const stem = match?.[1] ?? raw.trim().replace(/^\/+/, "");
+  if (!/^[a-z0-9_-]+$/i.test(stem)) return null;
+  return stem.toLowerCase();
+}
+
+/**
+ * Places to load one icon. The local proxy is first; public mirrors are next
+ * so a portrait still appears when the proxy cannot fetch it.
+ */
+export function iconImageUrls(icon: string): string[] {
+  const trimmed = icon.trim();
+  if (!trimmed) return [];
+  const urls = [`/api/icon?p=${encodeURIComponent(trimmed)}`];
+  const stem = iconFileStem(trimmed);
+  if (!stem) return urls;
+  const bare = `/api/icon?p=${encodeURIComponent(`${stem}.dds`)}`;
+  if (!urls.includes(bare)) urls.push(bare);
+  urls.push(`https://assets.rpglogs.com/img/eso/abilities/${stem}.png`);
+  urls.push(`https://eso-hub.com/storage/icons/${stem}.png`);
+  return urls;
+}
+
 /** URLs to try, in order, for a normalized `esoui/...png` path. */
 export function iconFetchUrls(normalizedPath: string, upstreams: string[]): string[] {
   const urls = upstreams.map((base) => `${base.replace(/\/$/, "")}/${normalizedPath}`);

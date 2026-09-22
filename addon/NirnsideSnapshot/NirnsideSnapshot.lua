@@ -303,6 +303,11 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     morphs = {},
   }
 
+  -- GetSkillAbilityInfo's texture is often blank. The ability id's icon is the
+  -- real portrait, purchased or not.
+  local skillAbilityId = GetSkillAbilityId and GetSkillAbilityId(skillType, lineIndex, skillIndex, false)
+  entry.icon = abilityIcon(skillAbilityId) or entry.icon
+
   if passive then
     local cur, maxUpgrade = GetSkillAbilityUpgradeInfo(skillType, lineIndex, skillIndex)
     if cur ~= nil then entry.rank = cur end
@@ -394,6 +399,15 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
 
   entry.purchased = anyOwned
   if not anyOwned then entry.rank = 0 end
+  if not entry.icon or entry.icon == "" then
+    for i = 1, #entry.morphs do
+      local ic = entry.morphs[i].icon
+      if ic and ic ~= "" then
+        entry.icon = ic
+        break
+      end
+    end
+  end
 
   return entry
 end

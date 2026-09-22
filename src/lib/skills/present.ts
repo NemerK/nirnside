@@ -101,10 +101,12 @@ export function presentAbility(ability: SkillMorph, lore: LoreIndex): AbilityVie
   const known = abilityIsKnown(ability);
   const face = displayAbility(ability);
   const faceHit = lore.get(loreKey(face.name));
-  const currentSlot = (ability.morphs ?? []).find((s) => s.slot === face.morphSlot);
+  const slots = ability.morphs ?? [];
+  const currentSlot = slots.find((s) => s.slot === face.morphSlot);
+  const anySlotIcon = slots.find((s) => s.icon && s.icon.trim())?.icon;
   const merged = mergeLore(
     {
-      icon: currentSlot?.icon ?? ability.icon,
+      icon: currentSlot?.icon ?? ability.icon ?? anySlotIcon,
       description: currentSlot?.description ?? ability.description,
     },
     faceHit,
