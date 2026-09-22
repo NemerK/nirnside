@@ -199,7 +199,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
 
       {c.wardrobe && (c.wardrobe.zones?.length ?? 0) > 0 && (
         <div className="mt-6">
-          <Wardrobe wardrobe={c.wardrobe} hrefForSet={hrefForSet} />
+          <Wardrobe wardrobe={c.wardrobe} hrefForSet={hrefForSet} characterName={c.name} characterId={c.id} />
         </div>
       )}
 
