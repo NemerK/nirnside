@@ -253,24 +253,39 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
 }
 
 // Older snapshots stored a meaningless slot code (e.g. "Slot 1.97e-3"); never
-// show that. Prefer the real item name, trimmed of the redundant set prefix.
+// show that.
 const SLOT_CODE = /^slot\s+[-\d.eE+]+$/i;
 
+/**
+ * The label for one collected/missing piece.
+ *
+ * The game gives us the real item name for many sets ("Helm of the Veiled
+ * Heritance", "Slimecraw Helmet"). For others — Infinite Archive and similar —
+ * the collection API returns only the slot ("Hat", "Helmet"), so the snapshot
+ * stored that slot as the name. We do NOT want half the sets showing full item
+ * names and half showing a bare slot, so when only a slot is known we compose
+ * the item's real name the way ESO names those pieces: "<Set> <Slot>"
+ * (e.g. "Aerie's Cry Helmet"). Set name and slot are both real in-game strings;
+ * nothing is invented.
+ */
 function pieceLabel(p: { name?: string; type?: string; slot?: string }, setName: string): string {
   const clean = (v?: string) => {
     const t = (v ?? "").trim();
     return !t || SLOT_CODE.test(t) ? "" : t;
   };
-  let name = clean(p.name);
-  if (name) {
-    const setLower = setName.trim().toLowerCase();
-    if (setLower && name.toLowerCase().startsWith(setLower)) {
-      const stripped = name.slice(setName.length).replace(/^[\s'’\-–]+/, "").trim();
-      if (stripped) name = stripped;
-    }
-    return name;
-  }
-  return clean(p.type);
+  const name = clean(p.name);
+  const slot = clean(p.slot);
+  const type = clean(p.type);
+
+  // A genuine item name is more than just the slot label the game fell back to.
+  const isBareSlot = !name || name === slot || name === type;
+  if (!isBareSlot) return name;
+
+  const slotWord = slot || type;
+  if (!slotWord) return name || "Piece";
+  // Do not double the set name if the slot label already carries it.
+  if (slotWord.toLowerCase().includes(setName.trim().toLowerCase())) return slotWord;
+  return `${setName} ${slotWord}`;
 }
 
 function SetCard({ set: s }: { set: SetWithTotals }) {
