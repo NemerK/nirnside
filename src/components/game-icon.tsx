@@ -63,7 +63,9 @@ export function GameIcon({
         alt={name}
         width={size}
         height={size}
-        loading="eager"
+        loading="lazy"
+        decoding="async"
+        fetchPriority="low"
         onError={() => setAttempt((n) => n + 1)}
         className={`shrink-0 rounded-md border border-border bg-surface-2 object-cover ${className}`}
         style={{ width: size, height: size }}

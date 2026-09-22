@@ -17,6 +17,8 @@ function TooltipIcon({ icon }: { icon: EsoIcon }) {
       alt=""
       width={16}
       height={16}
+      loading="lazy"
+      decoding="async"
       onError={() => setAttempt((n) => n + 1)}
       className="rounded-sm"
       style={{
