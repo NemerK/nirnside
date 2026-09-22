@@ -18,6 +18,7 @@ function char(partial: Partial<Character> & { id: string; name: string }): Chara
     vampire: { isVampire: false, stage: 0 },
     werewolf: { isWerewolf: false },
     classMastery: false,
+    classMasteries: [],
     skillLines: [],
     champion: [],
     equipped: [],

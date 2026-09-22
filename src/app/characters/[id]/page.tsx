@@ -140,6 +140,18 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               {c.classMastery && <Badge tone="muted">Class Mastery</Badge>}
               {c.mundus && <Badge tone="muted">{c.mundus}</Badge>}
             </div>
+            {c.classMasteries.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-fg-subtle">
+                <span className="inline-flex items-center gap-1 uppercase tracking-wider">
+                  <Sparkles className="h-3 w-3 text-accent" /> Mastered class lines
+                </span>
+                {c.classMasteries.map((m) => (
+                  <Badge key={m} tone="accent">
+                    {m}
+                  </Badge>
+                ))}
+              </div>
+            )}
             <div className="mt-3">
               <RolePicker characterId={c.id} assigned={assigned} roles={roles} />
             </div>

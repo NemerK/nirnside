@@ -412,8 +412,33 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
   return entry
 end
 
-local function gatherSkills()
+-- Subclassing (U46+): a class skill line active on this character that is not
+-- one of the character's own class lines is "subclassed" (borrowed). A class
+-- line leveled to 50 becomes "mastered" and unlocks account-wide. We read this
+-- through SKILLS_DATA_MANAGER by the line's skillLineId; every call is guarded
+-- so a client without these methods simply reports nothing extra.
+local function skillLineTraits(skillType, lineIndex)
+  return safe(function()
+    local skillLineId = select(4, GetSkillLineInfo(skillType, lineIndex))
+    if not skillLineId or not SKILLS_DATA_MANAGER then return nil end
+    local data = SKILLS_DATA_MANAGER:GetSkillLineDataById(skillLineId)
+    if not data then return nil end
+    local isClass = data.IsClassSkillLine and data:IsClassSkillLine() or false
+    local isOwnClass = data.IsPlayerClassSkillLine and data:IsPlayerClassSkillLine() or false
+    local active = data.IsActive and data:IsActive() or false
+    local mastered = data.HasMastery and data:HasMastery() or false
+    return {
+      isClass = isClass,
+      subclassed = isClass and active and not isOwnClass,
+      mastered = isClass and mastered,
+      name = data.GetName and zo_strformat("<<1>>", data:GetName()) or nil,
+    }
+  end, nil)
+end
+
+local function gatherSkills(masteriesOut)
   local lines = {}
+  local seenMastery = {}
   safe(function()
     local numTypes = GetNumSkillTypes()
     for skillType = 1, numTypes do
@@ -430,11 +455,20 @@ local function gatherSkills()
             end, nil)
             if ability then abilities[#abilities + 1] = ability end
           end
+          local traits = skillLineTraits(skillType, lineIndex)
+          local lineName = zo_strformat("<<1>>", name)
+          if masteriesOut and traits and traits.mastered then
+            local mName = traits.name or lineName
+            if not seenMastery[mName] then
+              seenMastery[mName] = true
+              masteriesOut[#masteriesOut + 1] = mName
+            end
+          end
           lines[#lines + 1] = {
-            name = zo_strformat("<<1>>", name),
+            name = lineName,
             category = safe(function() return GetString("SI_SKILLTYPE", skillType) end, "Skill"),
             rank = rank or 0,
-            subclassed = false, -- U50 subclassing detection: needs in-game verification
+            subclassed = (traits and traits.subclassed) or false,
             abilities = abilities,
           }
         end
@@ -687,6 +721,8 @@ local function gatherCharacter()
   local vampire, werewolf = gatherCurse()
   local level = safe(function() return GetUnitLevel("player") end, 1)
   local charId = safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, name)
+  local classMasteries = {}
+  local skillLines = gatherSkills(classMasteries)
   return {
     id = charId,
     name = name,
@@ -705,7 +741,8 @@ local function gatherCharacter()
     vampire = vampire,
     werewolf = werewolf,
     classMastery = false,
-    skillLines = gatherSkills(),
+    classMasteries = classMasteries,
+    skillLines = skillLines,
     champion = gatherChampion(),
     equipped = gatherEquipped(),
     companions = {},

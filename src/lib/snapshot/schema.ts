@@ -259,6 +259,11 @@ export const Character = z.object({
   werewolf: z.object({ isWerewolf: z.boolean().default(false) }).default({ isWerewolf: false }),
   /** True if this char uses Class Mastery (pure class, no subclassing). */
   classMastery: z.boolean().default(false),
+  /**
+   * Class skill lines the account has mastered (leveled to 50), which unlocks
+   * them for subclassing on any character. Names only — captured from the game.
+   */
+  classMasteries: z.array(z.string()).default([]),
   skillLines: lenientArray(SkillLine).default([]),
   champion: lenientArray(ChampionDiscipline).default([]),
   equipped: lenientArray(EquippedItem).default([]),

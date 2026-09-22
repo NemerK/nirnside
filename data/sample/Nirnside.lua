@@ -64,6 +64,7 @@ NirnsideData =
                         ["vampire"] = { ["isVampire"] = true, ["stage"] = 3 },
                         ["werewolf"] = { ["isWerewolf"] = false },
                         ["classMastery"] = false,
+                        ["classMasteries"] = { "Assassination", "Ardent Flame", "Herald of the Tome" },
                         ["lastSeen"] = 1757800920,
                         ["skillLines"] =
                         {
