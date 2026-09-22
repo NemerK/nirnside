@@ -111,8 +111,8 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         <ArrowLeft className="h-4 w-4" /> {archived ? "Archive" : "All characters"}
       </Link>
 
-      <Card className="mb-6 overflow-hidden">
-        <div className="h-1" style={{ background: accent }} />
+      <Card className="mb-6">
+        <div className="h-1 rounded-t-xl" style={{ background: accent }} />
         <div className="flex flex-wrap items-start justify-between gap-4 p-6">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-fg">{c.name}</h1>
