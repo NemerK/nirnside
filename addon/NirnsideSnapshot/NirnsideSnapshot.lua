@@ -259,11 +259,12 @@ end
 -- One ability: passives keep their upgrade rank; actives/ultimates snapshot
 -- independent ranks for base + both morphs via the live progression API.
 -- Skip crafted/scribing skills — GetSkillAbilityInfo can error on those.
--- A morph slot is purchased only when the player has XP in it (or it is the
--- selected morph of an ability they actually bought). GetAbilityProgressionRankFromAbilityId
--- reports the rank of the ability id itself, which exists for skills you have
--- never spent a point on — using that as "purchased" marked every base as owned.
--- Rank is omitted when unknown; we never invent I–IV.
+-- A morph slot is purchased only when the player has XP in it, or the game's
+-- progression info says this is the selected morph at rank I+. 
+-- GetAbilityProgressionRankFromAbilityId can return a rank for an ability id
+-- the player has never spent a point on — that must not mark the slot owned.
+-- Rank is always recorded (including 0) so the skill book can show whether
+-- the ability is leveled. Never invent I–IV.
 local function morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
   if GetProgressionSkillMorphSlotCurrentXP then
     local xp = GetProgressionSkillMorphSlotCurrentXP(progressionId, slot)
@@ -283,7 +284,7 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     return nil
   end
 
-  local aName, texture, earnedRank, passive, _, purchased, _, currentRank =
+  local aName, texture, earnedRank, passive, _, purchased, progressionIndex, currentRank =
     GetSkillAbilityInfo(skillType, lineIndex, skillIndex)
   aName = zo_strformat("<<1>>", aName)
   if not aName or aName == "" then return nil end
@@ -313,7 +314,8 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     if cur ~= nil then entry.rank = cur end
     if maxUpgrade ~= nil then entry.maxRank = maxUpgrade end
     entry.purchased = (cur or 0) >= 1 or abilityOwned
-    if not entry.purchased then entry.rank = 0 end
+    -- Keep the upgrade rank even when not purchased so the skill book can show
+    -- which level every ability is at on this character.
     local abilityId = GetSkillAbilityId and GetSkillAbilityId(skillType, lineIndex, skillIndex, false)
     entry.icon = abilityIcon(abilityId) or entry.icon
     entry.description = abilityDescription(abilityId)
@@ -335,6 +337,20 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     and GetProgressionSkillCurrentMorphSlot(progressionId)
     or nil
   entry.morph = currentMorph
+
+  -- Player's selected morph and its rank, from the progression index (not the
+  -- progression id). This is the level shown in the skills window.
+  local progMorph, progRank = nil, nil
+  if type(progressionIndex) == "number" and progressionIndex > 0 and GetAbilityProgressionInfo then
+    local _, m, r = GetAbilityProgressionInfo(progressionIndex)
+    if type(m) == "number" then progMorph = m end
+    if type(r) == "number" then progRank = r end
+  end
+  if type(currentRank) == "number" and currentRank > (progRank or 0) then
+    progRank = currentRank
+    if progMorph == nil then progMorph = currentMorph end
+  end
+  if type(progRank) == "number" then entry.rank = progRank end
 
   entry.skillStyle = safe(function()
     local id
@@ -358,10 +374,26 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
       if not abilityId or abilityId == 0 then return nil end
       local slotName = zo_strformat("<<1>>", GetAbilityName(abilityId))
       local owned = abilityOwned and morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
+      -- A selected morph the game has ranked I+ is purchased even when the
+      -- earnedRank heuristic missed it. Rank alone on some other slot is not.
+      local selected = (progMorph ~= nil and slot == progMorph) or (currentMorph ~= nil and slot == currentMorph)
+      if (not owned) and selected and type(progRank) == "number" and progRank >= 1 then
+        owned = true
+      end
       local slotRank = nil
-      if owned and GetAbilityProgressionRankFromAbilityId then
+      -- Per-morph rank from the skill line, including 0. This is the level.
+      if GetSkillLineProgressionAbilityRank then
+        local r = GetSkillLineProgressionAbilityRank(skillType, lineIndex, skillIndex, slot)
+        if type(r) == "number" then slotRank = r end
+      end
+      if selected and type(progRank) == "number" and progRank > (slotRank or 0) then
+        slotRank = progRank
+      end
+      -- Last resort only when the line API is missing. A non-nil 0 from the
+      -- line API is a real "not ranked", not an invitation to substitute this.
+      if slotRank == nil and GetAbilityProgressionRankFromAbilityId then
         local r = GetAbilityProgressionRankFromAbilityId(abilityId)
-        if type(r) == "number" and r >= 1 then slotRank = r end
+        if type(r) == "number" then slotRank = r end
       end
       local row = {
         slot = slot,
@@ -398,7 +430,14 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
   end
 
   entry.purchased = anyOwned
-  if not anyOwned then entry.rank = 0 end
+  -- Keep the best rank the game reported. Never wipe a known I–IV down to 0
+  -- just because the purchase heuristic failed.
+  local best = type(entry.rank) == "number" and entry.rank or 0
+  for i = 1, #entry.morphs do
+    local r = entry.morphs[i].rank
+    if type(r) == "number" and r > best then best = r end
+  end
+  entry.rank = best
   if not entry.icon or entry.icon == "" then
     for i = 1, #entry.morphs do
       local ic = entry.morphs[i].icon
