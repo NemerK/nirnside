@@ -5,9 +5,13 @@ export const MAX_ABILITY_RANK = 4;
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const;
 
-/** Rank as the game writes it (I–IV). Unknown/unpurchased is an em dash, never a guessed number. */
+/**
+ * Rank as the game writes it (I–IV). 0 is a real "not ranked yet" value.
+ * Only a missing rank is an em dash — never a guessed number.
+ */
 export function romanRank(rank: number | null | undefined): string {
-  if (rank == null || rank <= 0) return "—";
+  if (rank == null) return "—";
+  if (rank <= 0) return "0";
   return ROMAN[rank - 1] ?? String(rank);
 }
 

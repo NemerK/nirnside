@@ -112,7 +112,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto w-full min-w-0 max-w-5xl">
       <Link
         href={archived ? "/characters#archive" : "/characters"}
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
