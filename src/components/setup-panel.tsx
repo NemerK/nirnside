@@ -91,11 +91,16 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
   async function pickNative(mode: "file" | "folder") {
     setBusy(true);
     setError(null);
+    // Safety net: never let the button spin forever if the dialog opened
+    // somewhere the user can't reach it.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 150_000);
     try {
       const res = await fetch("/api/setup/pick", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ mode, startDir: path || undefined }),
+        signal: ctrl.signal,
       });
       const json = await res.json();
       if (json.ok) {
@@ -107,13 +112,18 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
         // User closed the dialog — nothing to report.
       } else if (json.unavailable) {
         setNativeAvail(false);
-        setError("Couldn't open a system dialog on this machine. Use the in-app browser or paste a path.");
+        setError(json.error ?? "Couldn't open a system dialog on this machine. Use the in-app browser or paste a path.");
       } else {
         setError(json.error ?? "Couldn't use that selection.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed.");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("No file window came back. If Nirnside is running on another machine, paste the path or upload your .lua instead.");
+      } else {
+        setError(err instanceof Error ? err.message : "Request failed.");
+      }
     } finally {
+      clearTimeout(timer);
       setBusy(false);
     }
   }

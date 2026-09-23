@@ -26,7 +26,10 @@ const FOLDER_TITLE = "Select your Elder Scrolls Online data folder (or live / li
 
 function run(cmd: string, args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    execFile(cmd, args, { timeout: 10 * 60_000, windowsHide: true, maxBuffer: 1 << 20 }, (err, stdout, stderr) => {
+    // The dialog is modal and waits for the user, but never forever: if it is
+    // left open (or opened on a desktop nobody can see) the process is killed
+    // after a couple of minutes so the request can't hang indefinitely.
+    execFile(cmd, args, { timeout: 2 * 60_000, windowsHide: true, maxBuffer: 1 << 20 }, (err, stdout, stderr) => {
       const code = err && typeof (err as { code?: number }).code === "number" ? (err as { code?: number }).code! : err ? 1 : 0;
       resolve({ code, stdout: String(stdout ?? ""), stderr: String(stderr ?? "") });
     });
@@ -109,10 +112,20 @@ async function pickLinux(mode: PickMode, startDir?: string): Promise<PickResult>
   return { ok: false, unavailable: true, error: "No native file dialog (install zenity) — use the in-app browser." };
 }
 
-/** True on platforms where we can attempt a native dialog. */
+/**
+ * True on platforms where we can actually show a native dialog *on this host*.
+ * On Linux a dialog needs a display server; without one (a headless server /
+ * container) zenity would open nowhere and hang, so we report unavailable.
+ * This is only about the machine running Nirnside — whether the *viewer* is
+ * local is checked separately at the request layer.
+ */
 export function nativePickerAvailable(): boolean {
   if (process.platform === "win32" || process.platform === "darwin") return true;
-  return hasCmd("zenity") || hasCmd("kdialog");
+  if (process.platform === "linux") {
+    const hasDisplay = !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+    return hasDisplay && (hasCmd("zenity") || hasCmd("kdialog"));
+  }
+  return false;
 }
 
 export async function nativePick(mode: PickMode, startDir?: string): Promise<PickResult> {
