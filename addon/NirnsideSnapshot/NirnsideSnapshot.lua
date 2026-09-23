@@ -257,26 +257,21 @@ local function morphSlotEnd()
 end
 
 -- One ability: passives keep their upgrade rank; actives/ultimates snapshot
--- independent ranks for base + both morphs via the live progression API.
+-- ranks for base + both morphs via the live progression API.
 -- Skip crafted/scribing skills — GetSkillAbilityInfo can error on those.
--- A morph slot is purchased only when the player has XP in it, or the game's
--- progression info says this is the selected morph at rank I+. 
--- GetAbilityProgressionRankFromAbilityId can return a rank for an ability id
--- the player has never spent a point on — that must not mark the slot owned.
--- Rank is always recorded (including 0) so the skill book can show whether
--- the ability is leveled. Never invent I–IV.
+--
+-- A morph slot is "owned" only when it is the player's CURRENT form for this
+-- ability: the base while unmorphed, or the chosen morph after morphing. ESO
+-- shares one progression (and its XP) across the base and both morphs, so
+-- GetProgressionSkillMorphSlotCurrentXP returns a number for EVERY slot — it is
+-- not a per-slot ownership signal. Using it marked both morphs purchased at
+-- once (impossible in game). Ownership follows the current morph slot, so
+-- exactly one slot is owned per purchased ability.
 local function morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
-  if GetProgressionSkillMorphSlotCurrentXP then
-    local xp = GetProgressionSkillMorphSlotCurrentXP(progressionId, slot)
-    if type(xp) == "number" then return true end
-    -- nil XP means not purchased. A maxed selected morph can also report nil;
-    -- only then fall back to the ability-level purchase.
-    if abilityOwned and currentMorph ~= nil and slot == currentMorph then
-      return true
-    end
-    return false
-  end
-  return abilityOwned and currentMorph ~= nil and slot == currentMorph
+  if not abilityOwned then return false end
+  local active = currentMorph
+  if type(active) ~= "number" then active = MORPH_SLOT_BASE or 0 end
+  return slot == active
 end
 
 local function gatherOneAbility(skillType, lineIndex, skillIndex)
@@ -338,12 +333,10 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     or nil
   entry.morph = currentMorph
 
-  -- The ability's progression rank is a single value shared by the base and
-  -- both morphs (live ESO ranks the whole progression at once). It is the
-  -- level the skills window shows on the node even before a skill point is
-  -- spent, so it is exactly what a leveled-but-unpurchased ability displays.
-  -- GetAbilityProgressionInfo returns it for the current progression index;
-  -- the 8th GetSkillAbilityInfo return is the same rank. Never invent one.
+  -- The CURRENT form's morph + rank (the active morph, or the base while
+  -- unmorphed). Per-morph remembered ranks are read separately, per slot, below
+  -- — ESO remembers the rank the base and EACH morph reached even after a
+  -- respec, so they can differ (base IV, morph 1 IV, morph 2 II). Never invent.
   local progMorph, progRank = nil, nil
   if type(progressionIndex) == "number" and progressionIndex > 0 and GetAbilityProgressionInfo then
     local _, m, r = GetAbilityProgressionInfo(progressionIndex)
@@ -377,18 +370,19 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
         and GetProgressionSkillMorphSlotAbilityId(progressionId, slot)
       if not abilityId or abilityId == 0 then return nil end
       local slotName = zo_strformat("<<1>>", GetAbilityName(abilityId))
-      local owned = abilityOwned and morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
-      -- A selected morph the game has ranked I+ is purchased even when the
-      -- earnedRank heuristic missed it. Rank alone on some other slot is not.
+      -- Ownership follows the current form only: a slot is purchased when the
+      -- ability currently has a skill point in it AND this is its active morph.
+      -- We do NOT infer ownership from a remembered rank — a base or morph that
+      -- was leveled and later respec'd out still carries its rank but is not
+      -- purchased, so it must show greyed.
+      local owned = morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
       local selected = (progMorph ~= nil and slot == progMorph) or (currentMorph ~= nil and slot == currentMorph)
-      if (not owned) and selected and type(progRank) == "number" and progRank >= 1 then
-        owned = true
-      end
-      -- Per-slot rank straight from the game: this is how the skills UI reads
-      -- each morph node's level (ZO_ActiveSkillProgressionData.currentRank).
-      -- It is nil for a morph the player has never owned, and a real 0 when
-      -- the game reports "not ranked". The shared progression rank is folded
-      -- in below so an unpurchased base still shows the level it reached.
+      -- Per-slot remembered rank straight from the game: this is how the skills
+      -- UI reads each morph node's level (ZO_ActiveSkillProgressionData
+      -- currentRank = GetAbilityProgressionRankFromAbilityId(slot's abilityId)).
+      -- nil = never owned (show as unranked); a number = the remembered rank,
+      -- kept even when the slot is not currently purchased. Never propagated
+      -- across slots — each morph keeps its own real value.
       local slotRank = nil
       if GetAbilityProgressionRankFromAbilityId then
         local r = GetAbilityProgressionRankFromAbilityId(abilityId)
@@ -432,27 +426,18 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
   end
 
   entry.purchased = anyOwned
-  -- The ability's rank is the best real value the game reported for this
-  -- progression (its own rank plus every slot's). Never wipe a known I–IV
-  -- down to 0 just because the purchase heuristic failed.
-  local best = type(entry.rank) == "number" and entry.rank or 0
-  local haveBest = type(entry.rank) == "number"
-  for i = 1, #entry.morphs do
-    local r = entry.morphs[i].rank
-    if type(r) == "number" then
-      haveBest = true
-      if r > best then best = r end
-    end
-  end
-  entry.rank = best
-  -- One shared progression rank drives the base and both morphs in live ESO.
-  -- Show it on every slot the game did not give a higher value for, including
-  -- the base of a leveled-but-unpurchased ability that would otherwise read 0
-  -- or blank. Purchase state stays separate, so this never implies ownership.
-  if haveBest and best > 0 then
+  -- The ability's headline rank is the rank of its CURRENT form (the owned
+  -- morph, or the base). entry.rank was already set from that above. We do NOT
+  -- copy a rank onto the other morph slots: each slot keeps the real per-slot
+  -- value the game reported, so a morph the player never chose never looks
+  -- leveled when it isn't. If the current-morph rank is missing, fall back to
+  -- the highest real slot rank so a known I–IV is never shown as 0.
+  if type(entry.rank) ~= "number" or entry.rank <= 0 then
     for i = 1, #entry.morphs do
       local r = entry.morphs[i].rank
-      if type(r) ~= "number" or r < best then entry.morphs[i].rank = best end
+      if type(r) == "number" and r > (type(entry.rank) == "number" and entry.rank or 0) then
+        entry.rank = r
+      end
     end
   end
   if not entry.icon or entry.icon == "" then

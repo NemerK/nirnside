@@ -170,9 +170,9 @@ NirnsideData =
                                         ["purchased"] = true,
                                         ["morphs"] =
                                         {
-                                            { ["slot"] = 0, ["name"] = "Shadow Cloak", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 0, ["name"] = "Shadow Cloak", ["rank"] = 4, ["purchased"] = false },
                                             { ["slot"] = 1, ["name"] = "Shadowy Disguise", ["rank"] = 4, ["purchased"] = true },
-                                            { ["slot"] = 2, ["name"] = "Dark Cloak", ["rank"] = 4, ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "Dark Cloak", ["rank"] = 2, ["purchased"] = false },
                                         },
                                     },
                                     {
@@ -185,7 +185,7 @@ NirnsideData =
                                         {
                                             { ["slot"] = 0, ["name"] = "Blur", ["rank"] = 4, ["purchased"] = false, ["description"] = "|cffffffReduces damage taken and grants Major Evasion.|r" },
                                             { ["slot"] = 1, ["name"] = "Mirage", ["rank"] = 4, ["purchased"] = false },
-                                            { ["slot"] = 2, ["name"] = "Double Take", ["rank"] = 4, ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "Double Take", ["rank"] = 2, ["purchased"] = false },
                                         },
                                     },
                                     {
