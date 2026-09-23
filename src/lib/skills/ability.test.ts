@@ -180,17 +180,28 @@ describe("sample snapshot morph ranks", () => {
     assert.equal(displayAbility(deathStroke).showingMorph, false);
     assert.equal(deathStroke.morphs.find((m) => m.slot === 1)?.purchased, false);
 
-    // Blur: leveled to IV but not currently purchased. The base and both
-    // morphs carry the shared progression rank so the sheet shows the level.
+    // Blur: leveled then respec'd out — nothing purchased, but each slot keeps
+    // its own remembered rank (base IV, Mirage IV, Double Take II). Ranks are
+    // NOT flattened to one shared value; every morph shows its real level.
     const blur = sings.skillLines
       .flatMap((l) => l.abilities)
       .find((a) => a.name === "Blur");
     assert.ok(blur);
     assert.equal(blur.purchased, false);
-    for (const slot of blur.morphs) {
-      assert.equal(slot.purchased, false);
-      assert.equal(slot.rank, 4);
-    }
-    assert.equal(bestRank(blur.morphs.find((m) => m.slot === 0)?.rank, blur.rank), 4);
+    for (const slot of blur.morphs) assert.equal(slot.purchased, false);
+    assert.equal(blur.morphs.find((m) => m.slot === 0)?.rank, 4);
+    assert.equal(blur.morphs.find((m) => m.slot === 1)?.rank, 4);
+    assert.equal(blur.morphs.find((m) => m.slot === 2)?.rank, 2);
+
+    // Shadowy Disguise: morphed — only the chosen morph is purchased; the base
+    // and the other morph are greyed but keep their remembered ranks.
+    const cloak = sings.skillLines
+      .flatMap((l) => l.abilities)
+      .find((a) => a.name === "Shadowy Disguise");
+    assert.ok(cloak);
+    assert.equal(cloak.morphs.find((m) => m.slot === 0)?.purchased, false);
+    assert.equal(cloak.morphs.find((m) => m.slot === 1)?.purchased, true);
+    assert.equal(cloak.morphs.find((m) => m.slot === 2)?.purchased, false);
+    assert.equal(cloak.morphs.find((m) => m.slot === 2)?.rank, 2);
   });
 });
