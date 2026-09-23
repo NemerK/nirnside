@@ -17,8 +17,38 @@ import { AccountSnapshot } from "./schema";
  * On any structural problem it throws with a clear message rather than guessing —
  * accuracy over silent partial data.
  */
+/**
+ * Two different files are both named NirnsideSnapshot.lua:
+ *   - the addon PROGRAM in  ...\AddOns\NirnsideSnapshot\NirnsideSnapshot.lua
+ *   - the SAVED DATA in     ...\live\SavedVariables\NirnsideSnapshot.lua
+ * People routinely grab the addon one (it's the file they have open). It is Lua
+ * source, not a data table, so parsing it yields a cryptic "expected '='"
+ * error. Detect it up front and say exactly which file to use instead.
+ */
+const WRONG_FILE_HINT =
+  "This looks like the Nirnside addon program, not your saved account data. " +
+  "Both files are named NirnsideSnapshot.lua — pick the one inside your SavedVariables folder " +
+  "(Documents\\Elder Scrolls Online\\live\\SavedVariables\\NirnsideSnapshot.lua), which begins with " +
+  "'NirnsideData = {'. The one in the AddOns folder is the addon itself and can't be read as data.";
+
+function looksLikeAddonSource(src: string): boolean {
+  const hasDataAssignment = /(^|\n)\s*NirnsideData\s*=/.test(src);
+  if (hasDataAssignment) return false;
+  return /(^|\n)\s*local\s+\w|\bfunction\s|\bSLASH_COMMANDS\b|\bEVENT_[A-Z]/.test(src);
+}
+
 export function loadSnapshotFromLua(src: string): AccountSnapshot {
-  const program = parseLua(src);
+  if (looksLikeAddonSource(src)) throw new Error(WRONG_FILE_HINT);
+
+  let program: Record<string, LuaValue>;
+  try {
+    program = parseLua(src);
+  } catch (err) {
+    // If it doesn't parse and doesn't contain the data table, it's almost
+    // certainly the wrong NirnsideSnapshot.lua (the addon), or some other file.
+    if (!/(^|\n)\s*NirnsideData\s*=/.test(src)) throw new Error(WRONG_FILE_HINT);
+    throw err;
+  }
   const root = program["NirnsideData"];
   if (!isObject(root)) throw new Error("NirnsideData table not found in SavedVariables");
 
