@@ -15,7 +15,7 @@ import {
 import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
-import { getSkillLineByName, setHref, catalogAbilityLore } from "@/lib/db/catalog-queries";
+import { getSkillLineByName, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { rolesForCharacter } from "@/lib/roles/filter";
@@ -70,9 +70,18 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   const front = c.equipped.filter((e) => e.bar === "front");
   const back = c.equipped.filter((e) => e.bar === "back");
   const armorJewelry = c.equipped.filter((e) => e.bar === null);
-  let lore = new Map() as ReturnType<typeof catalogAbilityLore>;
+  let lore = new Map() as ReturnType<typeof catalogAbilityLoreFor>;
   try {
-    lore = catalogAbilityLore();
+    const names: string[] = [];
+    for (const line of c.skillLines) {
+      for (const ability of line.abilities) {
+        if (ability.name) names.push(ability.name);
+        for (const morph of ability.morphs ?? []) {
+          if (morph.name) names.push(morph.name);
+        }
+      }
+    }
+    lore = catalogAbilityLoreFor(names);
   } catch {
     lore = new Map();
   }
