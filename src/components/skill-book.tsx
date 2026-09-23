@@ -23,7 +23,7 @@ function RankPips({ rank, max = 4 }: { rank: number | null; max?: number }) {
           />
         ))}
       </span>
-      <span className="tabular-nums text-xs text-fg-muted">{romanRank(rank)}</span>
+      <span className="tabular-nums text-xs text-fg-muted">Rank {romanRank(rank)}</span>
     </span>
   );
 }
@@ -50,7 +50,7 @@ function AbilityDetail({
   const icon = shown?.icon || ability.icon || ability.morphs.find((m) => m.icon)?.icon;
   const description = shown?.description || ability.description;
   const purchased = shown ? shown.purchased : ability.purchased;
-  const rank = shown ? shown.rank : ability.passive ? ability.rank : ability.rank >= 1 ? ability.rank : null;
+  const rank = shown?.rank ?? ability.rank;
   const source = ability.descriptionSource;
 
   return (
@@ -259,7 +259,7 @@ export function SkillBook({
                     a.morphs[0];
                   const label = face?.name ?? a.name;
                   const icon = face?.icon || a.icon || a.morphs.find((m) => m.icon)?.icon;
-                  const rank = face?.rank ?? (a.passive ? a.rank : null);
+                  const rank = face?.rank ?? a.rank;
                   return (
                     <li key={`${a.name}-${i}`}>
                       <button

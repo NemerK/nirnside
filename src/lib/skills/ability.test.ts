@@ -129,7 +129,7 @@ describe("ability display", () => {
     assert.equal(romanRank(3), "III");
     assert.equal(romanRank(4), "IV");
     assert.equal(romanRank(null), "—");
-    assert.equal(romanRank(0), "—");
+    assert.equal(romanRank(0), "0");
     assert.equal(slotLabel(0), "Base");
     assert.equal(slotLabel(2), "Morph 2");
   });

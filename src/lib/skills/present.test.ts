@@ -95,6 +95,8 @@ describe("skill book presentation", () => {
     const view = presentAbility(ability, new Map());
     assert.equal(view.purchased, false);
     assert.equal(view.morphs[0].purchased, false);
+    assert.equal(view.morphs[0].rank, 0);
+    assert.equal(view.morphs[0].rankLabel, "0");
     assert.equal(view.description.includes("|c"), true);
   });
 
