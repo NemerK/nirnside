@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Download, MonitorSmartphone, Users } from "lucide-react";
 import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
@@ -18,7 +18,14 @@ export default function HomePage() {
   const account = safe(() => getAccount());
   const dataSource = safe(() => getDataSource());
   const autoSetup = safe(() => getAutoSetup());
-  if (!account) return <Onboarding setup={autoSetup} scanned={safe(() => candidatePaths()) ?? []} />;
+  if (!account)
+    return (
+      <Onboarding
+        setup={autoSetup}
+        scanned={safe(() => candidatePaths()) ?? []}
+        onGamingPc={process.platform === "win32"}
+      />
+    );
 
   const characters = safe(() => getCharacters()) ?? [];
   const archived = safe(() => getArchivedCharacters()) ?? [];
@@ -99,12 +106,16 @@ function lineHrefs(goals: Goal[]): Record<string, string> {
   return out;
 }
 
+const RELEASES_URL = "https://github.com/NemerK/nirnside/releases/latest";
+
 function Onboarding({
   setup,
   scanned,
+  onGamingPc,
 }: {
   setup: ReturnType<typeof getAutoSetup>;
   scanned: string[];
+  onGamingPc: boolean;
 }) {
   const foundEso = (setup?.addOnsDirs.length ?? 0) > 0;
   return (
@@ -138,19 +149,56 @@ function Onboarding({
             </Link>
           </p>
         </EmptyState>
-      ) : (
-        <EmptyState title="Point Nirnside at your ESO folder" icon={<Users className="h-8 w-8" />}>
+      ) : onGamingPc ? (
+        <EmptyState title="Almost there — point Nirnside at your ESO folder" icon={<Users className="h-8 w-8" />}>
           <p className="mb-4">
-            Nirnside looks in the usual Documents folders by itself. If it didn&apos;t find ESO here — unusual path,
-            another drive, or this machine doesn&apos;t have the game — tell it where to look. It then installs its
-            addons and reads the files the game writes. Nothing is uploaded anywhere.
+            Nirnside checks your Documents automatically, including OneDrive. It didn&apos;t spot ESO here — it may be on
+            another drive or an unusual path. Choose your{" "}
+            <code className="rounded bg-surface-2 px-1">Elder Scrolls Online</code> folder once and you&apos;re done.
+            Nothing is uploaded.
           </p>
           <Link
             href="/setup"
-            className="inline-flex items-center rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg"
+            className="inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg"
           >
+            <MonitorSmartphone className="h-4 w-4" />
             Open Setup
           </Link>
+        </EmptyState>
+      ) : (
+        <EmptyState title="Run Nirnside on the PC where you play ESO" icon={<MonitorSmartphone className="h-8 w-8" />}>
+          <p className="mb-4">
+            Nirnside reads the files ESO saves on your gaming PC, so it runs on that same computer — no accounts, no
+            servers, nothing uploaded. This copy looks like it&apos;s on a different machine, so it can&apos;t see your
+            game folder.
+          </p>
+          <p className="mb-4 font-medium text-fg">On your Windows gaming PC:</p>
+          <ol className="mx-auto mb-5 max-w-md list-decimal space-y-2 text-left text-fg">
+            <li>
+              Download <span className="font-medium">Nirnside.exe</span> and double-click it. No Node, Visual Studio, or
+              Python — a browser tab opens on its own.
+            </li>
+            <li>
+              It finds your account automatically. In ESO, enable{" "}
+              <span className="font-medium">Nirnside Snapshot</span> and log out once.
+            </li>
+          </ol>
+          <a
+            href={RELEASES_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg"
+          >
+            <Download className="h-4 w-4" />
+            Download Nirnside for Windows
+          </a>
+          <p className="mt-4 text-sm text-fg-muted">
+            Already on your gaming PC?{" "}
+            <Link href="/setup" className="text-accent hover:underline">
+              Point it at your ESO folder
+            </Link>
+            .
+          </p>
         </EmptyState>
       )}
 
