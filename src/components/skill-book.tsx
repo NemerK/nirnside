@@ -54,7 +54,7 @@ function AbilityDetail({
   const source = ability.descriptionSource;
 
   return (
-    <div className="rounded-lg border border-border bg-surface/60 p-4">
+    <div className="w-full min-w-0 rounded-lg border border-border bg-surface/60 p-4">
       <div className="flex items-start gap-3">
         <span className={purchased ? "" : "opacity-40 grayscale"}>
           <GameIcon name={name} icon={icon} size={56} />
@@ -200,9 +200,9 @@ export function SkillBook({
   }
 
   return (
-    <section>
+    <section className="w-full min-w-0">
       <SectionTitle>Skills</SectionTitle>
-      <Card className="p-4">
+      <Card className="w-full min-w-0 p-4">
         <div role="tablist" aria-label="Skill type" className="mb-4 flex flex-wrap gap-1 border-b border-border pb-3">
           {categories.map((c) => (
             <TabButton key={c.name} active={c.name === category?.name} onClick={() => pickCategory(c.name)}>
@@ -211,9 +211,9 @@ export function SkillBook({
           ))}
         </div>
 
-        <div className="grid min-h-[32rem] gap-4 lg:h-[42rem] lg:min-h-[42rem] lg:grid-cols-[12.5rem_16rem_minmax(0,1fr)] lg:overflow-hidden">
+        <div className="grid w-full min-w-0 min-h-[32rem] gap-4 lg:h-[42rem] lg:min-h-[42rem] lg:grid-cols-[12.5rem_16rem_minmax(0,1fr)] lg:overflow-hidden">
           <ul
-            className="flex min-h-0 gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-y-auto lg:pr-1"
+            className="flex min-h-0 min-w-0 gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-y-auto lg:pr-1"
             aria-label="Skill line"
           >
             {category?.lines.map((l) => {
@@ -244,7 +244,7 @@ export function SkillBook({
             })}
           </ul>
 
-          <div className="min-h-0 lg:overflow-y-auto lg:pr-1">
+          <div className="min-h-0 min-w-0 lg:overflow-y-auto lg:pr-1">
             {line && line.abilities.length === 0 && (
               <p className="text-sm text-fg-muted">No abilities captured for this line.</p>
             )}
