@@ -6,12 +6,13 @@ export const MAX_ABILITY_RANK = 4;
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const;
 
 /**
- * Rank as the game writes it (I–IV). 0 is a real "not ranked yet" value.
- * Only a missing rank is an em dash — never a guessed number.
+ * Rank as the game writes it (I–IV). ESO only ever shows a rank of I or higher;
+ * an ability that was never leveled (rank 0) or was never captured (null) has
+ * no rank to show, so both render as an em dash rather than a misleading
+ * "Rank 0". We never guess a number.
  */
 export function romanRank(rank: number | null | undefined): string {
-  if (rank == null) return "—";
-  if (rank <= 0) return "0";
+  if (rank == null || rank <= 0) return "—";
   return ROMAN[rank - 1] ?? String(rank);
 }
 
@@ -28,6 +29,21 @@ export function morphSlotPurchased(slot: { purchased?: boolean; rank?: number | 
 export function slotLabel(slot: number): string {
   if (slot <= 0) return "Base";
   return `Morph ${slot}`;
+}
+
+/**
+ * The rank to show for an ability node. Live ESO shares one progression rank
+ * across the base and both morphs, so a leveled-but-unpurchased base should
+ * display that rank, not a zeroed slot value. We surface the higher of the two
+ * real values and only report unknown (—) when neither was captured.
+ */
+export function bestRank(...ranks: Array<number | null | undefined>): number | null {
+  let best: number | null = null;
+  for (const r of ranks) {
+    if (r == null) continue;
+    if (best == null || r > best) best = r;
+  }
+  return best;
 }
 
 /**

@@ -338,8 +338,12 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     or nil
   entry.morph = currentMorph
 
-  -- Player's selected morph and its rank, from the progression index (not the
-  -- progression id). This is the level shown in the skills window.
+  -- The ability's progression rank is a single value shared by the base and
+  -- both morphs (live ESO ranks the whole progression at once). It is the
+  -- level the skills window shows on the node even before a skill point is
+  -- spent, so it is exactly what a leveled-but-unpurchased ability displays.
+  -- GetAbilityProgressionInfo returns it for the current progression index;
+  -- the 8th GetSkillAbilityInfo return is the same rank. Never invent one.
   local progMorph, progRank = nil, nil
   if type(progressionIndex) == "number" and progressionIndex > 0 and GetAbilityProgressionInfo then
     local _, m, r = GetAbilityProgressionInfo(progressionIndex)
@@ -380,20 +384,18 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
       if (not owned) and selected and type(progRank) == "number" and progRank >= 1 then
         owned = true
       end
+      -- Per-slot rank straight from the game: this is how the skills UI reads
+      -- each morph node's level (ZO_ActiveSkillProgressionData.currentRank).
+      -- It is nil for a morph the player has never owned, and a real 0 when
+      -- the game reports "not ranked". The shared progression rank is folded
+      -- in below so an unpurchased base still shows the level it reached.
       local slotRank = nil
-      -- Per-morph rank from the skill line, including 0. This is the level.
-      if GetSkillLineProgressionAbilityRank then
-        local r = GetSkillLineProgressionAbilityRank(skillType, lineIndex, skillIndex, slot)
-        if type(r) == "number" then slotRank = r end
-      end
-      if selected and type(progRank) == "number" and progRank > (slotRank or 0) then
-        slotRank = progRank
-      end
-      -- Last resort only when the line API is missing. A non-nil 0 from the
-      -- line API is a real "not ranked", not an invitation to substitute this.
-      if slotRank == nil and GetAbilityProgressionRankFromAbilityId then
+      if GetAbilityProgressionRankFromAbilityId then
         local r = GetAbilityProgressionRankFromAbilityId(abilityId)
         if type(r) == "number" then slotRank = r end
+      end
+      if selected and type(progRank) == "number" and progRank > (slotRank or -1) then
+        slotRank = progRank
       end
       local row = {
         slot = slot,
@@ -430,14 +432,29 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
   end
 
   entry.purchased = anyOwned
-  -- Keep the best rank the game reported. Never wipe a known I–IV down to 0
-  -- just because the purchase heuristic failed.
+  -- The ability's rank is the best real value the game reported for this
+  -- progression (its own rank plus every slot's). Never wipe a known I–IV
+  -- down to 0 just because the purchase heuristic failed.
   local best = type(entry.rank) == "number" and entry.rank or 0
+  local haveBest = type(entry.rank) == "number"
   for i = 1, #entry.morphs do
     local r = entry.morphs[i].rank
-    if type(r) == "number" and r > best then best = r end
+    if type(r) == "number" then
+      haveBest = true
+      if r > best then best = r end
+    end
   end
   entry.rank = best
+  -- One shared progression rank drives the base and both morphs in live ESO.
+  -- Show it on every slot the game did not give a higher value for, including
+  -- the base of a leveled-but-unpurchased ability that would otherwise read 0
+  -- or blank. Purchase state stays separate, so this never implies ownership.
+  if haveBest and best > 0 then
+    for i = 1, #entry.morphs do
+      local r = entry.morphs[i].rank
+      if type(r) ~= "number" or r < best then entry.morphs[i].rank = best end
+    end
+  end
   if not entry.icon or entry.icon == "" then
     for i = 1, #entry.morphs do
       local ic = entry.morphs[i].icon

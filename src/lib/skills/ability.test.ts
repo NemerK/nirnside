@@ -5,6 +5,7 @@ import { loadSnapshotFromFile } from "../snapshot/load";
 import { SkillMorph } from "../snapshot/schema";
 import {
   abilityIsKnown,
+  bestRank,
   displayAbility,
   knownAbilityNames,
   romanRank,
@@ -129,9 +130,24 @@ describe("ability display", () => {
     assert.equal(romanRank(3), "III");
     assert.equal(romanRank(4), "IV");
     assert.equal(romanRank(null), "—");
-    assert.equal(romanRank(0), "0");
+    assert.equal(romanRank(0), "—");
     assert.equal(slotLabel(0), "Base");
     assert.equal(slotLabel(2), "Morph 2");
+  });
+
+  it("prefers the real progression rank over a zeroed slot rank", () => {
+    // A leveled-but-unpurchased base can read 0 while the ability's shared
+    // progression rank is IV — show IV, not 0.
+    assert.equal(bestRank(0, 4), 4);
+    assert.equal(bestRank(4, 0), 4);
+    // A known lower slot rank still wins over an unknown ability rank.
+    assert.equal(bestRank(3, null), 3);
+    // Nothing captured stays unknown (em dash), never a guessed number.
+    assert.equal(bestRank(null, undefined), null);
+    assert.equal(romanRank(bestRank(null, undefined)), "—");
+    // A genuine rank 0 with no other signal stays 0 in data, shown as unranked.
+    assert.equal(bestRank(0, null), 0);
+    assert.equal(romanRank(bestRank(0, null)), "—");
   });
 
   it("only reports XP progress when the game supplied extents", () => {
@@ -163,5 +179,18 @@ describe("sample snapshot morph ranks", () => {
     assert.ok(deathStroke);
     assert.equal(displayAbility(deathStroke).showingMorph, false);
     assert.equal(deathStroke.morphs.find((m) => m.slot === 1)?.purchased, false);
+
+    // Blur: leveled to IV but not currently purchased. The base and both
+    // morphs carry the shared progression rank so the sheet shows the level.
+    const blur = sings.skillLines
+      .flatMap((l) => l.abilities)
+      .find((a) => a.name === "Blur");
+    assert.ok(blur);
+    assert.equal(blur.purchased, false);
+    for (const slot of blur.morphs) {
+      assert.equal(slot.purchased, false);
+      assert.equal(slot.rank, 4);
+    }
+    assert.equal(bestRank(blur.morphs.find((m) => m.slot === 0)?.rank, blur.rank), 4);
   });
 });

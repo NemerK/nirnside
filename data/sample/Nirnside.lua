@@ -157,6 +157,52 @@ NirnsideData =
                                 },
                             },
                             {
+                                ["name"] = "Shadow",
+                                ["category"] = "Class",
+                                ["rank"] = 50,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    {
+                                        ["name"] = "Shadowy Disguise",
+                                        ["rank"] = 4,
+                                        ["morph"] = 1,
+                                        ["purchased"] = true,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Shadow Cloak", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 1, ["name"] = "Shadowy Disguise", ["rank"] = 4, ["purchased"] = true },
+                                            { ["slot"] = 2, ["name"] = "Dark Cloak", ["rank"] = 4, ["purchased"] = false },
+                                        },
+                                    },
+                                    {
+                                        ["name"] = "Blur",
+                                        ["rank"] = 4,
+                                        ["morph"] = 0,
+                                        ["purchased"] = false,
+                                        ["description"] = "|cffffffReduces damage taken and grants Major Evasion.|r",
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Blur", ["rank"] = 4, ["purchased"] = false, ["description"] = "|cffffffReduces damage taken and grants Major Evasion.|r" },
+                                            { ["slot"] = 1, ["name"] = "Mirage", ["rank"] = 4, ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "Double Take", ["rank"] = 4, ["purchased"] = false },
+                                        },
+                                    },
+                                    {
+                                        ["name"] = "Path of Darkness",
+                                        ["rank"] = 0,
+                                        ["morph"] = 0,
+                                        ["purchased"] = false,
+                                        ["morphs"] =
+                                        {
+                                            { ["slot"] = 0, ["name"] = "Path of Darkness", ["purchased"] = false },
+                                            { ["slot"] = 1, ["name"] = "Twisting Path", ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "Refreshing Path", ["purchased"] = false },
+                                        },
+                                    },
+                                },
+                            },
+                            {
                                 ["name"] = "Dual Wield",
                                 ["category"] = "Weapon",
                                 ["rank"] = 50,
