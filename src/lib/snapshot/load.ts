@@ -34,9 +34,20 @@ export function loadSnapshotFromLua(src: string): AccountSnapshot {
   const payload = accountNode["$AccountWide"] ?? accountNode;
   if (!isObject(payload)) throw new Error("$AccountWide payload not found");
 
+  // Every field in AccountSnapshot degrades to a safe default (scalars via
+  // .catch, lists via lenientArray), so a single odd value never blanks the
+  // whole account. A hard failure here means the payload is not an object at
+  // all — a genuinely unusable / wrong file.
   const parsed = AccountSnapshot.safeParse(payload);
   if (!parsed.success) {
     throw new Error("Snapshot failed validation:\n" + JSON.stringify(parsed.error.format(), null, 2));
+  }
+
+  // The account name is the file's identity. If it was missing or unreadable,
+  // fall back to the SavedVariables account key (e.g. "@AzuraStar") rather than
+  // showing a nameless account.
+  if (!parsed.data.displayName) {
+    parsed.data.displayName = accountKey;
   }
   return parsed.data;
 }

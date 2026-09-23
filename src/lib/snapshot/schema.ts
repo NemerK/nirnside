@@ -368,16 +368,32 @@ export const AchievementRecord = z.object({
 });
 export type AchievementRecord = z.infer<typeof AchievementRecord>;
 
+/**
+ * Account-level scalars use `.catch(...)` (not just `.default(...)`) so a single
+ * present-but-invalid value can never reject the whole snapshot. `.default`
+ * covers a *missing* value; `.catch` covers a value the game/addon wrote in an
+ * unexpected shape (e.g. a currency the API returns negative, or a stray float).
+ * This mirrors `lenientArray` above: one odd field degrades to a safe default
+ * instead of blanking the entire account. Missing/unreadable data reads as its
+ * empty default — never faked, and the character/item lists still load.
+ */
 export const AccountSnapshot = z.object({
-  displayName: z.string(),
-  region: Region.default("EU"),
+  // A snapshot with no account name is unusable; load.ts backfills it from the
+  // SavedVariables account key, so an empty string here is still recoverable.
+  displayName: z.string().catch(""),
+  region: Region.default("EU").catch("EU"),
   /** ESO API version at time of snapshot (used to detect patch changes). */
-  apiVersion: z.number().int().nonnegative().default(0),
-  esoPlus: z.boolean().default(false),
+  apiVersion: z.number().int().nonnegative().default(0).catch(0),
+  esoPlus: z.boolean().default(false).catch(false),
   /** Unix seconds of the most recent snapshot write. */
-  lastSnapshot: z.number().int().nonnegative().default(0),
-  gold: z.number().int().nonnegative().default(0),
-  currencies: z.record(z.string(), z.number().int().nonnegative()).default({}),
+  lastSnapshot: z.number().int().nonnegative().default(0).catch(0),
+  gold: z.number().int().nonnegative().default(0).catch(0),
+  // Per-currency values are coerced tolerantly so one odd amount does not drop
+  // every currency; the whole record still falls back to {} as a last resort.
+  currencies: z
+    .record(z.string(), z.number().int().catch(0))
+    .default({})
+    .catch({}),
   guilds: lenientArray(Guild).default([]),
   items: lenientArray(Item).default([]),
   characters: lenientArray(Character).default([]),
@@ -392,7 +408,7 @@ export const AccountSnapshot = z.object({
    * with older snapshots. New snapshots also fill `achievementRecords` below,
    * which the board prefers because it carries the full game truth.
    */
-  achievements: z.array(z.string()).default([]),
+  achievements: z.array(z.string()).default([]).catch([]),
   /**
    * Structured trial/dungeon/arena achievements straight from the game — the
    * authoritative source for the Pithka-style board. ESO achievements are
@@ -406,23 +422,24 @@ export const AccountSnapshot = z.object({
    * we simply check membership here — exactly what the in-game add-on does with
    * IsAchievementComplete. Sparse and cheap; written on logout/ReloadUI only.
    */
-    completedAchievementIds: z.preprocess(
-      (v) => coerceCompletedAchievementIds(v),
-      z.array(z.number().int().nonnegative()),
-    ),
+    completedAchievementIds: z
+      .preprocess((v) => coerceCompletedAchievementIds(v), z.array(z.number().int().nonnegative()))
+      .catch([]),
   /**
    * Per-character completed ids. Maelstrom Arena clears are still character-bound
    * in live ESO; we keep each toon's list and union them so the board stays
    * checked if any character has earned it.
    */
-  characterCompletedIds: z.preprocess((v) => {
-    if (v == null || typeof v !== "object" || Array.isArray(v)) return {};
-    const out: Record<string, number[]> = {};
-    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-      const ids = coerceCompletedAchievementIds(val);
-      if (ids.length > 0) out[k] = ids;
-    }
-    return out;
-  }, z.record(z.string(), z.array(z.number().int().nonnegative()))),
+  characterCompletedIds: z
+    .preprocess((v) => {
+      if (v == null || typeof v !== "object" || Array.isArray(v)) return {};
+      const out: Record<string, number[]> = {};
+      for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+        const ids = coerceCompletedAchievementIds(val);
+        if (ids.length > 0) out[k] = ids;
+      }
+      return out;
+    }, z.record(z.string(), z.array(z.number().int().nonnegative())))
+    .catch({}),
 });
 export type AccountSnapshot = z.infer<typeof AccountSnapshot>;
