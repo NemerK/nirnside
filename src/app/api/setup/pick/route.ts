@@ -6,9 +6,20 @@ import { getSetupStatus } from "@/lib/setup/status";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/** Whether this machine can show a native OS file/folder dialog. */
-export async function GET() {
-  return NextResponse.json({ available: nativePickerAvailable() });
+/**
+ * The native dialog opens on the machine *running* Nirnside. If the page is
+ * being viewed from a different device (a remote/cloud host), that dialog is
+ * invisible to the user and would just hang, so we only offer it when the
+ * request comes from this same machine.
+ */
+function requestIsLocal(req: Request): boolean {
+  const host = (req.headers.get("host") ?? "").split(":")[0].trim().toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]" || host === "";
+}
+
+/** Whether this machine can show a native OS file/folder dialog to this viewer. */
+export async function GET(req: Request) {
+  return NextResponse.json({ available: nativePickerAvailable() && requestIsLocal(req) });
 }
 
 /**
@@ -24,6 +35,18 @@ export async function POST(req: Request) {
     body = {};
   }
   const mode: PickMode = body.mode === "folder" ? "folder" : "file";
+
+  if (!requestIsLocal(req)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        unavailable: true,
+        error:
+          "The file window opens on the computer running Nirnside, which isn't this device. Paste the path or upload your NirnsideSnapshot.lua instead.",
+      },
+      { status: 501 },
+    );
+  }
 
   const picked = await nativePick(mode, body.startDir);
   if (!picked.ok || !picked.path) {
