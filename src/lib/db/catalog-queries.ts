@@ -95,21 +95,48 @@ export const skillLineCategories = () => categories("skillline");
 export const getSkillsForLine = (lineId: string) => query<CatalogSkill>("skill", { category: lineId });
 export const getSkillByName = (name: string) => byName<CatalogSkill>("skill", name);
 
+type LoreHit = { icon: string | null; description: string; source: CatalogSource };
+
+function rememberSkill(map: Map<string, LoreHit>, entry: CatalogSkill, source: CatalogSource) {
+  const baseIcon = entry.icon ?? null;
+  map.set(entry.name.toLowerCase(), { icon: baseIcon, description: entry.description, source });
+  for (const m of entry.morphs) {
+    map.set(m.name.toLowerCase(), {
+      icon: m.icon ?? baseIcon,
+      description: m.description || entry.description,
+      source,
+    });
+  }
+}
+
 /** Name → icon/description from the encyclopedia (base + morph names). */
-export function catalogAbilityLore(): Map<
-  string,
-  { icon: string | null; description: string; source: CatalogSource }
-> {
-  const map = new Map<string, { icon: string | null; description: string; source: CatalogSource }>();
-  for (const { entry, source } of getSkills()) {
-    const baseIcon = entry.icon ?? null;
-    map.set(entry.name.toLowerCase(), { icon: baseIcon, description: entry.description, source });
-    for (const m of entry.morphs) {
-      map.set(m.name.toLowerCase(), {
-        icon: m.icon ?? baseIcon,
-        description: m.description || entry.description,
-        source,
-      });
+export function catalogAbilityLore(): Map<string, LoreHit> {
+  const map = new Map<string, LoreHit>();
+  for (const { entry, source } of getSkills()) rememberSkill(map, entry, source);
+  return map;
+}
+
+/**
+ * Lore for the names on one character. Avoids parsing the whole skill catalog
+ * on every character-page navigation.
+ */
+export function catalogAbilityLoreFor(names: Iterable<string>): Map<string, LoreHit> {
+  const wanted = [...new Set([...names].map((n) => n.trim()).filter(Boolean))];
+  const map = new Map<string, LoreHit>();
+  if (wanted.length === 0) return map;
+  const db = getDb();
+  const chunk = 400;
+  for (let i = 0; i < wanted.length; i += chunk) {
+    const slice = wanted.slice(i, i + chunk);
+    const placeholders = slice.map(() => "?").join(", ");
+    const rows = db
+      .prepare(
+        `SELECT json, source FROM catalog
+         WHERE domain = 'skill' AND name IN (${placeholders}) COLLATE NOCASE`,
+      )
+      .all(...slice) as { json: string; source: CatalogSource }[];
+    for (const row of rows) {
+      rememberSkill(map, JSON.parse(row.json) as CatalogSkill, row.source);
     }
   }
   return map;

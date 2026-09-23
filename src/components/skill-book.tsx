@@ -23,7 +23,7 @@ function RankPips({ rank, max = 4 }: { rank: number | null; max?: number }) {
           />
         ))}
       </span>
-      <span className="tabular-nums text-xs text-fg-muted">{romanRank(rank)}</span>
+      <span className="tabular-nums text-xs text-fg-muted">Rank {romanRank(rank)}</span>
     </span>
   );
 }
@@ -50,11 +50,11 @@ function AbilityDetail({
   const icon = shown?.icon || ability.icon || ability.morphs.find((m) => m.icon)?.icon;
   const description = shown?.description || ability.description;
   const purchased = shown ? shown.purchased : ability.purchased;
-  const rank = shown ? shown.rank : ability.passive && ability.purchased ? ability.rank : null;
+  const rank = shown?.rank ?? ability.rank;
   const source = ability.descriptionSource;
 
   return (
-    <div className="rounded-lg border border-border bg-surface/60 p-4">
+    <div className="w-full min-w-0 rounded-lg border border-border bg-surface/60 p-4">
       <div className="flex items-start gap-3">
         <span className={purchased ? "" : "opacity-40 grayscale"}>
           <GameIcon name={name} icon={icon} size={56} />
@@ -71,19 +71,16 @@ function AbilityDetail({
               </span>
             )}
           </div>
-          <div className="mt-1">
-            {purchased ? (
-              ability.passive ? (
-                <span className="text-xs tabular-nums text-fg-muted">
-                  Rank {ability.rank}
-                  {ability.maxRank != null ? ` / ${ability.maxRank}` : ""}
-                </span>
-              ) : (
-                <RankPips rank={rank} />
-              )
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {ability.passive ? (
+              <span className="text-xs tabular-nums text-fg-muted">
+                Rank {ability.rank}
+                {ability.maxRank != null ? ` / ${ability.maxRank}` : ""}
+              </span>
             ) : (
-              <span className="text-xs text-fg-subtle">No skill point spent</span>
+              <RankPips rank={rank} />
             )}
+            {!purchased && <span className="text-xs text-fg-subtle">No skill point spent</span>}
           </div>
         </div>
       </div>
@@ -124,7 +121,10 @@ function AbilityDetail({
                 <span className="min-w-0">
                   <span className="block text-[10px] uppercase tracking-wider text-fg-subtle">{m.label}</span>
                   <span className={`block truncate ${m.purchased ? "text-fg" : "text-fg-subtle"}`}>{m.name}</span>
-                  {m.purchased ? <RankPips rank={m.rank} /> : <span className="text-[10px] text-fg-subtle">Not owned</span>}
+                  <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                    <RankPips rank={m.rank} />
+                    {!m.purchased && <span className="text-[10px] text-fg-subtle">Not owned</span>}
+                  </span>
                 </span>
               </button>
             );
@@ -200,9 +200,9 @@ export function SkillBook({
   }
 
   return (
-    <section>
+    <section className="w-full min-w-0">
       <SectionTitle>Skills</SectionTitle>
-      <Card className="p-4">
+      <Card className="w-full min-w-0 p-4">
         <div role="tablist" aria-label="Skill type" className="mb-4 flex flex-wrap gap-1 border-b border-border pb-3">
           {categories.map((c) => (
             <TabButton key={c.name} active={c.name === category?.name} onClick={() => pickCategory(c.name)}>
@@ -211,9 +211,9 @@ export function SkillBook({
           ))}
         </div>
 
-        <div className="grid gap-4 lg:h-[34rem] lg:grid-cols-[12.5rem_16rem_minmax(0,1fr)]">
+        <div className="grid w-full min-w-0 min-h-[32rem] gap-4 lg:h-[42rem] lg:min-h-[42rem] lg:grid-cols-[12.5rem_16rem_minmax(0,1fr)] lg:overflow-hidden">
           <ul
-            className="flex gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-y-auto lg:pr-1"
+            className="flex min-h-0 min-w-0 gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-y-auto lg:pr-1"
             aria-label="Skill line"
           >
             {category?.lines.map((l) => {
@@ -244,7 +244,7 @@ export function SkillBook({
             })}
           </ul>
 
-          <div className="min-h-0 lg:overflow-y-auto lg:pr-1">
+          <div className="min-h-0 min-w-0 lg:overflow-y-auto lg:pr-1">
             {line && line.abilities.length === 0 && (
               <p className="text-sm text-fg-muted">No abilities captured for this line.</p>
             )}
@@ -252,10 +252,14 @@ export function SkillBook({
               <ul className="divide-y divide-border/70 overflow-hidden rounded-lg border border-border">
                 {line.abilities.map((a, i) => {
                   const selected = i === Math.min(abilityIndex, line.abilities.length - 1);
-                  const face = a.morphs.find((s) => s.current) ?? a.morphs.find((s) => s.purchased);
+                  const face =
+                    a.morphs.find((s) => s.current) ??
+                    a.morphs.find((s) => s.purchased) ??
+                    a.morphs.find((s) => (s.rank ?? 0) >= 1) ??
+                    a.morphs[0];
                   const label = face?.name ?? a.name;
                   const icon = face?.icon || a.icon || a.morphs.find((m) => m.icon)?.icon;
-                  const rank = face?.rank ?? (a.passive && a.purchased ? a.rank : null);
+                  const rank = face?.rank ?? a.rank;
                   return (
                     <li key={`${a.name}-${i}`}>
                       <button
@@ -280,14 +284,10 @@ export function SkillBook({
                             {!a.purchased ? " · not purchased" : ""}
                           </span>
                         </span>
-                        {a.purchased ? (
-                          a.passive ? (
-                            <span className="text-xs tabular-nums text-fg-muted">{a.rank}</span>
-                          ) : (
-                            <RankPips rank={rank} />
-                          )
+                        {a.passive ? (
+                          <span className="text-xs tabular-nums text-fg-muted">{a.rank}</span>
                         ) : (
-                          <span className="text-xs text-fg-subtle">—</span>
+                          <RankPips rank={rank} />
                         )}
                       </button>
                     </li>

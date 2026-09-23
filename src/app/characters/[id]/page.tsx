@@ -15,7 +15,7 @@ import {
 import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
-import { getSkillLineByName, setHref, catalogAbilityLore } from "@/lib/db/catalog-queries";
+import { getSkillLineByName, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { rolesForCharacter } from "@/lib/roles/filter";
@@ -70,9 +70,18 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   const front = c.equipped.filter((e) => e.bar === "front");
   const back = c.equipped.filter((e) => e.bar === "back");
   const armorJewelry = c.equipped.filter((e) => e.bar === null);
-  let lore = new Map() as ReturnType<typeof catalogAbilityLore>;
+  let lore = new Map() as ReturnType<typeof catalogAbilityLoreFor>;
   try {
-    lore = catalogAbilityLore();
+    const names: string[] = [];
+    for (const line of c.skillLines) {
+      for (const ability of line.abilities) {
+        if (ability.name) names.push(ability.name);
+        for (const morph of ability.morphs ?? []) {
+          if (morph.name) names.push(morph.name);
+        }
+      }
+    }
+    lore = catalogAbilityLoreFor(names);
   } catch {
     lore = new Map();
   }
@@ -103,7 +112,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto w-full min-w-0 max-w-5xl">
       <Link
         href={archived ? "/characters#archive" : "/characters"}
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
@@ -111,8 +120,8 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         <ArrowLeft className="h-4 w-4" /> {archived ? "Archive" : "All characters"}
       </Link>
 
-      <Card className="mb-6 overflow-hidden">
-        <div className="h-1" style={{ background: accent }} />
+      <Card className="mb-6">
+        <div className="h-1 rounded-t-xl" style={{ background: accent }} />
         <div className="flex flex-wrap items-start justify-between gap-4 p-6">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-fg">{c.name}</h1>
@@ -140,6 +149,18 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               {c.classMastery && <Badge tone="muted">Class Mastery</Badge>}
               {c.mundus && <Badge tone="muted">{c.mundus}</Badge>}
             </div>
+            {c.classMasteries.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-fg-subtle">
+                <span className="inline-flex items-center gap-1 uppercase tracking-wider">
+                  <Sparkles className="h-3 w-3 text-accent" /> Mastered class lines
+                </span>
+                {c.classMasteries.map((m) => (
+                  <Badge key={m} tone="accent">
+                    {m}
+                  </Badge>
+                ))}
+              </div>
+            )}
             <div className="mt-3">
               <RolePicker characterId={c.id} assigned={assigned} roles={roles} />
             </div>

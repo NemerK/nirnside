@@ -138,13 +138,17 @@ function presentSlot(slot: MorphSlot, currentSlot: number | null, abilityKnown: 
   const hit = lore.get(loreKey(slot.name));
   const merged = mergeLore({ icon: slot.icon, description: slot.description }, hit);
   const icon = merged.icon ?? skillIconByName(slot.name);
+  // Rank is shown even when the slot is not purchased. 0 means the game (or
+  // the last snapshot) recorded "not ranked"; null means the rank was not captured.
+  // Purchase status stays separate so a rank never implies the skill is owned.
+  const rank = slot.rank == null ? null : slot.rank;
   return {
     slot: slot.slot,
     label: slotLabel(slot.slot),
     name: slot.name,
     purchased: morphSlotPurchased(slot),
-    rank: morphSlotPurchased(slot) ? (slot.rank ?? null) : null,
-    rankLabel: romanRank(morphSlotPurchased(slot) ? slot.rank : null),
+    rank,
+    rankLabel: romanRank(rank),
     current: abilityKnown && currentSlot === slot.slot,
     icon,
     description: merged.description,

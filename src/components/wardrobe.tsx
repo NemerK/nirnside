@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Download, Shirt, Sparkles, Star, Utensils } from "lucide-react";
-import { Badge, Card, SectionTitle } from "@/components/ui";
+import { Check, Copy, Download, Shirt, Sparkles, Star, Utensils } from "lucide-react";
+import { Badge, Card } from "@/components/ui";
 import { GameIcon } from "@/components/game-icon";
+import { Modal } from "@/components/modal";
 import type { Wardrobe as WardrobeData, WardrobePage, WardrobeSetup, WardrobeZone } from "@/lib/snapshot/schema";
 import { qualityText } from "@/lib/format";
+import { copySetupImage, downloadSetupImage, type SetupImageMeta } from "@/lib/wardrobe/setup-image";
 import {
   buildWardrobeExport,
   wardrobeExportFilename,
@@ -15,12 +17,10 @@ import {
   type WardrobeExportScope,
 } from "@/lib/wardrobe/export";
 
-type WardrobeData_ = WardrobeData;
-
 /** Download a setup/page/zone/whole wardrobe as JSON, and copy it to the clipboard. */
 function saveWardrobe(
   scope: WardrobeExportScope,
-  data: WardrobeData_ | WardrobeZone | WardrobePage | WardrobeSetup,
+  data: WardrobeData | WardrobeZone | WardrobePage | WardrobeSetup,
   ctx: WardrobeExportContext,
 ) {
   const payload = buildWardrobeExport(scope, data, ctx);
@@ -119,21 +119,79 @@ function SkillBar({ bar }: { bar: WardrobeSetup["bars"][number] }) {
   );
 }
 
+type CopyState = "idle" | "working" | "copied" | "downloaded";
+
 function SetupCard({
   setup,
   hrefForSet,
+  meta,
   onSave,
 }: {
   setup: WardrobeSetup;
   hrefForSet: Record<string, string>;
+  meta: SetupImageMeta;
   onSave: () => void;
 }) {
   const gear = setup.gear.filter((g) => g.name || g.slot);
+  const [state, setState] = useState<CopyState>("idle");
+
+  async function copyImage() {
+    if (state === "working") return;
+    setState("working");
+    const ok = await copySetupImage(setup, meta);
+    if (ok) {
+      setState("copied");
+    } else {
+      // Clipboard refused (permissions / browser) — hand them a file instead.
+      await downloadSetupImage(setup, meta);
+      setState("downloaded");
+    }
+    window.setTimeout(() => setState("idle"), 1800);
+  }
+
+  async function download() {
+    await downloadSetupImage(setup, meta);
+  }
+
   return (
     <Card className="p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="font-medium text-fg">{setup.name || "Unnamed setup"}</span>
-        <SaveButton label="Save" onSave={onSave} />
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={copyImage}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-fg-muted transition hover:border-border-strong hover:text-fg"
+            title="Copy this setup as an image to paste to a friend"
+          >
+            {state === "copied" ? (
+              <>
+                <Check className="h-3 w-3 text-ok" /> Copied
+              </>
+            ) : state === "downloaded" ? (
+              <>
+                <Check className="h-3 w-3 text-ok" /> Saved image
+              </>
+            ) : state === "working" ? (
+              <>
+                <Copy className="h-3 w-3 animate-pulse" /> …
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" /> Copy image
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={download}
+            className="inline-flex items-center rounded-md border border-border p-1 text-fg-muted transition hover:border-border-strong hover:text-fg"
+            title="Download this setup as a PNG"
+          >
+            <Download className="h-3 w-3" />
+          </button>
+          <SaveButton label="Save JSON" onSave={onSave} />
+        </div>
       </div>
 
       {gear.length > 0 && (
@@ -212,6 +270,7 @@ function ZonePanel({
                   key={`${s.name}-${si}`}
                   setup={s}
                   hrefForSet={hrefForSet}
+                  meta={{ character: character.name, zone: zone.name || zone.tag, page: pageName }}
                   onSave={() =>
                     saveWardrobe("setup", s, {
                       character,
@@ -230,6 +289,12 @@ function ZonePanel({
   );
 }
 
+function countSetups(wardrobe: WardrobeData): number {
+  let n = 0;
+  for (const z of wardrobe.zones) for (const p of z.pages) n += p.setups.length;
+  return n;
+}
+
 export function Wardrobe({
   wardrobe,
   hrefForSet = {},
@@ -244,54 +309,77 @@ export function Wardrobe({
   const zones = (wardrobe?.zones ?? []).filter((z) =>
     z.pages.some((p) => p.setups.some((s) => s.name || s.gear.length || s.bars.length)),
   );
+  const [open, setOpen] = useState(false);
   const [zoneTag, setZoneTag] = useState(zones[0]?.tag ?? "");
-  if (zones.length === 0 || !wardrobe) return null;
+  if (!wardrobe || zones.length === 0) return null;
   const zone = zones.find((z) => z.tag === zoneTag) ?? zones[0];
+  const total = countSetups({ ...wardrobe, zones });
   const character = { id: characterId, name: characterName };
+  const scoped = { ...wardrobe, zones };
 
   return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <SectionTitle className="mb-0">Wizard&apos;s Wardrobe</SectionTitle>
-        <div className="flex items-center gap-2">
-          <Badge tone="muted">
-            <Sparkles className="h-3 w-3" /> From the Wizard&apos;s Wardrobe addon
-            {wardrobe?.accountWide ? " · account-wide" : ""}
-          </Badge>
-          <SaveButton
-            label="Save all"
-            onSave={() => saveWardrobe("wardrobe", { ...wardrobe, zones }, { character })}
-          />
-        </div>
-      </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg transition hover:border-accent/50 hover:bg-surface-2"
+      >
+        <Sparkles className="h-4 w-4 text-accent" />
+        Wizard&apos;s Wardrobe
+        <span className="text-xs text-fg-subtle">
+          {zones.length} zone{zones.length === 1 ? "" : "s"} · {total} setup{total === 1 ? "" : "s"}
+        </span>
+      </button>
 
-      {zones.length > 1 && (
-        <div className="mb-3 flex flex-wrap items-center gap-1">
-          <div role="tablist" aria-label="Wardrobe zone" className="flex flex-wrap gap-1">
-            {zones.map((z) => (
-              <button
-                key={z.tag}
-                type="button"
-                role="tab"
-                aria-selected={z.tag === zone.tag}
-                onClick={() => setZoneTag(z.tag)}
-                className={`rounded-md px-3 py-1.5 text-sm transition ${
-                  z.tag === zone.tag ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
-                }`}
-              >
-                {z.name || z.tag}
-              </button>
-            ))}
+      {open && (
+        <Modal title="Wizard's Wardrobe" onClose={() => setOpen(false)} maxWidthClass="max-w-4xl">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <Badge tone="muted">
+              <Sparkles className="h-3 w-3" /> From the Wizard&apos;s Wardrobe addon
+              {wardrobe.accountWide ? " · account-wide" : ""}
+            </Badge>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-fg-subtle">Copy an image, or save JSON to share a setup.</span>
+              <SaveButton
+                label="Save all"
+                onSave={() => saveWardrobe("wardrobe", scoped, { character })}
+              />
+            </div>
           </div>
-          <SaveButton
-            label="Save zone"
-            className="ml-auto"
-            onSave={() => saveWardrobe("zone", zone, { character, zone: { tag: zone.tag, name: zone.name } })}
-          />
-        </div>
-      )}
 
-      <ZonePanel zone={zone} hrefForSet={hrefForSet} character={character} />
-    </section>
+          {zones.length > 1 && (
+            <div className="mb-3 flex flex-wrap items-center gap-1">
+              <div role="tablist" aria-label="Wardrobe zone" className="flex flex-wrap gap-1">
+                {zones.map((z) => (
+                  <button
+                    key={z.tag}
+                    type="button"
+                    role="tab"
+                    aria-selected={z.tag === zone.tag}
+                    onClick={() => setZoneTag(z.tag)}
+                    className={`rounded-md px-3 py-1.5 text-sm transition ${
+                      z.tag === zone.tag
+                        ? "bg-accent-soft font-medium text-accent"
+                        : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                    }`}
+                  >
+                    {z.name || z.tag}
+                  </button>
+                ))}
+              </div>
+              <SaveButton
+                label="Save zone"
+                className="ml-auto"
+                onSave={() => saveWardrobe("zone", zone, { character, zone: { tag: zone.tag, name: zone.name } })}
+              />
+            </div>
+          )}
+
+          <div className="max-h-[70vh] overflow-y-auto pr-1">
+            <ZonePanel zone={zone} hrefForSet={hrefForSet} character={character} />
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

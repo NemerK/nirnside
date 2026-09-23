@@ -64,6 +64,7 @@ NirnsideData =
                         ["vampire"] = { ["isVampire"] = true, ["stage"] = 3 },
                         ["werewolf"] = { ["isWerewolf"] = false },
                         ["classMastery"] = false,
+                        ["classMasteries"] = { "Assassination", "Ardent Flame", "Herald of the Tome" },
                         ["lastSeen"] = 1757800920,
                         ["skillLines"] =
                         {
@@ -108,8 +109,8 @@ NirnsideData =
                                         ["morphs"] =
                                         {
                                             { ["slot"] = 0, ["name"] = "Death Stroke", ["rank"] = 4, ["purchased"] = true },
-                                            { ["slot"] = 1, ["name"] = "Incapacitating Strike", ["purchased"] = false },
-                                            { ["slot"] = 2, ["name"] = "Soul Harvest", ["purchased"] = false },
+                                            { ["slot"] = 1, ["name"] = "Incapacitating Strike", ["rank"] = 4, ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "Soul Harvest", ["rank"] = 2, ["purchased"] = false },
                                         },
                                     },
                                     {
@@ -197,15 +198,15 @@ NirnsideData =
                                     },
                                     {
                                         ["name"] = "Vampiric Drain",
-                                        ["rank"] = 0,
+                                        ["rank"] = 3,
                                         ["morph"] = 0,
                                         ["purchased"] = false,
                                         ["description"] = "|cffffffSiphon health from an enemy.|r",
                                         ["morphs"] =
                                         {
-                                            { ["slot"] = 0, ["name"] = "Vampiric Drain", ["purchased"] = false, ["description"] = "|cffffffSiphon health from an enemy.|r" },
-                                            { ["slot"] = 1, ["name"] = "Drain Vigor", ["purchased"] = false },
-                                            { ["slot"] = 2, ["name"] = "Exhilarating Drain", ["purchased"] = false },
+                                            { ["slot"] = 0, ["name"] = "Vampiric Drain", ["rank"] = 3, ["purchased"] = false, ["description"] = "|cffffffSiphon health from an enemy.|r" },
+                                            { ["slot"] = 1, ["name"] = "Drain Vigor", ["rank"] = 1, ["purchased"] = false },
+                                            { ["slot"] = 2, ["name"] = "Exhilarating Drain", ["rank"] = 2, ["purchased"] = false },
                                         },
                                     },
                                 },
