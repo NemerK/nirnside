@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ChevronLeft,
+  FileSearch,
   FolderOpen,
   FolderSearch,
+  HardDrive,
   Loader2,
   PackageCheck,
   RotateCcw,
@@ -70,6 +72,7 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
   const [error, setError] = useState<string | null>(null);
   const [browse, setBrowse] = useState<BrowseResult | null>(null);
   const [browseOpen, setBrowseOpen] = useState(false);
+  const [nativeAvail, setNativeAvail] = useState(false);
 
   useEffect(() => {
     const iv = setInterval(() => {
@@ -77,6 +80,43 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
     }, 8000);
     return () => clearInterval(iv);
   }, []);
+
+  useEffect(() => {
+    fetch("/api/setup/pick", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setNativeAvail(!!j.available))
+      .catch(() => setNativeAvail(false));
+  }, []);
+
+  async function pickNative(mode: "file" | "folder") {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/setup/pick", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mode, startDir: path || undefined }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        if (json.status) setStatus(json.status);
+        if (json.path) setPath(json.path);
+        setBrowseOpen(false);
+        router.refresh();
+      } else if (json.cancelled) {
+        // User closed the dialog — nothing to report.
+      } else if (json.unavailable) {
+        setNativeAvail(false);
+        setError("Couldn't open a system dialog on this machine. Use the in-app browser or paste a path.");
+      } else {
+        setError(json.error ?? "Couldn't use that selection.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submitPath(nextPath: string) {
     setBusy(true);
@@ -191,6 +231,38 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
             </div>
           )}
 
+          {nativeAvail && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => pickNative("file")}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-60"
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSearch className="h-4 w-4" />}
+                Browse my computer…
+              </button>
+              <button
+                type="button"
+                onClick={() => pickNative("folder")}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-fg-muted hover:text-fg disabled:opacity-60"
+              >
+                <HardDrive className="h-4 w-4" />
+                Pick a folder…
+              </button>
+            </div>
+          )}
+          {nativeAvail && (
+            <p className="mb-3 text-xs text-fg-subtle">
+              Opens your computer&apos;s file window. Choose your{" "}
+              <code className="rounded bg-surface-2 px-1">NirnsideSnapshot.lua</code> (inside a{" "}
+              <code className="rounded bg-surface-2 px-1">SavedVariables</code> folder), or pick the{" "}
+              <code className="rounded bg-surface-2 px-1">live</code>/<code className="rounded bg-surface-2 px-1">liveeu</code>{" "}
+              folder.
+            </p>
+          )}
+
           <form
             className="flex flex-col gap-2 sm:flex-row"
             onSubmit={(e) => {
@@ -201,7 +273,7 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
             <input
               value={path}
               onChange={(e) => setPath(e.target.value)}
-              placeholder="Paste a folder path, or browse…"
+              placeholder="…or paste a folder path"
               className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
             />
             <div className="flex gap-2">
@@ -211,7 +283,7 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-fg-muted hover:text-fg"
               >
                 <FolderSearch className="h-4 w-4" />
-                Browse
+                Browse in app
               </button>
               <button
                 type="submit"
@@ -226,6 +298,26 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
 
           {browseOpen && (
             <div className="mt-3 rounded-lg border border-border bg-bg-elev p-3">
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => openBrowse()}
+                  className="rounded-md border border-border px-2 py-1 text-xs text-fg-muted hover:text-fg"
+                >
+                  Home
+                </button>
+                {status.detected.map((d) => (
+                  <button
+                    key={d.root}
+                    type="button"
+                    onClick={() => openBrowse(d.root)}
+                    className="max-w-[16rem] truncate rounded-md border border-border px-2 py-1 text-xs text-accent hover:bg-accent-soft"
+                    title={d.root}
+                  >
+                    {d.root}
+                  </button>
+                ))}
+              </div>
               <div className="mb-2 flex items-center gap-2 text-xs">
                 <button
                   type="button"
