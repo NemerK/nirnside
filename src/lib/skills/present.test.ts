@@ -96,7 +96,7 @@ describe("skill book presentation", () => {
     assert.equal(view.purchased, false);
     assert.equal(view.morphs[0].purchased, false);
     assert.equal(view.morphs[0].rank, 0);
-    assert.equal(view.morphs[0].rankLabel, "0");
+    assert.equal(view.morphs[0].rankLabel, "—");
     assert.equal(view.description.includes("|c"), true);
   });
 

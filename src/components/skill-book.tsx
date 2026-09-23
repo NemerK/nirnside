@@ -8,7 +8,7 @@ import { GameIcon } from "@/components/game-icon";
 import { SourceBadge } from "@/components/source-badge";
 import { EsoText } from "@/components/eso-text";
 import type { AbilitySlotView, AbilityView, SkillCategoryView, SkillLineView } from "@/lib/skills/present";
-import { romanRank } from "@/lib/skills/ability";
+import { bestRank, romanRank } from "@/lib/skills/ability";
 import type { CatalogSource } from "@/lib/catalog/schema";
 
 function RankPips({ rank, max = 4 }: { rank: number | null; max?: number }) {
@@ -50,7 +50,7 @@ function AbilityDetail({
   const icon = shown?.icon || ability.icon || ability.morphs.find((m) => m.icon)?.icon;
   const description = shown?.description || ability.description;
   const purchased = shown ? shown.purchased : ability.purchased;
-  const rank = shown?.rank ?? ability.rank;
+  const rank = bestRank(shown?.rank, ability.rank);
   const source = ability.descriptionSource;
 
   return (
@@ -122,7 +122,7 @@ function AbilityDetail({
                   <span className="block text-[10px] uppercase tracking-wider text-fg-subtle">{m.label}</span>
                   <span className={`block truncate ${m.purchased ? "text-fg" : "text-fg-subtle"}`}>{m.name}</span>
                   <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                    <RankPips rank={m.rank} />
+                    <RankPips rank={m.rank ?? ability.rank} />
                     {!m.purchased && <span className="text-[10px] text-fg-subtle">Not owned</span>}
                   </span>
                 </span>
@@ -259,7 +259,7 @@ export function SkillBook({
                     a.morphs[0];
                   const label = face?.name ?? a.name;
                   const icon = face?.icon || a.icon || a.morphs.find((m) => m.icon)?.icon;
-                  const rank = face?.rank ?? a.rank;
+                  const rank = bestRank(face?.rank, a.rank);
                   return (
                     <li key={`${a.name}-${i}`}>
                       <button
