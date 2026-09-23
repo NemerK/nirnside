@@ -28,6 +28,19 @@ describe("account snapshot resilience", () => {
     assert.deepEqual(parsed.data.completedAchievementIds, []);
   });
 
+  it("rejects the addon program with a which-file hint, not a cryptic parse error", () => {
+    // The file people accidentally pick: AddOns\NirnsideSnapshot\NirnsideSnapshot.lua
+    const addonSource = `--[[ Nirnside Snapshot addon ]]--
+local ADDON_NAME = "NirnsideSnapshot"
+local function takeSnapshot() end
+SLASH_COMMANDS["/nirnside"] = takeSnapshot`;
+    assert.throws(
+      () => loadSnapshotFromLua(addonSource),
+      /SavedVariables/,
+      "should point the user at the SavedVariables file",
+    );
+  });
+
   it("backfills a missing account name from the SavedVariables key", () => {
     const lua = `
       NirnsideData = {
