@@ -237,6 +237,7 @@ export const Wardrobe = z.object({
 export type Wardrobe = z.infer<typeof Wardrobe>;
 export type WardrobeSetup = z.infer<typeof WardrobeSetup>;
 export type WardrobeZone = z.infer<typeof WardrobeZone>;
+export type WardrobePage = z.infer<typeof WardrobePage>;
 
 export const Character = z.object({
   id: z.string(),
