@@ -1,6 +1,6 @@
 import "server-only";
 import { getDb } from "./index";
-import { getArchivedCharacters, getCharacters } from "./queries";
+import { getArchivedCharacters, getCharactersFull } from "./queries";
 import { archivedOwnerNames } from "../snapshot/roster";
 import { abilityIsKnown, displayAbility, knownAbilityNames, romanRank } from "../skills/ability";
 
@@ -31,7 +31,7 @@ export interface CharRef {
 /** Characters that have discovered a given skill line, with their rank. */
 export function charactersWithSkillLine(lineName: string): CharRef[] {
   const out: CharRef[] = [];
-  for (const c of getCharacters()) {
+  for (const c of getCharactersFull()) {
     const line = c.skillLines.find((l) => l.name.toLowerCase() === lineName.toLowerCase());
     if (line) out.push({ id: c.id, name: c.name, detail: `Rank ${line.rank}` });
   }
@@ -42,7 +42,7 @@ export function charactersWithSkillLine(lineName: string): CharRef[] {
 export function charactersKnowingSkill(names: string[]): CharRef[] {
   const lc = names.map((n) => n.toLowerCase());
   const out: CharRef[] = [];
-  for (const c of getCharacters()) {
+  for (const c of getCharactersFull()) {
     for (const line of c.skillLines) {
       const hit = line.abilities.find((a) => {
         if (!abilityIsKnown(a)) return false;
@@ -69,7 +69,7 @@ export function charactersKnowingSkill(names: string[]): CharRef[] {
 /** CP points spent on a given star, across all characters. */
 export function cpAcross(starName: string): CharRef[] {
   const out: CharRef[] = [];
-  for (const c of getCharacters()) {
+  for (const c of getCharactersFull()) {
     for (const disc of c.champion) {
       const star = disc.stars.find((s) => s.name.toLowerCase() === starName.toLowerCase());
       if (star) {
@@ -84,7 +84,7 @@ export function cpAcross(starName: string): CharRef[] {
 /** Every scribing script known across the account (by name, lowercased). */
 export function knownScriptNames(): Set<string> {
   const set = new Set<string>();
-  for (const c of getCharacters()) {
+  for (const c of getCharactersFull()) {
     for (const s of c.scribingScripts) set.add(s.toLowerCase());
   }
   return set;
@@ -93,7 +93,7 @@ export function knownScriptNames(): Set<string> {
 /** Characters that know a given scribing script. */
 export function charactersWithScript(scriptName: string): CharRef[] {
   const out: CharRef[] = [];
-  for (const c of getCharacters()) {
+  for (const c of getCharactersFull()) {
     if (c.scribingScripts.some((s) => s.toLowerCase() === scriptName.toLowerCase())) {
       out.push({ id: c.id, name: c.name });
     }

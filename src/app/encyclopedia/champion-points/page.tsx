@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getCPStars } from "@/lib/db/catalog-queries";
-import { getCharacters } from "@/lib/db/queries";
+import { getChampionAllocations } from "@/lib/db/queries";
 import { getCatalogMeta } from "@/lib/catalog/import";
 import { PageFrame, PageHeader } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
@@ -30,7 +30,7 @@ export default function ChampionPointsPage() {
   }
   const disciplines = ORDER.filter((o) => byDisc.has(o)).map((o) => byDisc.get(o)!);
 
-  const characters: CPCharacterAlloc[] = (safe(() => getCharacters()) ?? []).map((c) => {
+  const characters: CPCharacterAlloc[] = (safe(() => getChampionAllocations()) ?? []).map((c) => {
     const alloc: CPCharacterAlloc["alloc"] = {};
     for (const disc of c.champion) {
       for (const s of disc.stars) alloc[s.name.toLowerCase()] = { points: s.points, slotted: s.slotted };
