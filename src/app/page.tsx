@@ -106,6 +106,9 @@ function lineHrefs(goals: Goal[]): Record<string, string> {
   return out;
 }
 
+// Link straight at the .exe so a click downloads it — GitHub hides release
+// files under a collapsed "Assets" section that people miss.
+const EXE_DOWNLOAD_URL = "https://github.com/NemerK/nirnside/releases/latest/download/Nirnside.exe";
 const RELEASES_URL = "https://github.com/NemerK/nirnside/releases/latest";
 
 function Onboarding({
@@ -184,14 +187,19 @@ function Onboarding({
             </li>
           </ol>
           <a
-            href={RELEASES_URL}
-            target="_blank"
-            rel="noreferrer"
+            href={EXE_DOWNLOAD_URL}
             className="inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg"
           >
             <Download className="h-4 w-4" />
-            Download Nirnside for Windows
+            Download Nirnside.exe (Windows)
           </a>
+          <p className="mt-3 text-xs text-fg-subtle">
+            Downloads the app directly. For the zip, macOS/Linux, or all files, see{" "}
+            <a href={RELEASES_URL} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+              all downloads
+            </a>
+            .
+          </p>
           <p className="mt-4 text-sm text-fg-muted">
             Already on your gaming PC?{" "}
             <Link href="/setup" className="text-accent hover:underline">

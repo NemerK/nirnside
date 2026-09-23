@@ -56,8 +56,11 @@ The project is public: **https://github.com/NemerK/nirnside**
 
 ### For you, or anyone else (Windows)
 
-1. Download **Nirnside.exe** from
-   <https://github.com/NemerK/nirnside/releases/latest>
+1. Download **Nirnside.exe**:
+   <https://github.com/NemerK/nirnside/releases/latest/download/Nirnside.exe>
+   (that link downloads the file directly; the
+   [releases page](https://github.com/NemerK/nirnside/releases/latest) keeps it
+   under a collapsed **Assets** section).
 2. Double-click it. A short wizard puts Nirnside on this PC and opens a
    browser. You do not install Node.js, Visual Studio, or Python.
 3. If Windows SmartScreen appears: **More info → Run anyway**.
