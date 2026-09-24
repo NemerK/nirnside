@@ -6,7 +6,23 @@ import type { Character } from "@/lib/snapshot/schema";
 import type { Role, RoleAssignments } from "@/lib/roles/types";
 import { filterCharacters, rolesForCharacter } from "@/lib/roles/filter";
 import { CharacterCard } from "./character-card";
+import { GameIcon } from "./game-icon";
 import { Badge, Card, PageScroll, StickyMenu } from "./ui";
+
+/** In-game class icon (.dds) per class, served through our icon proxy. */
+const CLASS_ICONS: Record<string, string> = {
+  Dragonknight: "/esoui/art/icons/class/class_dragonknight.dds",
+  Sorcerer: "/esoui/art/icons/class/class_sorcerer.dds",
+  Nightblade: "/esoui/art/icons/class/class_nightblade.dds",
+  Templar: "/esoui/art/icons/class/class_templar.dds",
+  Warden: "/esoui/art/icons/class/class_warden.dds",
+  Necromancer: "/esoui/art/icons/class/class_necromancer.dds",
+  Arcanist: "/esoui/art/icons/class/class_arcanist.dds",
+};
+
+function classIcon(className: string): string | undefined {
+  return CLASS_ICONS[className];
+}
 
 export function CharacterRoster({
   characters,
@@ -50,7 +66,7 @@ export function CharacterRoster({
             className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
           />
         </div>
-        <FilterSelect label="Class" value={className} onChange={setClassName} options={classes} />
+        <ClassPicker classes={classes} value={className} onChange={setClassName} />
         <FilterSelect label="Race" value={race} onChange={setRace} options={races} />
         <select
           value={role}
@@ -134,6 +150,41 @@ export function CharacterRoster({
         </section>
       )}
       </PageScroll>
+    </div>
+  );
+}
+
+/** One-click class filter: an icon per class present on the roster. */
+function ClassPicker({
+  classes,
+  value,
+  onChange,
+}: {
+  classes: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  if (classes.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1" role="group" aria-label="Filter by class">
+      {classes.map((c) => {
+        const active = value === c;
+        return (
+          <button
+            key={c}
+            type="button"
+            title={c}
+            aria-pressed={active}
+            onClick={() => onChange(active ? "" : c)}
+            className={`flex items-center justify-center rounded-lg border p-1 transition ${
+              active ? "border-accent bg-accent-soft" : "border-border hover:border-border-strong"
+            }`}
+          >
+            <GameIcon name={c} icon={classIcon(c)} size={26} className={active ? "" : "opacity-80"} />
+            <span className="sr-only">{c}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
