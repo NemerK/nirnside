@@ -4,13 +4,15 @@ import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getData
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { candidatePaths } from "@/lib/snapshot/locate";
-import { Card, PageHeader, Stat, EmptyState, Badge } from "@/components/ui";
+import { accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
+import { Card, PageHeader, Stat, EmptyState, Badge, SectionTitle } from "@/components/ui";
 import { DataSourceBanner } from "@/components/data-source-banner";
 import { LoadDemoButton } from "@/components/demo-controls";
 import { GoalsBoard } from "@/components/goals-board";
+import { AccountWallet } from "@/components/account-wallet";
 import { toGoalSubject } from "@/lib/goals/progress";
 import type { Goal } from "@/lib/goals/types";
-import { formatDateTime, timeAgo } from "@/lib/format";
+import { formatDateTime, formatGold, formatNumber, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,15 @@ export default function HomePage() {
   const lines = safe(() => skillLineChoices()) ?? [];
   // Champion Points are account-wide, so show one number for the whole account.
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
+  const gold = goldBreakdown({
+    characters,
+    bankGold: account.currencies?.bankGold ?? 0,
+    legacyGold: account.gold,
+  });
+  const telVar = accountTelVar({
+    characters,
+    legacyTelVar: account.currencies?.telVar,
+  });
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -64,6 +75,28 @@ export default function HomePage() {
           <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
         </Link>
       </div>
+
+      <section className="mb-8">
+        <div className="mb-3 flex items-end justify-between gap-2">
+          <SectionTitle className="mb-0">Currencies</SectionTitle>
+          <Link href="/inventory?view=currency" className="text-xs text-accent hover:underline">
+            Per character →
+          </Link>
+        </div>
+        <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
+          <Link href="/inventory?view=currency" className="block rounded-xl transition-colors hover:brightness-110">
+            <Stat
+              label="Gold"
+              value={formatGold(gold.total)}
+              hint={gold.usedLegacy ? "last snapshot" : `${formatGold(gold.wallets)} wallets · ${formatGold(gold.bank)} bank`}
+            />
+          </Link>
+          <Link href="/inventory?view=currency" className="block rounded-xl transition-colors hover:brightness-110">
+            <Stat label="Tel Var" value={formatNumber(telVar)} hint="across live characters" />
+          </Link>
+        </div>
+        <AccountWallet currencies={account.currencies ?? {}} title="Account-wide" compact />
+      </section>
 
       <GoalsBoard
         goals={goals}

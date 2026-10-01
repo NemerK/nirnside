@@ -26,6 +26,16 @@ NirnsideData =
                     ["writVouchers"] = 6640,
                     ["eventTickets"] = 12,
                     ["undauntedKeys"] = 21,
+                    ["crowns"] = 2295,
+                    ["crownGems"] = 456,
+                    ["seals"] = 15575,
+                    ["outfitChangeTokens"] = 15,
+                    ["archivalFortunes"] = 780,
+                    ["imperialFragments"] = 3179,
+                    ["tomePoints"] = 4923,
+                    ["premiumTomeTokens"] = 10,
+                    ["cachesOfTomePoints"] = 3,
+                    ["tradeBars"] = 11156,
                 },
                 ["guilds"] =
                 {
@@ -221,6 +231,17 @@ NirnsideData =
                                             { ["slot"] = 2, ["name"] = "Bloodthirst", ["rank"] = 4, ["purchased"] = true },
                                         },
                                     },
+                                    {
+                                        ["name"] = "Traveling Knife",
+                                        ["rank"] = 1,
+                                        ["purchased"] = true,
+                                        ["crafted"] = true,
+                                        ["scribed"] = true,
+                                        ["scripts"] = { "Physical Damage", "Ranged", "Minor Force" },
+                                        ["icon"] = "/esoui/art/icons/ability_grimoire_dualwield.dds",
+                                        ["description"] = "|cffffffThrow a knife that can be recalled, striking enemies on the way out and back.|r",
+                                        ["morphs"] = {},
+                                    },
                                 },
                             },
                             {
@@ -262,7 +283,68 @@ NirnsideData =
                                 ["category"] = "Guild",
                                 ["rank"] = 6,
                                 ["subclassed"] = false,
-                                ["abilities"] = {},
+                                ["abilities"] =
+                                {
+                                    {
+                                        ["name"] = "Wield Soul",
+                                        ["rank"] = 1,
+                                        ["purchased"] = true,
+                                        ["crafted"] = true,
+                                        ["scribed"] = true,
+                                        ["scripts"] = { "Magic Damage", "Class Mastery", "Minor Berserk" },
+                                        ["icon"] = "/esoui/art/icons/ability_grimoire_soulmagic1.dds",
+                                        ["description"] = "|cffffffConjure a soul-bound weapon to strike an enemy and apply an effect.|r",
+                                        ["morphs"] = {},
+                                    },
+                                    {
+                                        ["name"] = "Soul Burst",
+                                        ["rank"] = 0,
+                                        ["purchased"] = false,
+                                        ["crafted"] = true,
+                                        ["scribed"] = false,
+                                        ["scripts"] = {},
+                                        ["icon"] = "/esoui/art/icons/ability_grimoire_soulmagic2.dds",
+                                        ["description"] = "|cffffffUnleash a burst of soul energy around you.|r",
+                                        ["morphs"] = {},
+                                    },
+                                },
+                            },
+                            {
+                                ["name"] = "Mages Guild",
+                                ["category"] = "Guild",
+                                ["rank"] = 10,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    {
+                                        ["name"] = "Ulfsild's Contingency",
+                                        ["rank"] = 1,
+                                        ["purchased"] = true,
+                                        ["crafted"] = true,
+                                        ["scribed"] = true,
+                                        ["scripts"] = { "Flame Damage", "Anchorite's Cruelty", "Minor Vulnerability" },
+                                        ["icon"] = "/esoui/art/icons/ability_grimoire_magesguild.dds",
+                                        ["description"] = "|cffffffPlace a rune that stores your next abilities and detonates them for area damage.|r",
+                                        ["morphs"] = {},
+                                    },
+                                },
+                            },
+                            {
+                                ["name"] = "Scribing",
+                                ["category"] = "World",
+                                ["rank"] = 5,
+                                ["subclassed"] = false,
+                                ["abilities"] =
+                                {
+                                    {
+                                        ["name"] = "Scribing",
+                                        ["rank"] = 1,
+                                        ["purchased"] = true,
+                                        ["passive"] = true,
+                                        ["maxRank"] = 1,
+                                        ["description"] = "|cffffffAllows you to scribe scripts onto grimoires.|r",
+                                    },
+                                },
                             },
                         },
                         ["champion"] =
@@ -313,10 +395,15 @@ NirnsideData =
                         },
                         ["scribingScripts"] =
                         {
-                            "Ulfsild's Contingency",
-                            "Traveling Knife",
-                            "Class Mastery: Assassin",
+                            "Physical Damage",
+                            "Ranged",
+                            "Minor Force",
+                            "Magic Damage",
+                            "Class Mastery",
+                            "Minor Berserk",
+                            "Flame Damage",
                             "Anchorite's Cruelty",
+                            "Minor Vulnerability",
                         },
                         ["research"] =
                         {

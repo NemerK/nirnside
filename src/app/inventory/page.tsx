@@ -7,7 +7,7 @@ import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryTabs } from "@/components/inventory-tabs";
 import { CurrencyTable } from "@/components/currency-table";
 import { Badge, Card, EmptyState, PageFrame, PageHeader, PageScroll, StickyMenu } from "@/components/ui";
-import { locationLabel, qualityText } from "@/lib/format";
+import { formatGold, formatNumber, locationLabel, qualityText } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +32,23 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
     owners: [],
   };
   let archivedOwner = false;
+  let ownerWallet: { name: string; gold: number; telVar: number; lastSeen: number | null } | null = null;
   try {
     items = getItems(filters);
     facets = getItemFacets();
     if (filters.owner) {
-      archivedOwner = getArchivedCharacters().some((c) => c.name === filters.owner);
+      const archived = getArchivedCharacters();
+      archivedOwner = archived.some((c) => c.name === filters.owner);
+      const owner =
+        getCharacters().find((c) => c.name === filters.owner) ?? archived.find((c) => c.name === filters.owner);
+      if (owner) {
+        ownerWallet = {
+          name: owner.name,
+          gold: owner.gold ?? 0,
+          telVar: owner.telVar ?? 0,
+          lastSeen: owner.lastSeen,
+        };
+      }
     }
   } catch {
     // leave defaults
@@ -51,7 +63,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
         title="Inventory"
         subtitle={
           view === "currency"
-            ? "Gold, Tel Var, and account currencies from the last snapshot."
+            ? "Gold and Tel Var per character, plus account-wide currencies from the last snapshot."
             : "Live bags only — worn gear, backpacks, bank, subscriber bank and craft bag. Deleted characters' last-known stacks live on their Archive page."
         }
       />
@@ -64,6 +76,21 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
       <PageScroll>
       {view === "currency" ? <CurrencyView /> : (
         <>
+          {ownerWallet && (
+            <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+              <span className="text-fg">{ownerWallet.name}&apos;s wallet</span>
+              <span className="flex flex-wrap gap-4 tabular-nums">
+                <span className="text-yellow-200">
+                  {ownerWallet.lastSeen ? formatGold(ownerWallet.gold) : "—"}
+                  <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">Gold</span>
+                </span>
+                <span className="text-sky-300">
+                  {ownerWallet.lastSeen ? formatNumber(ownerWallet.telVar) : "—"}
+                  <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">Tel Var</span>
+                </span>
+              </span>
+            </Card>
+          )}
           {archivedOwner && (
             <Card className="mb-4 px-4 py-3 text-sm text-fg-muted">
               Showing last-known bags for a deleted character. These stacks are not part of the live inventory.

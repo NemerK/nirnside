@@ -122,4 +122,25 @@ describe("skill book presentation", () => {
     assert.equal(view.morphs[2].rank, 1);
     assert.equal(view.morphs[2].rankLabel, "I");
   });
+
+  it("presents a scribing grimoire without morphs and with its scripts", () => {
+    const view = presentAbility(
+      SkillMorph.parse({
+        name: "Wield Soul",
+        purchased: true,
+        crafted: true,
+        scribed: true,
+        scripts: ["Magic Damage", "Class Mastery", "Minor Berserk"],
+        description: "Conjure a soul-bound weapon.",
+        morphs: [],
+      }),
+      new Map(),
+    );
+    assert.equal(view.crafted, true);
+    assert.equal(view.scribed, true);
+    assert.equal(view.purchased, true);
+    assert.deepEqual(view.scripts, ["Magic Damage", "Class Mastery", "Minor Berserk"]);
+    assert.equal(view.morphs.length, 0);
+    assert.equal(view.description, "Conjure a soul-bound weapon.");
+  });
 });

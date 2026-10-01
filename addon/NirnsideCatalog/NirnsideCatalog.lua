@@ -100,8 +100,35 @@ local function gatherSkills()
           lines[#lines + 1] = line
           local numAbilities = GetNumSkillAbilities(skillType, lineIndex)
           for a = 1, numAbilities do
-            if IsCraftedAbilitySkill and IsCraftedAbilitySkill(skillType, lineIndex, a) then
-              -- skip: GetSkillAbilityInfo can error on scribing skills
+            local crafted = IsCraftedAbilitySkill and IsCraftedAbilitySkill(skillType, lineIndex, a)
+            if crafted then
+              local craftedId = safe(function()
+                return GetCraftedAbilitySkillCraftedAbilityId
+                  and GetCraftedAbilitySkillCraftedAbilityId(skillType, lineIndex, a)
+                  or nil
+              end, nil)
+              local aName = craftedId and safe(function()
+                return GetCraftedAbilityDisplayName and zo_strformat("<<1>>", GetCraftedAbilityDisplayName(craftedId)) or nil
+              end, nil)
+              if aName and aName ~= "" then
+                local icon = safe(function()
+                  return GetCraftedAbilityIcon and normIcon(GetCraftedAbilityIcon(craftedId)) or nil
+                end, nil)
+                local description = safe(function()
+                  return GetCraftedAbilityDescription and zo_strformat("<<1>>", GetCraftedAbilityDescription(craftedId)) or ""
+                end, "")
+                if icon and not line.icon then line.icon = icon end
+                skills[#skills + 1] = {
+                  id = "sk-" .. slug(aName),
+                  name = aName,
+                  lineId = lineId,
+                  type = "active",
+                  description = description,
+                  icon = icon,
+                  morphs = {},
+                  source = "ingame",
+                }
+              end
             else
             local aName, texture, _, passive = GetSkillAbilityInfo(skillType, lineIndex, a)
             aName = zo_strformat("<<1>>", aName)
@@ -209,9 +236,78 @@ local function gatherSets()
   return out
 end
 
-----------------------------------------------------------------------
--- Orchestration
-----------------------------------------------------------------------
+local function gatherScribing()
+  local grimoires, scripts = {}, {}
+  safe(function()
+    if not GetNumCraftedAbilityScripts or not GetCraftedAbilityScriptIdAtIndex then return end
+    for i = 1, GetNumCraftedAbilityScripts() do
+      local id = GetCraftedAbilityScriptIdAtIndex(i)
+      if id and id ~= 0 then
+        local name = safe(function()
+          return GetCraftedAbilityScriptDisplayName and zo_strformat("<<1>>", GetCraftedAbilityScriptDisplayName(id)) or nil
+        end, nil)
+        if name and name ~= "" then
+          local slotName = safe(function()
+            local slot = GetCraftedAbilityScriptScribingSlot and GetCraftedAbilityScriptScribingSlot(id)
+            if slot == SCRIBING_SLOT_PRIMARY or slot == 1 then return "focus" end
+            if slot == SCRIBING_SLOT_SECONDARY or slot == 2 then return "signature" end
+            if slot == SCRIBING_SLOT_TERTIARY or slot == 3 then return "affix" end
+            return "focus"
+          end, "focus")
+          scripts[#scripts + 1] = {
+            id = "scr-" .. slug(name),
+            name = name,
+            slot = slotName,
+            effect = safe(function()
+              return GetCraftedAbilityScriptDescription
+                and zo_strformat("<<1>>", GetCraftedAbilityScriptDescription(id))
+                or ""
+            end, ""),
+            source = "ingame",
+          }
+        end
+      end
+    end
+  end)
+  safe(function()
+    if not GetNumCraftedAbilities or not GetCraftedAbilityIdAtIndex then return end
+    for i = 1, GetNumCraftedAbilities() do
+      local id = GetCraftedAbilityIdAtIndex(i)
+      if id and id ~= 0 then
+        local name = safe(function()
+          return GetCraftedAbilityDisplayName and zo_strformat("<<1>>", GetCraftedAbilityDisplayName(id)) or nil
+        end, nil)
+        if name and name ~= "" then
+          local lineName = safe(function()
+            local skillType, lineIndex
+            if GetCraftedAbilitySkillAbilityIndices then
+              skillType, lineIndex = GetCraftedAbilitySkillAbilityIndices(id)
+            elseif GetCraftedAbilitySkillIndices then
+              skillType, lineIndex = GetCraftedAbilitySkillIndices(id)
+            end
+            if skillType and lineIndex then
+              return zo_strformat("<<1>>", GetSkillLineInfo(skillType, lineIndex))
+            end
+            return "Scribing"
+          end, "Scribing")
+          grimoires[#grimoires + 1] = {
+            id = "grim-" .. slug(name),
+            name = name,
+            skillLine = lineName ~= "" and lineName or "Scribing",
+            description = safe(function()
+              return GetCraftedAbilityDescription and zo_strformat("<<1>>", GetCraftedAbilityDescription(id)) or ""
+            end, ""),
+            icon = safe(function()
+              return GetCraftedAbilityIcon and normIcon(GetCraftedAbilityIcon(id)) or nil
+            end, nil),
+            source = "ingame",
+          }
+        end
+      end
+    end
+  end)
+  return grimoires, scripts
+end
 local function scan()
   if IsUnitInCombat("player") then
     d("[Nirnside Catalog] In combat — scan refused. Run /nirncatalog while AFK.")
@@ -226,13 +322,14 @@ local function scan()
   sv.skillLines = lines
   sv.skills = skills
   sv.sets = gatherSets()
-  -- Scribing catalog scan is intentionally omitted until API coverage is
-  -- verified; reference data covers it and is clearly flagged.
+  local grimoires, scripts = gatherScribing()
+  sv.grimoires = grimoires
+  sv.scripts = scripts
   sv.generatedAt = GetTimeStamp()
 
   d(string.format(
-    "[Nirnside Catalog] Done: %d CP, %d skill lines, %d abilities, %d sets. /reloadui or log out to write the file.",
-    #sv.cp, #sv.skillLines, #sv.skills, #sv.sets))
+    "[Nirnside Catalog] Done: %d CP, %d skill lines, %d abilities, %d sets, %d grimoires, %d scripts. /reloadui or log out to write the file.",
+    #sv.cp, #sv.skillLines, #sv.skills, #sv.sets, #sv.grimoires, #sv.scripts))
 end
 
 local function onLoaded(_, name)

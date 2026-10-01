@@ -203,5 +203,49 @@ describe("sample snapshot morph ranks", () => {
     assert.equal(cloak.morphs.find((m) => m.slot === 1)?.purchased, true);
     assert.equal(cloak.morphs.find((m) => m.slot === 2)?.purchased, false);
     assert.equal(cloak.morphs.find((m) => m.slot === 2)?.rank, 2);
+
+    const wieldSoul = sings.skillLines
+      .flatMap((l) => l.abilities)
+      .find((a) => a.name === "Wield Soul");
+    assert.ok(wieldSoul);
+    assert.equal(wieldSoul.crafted, true);
+    assert.equal(wieldSoul.scribed, true);
+    assert.equal(abilityIsKnown(wieldSoul), true);
+    assert.deepEqual(wieldSoul.scripts, ["Magic Damage", "Class Mastery", "Minor Berserk"]);
+
+    const soulBurst = sings.skillLines
+      .flatMap((l) => l.abilities)
+      .find((a) => a.name === "Soul Burst");
+    assert.ok(soulBurst);
+    assert.equal(soulBurst.crafted, true);
+    assert.equal(abilityIsKnown(soulBurst), false);
+  });
+
+  it("treats an unlocked scribing grimoire as known even at rank 0", () => {
+    const ability = SkillMorph.parse({
+      name: "Wield Soul",
+      rank: 0,
+      purchased: true,
+      crafted: true,
+      scribed: true,
+      scripts: ["Magic Damage", "Class Mastery", "Minor Berserk"],
+      morphs: [],
+    });
+    assert.equal(abilityIsKnown(ability), true);
+    assert.deepEqual(knownAbilityNames(ability), ["Wield Soul"]);
+    assert.equal(displayAbility(ability).name, "Wield Soul");
+  });
+
+  it("does not treat a locked grimoire as known", () => {
+    const ability = SkillMorph.parse({
+      name: "Soul Burst",
+      purchased: false,
+      crafted: true,
+      scribed: false,
+      scripts: [],
+      morphs: [],
+    });
+    assert.equal(abilityIsKnown(ability), false);
+    assert.deepEqual(knownAbilityNames(ability), []);
   });
 });

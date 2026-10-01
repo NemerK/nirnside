@@ -258,7 +258,7 @@ end
 
 -- One ability: passives keep their upgrade rank; actives/ultimates snapshot
 -- ranks for base + both morphs via the live progression API.
--- Skip crafted/scribing skills — GetSkillAbilityInfo can error on those.
+-- Crafted/scribing skills crash GetSkillAbilityInfo — gather those separately.
 --
 -- A morph slot is "owned" only when it is the player's CURRENT form for this
 -- ability: the base while unmorphed, or the chosen morph after morphing. ESO
@@ -274,9 +274,147 @@ local function morphSlotOwned(progressionId, slot, abilityOwned, currentMorph)
   return slot == active
 end
 
+local function craftedScriptName(scriptId)
+  if not scriptId or scriptId == 0 then return nil end
+  local name = safe(function()
+    return GetCraftedAbilityScriptDisplayName and GetCraftedAbilityScriptDisplayName(scriptId) or nil
+  end, nil)
+  if not name or name == "" then return nil end
+  return zo_strformat("<<1>>", name)
+end
+
+local function craftedAbilityIdToAbilityId(craftedId)
+  local id = safe(function()
+    return GetCraftedAbilityRepresentativeAbilityId and GetCraftedAbilityRepresentativeAbilityId(craftedId) or nil
+  end, nil)
+  if type(id) == "number" and id > 0 then return id end
+  id = safe(function()
+    return GetAbilityIdForCraftedAbilityId and GetAbilityIdForCraftedAbilityId(craftedId) or nil
+  end, nil)
+  if type(id) == "number" and id > 0 then return id end
+  return safe(function()
+    if not SCRIBING_DATA_MANAGER or not SCRIBING_DATA_MANAGER.GetCraftedAbilityData then return nil end
+    local data = SCRIBING_DATA_MANAGER:GetCraftedAbilityData(craftedId)
+    if not data then return nil end
+    if data.GetAbilityId then return data:GetAbilityId() end
+    if data.GetRepresentativeAbilityId then return data:GetRepresentativeAbilityId() end
+    return nil
+  end, nil)
+end
+
+-- Scribing grimoires. Never call GetSkillAbilityInfo here — it errors.
+local function gatherCraftedAbility(skillType, lineIndex, skillIndex)
+  local craftedId = safe(function()
+    return GetCraftedAbilitySkillCraftedAbilityId
+      and GetCraftedAbilitySkillCraftedAbilityId(skillType, lineIndex, skillIndex)
+      or nil
+  end, nil)
+  if not craftedId or craftedId == 0 then return nil end
+
+  local aName = safe(function()
+    return GetCraftedAbilityDisplayName and GetCraftedAbilityDisplayName(craftedId) or nil
+  end, nil)
+  aName = aName and zo_strformat("<<1>>", aName) or nil
+  if not aName or aName == "" then return nil end
+
+  local unlocked = safe(function()
+    return IsCraftedAbilityUnlocked and IsCraftedAbilityUnlocked(craftedId) == true
+  end, false)
+  local icon = safe(function()
+    return GetCraftedAbilityIcon and normIcon(GetCraftedAbilityIcon(craftedId)) or nil
+  end, nil)
+  local abilityId = craftedAbilityIdToAbilityId(craftedId)
+  if (not icon or icon == "") and abilityId then
+    icon = abilityIcon(abilityId)
+  end
+
+  local description = safe(function()
+    if not GetCraftedAbilityDescription then return nil end
+    local desc = GetCraftedAbilityDescription(craftedId)
+    if not desc or desc == "" then return nil end
+    return zo_strformat("<<1>>", desc)
+  end, nil)
+  if not description then description = abilityDescription(abilityId) end
+
+  local scripts = {}
+  local scribed = false
+  safe(function()
+    if not GetCraftedAbilityActiveScriptIds then return end
+    local primary, signature, affix = GetCraftedAbilityActiveScriptIds(craftedId)
+    for _, sid in ipairs({ primary, signature, affix }) do
+      local n = craftedScriptName(sid)
+      if n then
+        scripts[#scripts + 1] = n
+        scribed = true
+      end
+    end
+  end)
+  if not scribed then
+    scribed = safe(function()
+      return IsCraftedAbilityScribed and IsCraftedAbilityScribed(craftedId) == true
+    end, false)
+  end
+
+  return {
+    name = aName,
+    abilityId = abilityId,
+    rank = unlocked and 1 or 0,
+    morph = nil,
+    purchased = unlocked == true,
+    skillStyle = nil,
+    passive = false,
+    crafted = true,
+    scribed = scribed == true,
+    scripts = scripts,
+    icon = icon,
+    description = description,
+    morphs = {},
+  }
+end
+
+local function gatherScribingScripts()
+  local out, seen = {}, {}
+  local function add(name)
+    if name and name ~= "" and not seen[name] then
+      seen[name] = true
+      out[#out + 1] = name
+    end
+  end
+  safe(function()
+    if not GetNumCraftedAbilityScripts or not GetCraftedAbilityScriptIdAtIndex then return end
+    for i = 1, GetNumCraftedAbilityScripts() do
+      local id = GetCraftedAbilityScriptIdAtIndex(i)
+      if id and id ~= 0 then
+        local unlocked = true
+        if IsCraftedAbilityScriptUnlocked then
+          unlocked = IsCraftedAbilityScriptUnlocked(id) == true
+        else
+          unlocked = false
+        end
+        if unlocked then add(craftedScriptName(id)) end
+      end
+    end
+  end)
+  if #out == 0 then
+    safe(function()
+      if not GetNumCraftedAbilities or not GetCraftedAbilityIdAtIndex then return end
+      for i = 1, GetNumCraftedAbilities() do
+        local cid = GetCraftedAbilityIdAtIndex(i)
+        if cid and GetCraftedAbilityActiveScriptIds then
+          local primary, signature, affix = GetCraftedAbilityActiveScriptIds(cid)
+          add(craftedScriptName(primary))
+          add(craftedScriptName(signature))
+          add(craftedScriptName(affix))
+        end
+      end
+    end)
+  end
+  return out
+end
+
 local function gatherOneAbility(skillType, lineIndex, skillIndex)
   if IsCraftedAbilitySkill and IsCraftedAbilitySkill(skillType, lineIndex, skillIndex) then
-    return nil
+    return gatherCraftedAbility(skillType, lineIndex, skillIndex)
   end
 
   local aName, texture, earnedRank, passive, _, purchased, progressionIndex, currentRank =
@@ -787,7 +925,7 @@ local function gatherCharacter()
     champion = gatherChampion(),
     equipped = gatherEquipped(),
     companions = {},
-    scribingScripts = {},
+    scribingScripts = gatherScribingScripts(),
     research = {},
     lastSeen = GetTimeStamp(),
     gold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0),
@@ -816,16 +954,115 @@ local function gatherGuilds()
   return guilds
 end
 
-local function gatherCurrencies()
-  return {
-    transmuteCrystals = safe(function() return GetCurrencyAmount(CURT_CHAOTIC_CREATIA, CURRENCY_LOCATION_ACCOUNT) end, 0),
-    telVar            = safe(function() return GetCurrencyAmount(CURT_TELVAR_STONES, CURRENCY_LOCATION_CHARACTER) end, 0),
-    alliancePoints    = safe(function() return GetCurrencyAmount(CURT_ALLIANCE_POINTS, CURRENCY_LOCATION_ACCOUNT) end, 0),
-    writVouchers      = safe(function() return GetCurrencyAmount(CURT_WRIT_VOUCHERS, CURRENCY_LOCATION_ACCOUNT) end, 0),
-    eventTickets      = safe(function() return GetCurrencyAmount(CURT_EVENT_TICKETS, CURRENCY_LOCATION_ACCOUNT) end, 0),
-    undauntedKeys     = safe(function() return GetCurrencyAmount(CURT_UNDAUNTED_KEYS, CURRENCY_LOCATION_ACCOUNT) end, 0),
-    bankGold          = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_BANK) end, 0),
+local function currencyKeyFromName(name)
+  if not name or name == "" then return nil end
+  local lower = name:lower()
+  local known = {
+    ["alliance points"] = "alliancePoints",
+    ["archival fortunes"] = "archivalFortunes",
+    ["caches of tome points"] = "cachesOfTomePoints",
+    ["cache of tome points"] = "cachesOfTomePoints",
+    ["crown gems"] = "crownGems",
+    ["crowns"] = "crowns",
+    ["imperial fragments"] = "imperialFragments",
+    ["outfit change tokens"] = "outfitChangeTokens",
+    ["style stones"] = "outfitChangeTokens",
+    ["premium tome tokens"] = "premiumTomeTokens",
+    ["seals"] = "seals",
+    ["seals of endeavor"] = "seals",
+    ["tome points"] = "tomePoints",
+    ["trade bars"] = "tradeBars",
+    ["transmute crystals"] = "transmuteCrystals",
+    ["chaotic creatia"] = "transmuteCrystals",
+    ["undaunted keys"] = "undauntedKeys",
+    ["writ vouchers"] = "writVouchers",
+    ["event tickets"] = "eventTickets",
   }
+  if known[lower] then return known[lower] end
+  -- Skip character-bound / gold — those live on the character and gold table.
+  if lower == "gold" or lower == "money" or lower == "tel var stones" or lower == "tel var" then
+    return nil
+  end
+  local parts = {}
+  for w in name:gmatch("%S+") do
+    local clean = w:gsub("[^%w]", "")
+    if clean ~= "" then parts[#parts + 1] = clean end
+  end
+  if #parts == 0 then return nil end
+  local key = parts[1]:lower()
+  for i = 2, #parts do
+    local w = parts[i]
+    key = key .. w:sub(1, 1):upper() .. w:sub(2):lower()
+  end
+  return key
+end
+
+local function gatherCurrencies()
+  local out = {
+    bankGold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_BANK) end, 0),
+  }
+
+  local function put(key, amount)
+    if not key or out[key] ~= nil then return end
+    out[key] = type(amount) == "number" and amount or 0
+  end
+
+  -- Named constants first so keys stay stable across patches.
+  local named = {
+    { "transmuteCrystals",  function() return CURT_CHAOTIC_CREATIA end },
+    { "alliancePoints",     function() return CURT_ALLIANCE_POINTS end },
+    { "writVouchers",       function() return CURT_WRIT_VOUCHERS end },
+    { "eventTickets",       function() return CURT_EVENT_TICKETS end },
+    { "tradeBars",          function() return CURT_TRADE_BARS end },
+    { "undauntedKeys",      function() return CURT_UNDAUNTED_KEYS end },
+    { "crowns",             function() return CURT_CROWNS end },
+    { "crownGems",          function() return CURT_CROWN_GEMS end },
+    { "seals",              function() return CURT_ENDEAVOR_SEALS end },
+    { "outfitChangeTokens", function() return CURT_STYLE_STONES end },
+    { "archivalFortunes",   function() return CURT_ARCHIVAL_FORTUNES end },
+    { "imperialFragments",  function() return CURT_IMPERIAL_FRAGMENTS end },
+    { "tomePoints",         function() return CURT_TOME_POINTS end },
+    { "premiumTomeTokens",  function() return CURT_PREMIUM_TOME_TOKENS end },
+    { "cachesOfTomePoints", function() return CURT_TOME_POINT_CACHES or CURT_CACHES_OF_TOME_POINTS end },
+  }
+  for _, row in ipairs(named) do
+    local key, curtFn = row[1], row[2]
+    local curt = safe(curtFn, nil)
+    if type(curt) == "number" then
+      put(key, safe(function()
+        if CURRENCY_LOCATION_ACCOUNT and DoesCurrencyLocationHaveCurrencyType
+          and not DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_ACCOUNT, curt) then
+          return GetCurrencyAmount(curt, CURRENCY_LOCATION_CHARACTER) or 0
+        end
+        return GetCurrencyAmount(curt, CURRENCY_LOCATION_ACCOUNT) or 0
+      end, 0))
+    end
+  end
+
+  -- Catch anything the live patch added that we don't have a constant for.
+  safe(function()
+    local beginT = CURRENCY_TYPE_ITERATION_BEGIN or 1
+    local endT = CURRENCY_TYPE_ITERATION_END or 40
+    for t = beginT, endT do
+      if t ~= (CURT_NONE or 0) and t ~= CURT_MONEY and t ~= CURT_TELVAR_STONES then
+        local name = safe(function()
+          return GetCurrencyName and GetCurrencyName(t, true) or nil
+        end, nil)
+        local key = currencyKeyFromName(name and zo_strformat("<<1>>", name) or "")
+        if key then
+          put(key, safe(function()
+            if CURRENCY_LOCATION_ACCOUNT and DoesCurrencyLocationHaveCurrencyType
+              and not DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_ACCOUNT, t) then
+              return GetCurrencyAmount(t, CURRENCY_LOCATION_CHARACTER) or 0
+            end
+            return GetCurrencyAmount(t, CURRENCY_LOCATION_ACCOUNT) or 0
+          end, 0))
+        end
+      end
+    end
+  end)
+
+  return out
 end
 
 -- Item Set Collections (stickerbook). Iterated out of combat only; changes
