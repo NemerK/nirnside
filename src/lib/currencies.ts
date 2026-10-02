@@ -1,6 +1,7 @@
 /**
- * Live ESO wallet layout. Gold and Tel Var are character-bound (plus bank gold);
- * everything else is account-wide. Keys match what the snapshot addon writes.
+ * Live ESO wallet layout. Gold, Tel Var, and Alliance Points are character-bound
+ * (plus bank gold). Everything else is account-wide. Keys match what the
+ * snapshot addon writes; singular leftovers from older snapshots are folded in.
  */
 
 export type CurrencyScope = "account" | "hidden";
@@ -37,6 +38,33 @@ export const ACCOUNT_CURRENCIES: CurrencyDef[] = [
 
 const BY_KEY = new Map(ACCOUNT_CURRENCIES.map((c) => [c.key, c]));
 
+/**
+ * Older snapshots wrote both the stable key and a singular leftover
+ * (`crowns` + `crown`) because `zo_strformat("<<1>>")` singularizes names.
+ */
+const KEY_ALIASES: Record<string, string> = {
+  alliancePoint: "alliancePoints",
+  archivalFortune: "archivalFortunes",
+  cacheOfTomePoints: "cachesOfTomePoints",
+  crownGem: "crownGems",
+  crown: "crowns",
+  imperialFragment: "imperialFragments",
+  outfitChangeToken: "outfitChangeTokens",
+  styleStones: "outfitChangeTokens",
+  styleStone: "outfitChangeTokens",
+  premiumTomeToken: "premiumTomeTokens",
+  seal: "seals",
+  sealsOfEndeavor: "seals",
+  sealOfEndeavor: "seals",
+  tomePoint: "tomePoints",
+  tradeBar: "tradeBars",
+  transmuteCrystal: "transmuteCrystals",
+  chaoticCreatia: "transmuteCrystals",
+  undauntedKey: "undauntedKeys",
+  writVoucher: "writVouchers",
+  eventTicket: "eventTickets",
+};
+
 /** Stored on the account record but shown in the gold/Tel Var table, not the wallet grid. */
 const HIDDEN_KEYS = new Set(["bankGold", "telVar", "gold"]);
 
@@ -46,6 +74,31 @@ export type WalletEntry = {
   amount: number;
   colorClass: string;
 };
+
+function canonicalKey(key: string): string {
+  if (KEY_ALIASES[key]) return KEY_ALIASES[key];
+  if (BY_KEY.has(key)) return key;
+  for (const def of ACCOUNT_CURRENCIES) {
+    if (def.key.endsWith("s") && def.key.slice(0, -1) === key) return def.key;
+  }
+  return key;
+}
+
+function asAmount(raw: unknown): number {
+  return typeof raw === "number" && Number.isFinite(raw) ? Math.trunc(raw) : 0;
+}
+
+/** Fold singular leftovers into the stable keys; keep the higher amount. */
+export function canonicalizeCurrencies(
+  currencies: Record<string, number> | null | undefined,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [key, raw] of Object.entries(currencies ?? {})) {
+    const canon = canonicalKey(key);
+    out[canon] = Math.max(out[canon] ?? 0, asAmount(raw));
+  }
+  return out;
+}
 
 function labelFromKey(key: string): string {
   const known = BY_KEY.get(key);
@@ -79,7 +132,7 @@ export function walletEntries(
   currencies: Record<string, number> | null | undefined,
   opts?: { includeZero?: boolean },
 ): WalletEntry[] {
-  const src = currencies ?? {};
+  const src = canonicalizeCurrencies(currencies);
   const includeZero = opts?.includeZero === true;
   const seen = new Set<string>();
   const out: WalletEntry[] = [];
@@ -87,14 +140,14 @@ export function walletEntries(
   for (const def of ACCOUNT_CURRENCIES) {
     if (def.scope !== "account") continue;
     seen.add(def.key);
-    const amount = Number.isFinite(src[def.key]) ? Math.trunc(src[def.key]) : 0;
+    const amount = asAmount(src[def.key]);
     if (amount === 0 && !def.always && !includeZero) continue;
     out.push({ key: def.key, label: def.label, amount, colorClass: def.colorClass });
   }
 
   for (const [key, raw] of Object.entries(src)) {
     if (seen.has(key) || HIDDEN_KEYS.has(key)) continue;
-    const amount = Number.isFinite(raw) ? Math.trunc(raw) : 0;
+    const amount = asAmount(raw);
     if (amount === 0 && !includeZero) continue;
     out.push({
       key,

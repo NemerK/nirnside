@@ -181,6 +181,9 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
                 {(c.telVar ?? 0) > 0 && (
                   <div className="mt-1 text-xs text-fg-subtle">{formatNumber(c.telVar ?? 0)} Tel Var</div>
                 )}
+                {(c.alliancePoints ?? 0) > 0 && (
+                  <div className="mt-1 text-xs text-fg-subtle">{formatNumber(c.alliancePoints ?? 0)} Alliance Points</div>
+                )}
               </div>
             ) : null}
           </div>

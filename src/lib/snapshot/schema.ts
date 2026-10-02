@@ -289,6 +289,8 @@ export const Character = z.object({
   gold: z.number().int().nonnegative().default(0),
   /** Tel Var stones on this character as of last snapshot. Not account-wide. */
   telVar: z.number().int().nonnegative().default(0),
+  /** Alliance Points on this character. AP is character-bound in live ESO. */
+  alliancePoints: z.number().int().nonnegative().default(0),
   /**
    * Set when this character is gone from the live ESO roster (deleted).
    * The last snapshot is kept in Archive; it must not appear as a current toon.

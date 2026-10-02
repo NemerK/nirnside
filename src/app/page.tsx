@@ -4,7 +4,7 @@ import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getData
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { candidatePaths } from "@/lib/snapshot/locate";
-import { accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
+import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
 import { dashboardWallet } from "@/lib/currencies";
 import { Card, PageHeader, Stat, EmptyState, Badge, SectionTitle } from "@/components/ui";
 import { DataSourceBanner } from "@/components/data-source-banner";
@@ -47,6 +47,10 @@ export default function HomePage() {
   const telVar = accountTelVar({
     characters,
     legacyTelVar: account.currencies?.telVar,
+  });
+  const alliancePoints = accountAlliancePoints({
+    characters,
+    legacyAlliancePoints: account.currencies?.alliancePoints,
   });
 
   return (
@@ -98,7 +102,7 @@ export default function HomePage() {
           rows={dashboardWallet({
             gold: gold.total,
             telVar,
-            currencies: account.currencies ?? {},
+            currencies: { ...(account.currencies ?? {}), alliancePoints },
           })}
           title="Account-wide"
           compact
