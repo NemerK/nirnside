@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 /** GitHub repo ZIP/git updates pull from. Override with NIRNSIDE_UPDATE_REPO. */
 export const DEFAULT_REPO = "NemerK/nirnside";
-/** Branch ZIP users track. Git clones follow whatever branch they checked out. */
+/** Branch ZIP users track. Git clones fetch and stay on origin/main. */
 export const DEFAULT_REF = "main";
 
 const RESTART_NAME = ".nirnside-restart";
@@ -193,24 +193,33 @@ function markRestart(root) {
 }
 
 async function updateFromGit(root) {
-  log("Git clone detected — pulling the latest commit on this branch (app + addons).");
+  log("Git clone detected — updating from origin/main (live channel).");
   const before = git(root, ["rev-parse", "HEAD"]).stdout.trim();
-  const fetch = git(root, ["fetch", "--quiet"]);
+  const fetch = git(root, ["fetch", "--quiet", "origin", "main"]);
   if (fetch.status !== 0) {
     log(`git fetch failed: ${(fetch.stderr || fetch.stdout || "").trim() || "unknown error"}`);
     return 0;
   }
-  const pull = git(root, ["pull", "--ff-only"]);
-  if (pull.status !== 0) {
-    log(`git pull failed (your local changes were not overwritten): ${(pull.stderr || "").trim()}`);
-    return 0;
+  const branch = git(root, ["rev-parse", "--abbrev-ref", "HEAD"]).stdout.trim() || DEFAULT_REF;
+  if (branch !== "main") {
+    log(`This copy was on ${branch}; switching to main so the hub stays live.`);
+    const co = git(root, ["checkout", "-B", "main", "origin/main"]);
+    if (co.status !== 0) {
+      log(`checkout main failed (local changes were not overwritten): ${(co.stderr || "").trim()}`);
+      return 0;
+    }
+  } else {
+    const pull = git(root, ["pull", "--ff-only", "origin", "main"]);
+    if (pull.status !== 0) {
+      log(`git pull failed (your local changes were not overwritten): ${(pull.stderr || "").trim()}`);
+      return 0;
+    }
   }
   const after = git(root, ["rev-parse", "HEAD"]).stdout.trim();
-  const branch = git(root, ["rev-parse", "--abbrev-ref", "HEAD"]).stdout.trim() || DEFAULT_REF;
   writeRevision(root, {
     source: "git",
     repo: DEFAULT_REPO,
-    ref: branch,
+    ref: "main",
     sha: after,
     at: new Date().toISOString(),
   });

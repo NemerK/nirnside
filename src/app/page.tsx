@@ -4,6 +4,7 @@ import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getData
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { candidatePaths } from "@/lib/snapshot/locate";
+import { isBundledSampleAccount } from "@/lib/snapshot/load";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
 import { dashboardWallet } from "@/lib/currencies";
 import { Card, PageHeader, Stat, EmptyState, Badge, SectionTitle } from "@/components/ui";
@@ -62,7 +63,11 @@ export default function HomePage() {
         )}`}
       />
 
-      <DataSourceBanner source={dataSource} setup={autoSetup} />
+      <DataSourceBanner
+        source={dataSource}
+        setup={autoSetup}
+        sampleAccount={isBundledSampleAccount(account.displayName)}
+      />
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/characters" className="block rounded-xl transition-colors hover:brightness-110">

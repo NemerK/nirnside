@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PlayCircle, LogOut } from "lucide-react";
+import { PlayCircle, RotateCcw } from "lucide-react";
 
 export function LoadDemoButton() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export function LoadDemoButton() {
   );
 }
 
-export function ExitDemoButton() {
+export function LoadLiveAccountButton() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   return (
@@ -34,10 +34,14 @@ export function ExitDemoButton() {
         router.refresh();
       }}
       disabled={busy}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:text-fg disabled:opacity-60"
+      className="inline-flex items-center gap-1.5 rounded-md border border-accent/40 bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg transition-colors hover:brightness-110 disabled:opacity-60"
     >
-      <LogOut className="h-3.5 w-3.5" />
-      {busy ? "Exiting…" : "Exit demo"}
+      <RotateCcw className="h-3.5 w-3.5" />
+      {busy ? "Loading…" : "Load my ESO account"}
     </button>
   );
+}
+
+export function ExitDemoButton() {
+  return <LoadLiveAccountButton />;
 }

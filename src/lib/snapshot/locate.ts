@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { getUserConfig } from "../setup/config";
+import { loadSnapshotFromFile, looksLikeBundledSample } from "./load";
 
 /**
  * Zero-config discovery of the ESO SavedVariables file the NirnsideSnapshot
@@ -23,6 +24,7 @@ import { getUserConfig } from "../setup/config";
 // is <env>/SavedVariables/NirnsideSnapshot.lua.
 export const SNAPSHOT_FILENAME = "NirnsideSnapshot.lua";
 export const CATALOG_FILENAME = "NirnsideCatalog.lua";
+const SNAPSHOT_FILENAMES = [SNAPSHOT_FILENAME, "Nirnside.lua"] as const;
 
 export type SnapshotSource =
   | { kind: "env"; path: string; label: string }
@@ -145,11 +147,13 @@ export function envFolders(root: string): string[] {
 export function candidatePaths(): string[] {
   const out: string[] = [];
   const cfg = getUserConfig();
-  if (cfg.snapshotFile) out.push(cfg.snapshotFile);
+  if (cfg.snapshotFile && !isBundledSamplePath(cfg.snapshotFile)) out.push(cfg.snapshotFile);
   out.push(incomingPath());
   for (const root of esoRoots()) {
     for (const env of envFolders(root)) {
-      out.push(join(root, env, "SavedVariables", SNAPSHOT_FILENAME));
+      for (const name of SNAPSHOT_FILENAMES) {
+        out.push(join(root, env, "SavedVariables", name));
+      }
     }
   }
   return Array.from(new Set(out));
@@ -172,6 +176,69 @@ function usableFile(path: string | null | undefined): path is string {
   return !!path && existsSync(path) && !isBundledSamplePath(path);
 }
 
+export type RankedSnapshot = SnapshotSource & {
+  displayName: string;
+  characters: number;
+  lastSnapshot: number;
+};
+
+function sourceKindFor(path: string): { kind: SnapshotSource["kind"]; label: string } {
+  const n = path.replace(/\\/g, "/").toLowerCase();
+  if (n.includes("/data/incoming/")) return { kind: "uploaded", label: "uploaded file (data/incoming)" };
+  try {
+    const cfg = getUserConfig();
+    if (cfg.snapshotFile && samePath(path, cfg.snapshotFile)) return { kind: "eso", label: "chosen file" };
+  } catch {
+    // Ranking must still work when the local DB is not open yet.
+  }
+  try {
+    return { kind: "eso", label: basename(dirname(dirname(path))) || "eso" };
+  } catch {
+    return { kind: "eso", label: "eso" };
+  }
+}
+
+/**
+ * Read every candidate file and keep the live accounts. The bundled
+ * @AzuraStar fixture is dropped even if someone pointed Setup at it or
+ * copied it into SavedVariables.
+ */
+export function rankLiveSnapshotFiles(paths: string[]): RankedSnapshot[] {
+  const seen = new Set<string>();
+  const out: RankedSnapshot[] = [];
+  for (const path of paths) {
+    const key = path.replace(/\\/g, "/").toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!usableFile(path)) continue;
+    let snap;
+    try {
+      snap = loadSnapshotFromFile(path);
+    } catch {
+      // Unreadable / wrong file — keep looking.
+      continue;
+    }
+    if (looksLikeBundledSample(snap)) continue;
+    const live = (snap.characters ?? []).filter((c) => !c.archivedAt).length;
+    if (live <= 0 && (snap.characters ?? []).length <= 0) continue;
+    const { kind, label } = sourceKindFor(path);
+    out.push({
+      kind,
+      path,
+      label,
+      displayName: snap.displayName,
+      characters: live || snap.characters.length,
+      lastSnapshot: snap.lastSnapshot ?? 0,
+    });
+  }
+  out.sort((a, b) => b.characters - a.characters || b.lastSnapshot - a.lastSnapshot);
+  return out;
+}
+
+export function locateBestLiveSnapshot(): SnapshotSource | null {
+  return rankLiveSnapshotFiles(candidatePaths())[0] ?? null;
+}
+
 /**
  * Resolve the snapshot file to use right now, or null if nothing (not even the
  * sample) exists. Pass includeSample=false to only accept a real ESO file.
@@ -179,44 +246,23 @@ function usableFile(path: string | null | undefined): path is string {
 export function locateSnapshot(includeSample = true): SnapshotSource | null {
   const envFile = process.env.NIRNSIDE_SV_FILE;
   if (usableFile(envFile)) {
-    return { kind: "env", path: envFile, label: "NIRNSIDE_SV_FILE" };
+    const ranked = rankLiveSnapshotFiles([envFile]);
+    if (ranked[0]) return { kind: "env", path: ranked[0].path, label: "NIRNSIDE_SV_FILE" };
   }
 
   const envDir = process.env.NIRNSIDE_SV_DIR;
   if (envDir) {
-    const p = join(envDir, SNAPSHOT_FILENAME);
-    if (usableFile(p)) return { kind: "env", path: p, label: "NIRNSIDE_SV_DIR" };
+    const ranked = rankLiveSnapshotFiles(SNAPSHOT_FILENAMES.map((name) => join(envDir, name)));
+    if (ranked[0]) return { kind: "env", path: ranked[0].path, label: "NIRNSIDE_SV_DIR" };
   }
 
-  const cfg = getUserConfig();
-  if (usableFile(cfg.snapshotFile)) {
-    return { kind: "eso", path: cfg.snapshotFile, label: "chosen file" };
-  }
-
-  for (const root of esoRoots()) {
-    for (const env of envFolders(root)) {
-      const p = join(root, env, "SavedVariables", SNAPSHOT_FILENAME);
-      if (existsSync(p)) {
-        const envLabel = env || basenameLabel(root);
-        const chosen = cfg.esoDir && samePath(root, cfg.esoDir);
-        return { kind: "eso", path: p, label: chosen ? `chosen folder (${envLabel})` : envLabel };
-      }
-    }
-  }
-
-  const incoming = incomingPath();
-  if (usableFile(incoming)) {
-    return { kind: "uploaded", path: incoming, label: "uploaded file (data/incoming)" };
-  }
+  const best = locateBestLiveSnapshot();
+  if (best) return best;
 
   if (includeSample && existsSync(SAMPLE_PATH)) {
     return { kind: "sample", path: SAMPLE_PATH, label: "sample data" };
   }
   return null;
-}
-
-function basenameLabel(root: string): string {
-  return basename(root) || root;
 }
 
 function samePath(a: string, b: string): boolean {

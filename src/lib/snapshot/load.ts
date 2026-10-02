@@ -96,6 +96,18 @@ export function isBundledSampleAccount(name: string | null | undefined): boolean
   return (name ?? "").trim().toLowerCase() === SAMPLE_ACCOUNT;
 }
 
+const SAMPLE_CHARACTER_NAMES = new Set(["Sings-With-Shadows", "Draugr-Bane", "Bakes-Sweet-Rolls"]);
+
+/** True for the bundled tour fixture, even if it was saved under another filename. */
+export function looksLikeBundledSample(snap: {
+  displayName?: string | null;
+  characters?: { name?: string }[];
+}): boolean {
+  if (isBundledSampleAccount(snap.displayName)) return true;
+  const names = (snap.characters ?? []).map((c) => c.name).filter(Boolean) as string[];
+  return names.filter((n) => SAMPLE_CHARACTER_NAMES.has(n)).length >= 2;
+}
+
 /**
  * A SavedVariables file can hold more than one @account. Prefer the live
  * roster with the most characters / newest snapshot, and never pick the

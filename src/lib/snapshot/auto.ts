@@ -10,11 +10,12 @@ import {
   incomingCatalogPath,
   CATALOG_FILENAME,
   isBundledSamplePath,
+  rankLiveSnapshotFiles,
   type SnapshotSource,
 } from "./locate";
 import { importSnapshot } from "../db/import";
 import { getDb, getMeta, setMeta } from "../db";
-import { isBundledSampleAccount } from "./load";
+import { isBundledSampleAccount, looksLikeBundledSample } from "./load";
 import { loadReferenceCatalog, loadCatalogFromLua } from "../catalog/load";
 import { installAddons } from "../setup/install-addons";
 import { clearUserConfig, setUserConfig } from "../setup/config";
@@ -76,6 +77,11 @@ function lastLiveSource(): SnapshotSource | null {
   try {
     const prev = getMeta<{ path?: string; kind?: SnapshotSource["kind"]; label?: string }>(LAST_LIVE_KEY);
     if (!prev?.path || !existsSync(prev.path) || isBundledSamplePath(prev.path)) return null;
+    try {
+      if (looksLikeBundledSample(loadSnapshotFromFile(prev.path))) return null;
+    } catch {
+      return null;
+    }
     const kind = prev.kind && prev.kind !== "sample" ? prev.kind : "eso";
     return { kind, path: prev.path, label: prev.label || "last live snapshot" };
   } catch {
@@ -83,11 +89,36 @@ function lastLiveSource(): SnapshotSource | null {
   }
 }
 
+/** Don't keep Setup pinned to a copy of the @AzuraStar tour fixture. */
+function forgetPinnedSampleFile() {
+  try {
+    const cfg = getUserConfig();
+    if (!cfg.snapshotFile) return;
+    if (isBundledSamplePath(cfg.snapshotFile)) {
+      setUserConfig({ esoDir: cfg.esoDir });
+      return;
+    }
+    if (!existsSync(cfg.snapshotFile)) return;
+    if (looksLikeBundledSample(loadSnapshotFromFile(cfg.snapshotFile))) {
+      setUserConfig({ esoDir: cfg.esoDir });
+    }
+  } catch {
+    // Leave the saved path if we cannot read it.
+  }
+}
+
+function sameSnapshotPath(a: string, b: string): boolean {
+  return a.replace(/\\/g, "/").toLowerCase() === b.replace(/\\/g, "/").toLowerCase();
+}
+
 /** Real SavedVariables only — never the bundled @AzuraStar fixture. */
-function locateRealSnapshot(): SnapshotSource | null {
-  const found = locateSnapshot(false);
-  if (found && !isSampleSource(found)) return found;
-  return lastLiveSource();
+function locateRealSnapshot(excludePath?: string): SnapshotSource | null {
+  const paths = candidatePaths().filter((p) => !excludePath || !sameSnapshotPath(p, excludePath));
+  const best = rankLiveSnapshotFiles(paths)[0];
+  if (best) return best;
+  const last = lastLiveSource();
+  if (last && (!excludePath || !sameSnapshotPath(last.path, excludePath))) return last;
+  return null;
 }
 
 function doImport(src: SnapshotSource, reason: string) {
@@ -110,9 +141,9 @@ function doImport(src: SnapshotSource, reason: string) {
       return;
     }
     const snap = loadSnapshotFromFile(src.path);
-    if (isBundledSampleAccount(snap.displayName)) {
-      const real = locateRealSnapshot();
-      if (real && real.path !== src.path) {
+    if (looksLikeBundledSample(snap) || isBundledSampleAccount(snap.displayName)) {
+      const real = locateRealSnapshot(src.path);
+      if (real && !sameSnapshotPath(real.path, src.path)) {
         console.log(`[nirnside] ${src.path} is the sample account; switching to ${real.path}`);
         doImport(real, reason);
         return;
@@ -161,24 +192,26 @@ function beginWatch(src: SnapshotSource, reason = "startup") {
   }
   doImport(src, reason);
 
-  // Sample data is static — no need to watch it.
-  if (isSampleSource(src)) {
+  const imported = getMeta<DataSourceStatus>("dataSource");
+  const accountName = getMeta<{ displayName?: string }>("account")?.displayName;
+  if (imported?.kind === "sample" || isBundledSampleAccount(accountName)) {
     console.log("[nirnside] Using bundled sample data. Run the app on your ESO PC to load your real account.");
     pollForRealFile();
     return;
   }
 
+  const watchPath = imported?.ok ? imported.path : src.path;
   watcher?.close();
-  watcher = watch(src.path, {
+  watcher = watch(watchPath, {
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 400, pollInterval: 100 },
   });
   const trigger = (why: string) => {
     if (debounce) clearTimeout(debounce);
-    debounce = setTimeout(() => doImport(src, why), 600);
+    debounce = setTimeout(() => doImport({ kind: imported?.kind ?? src.kind, path: watchPath, label: imported?.label ?? src.label }, why), 600);
   };
   watcher.on("change", () => trigger("change")).on("add", () => trigger("add"));
-  console.log(`[nirnside] Watching ${src.path} — logout or /reloadui in ESO to refresh automatically.`);
+  console.log(`[nirnside] Watching ${watchPath} — logout or /reloadui in ESO to refresh automatically.`);
 }
 
 function pollForRealFile() {
@@ -272,6 +305,7 @@ function autoSetup() {
  * Safe to call from Setup after the user points at a folder.
  */
 export function rescanNow(reason = "rescan"): DataSourceStatus | null {
+  forgetPinnedSampleFile();
   autoSetup();
   loadCatalog();
 
@@ -315,6 +349,15 @@ export function applyUserPath(raw: string): { ok: boolean; error?: string } {
   }
 
   if (resolved.kind === "snapshot") {
+    try {
+      if (isBundledSamplePath(resolved.file) || looksLikeBundledSample(loadSnapshotFromFile(resolved.file))) {
+        setUserConfig({ esoDir: resolved.esoRoot });
+        rescanNow("setup-file");
+        return { ok: true };
+      }
+    } catch {
+      // If we cannot read it, still remember the path so Setup can show the error.
+    }
     setUserConfig({ snapshotFile: resolved.file, esoDir: resolved.esoRoot });
     rescanNow("setup-file");
     return { ok: true };
