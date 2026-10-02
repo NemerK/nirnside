@@ -4,7 +4,7 @@ import { basename, dirname, join } from "node:path";
 import { getAutoSetup, getDataSource } from "../db/queries";
 import { getUserConfig } from "./config";
 import { getUpdateInfo, type UpdateInfo } from "./update-info";
-import { defaultBrowsePath } from "./browse";
+import { browsePlaces, defaultBrowsePath, type BrowsePlace } from "./browse";
 import {
   CATALOG_FILENAME,
   SNAPSHOT_FILENAME,
@@ -40,6 +40,7 @@ export interface SetupStatus {
   /** True when this process can see Windows (or macOS) Documents, including WSL mounts. */
   onGamingPc: boolean;
   browseStart: string;
+  browsePlaces: BrowsePlace[];
 }
 
 export function getSetupStatus(): SetupStatus {
@@ -81,5 +82,6 @@ export function getSetupStatus(): SetupStatus {
     serverPlatform: process.platform,
     onGamingPc: process.platform === "win32" || process.platform === "darwin" || seesWindowsDocuments(),
     browseStart: defaultBrowsePath(),
+    browsePlaces: browsePlaces(),
   };
 }

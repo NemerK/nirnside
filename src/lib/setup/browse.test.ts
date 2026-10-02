@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { defaultBrowsePath } from "./browse";
+import { browsePlaces, defaultBrowsePath } from "./browse";
 import { seesWindowsDocuments, windowsMountRoots } from "../snapshot/locate";
 
 describe("setup browse start", () => {
@@ -12,6 +12,13 @@ describe("setup browse start", () => {
     const docs = join(homedir(), "Documents");
     if (existsSync(docs)) assert.notEqual(start, homedir());
     assert.ok(start.length > 0);
+  });
+
+  it("lists only folders that exist on this machine", () => {
+    for (const place of browsePlaces()) {
+      assert.ok(place.label.length > 0);
+      assert.ok(existsSync(place.path));
+    }
   });
 
   it("only reports Windows Documents when a Users tree is actually visible", () => {

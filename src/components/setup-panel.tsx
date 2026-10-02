@@ -47,6 +47,7 @@ type SetupStatus = {
   serverPlatform: string;
   onGamingPc: boolean;
   browseStart: string;
+  browsePlaces: { label: string; path: string }[];
   update: {
     repo: string;
     ref: string;
@@ -104,7 +105,7 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
       const res = await fetch("/api/setup/pick", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mode, startDir: path || undefined }),
+        body: JSON.stringify({ mode, startDir: path || status.browseStart || undefined }),
         signal: ctrl.signal,
       });
       const json = await res.json();
@@ -229,13 +230,12 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
             writes your account files under Documents:
           </p>
           <code className="mb-4 block overflow-x-auto rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs text-fg">
-            Documents\Elder Scrolls Online\liveeu
+            Documents\Elder Scrolls Online\live\SavedVariables\NirnsideSnapshot.lua
           </code>
           <p className="mb-4 text-xs text-fg-subtle">
-            EU players usually have <code className="rounded bg-surface-2 px-1">liveeu</code>. NA is{" "}
-            <code className="rounded bg-surface-2 px-1">live</code>. Either the parent{" "}
-            <code className="rounded bg-surface-2 px-1">Elder Scrolls Online</code> folder or the live folder itself is
-            fine.
+            EU is often <code className="rounded bg-surface-2 px-1">live</code> or{" "}
+            <code className="rounded bg-surface-2 px-1">liveeu</code>. NA is{" "}
+            <code className="rounded bg-surface-2 px-1">live</code>. OneDrive Documents counts.
           </p>
 
           {status.detected.length > 0 && (
@@ -261,37 +261,35 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
             </div>
           )}
 
-          {nativeAvail && (
-            <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-3 flex flex-wrap gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSearch className="h-4 w-4" />}
+              Choose NirnsideSnapshot.lua on this PC
+              <input
+                type="file"
+                accept=".lua"
+                className="hidden"
+                onChange={(e) => onUpload(e.target.files?.[0])}
+              />
+            </label>
+            {nativeAvail && (
               <button
                 type="button"
                 onClick={() => pickNative("file")}
                 disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-60"
-              >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSearch className="h-4 w-4" />}
-                Browse my computer…
-              </button>
-              <button
-                type="button"
-                onClick={() => pickNative("folder")}
-                disabled={busy}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-fg-muted hover:text-fg disabled:opacity-60"
               >
                 <HardDrive className="h-4 w-4" />
-                Pick a folder…
+                Windows folder window
               </button>
-            </div>
-          )}
-          {nativeAvail && (
-            <p className="mb-3 text-xs text-fg-subtle">
-              Opens your computer&apos;s file window. Choose your{" "}
-              <code className="rounded bg-surface-2 px-1">NirnsideSnapshot.lua</code> (inside a{" "}
-              <code className="rounded bg-surface-2 px-1">SavedVariables</code> folder), or pick the{" "}
-              <code className="rounded bg-surface-2 px-1">live</code>/<code className="rounded bg-surface-2 px-1">liveeu</code>{" "}
-              folder.
-            </p>
-          )}
+            )}
+          </div>
+          <p className="mb-4 text-xs text-fg-subtle">
+            Opens <span className="font-medium text-fg">this computer&apos;s</span> file window — Documents, OneDrive,{" "}
+            <code className="rounded bg-surface-2 px-1">C:\Users\...</code> — not a Linux home folder. Pick{" "}
+            <code className="rounded bg-surface-2 px-1">NirnsideSnapshot.lua</code> inside{" "}
+            <code className="rounded bg-surface-2 px-1">SavedVariables</code>.
+          </p>
 
           <form
             className="flex flex-col gap-2 sm:flex-row"
@@ -307,14 +305,16 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
               className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
             />
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => openBrowse(path || status.browseStart || undefined)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-fg-muted hover:text-fg"
-              >
-                <FolderSearch className="h-4 w-4" />
-                Browse in app
-              </button>
+              {status.onGamingPc !== false && (
+                <button
+                  type="button"
+                  onClick={() => openBrowse(path || status.browseStart || undefined)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-fg-muted hover:text-fg"
+                >
+                  <FolderSearch className="h-4 w-4" />
+                  Browse folders
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={busy || !path.trim()}
@@ -326,25 +326,18 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
             </div>
           </form>
 
-          {browseOpen && (
+          {browseOpen && status.onGamingPc !== false && (
             <div className="mt-3 rounded-lg border border-border bg-bg-elev p-3">
               <div className="mb-2 flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => openBrowse(status.browseStart || undefined)}
-                  className="rounded-md border border-border px-2 py-1 text-xs text-fg-muted hover:text-fg"
-                >
-                  Documents
-                </button>
-                {status.detected.map((d) => (
+                {(status.browsePlaces ?? []).map((place) => (
                   <button
-                    key={d.root}
+                    key={place.path}
                     type="button"
-                    onClick={() => openBrowse(d.root)}
-                    className="max-w-[16rem] truncate rounded-md border border-border px-2 py-1 text-xs text-accent hover:bg-accent-soft"
-                    title={d.root}
+                    onClick={() => openBrowse(place.path)}
+                    className="max-w-[16rem] truncate rounded-md border border-border px-2 py-1 text-xs text-fg-muted hover:text-fg"
+                    title={place.path}
                   >
-                    {d.root}
+                    {place.label}
                   </button>
                 ))}
               </div>

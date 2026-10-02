@@ -334,6 +334,19 @@ export function applyUserPath(raw: string): { ok: boolean; error?: string } {
   return { ok: true };
 }
 
+function findLocalCopyOf(bytes: Buffer): string | null {
+  const want = createHash("sha256").update(bytes).digest("hex");
+  for (const p of candidatePaths()) {
+    if (!existsSync(p) || isIncomingPath(p) || isBundledSamplePath(p)) continue;
+    try {
+      if (createHash("sha256").update(readFileSync(p)).digest("hex") === want) return p;
+    } catch {
+      /* skip unreadable */
+    }
+  }
+  return null;
+}
+
 /** Drop a SavedVariables lua into data/incoming and import it. */
 export function applyUploadedLua(filename: string, bytes: Buffer): { ok: boolean; error?: string } {
   const lower = filename.toLowerCase();
@@ -347,6 +360,16 @@ export function applyUploadedLua(filename: string, bytes: Buffer): { ok: boolean
       loadCatalogFromLua(dest);
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  } else {
+    const local = findLocalCopyOf(bytes);
+    if (local) {
+      const resolved = resolveUserPath(local);
+      if (resolved.ok && resolved.kind === "snapshot") {
+        setUserConfig({ snapshotFile: resolved.file, esoDir: resolved.esoRoot });
+      } else {
+        setUserConfig({ snapshotFile: local });
+      }
     }
   }
   rescanNow("upload");

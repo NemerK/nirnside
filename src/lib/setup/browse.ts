@@ -30,11 +30,52 @@ function isDir(p: string): boolean {
  * Where the in-app folder picker should open. Documents / Elder Scrolls Online
  * when we can see it — never a bare Linux home like /home/ubuntu.
  */
+export interface BrowsePlace {
+  label: string;
+  path: string;
+}
+
+export function browsePlaces(): BrowsePlace[] {
+  const places: BrowsePlace[] = [];
+  const seen = new Set<string>();
+  const add = (label: string, dir: string) => {
+    if (!dir || !isDir(dir)) return;
+    const key = dir.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    places.push({ label, path: dir });
+  };
+
+  for (const root of esoRoots()) add("Elder Scrolls Online", root);
+
+  const docs = [
+    ...windowsMountRoots(),
+    process.env.OneDrive ? join(process.env.OneDrive, "Documents") : "",
+    process.env.USERPROFILE ? join(process.env.USERPROFILE, "Documents") : "",
+    join(homedir(), "Documents"),
+  ];
+  for (const dir of docs) {
+    if (!dir) continue;
+    add("Documents", dir);
+    add("Elder Scrolls Online", join(dir, "Elder Scrolls Online"));
+  }
+
+  if (process.platform === "win32") {
+    for (let c = 67; c <= 90; c++) {
+      const letter = String.fromCharCode(c);
+      add(`${letter}:`, `${letter}:\\`);
+    }
+  }
+
+  return places;
+}
+
 export function defaultBrowsePath(): string {
   const eso = esoRoots()[0];
   if (eso) return eso;
 
   const docs: string[] = [...windowsMountRoots()];
+  if (process.env.OneDrive) docs.push(join(process.env.OneDrive, "Documents"));
   if (process.env.USERPROFILE) docs.push(join(process.env.USERPROFILE, "Documents"));
   docs.push(join(homedir(), "Documents"));
 

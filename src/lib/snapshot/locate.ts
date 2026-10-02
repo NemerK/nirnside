@@ -73,9 +73,17 @@ function documentsDirs(): string[] {
   const homes = new Set<string>([homedir()]);
   if (process.env.USERPROFILE) homes.add(process.env.USERPROFILE);
   if (process.env.HOME) homes.add(process.env.HOME);
+  for (const key of ["OneDrive", "OneDriveConsumer", "OneDriveCommercial"] as const) {
+    const v = process.env[key];
+    if (v) homes.add(v);
+  }
 
   const docNames = ["Documents", "Documenten", "Dokumente", "Documentos", "Documenti", "文档", "My Documents"];
   const out: string[] = [];
+  for (const key of ["OneDrive", "OneDriveConsumer", "OneDriveCommercial"] as const) {
+    const v = process.env[key];
+    if (v) out.push(join(v, "Documents"));
+  }
   for (const home of homes) {
     // Direct Documents variants.
     for (const d of docNames) out.push(join(home, d));
