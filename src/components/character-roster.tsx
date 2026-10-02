@@ -5,24 +5,10 @@ import { Archive, Search, X } from "lucide-react";
 import type { Character } from "@/lib/snapshot/schema";
 import type { Role, RoleAssignments } from "@/lib/roles/types";
 import { filterCharacters, rolesForCharacter } from "@/lib/roles/filter";
+import { classFilterOrder, classIcon } from "@/lib/classes";
 import { CharacterCard } from "./character-card";
 import { GameIcon } from "./game-icon";
 import { Badge, Card, PageScroll, StickyMenu } from "./ui";
-
-/** In-game class icon (.dds) per class, served through our icon proxy. */
-const CLASS_ICONS: Record<string, string> = {
-  Dragonknight: "/esoui/art/icons/class/class_dragonknight.dds",
-  Sorcerer: "/esoui/art/icons/class/class_sorcerer.dds",
-  Nightblade: "/esoui/art/icons/class/class_nightblade.dds",
-  Templar: "/esoui/art/icons/class/class_templar.dds",
-  Warden: "/esoui/art/icons/class/class_warden.dds",
-  Necromancer: "/esoui/art/icons/class/class_necromancer.dds",
-  Arcanist: "/esoui/art/icons/class/class_arcanist.dds",
-};
-
-function classIcon(className: string): string | undefined {
-  return CLASS_ICONS[className];
-}
 
 export function CharacterRoster({
   characters,
@@ -41,7 +27,12 @@ export function CharacterRoster({
   const [role, setRole] = useState("");
 
   const all = useMemo(() => [...characters, ...archived], [characters, archived]);
-  const classes = useMemo(() => [...new Set(all.map((c) => c.class).filter(Boolean))].sort(), [all]);
+  const classes = useMemo(() => classFilterOrder([...new Set(all.map((c) => c.class).filter(Boolean))]), [all]);
+  const classCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of all) counts.set(c.class, (counts.get(c.class) ?? 0) + 1);
+    return counts;
+  }, [all]);
   const races = useMemo(() => [...new Set(all.map((c) => c.race).filter(Boolean))].sort(), [all]);
 
   const filters = {
@@ -56,7 +47,9 @@ export function CharacterRoster({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <StickyMenu className="flex flex-wrap items-center gap-2">
+      <StickyMenu className="space-y-2">
+        <ClassPicker classes={classes} counts={classCounts} value={className} onChange={setClassName} />
+        <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
           <input
@@ -66,7 +59,6 @@ export function CharacterRoster({
             className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
           />
         </div>
-        <ClassPicker classes={classes} value={className} onChange={setClassName} />
         <FilterSelect label="Race" value={race} onChange={setRace} options={races} />
         <select
           value={role}
@@ -97,6 +89,7 @@ export function CharacterRoster({
             <X className="h-4 w-4" /> Clear
           </button>
         )}
+        </div>
       </StickyMenu>
 
       <PageScroll>
@@ -154,34 +147,42 @@ export function CharacterRoster({
   );
 }
 
-/** One-click class filter: an icon per class present on the roster. */
+/** One-click class filter: an icon per live ESO class, with roster counts. */
 function ClassPicker({
   classes,
+  counts,
   value,
   onChange,
 }: {
   classes: string[];
+  counts: Map<string, number>;
   value: string;
   onChange: (v: string) => void;
 }) {
   if (classes.length === 0) return null;
   return (
-    <div className="flex items-center gap-1" role="group" aria-label="Filter by class">
+    <div className="flex flex-wrap items-stretch gap-1.5" role="group" aria-label="Filter by class">
       {classes.map((c) => {
         const active = value === c;
+        const count = counts.get(c) ?? 0;
         return (
           <button
             key={c}
             type="button"
-            title={c}
+            title={count === 1 ? `${c} · 1 character` : `${c} · ${count} characters`}
             aria-pressed={active}
             onClick={() => onChange(active ? "" : c)}
-            className={`flex items-center justify-center rounded-lg border p-1 transition ${
-              active ? "border-accent bg-accent-soft" : "border-border hover:border-border-strong"
+            className={`flex min-w-[4.5rem] flex-col items-center gap-1 rounded-lg border px-2 py-1.5 transition ${
+              active
+                ? "border-accent bg-accent-soft"
+                : count === 0
+                  ? "border-border/60 opacity-50 hover:border-border-strong hover:opacity-80"
+                  : "border-border hover:border-border-strong"
             }`}
           >
-            <GameIcon name={c} icon={classIcon(c)} size={26} className={active ? "" : "opacity-80"} />
-            <span className="sr-only">{c}</span>
+            <GameIcon name={c} icon={classIcon(c)} size={32} className={active ? "" : "opacity-90"} />
+            <span className={`text-[10px] leading-none ${active ? "text-accent" : "text-fg-muted"}`}>{c}</span>
+            <span className="text-[10px] tabular-nums leading-none text-fg-subtle">{count}</span>
           </button>
         );
       })}

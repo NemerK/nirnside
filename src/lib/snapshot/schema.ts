@@ -131,6 +131,15 @@ export const SkillMorph = z.object({
   /** Passive upgrade cap (e.g. 2). Omitted when unknown or not a passive. */
   maxRank: z.number().int().nullable().optional(),
   /**
+   * True when this is a scribing / crafted ability (grimoire). Those have no
+   * morphs; purchase means the grimoire is unlocked.
+   */
+  crafted: z.boolean().default(false),
+  /** True when scripts are currently scribed onto this grimoire. */
+  scribed: z.boolean().default(false),
+  /** Currently slotted focus / signature / affix script names. */
+  scripts: z.array(z.string()).default([]),
+  /**
    * Per-slot rank for base + both morphs. Empty on older snapshots that only
    * recorded the currently selected morph.
    */

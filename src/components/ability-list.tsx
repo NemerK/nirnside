@@ -45,19 +45,26 @@ function AbilityRow({ ability }: { ability: SkillMorph }) {
         <span className={`text-sm font-medium ${known ? "text-fg" : "text-fg-subtle"}`}>{face.name}</span>
         {face.showingMorph && <span className="text-accent">◆</span>}
         {ability.passive && <Badge tone="muted">Passive</Badge>}
-        {!known && <Badge tone="muted">Not purchased</Badge>}
+        {ability.crafted && <Badge tone="accent">Scribing</Badge>}
+        {ability.crafted && ability.scribed && <Badge tone="ok">Scribed</Badge>}
+        {!known && <Badge tone="muted">{ability.crafted ? "Not unlocked" : "Not purchased"}</Badge>}
         {ability.skillStyle && (
           <span className="inline-flex items-center gap-1 text-xs text-accent">
             <Sparkles className="h-3 w-3" /> {ability.skillStyle}
           </span>
         )}
+        {ability.scripts?.map((script) => (
+          <span key={script} className="inline-flex items-center gap-1 text-xs text-accent">
+            <Sparkles className="h-3 w-3" /> {script}
+          </span>
+        ))}
         {ability.passive && (
           <span className="ml-auto text-xs tabular-nums text-fg-muted">
             Rank {ability.rank}
             {ability.maxRank != null ? ` / ${ability.maxRank}` : ""}
           </span>
         )}
-        {!ability.passive && slots.length === 0 && known && (
+        {!ability.passive && !ability.crafted && slots.length === 0 && known && (
           <span className="ml-auto">
             <RankPips rank={ability.rank > 0 ? ability.rank : null} />
           </span>

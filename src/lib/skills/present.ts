@@ -43,6 +43,10 @@ export type AbilityView = {
   description: string;
   descriptionSource: CatalogSource | "unknown";
   morphs: AbilitySlotView[];
+  /** Scribing / crafted ability (grimoire). No morphs; scripts are the slots. */
+  crafted: boolean;
+  scribed: boolean;
+  scripts: string[];
 };
 
 export type SkillLineView = {
@@ -69,6 +73,7 @@ export const SKILL_CATEGORY_ORDER = [
   "Alliance War",
   "Racial",
   "Craft",
+  "Scribing",
 ];
 
 export function loreKey(name: string): string {
@@ -131,6 +136,9 @@ export function presentAbility(ability: SkillMorph, lore: LoreIndex): AbilityVie
     description: merged.description,
     descriptionSource: merged.source,
     morphs,
+    crafted: ability.crafted === true,
+    scribed: ability.scribed === true,
+    scripts: ability.scripts ?? [],
   };
 }
 

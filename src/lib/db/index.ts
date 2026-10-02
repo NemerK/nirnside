@@ -16,6 +16,9 @@ export function getDb(): Database.Database {
   const db = new Database(DB_PATH);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  // Fail a blocked read instead of hanging the page forever (the UI then
+  // recovers via a real reload). Default busy_timeout is 0.
+  db.pragma("busy_timeout = 4000");
   migrate(db);
   _db = db;
   return db;

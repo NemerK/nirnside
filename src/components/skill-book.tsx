@@ -63,8 +63,10 @@ function AbilityDetail({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className={`text-base font-medium ${purchased ? "text-fg" : "text-fg-subtle"}`}>{name}</h3>
             {ability.passive && <Badge tone="muted">Passive</Badge>}
-            {shown && shown.slot > 0 && purchased && <Badge tone="accent">Morph</Badge>}
-            {!purchased && <Badge tone="muted">Not purchased</Badge>}
+            {ability.crafted && <Badge tone="accent">Scribing</Badge>}
+            {ability.crafted && ability.scribed && <Badge tone="ok">Scribed</Badge>}
+            {shown && shown.slot > 0 && purchased && !ability.crafted && <Badge tone="accent">Morph</Badge>}
+            {!purchased && <Badge tone="muted">{ability.crafted ? "Not unlocked" : "Not purchased"}</Badge>}
             {ability.skillStyle && (
               <span className="inline-flex items-center gap-1 text-xs text-accent">
                 <Sparkles className="h-3 w-3" /> {ability.skillStyle}
@@ -72,7 +74,11 @@ function AbilityDetail({
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            {ability.passive ? (
+            {ability.crafted ? (
+              <span className="text-xs text-fg-muted">
+                {purchased ? (ability.scribed ? "Grimoire unlocked · scripts scribed" : "Grimoire unlocked") : "Grimoire not unlocked"}
+              </span>
+            ) : ability.passive ? (
               <span className="text-xs tabular-nums text-fg-muted">
                 Rank {ability.rank}
                 {ability.maxRank != null ? ` / ${ability.maxRank}` : ""}
@@ -80,7 +86,7 @@ function AbilityDetail({
             ) : (
               <RankPips rank={rank} />
             )}
-            {!purchased && <span className="text-xs text-fg-subtle">No skill point spent</span>}
+            {!purchased && !ability.crafted && <span className="text-xs text-fg-subtle">No skill point spent</span>}
           </div>
         </div>
       </div>
@@ -99,6 +105,19 @@ function AbilityDetail({
       {source !== "unknown" && source !== "ingame" && (
         <div className="mt-2">
           <SourceBadge source={source as CatalogSource} />
+        </div>
+      )}
+
+      {ability.scripts.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {ability.scripts.map((script) => (
+            <span
+              key={script}
+              className="inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent-soft px-2 py-0.5 text-xs text-accent"
+            >
+              <Sparkles className="h-3 w-3" /> {script}
+            </span>
+          ))}
         </div>
       )}
 
@@ -280,11 +299,23 @@ export function SkillBook({
                             {label}
                           </span>
                           <span className="text-[11px] text-fg-subtle">
-                            {a.passive ? "Passive" : face && face.slot > 0 ? "Morph" : "Base"}
-                            {!a.purchased ? " · not purchased" : ""}
+                            {a.crafted
+                              ? a.scribed
+                                ? "Scribed"
+                                : a.purchased
+                                  ? "Unlocked"
+                                  : "Locked"
+                              : a.passive
+                                ? "Passive"
+                                : face && face.slot > 0
+                                  ? "Morph"
+                                  : "Base"}
+                            {!a.purchased && !a.crafted ? " · not purchased" : ""}
                           </span>
                         </span>
-                        {a.passive ? (
+                        {a.crafted ? (
+                          <span className="text-[11px] text-fg-subtle">{a.scripts.length > 0 ? `${a.scripts.length} scripts` : ""}</span>
+                        ) : a.passive ? (
                           <span className="text-xs tabular-nums text-fg-muted">{a.rank}</span>
                         ) : (
                           <RankPips rank={rank} />

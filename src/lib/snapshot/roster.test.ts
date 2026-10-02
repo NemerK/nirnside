@@ -107,6 +107,9 @@ describe("roster gold and archive", () => {
       }),
       15230,
     );
+    assert.equal(snap.currencies.alliancePoints, 402118);
+    assert.equal(snap.currencies.tradeBars, 11156);
+    assert.equal(snap.currencies.tomePoints, 4923);
   });
 
   it("sums live Tel Var instead of last-logout Tel Var", () => {
