@@ -157,24 +157,39 @@ export function candidatePaths(): string[] {
 
 const SAMPLE_PATH = join(process.cwd(), "data", "sample", "Nirnside.lua");
 
+/** Bundled tour fixture — never treat this as a player's SavedVariables file. */
+export function isBundledSamplePath(path: string | null | undefined): boolean {
+  if (!path) return false;
+  const n = path.replace(/\\/g, "/").toLowerCase();
+  return n.endsWith("/data/sample/nirnside.lua");
+}
+
+export function bundledSamplePath(): string {
+  return SAMPLE_PATH;
+}
+
+function usableFile(path: string | null | undefined): path is string {
+  return !!path && existsSync(path) && !isBundledSamplePath(path);
+}
+
 /**
  * Resolve the snapshot file to use right now, or null if nothing (not even the
  * sample) exists. Pass includeSample=false to only accept a real ESO file.
  */
 export function locateSnapshot(includeSample = true): SnapshotSource | null {
   const envFile = process.env.NIRNSIDE_SV_FILE;
-  if (envFile && existsSync(envFile)) {
+  if (usableFile(envFile)) {
     return { kind: "env", path: envFile, label: "NIRNSIDE_SV_FILE" };
   }
 
   const envDir = process.env.NIRNSIDE_SV_DIR;
   if (envDir) {
     const p = join(envDir, SNAPSHOT_FILENAME);
-    if (existsSync(p)) return { kind: "env", path: p, label: "NIRNSIDE_SV_DIR" };
+    if (usableFile(p)) return { kind: "env", path: p, label: "NIRNSIDE_SV_DIR" };
   }
 
   const cfg = getUserConfig();
-  if (cfg.snapshotFile && existsSync(cfg.snapshotFile)) {
+  if (usableFile(cfg.snapshotFile)) {
     return { kind: "eso", path: cfg.snapshotFile, label: "chosen file" };
   }
 
@@ -190,7 +205,7 @@ export function locateSnapshot(includeSample = true): SnapshotSource | null {
   }
 
   const incoming = incomingPath();
-  if (existsSync(incoming)) {
+  if (usableFile(incoming)) {
     return { kind: "uploaded", path: incoming, label: "uploaded file (data/incoming)" };
   }
 

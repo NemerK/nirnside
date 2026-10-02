@@ -55,7 +55,7 @@ export function loadSnapshotFromLua(src: string): AccountSnapshot {
   const defaults = root["Default"];
   if (!isObject(defaults)) throw new Error("NirnsideData.Default not found");
 
-  const accountKey = Object.keys(defaults).find((k) => k.startsWith("@"));
+  const accountKey = pickAccountKey(defaults);
   if (!accountKey) throw new Error("No @account key found under NirnsideData.Default");
 
   const accountNode = defaults[accountKey];
@@ -88,4 +88,37 @@ export function loadSnapshotFromFile(path: string): AccountSnapshot {
 
 function isObject(v: LuaValue | undefined): v is Record<string, LuaValue> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+const SAMPLE_ACCOUNT = "@azurastar";
+
+export function isBundledSampleAccount(name: string | null | undefined): boolean {
+  return (name ?? "").trim().toLowerCase() === SAMPLE_ACCOUNT;
+}
+
+/**
+ * A SavedVariables file can hold more than one @account. Prefer the live
+ * roster with the most characters / newest snapshot, and never pick the
+ * bundled @AzuraStar fixture when a real account is sitting next to it.
+ */
+function pickAccountKey(defaults: Record<string, LuaValue>): string | null {
+  const keys = Object.keys(defaults).filter((k) => k.startsWith("@"));
+  if (keys.length === 0) return null;
+  let best: string | null = null;
+  let bestScore = -Infinity;
+  for (const key of keys) {
+    const node = defaults[key];
+    if (!isObject(node)) continue;
+    const payload = isObject(node["$AccountWide"]) ? node["$AccountWide"] : node;
+    const chars = isObject(payload) ? payload.characters : null;
+    const n = Array.isArray(chars) ? chars.length : 0;
+    const last = isObject(payload) && typeof payload.lastSnapshot === "number" ? payload.lastSnapshot : 0;
+    let score = n * 1_000_000 + last;
+    if (isBundledSampleAccount(key)) score -= 1_000_000_000;
+    if (score > bestScore) {
+      best = key;
+      bestScore = score;
+    }
+  }
+  return best;
 }

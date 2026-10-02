@@ -59,4 +59,35 @@ SLASH_COMMANDS["/nirnside"] = takeSnapshot`;
     assert.equal(snap.displayName, "@AzuraStar");
     assert.equal(snap.characters.length, 1);
   });
+
+  it("prefers a live @account over the bundled @AzuraStar fixture in the same file", () => {
+    const lua = `
+      NirnsideData = {
+        ["Default"] = {
+          ["@AzuraStar"] = {
+            ["$AccountWide"] = {
+              ["displayName"] = "@AzuraStar",
+              ["lastSnapshot"] = 1,
+              ["characters"] = {
+                { ["id"] = "c1", ["name"] = "Sings", ["class"] = "Nightblade", ["race"] = "Khajiit", ["alliance"] = "Aldmeri Dominion" },
+              },
+            },
+          },
+          ["@Jaegeron"] = {
+            ["$AccountWide"] = {
+              ["displayName"] = "@Jaegeron",
+              ["lastSnapshot"] = 9,
+              ["characters"] = {
+                { ["id"] = "a", ["name"] = "One", ["class"] = "Nightblade", ["race"] = "Khajiit", ["alliance"] = "Aldmeri Dominion" },
+                { ["id"] = "b", ["name"] = "Two", ["class"] = "Sorcerer", ["race"] = "High Elf", ["alliance"] = "Aldmeri Dominion" },
+              },
+            },
+          },
+        },
+      }
+    `;
+    const snap = loadSnapshotFromLua(lua);
+    assert.equal(snap.displayName, "@Jaegeron");
+    assert.equal(snap.characters.length, 2);
+  });
 });
