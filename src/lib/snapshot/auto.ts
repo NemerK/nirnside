@@ -9,10 +9,12 @@ import {
   incomingPath,
   incomingCatalogPath,
   CATALOG_FILENAME,
+  isBundledSamplePath,
   type SnapshotSource,
 } from "./locate";
 import { importSnapshot } from "../db/import";
 import { getDb, getMeta, setMeta } from "../db";
+import { isBundledSampleAccount } from "./load";
 import { loadReferenceCatalog, loadCatalogFromLua } from "../catalog/load";
 import { installAddons } from "../setup/install-addons";
 import { clearUserConfig, setUserConfig } from "../setup/config";
@@ -45,11 +47,61 @@ let debounce: NodeJS.Timeout | null = null;
 let pollTimer: NodeJS.Timeout | null = null;
 let catalogLoaded = false;
 
+const LAST_LIVE_KEY = "lastLiveSnapshot";
+
 function snapshotFingerprint(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function isSampleSource(src: SnapshotSource): boolean {
+  return src.kind === "sample" || isBundledSamplePath(src.path);
+}
+
+function liveAccountName(): string | null {
+  try {
+    const name = getMeta<{ displayName?: string }>("account")?.displayName;
+    if (!name || isBundledSampleAccount(name) || name.toLowerCase() === "@unknown") return null;
+    return name;
+  } catch {
+    return null;
+  }
+}
+
+function rememberLiveSource(src: SnapshotSource) {
+  if (isSampleSource(src)) return;
+  setMeta(LAST_LIVE_KEY, { path: src.path, kind: src.kind, label: src.label, at: Date.now() });
+}
+
+function lastLiveSource(): SnapshotSource | null {
+  try {
+    const prev = getMeta<{ path?: string; kind?: SnapshotSource["kind"]; label?: string }>(LAST_LIVE_KEY);
+    if (!prev?.path || !existsSync(prev.path) || isBundledSamplePath(prev.path)) return null;
+    const kind = prev.kind && prev.kind !== "sample" ? prev.kind : "eso";
+    return { kind, path: prev.path, label: prev.label || "last live snapshot" };
+  } catch {
+    return null;
+  }
+}
+
+/** Real SavedVariables only — never the bundled @AzuraStar fixture. */
+function locateRealSnapshot(): SnapshotSource | null {
+  const found = locateSnapshot(false);
+  if (found && !isSampleSource(found)) return found;
+  return lastLiveSource();
+}
+
 function doImport(src: SnapshotSource, reason: string) {
+  if (isSampleSource(src)) {
+    const real = locateRealSnapshot();
+    if (real) {
+      console.log(`[nirnside] ignoring sample data; using ${real.path}`);
+      src = real;
+    } else if (liveAccountName()) {
+      console.log(`[nirnside] refusing to replace ${liveAccountName()} with sample data`);
+      return;
+    }
+  }
+
   try {
     const hash = snapshotFingerprint(src.path);
     const prev = getMeta<{ hash?: string }>("snapshotHash");
@@ -58,6 +110,19 @@ function doImport(src: SnapshotSource, reason: string) {
       return;
     }
     const snap = loadSnapshotFromFile(src.path);
+    if (isBundledSampleAccount(snap.displayName)) {
+      const real = locateRealSnapshot();
+      if (real && real.path !== src.path) {
+        console.log(`[nirnside] ${src.path} is the sample account; switching to ${real.path}`);
+        doImport(real, reason);
+        return;
+      }
+      if (liveAccountName()) {
+        console.log(`[nirnside] refusing to replace ${liveAccountName()} with @AzuraStar`);
+        return;
+      }
+      src = { kind: "sample", path: src.path, label: "sample data" };
+    }
     const result = importSnapshot(snap);
     setMeta("snapshotHash", { hash, at: Date.now() });
     const status: DataSourceStatus = {
@@ -68,6 +133,9 @@ function doImport(src: SnapshotSource, reason: string) {
       ok: true,
     };
     setMeta("dataSource", status);
+    if (!isSampleSource(src) && !isBundledSampleAccount(snap.displayName)) {
+      rememberLiveSource(src);
+    }
     console.log(
       `[nirnside] (${reason}) imported ${snap.displayName} from ${src.label} — ` +
         `${result.characters} chars, ${result.items} items, ${result.sets} sets`,
@@ -87,10 +155,14 @@ function stopPoll() {
 }
 
 function beginWatch(src: SnapshotSource, reason = "startup") {
+  if (isSampleSource(src)) {
+    const real = locateRealSnapshot();
+    if (real) src = real;
+  }
   doImport(src, reason);
 
   // Sample data is static — no need to watch it.
-  if (src.kind === "sample") {
+  if (isSampleSource(src)) {
     console.log("[nirnside] Using bundled sample data. Run the app on your ESO PC to load your real account.");
     pollForRealFile();
     return;
@@ -111,14 +183,18 @@ function beginWatch(src: SnapshotSource, reason = "startup") {
 
 function pollForRealFile() {
   stopPoll();
-  pollTimer = setInterval(() => {
-    const real = locateSnapshot(false);
-    if (real && real.kind !== "sample") {
+  const tryNow = () => {
+    const real = locateRealSnapshot();
+    if (real) {
       stopPoll();
       console.log(`[nirnside] Detected real account file at ${real.path}.`);
       beginWatch(real, "detected");
+      return true;
     }
-  }, 20_000);
+    return false;
+  };
+  if (tryNow()) return;
+  pollTimer = setInterval(tryNow, 3_000);
   if (pollTimer && typeof pollTimer.unref === "function") pollTimer.unref();
 }
 
@@ -199,7 +275,7 @@ export function rescanNow(reason = "rescan"): DataSourceStatus | null {
   autoSetup();
   loadCatalog();
 
-  const found = locateSnapshot(false);
+  const found = locateRealSnapshot();
   if (found) {
     stopPoll();
     beginWatch(found, reason);
@@ -277,10 +353,28 @@ export function resetSetupPath(): void {
 
 /** Opt-in: import the bundled sample account so users can tour a populated app. */
 export function loadSampleData(): boolean {
+  const real = locateRealSnapshot();
+  if (real) {
+    console.log(`[nirnside] demo blocked — a live snapshot is at ${real.path}`);
+    beginWatch(real, "demo-blocked");
+    return false;
+  }
   const sample = join(process.cwd(), "data", "sample", "Nirnside.lua");
   if (!existsSync(sample)) return false;
   doImport({ kind: "sample", path: sample, label: "sample data" }, "demo");
+  pollForRealFile();
   return true;
+}
+
+/** Leave the sample account and reload the live snapshot when we have one. */
+export function exitDemo(): void {
+  const real = locateRealSnapshot();
+  if (real) {
+    beginWatch(real, "exit-demo");
+    return;
+  }
+  clearAccountData();
+  pollForRealFile();
 }
 
 /** Clear the imported account (returns the app to its honest empty state). */

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadSampleData, clearAccountData } from "@/lib/snapshot/auto";
+import { loadSampleData, exitDemo } from "@/lib/snapshot/auto";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +9,8 @@ export async function POST() {
   return NextResponse.json({ ok });
 }
 
-/** Exit the demo: wipe the imported account, back to the honest empty state. */
+/** Exit the demo: reload the live snapshot if one exists. */
 export async function DELETE() {
-  clearAccountData();
+  exitDemo();
   return NextResponse.json({ ok: true });
 }
