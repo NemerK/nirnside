@@ -94,6 +94,21 @@ function hasCmd(cmd: string): boolean {
   return false;
 }
 
+const WSL_POWERSHELL = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
+
+function wslPowershell(): string | null {
+  if (existsSync(WSL_POWERSHELL)) return WSL_POWERSHELL;
+  return null;
+}
+
+/** C:\Users\... from a Windows dialog → /mnt/c/Users/... when Node is in WSL. */
+function windowsPathToLocal(p: string): string {
+  const m = p.match(/^([A-Za-z]):[\\/](.*)$/);
+  if (!m || process.platform === "win32") return p;
+  const mapped = `/mnt/${m[1].toLowerCase()}/${m[2].replace(/\\/g, "/")}`;
+  return existsSync(mapped) ? mapped : p;
+}
+
 async function pickLinux(mode: PickMode, startDir?: string): Promise<PickResult> {
   if (hasCmd("zenity")) {
     const args = ["--file-selection", `--title=${mode === "folder" ? FOLDER_TITLE : FILE_TITLE}`];
@@ -122,6 +137,7 @@ async function pickLinux(mode: PickMode, startDir?: string): Promise<PickResult>
 export function nativePickerAvailable(): boolean {
   if (process.platform === "win32" || process.platform === "darwin") return true;
   if (process.platform === "linux") {
+    if (wslPowershell()) return true;
     const hasDisplay = !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
     return hasDisplay && (hasCmd("zenity") || hasCmd("kdialog"));
   }
@@ -132,7 +148,16 @@ export async function nativePick(mode: PickMode, startDir?: string): Promise<Pic
   try {
     if (process.platform === "win32") return await pickWindows(mode, startDir);
     if (process.platform === "darwin") return await pickMac(mode);
-    if (process.platform === "linux") return await pickLinux(mode, startDir);
+    if (process.platform === "linux") {
+      const ps = wslPowershell();
+      if (ps) {
+        const { stdout } = await run(ps, ["-NoProfile", "-STA", "-Command", windowsScript(mode, startDir)]);
+        const path = windowsPathToLocal(stdout.trim());
+        if (!path) return { ok: false, error: "No selection." };
+        return { ok: true, path };
+      }
+      return await pickLinux(mode, startDir);
+    }
     return { ok: false, unavailable: true, error: "Native picker not supported on this OS." };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not open a file dialog." };

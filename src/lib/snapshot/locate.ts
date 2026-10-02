@@ -89,26 +89,50 @@ function documentsDirs(): string[] {
   return out;
 }
 
-/**
- * Windows drive roots to also probe (C:..Z:), for installs on a non-system
- * drive or a relocated Users folder. No-op on macOS/Linux.
- */
+const SKIP_WINDOWS_USERS = new Set(["public", "default", "default user", "all users", "defaultapppool"]);
+
+function collectWindowsUserDocs(usersDir: string): string[] {
+  const out: string[] = [];
+  if (!isDir(usersDir)) return out;
+  for (const user of safeReaddir(usersDir)) {
+    if (SKIP_WINDOWS_USERS.has(user.toLowerCase())) continue;
+    const base = join(usersDir, user);
+    if (!isDir(base)) continue;
+    out.push(join(base, "Documents"));
+    for (const entry of safeReaddir(base)) {
+      if (/^onedrive/i.test(entry)) out.push(join(base, entry, "Documents"));
+    }
+  }
+  return out;
+}
+
+/** Windows drive Users folders (C:..Z:). No-op on macOS/Linux. */
 function windowsUserRoots(): string[] {
   if (process.platform !== "win32") return [];
   const out: string[] = [];
   for (let c = 67; c <= 90; c++) {
     const drive = String.fromCharCode(c) + ":\\";
-    const users = join(drive, "Users");
-    if (!isDir(users)) continue;
-    for (const user of safeReaddir(users)) {
-      const base = join(users, user);
-      out.push(join(base, "Documents"));
-      for (const entry of safeReaddir(base)) {
-        if (/^onedrive/i.test(entry)) out.push(join(base, entry, "Documents"));
-      }
-    }
+    out.push(...collectWindowsUserDocs(join(drive, "Users")));
   }
   return out;
+}
+
+/**
+ * WSL (and similar) mounts of Windows drives. ESO's files live under
+ * C:\Users\...\Documents, which is /mnt/c/Users/... here — not /home/ubuntu.
+ */
+export function windowsMountRoots(): string[] {
+  if (process.platform === "win32") return [];
+  const out: string[] = [];
+  for (const letter of "cdefghijklmnopqrstuvwxyz") {
+    out.push(...collectWindowsUserDocs(`/mnt/${letter}/Users`));
+  }
+  return out;
+}
+
+/** True when this process can see a real Windows Documents tree (native or WSL). */
+export function seesWindowsDocuments(): boolean {
+  return process.platform === "win32" || windowsMountRoots().length > 0;
 }
 
 /** Roots under which the "Elder Scrolls Online" folder typically lives. */
@@ -118,7 +142,7 @@ export function esoRoots(): string[] {
   const chosen = getUserConfig().esoDir;
   if (chosen) roots.push(chosen);
   if (process.env.NIRNSIDE_ESO_DIR) roots.push(process.env.NIRNSIDE_ESO_DIR);
-  for (const docs of [...documentsDirs(), ...windowsUserRoots()]) {
+  for (const docs of [...documentsDirs(), ...windowsUserRoots(), ...windowsMountRoots()]) {
     roots.push(join(docs, ESO_DIRNAME));
   }
   return Array.from(new Set(roots)).filter(isDir);

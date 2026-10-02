@@ -15,6 +15,7 @@ import {
   ScanLine,
   RefreshCw,
   Upload,
+  TriangleAlert,
 } from "lucide-react";
 import { Card } from "./ui";
 
@@ -42,6 +43,10 @@ type SetupStatus = {
   catalogFound: boolean;
   catalogPath: string | null;
   lookingIn: string[];
+  serverHome: string;
+  serverPlatform: string;
+  onGamingPc: boolean;
+  browseStart: string;
   update: {
     repo: string;
     ref: string;
@@ -202,6 +207,21 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
 
   return (
     <div className="space-y-6">
+      {status.onGamingPc === false && (
+        <Card className="flex items-start gap-3 border-danger/40 p-4">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+          <div className="text-sm text-fg">
+            <span className="font-medium">This Nirnside is not running on your Windows PC.</span>{" "}
+            <span className="text-fg-muted">
+              The folder list below is {status.serverHome || "this machine"}, not{" "}
+              <code className="rounded bg-surface-2 px-1">Documents\Elder Scrolls Online</code>. Close this tab. On the
+              PC where you play, start Nirnside with <code className="rounded bg-surface-2 px-1">start-nirnside.cmd</code>{" "}
+              or Nirnside.exe — then you should see <code className="rounded bg-surface-2 px-1">C:\Users\...</code>, not{" "}
+              <code className="rounded bg-surface-2 px-1">/home/ubuntu</code>.
+            </span>
+          </div>
+        </Card>
+      )}
       <ol className="space-y-6">
         <Step n={1} title="Point Nirnside at your ESO data folder" done={addonsOk || snapshotOk}>
           <p className="mb-3 text-sm text-fg-muted">
@@ -289,7 +309,7 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => openBrowse(path || undefined)}
+                onClick={() => openBrowse(path || status.browseStart || undefined)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-fg-muted hover:text-fg"
               >
                 <FolderSearch className="h-4 w-4" />
@@ -311,10 +331,10 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
               <div className="mb-2 flex flex-wrap gap-1.5">
                 <button
                   type="button"
-                  onClick={() => openBrowse()}
+                  onClick={() => openBrowse(status.browseStart || undefined)}
                   className="rounded-md border border-border px-2 py-1 text-xs text-fg-muted hover:text-fg"
                 >
-                  Home
+                  Documents
                 </button>
                 {status.detected.map((d) => (
                   <button

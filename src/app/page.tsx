@@ -3,7 +3,7 @@ import { Download, MonitorSmartphone, Users } from "lucide-react";
 import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
-import { candidatePaths } from "@/lib/snapshot/locate";
+import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
 import { isBundledSampleAccount } from "@/lib/snapshot/load";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
 import { dashboardWallet } from "@/lib/currencies";
@@ -27,7 +27,7 @@ export default function HomePage() {
       <Onboarding
         setup={autoSetup}
         scanned={safe(() => candidatePaths()) ?? []}
-        onGamingPc={process.platform === "win32"}
+        onGamingPc={process.platform === "win32" || process.platform === "darwin" || seesWindowsDocuments()}
       />
     );
 

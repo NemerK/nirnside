@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
+import { esoRoots, windowsMountRoots } from "../snapshot/locate";
 
 const HIDDEN = new Set(["node_modules", ".git", ".cache", ".next", ".cursor"]);
 
@@ -26,11 +27,33 @@ function isDir(p: string): boolean {
 }
 
 /**
+ * Where the in-app folder picker should open. Documents / Elder Scrolls Online
+ * when we can see it — never a bare Linux home like /home/ubuntu.
+ */
+export function defaultBrowsePath(): string {
+  const eso = esoRoots()[0];
+  if (eso) return eso;
+
+  const docs: string[] = [...windowsMountRoots()];
+  if (process.env.USERPROFILE) docs.push(join(process.env.USERPROFILE, "Documents"));
+  docs.push(join(homedir(), "Documents"));
+
+  for (const dir of docs) {
+    const esoDir = join(dir, "Elder Scrolls Online");
+    if (isDir(esoDir)) return esoDir;
+  }
+  for (const dir of docs) {
+    if (isDir(dir)) return dir;
+  }
+  return homedir();
+}
+
+/**
  * List folders (and .lua files) under a path so the Setup page can pick an ESO
  * data folder without the user having to type a long Windows path.
  */
 export function browseDir(requested?: string | null): BrowseResult {
-  const home = homedir();
+  const home = defaultBrowsePath();
   const raw = (requested ?? "").trim() || home;
   let path: string;
   try {
@@ -76,7 +99,7 @@ export function browseDir(requested?: string | null): BrowseResult {
 }
 
 export function browseHome(): string {
-  return homedir();
+  return defaultBrowsePath();
 }
 
 export function basenameOf(p: string): string {
