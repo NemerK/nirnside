@@ -10,6 +10,7 @@ import {
   incomingCatalogPath,
   CATALOG_FILENAME,
   isBundledSamplePath,
+  isIncomingPath,
   type SnapshotSource,
 } from "./locate";
 import { importSnapshot } from "../db/import";
@@ -17,7 +18,7 @@ import { getDb, getMeta, setMeta } from "../db";
 import { isBundledSampleAccount } from "./load";
 import { loadReferenceCatalog, loadCatalogFromLua } from "../catalog/load";
 import { installAddons } from "../setup/install-addons";
-import { clearUserConfig, setUserConfig } from "../setup/config";
+import { clearUserConfig, getUserConfig, setUserConfig } from "../setup/config";
 import { resolveUserPath } from "../setup/resolve-path";
 
 /**
@@ -57,8 +58,11 @@ function isSampleSource(src: SnapshotSource): boolean {
   return src.kind === "sample" || isBundledSamplePath(src.path);
 }
 
-function isIncomingPath(path: string): boolean {
-  return path.replace(/\\/g, "/").toLowerCase().includes("/data/incoming/");
+function forgetIncomingChosenFile() {
+  const cfg = getUserConfig();
+  if (cfg.snapshotFile && isIncomingPath(cfg.snapshotFile)) {
+    setUserConfig({ esoDir: cfg.esoDir });
+  }
 }
 
 function liveAccountName(): string | null {
@@ -276,6 +280,7 @@ function autoSetup() {
  * Safe to call from Setup after the user points at a folder.
  */
 export function rescanNow(reason = "rescan"): DataSourceStatus | null {
+  forgetIncomingChosenFile();
   autoSetup();
   loadCatalog();
 
@@ -343,8 +348,6 @@ export function applyUploadedLua(filename: string, bytes: Buffer): { ok: boolean
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
-  } else {
-    setUserConfig({ snapshotFile: dest });
   }
   rescanNow("upload");
   return { ok: true };

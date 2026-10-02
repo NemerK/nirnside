@@ -141,12 +141,17 @@ export function envFolders(root: string): string[] {
   return found;
 }
 
-/** Every candidate SavedVariables file path we'd consider, in priority order. */
+/** data/incoming drop-in — last resort only, never a chosen/live ESO path. */
+export function isIncomingPath(path: string | null | undefined): boolean {
+  if (!path) return false;
+  return path.replace(/\\/g, "/").toLowerCase().includes("/data/incoming/");
+}
+
+/** Every ESO SavedVariables path we'd consider, in priority order. */
 export function candidatePaths(): string[] {
   const out: string[] = [];
   const cfg = getUserConfig();
-  if (cfg.snapshotFile) out.push(cfg.snapshotFile);
-  out.push(incomingPath());
+  if (cfg.snapshotFile && !isIncomingPath(cfg.snapshotFile)) out.push(cfg.snapshotFile);
   for (const root of esoRoots()) {
     for (const env of envFolders(root)) {
       out.push(join(root, env, "SavedVariables", SNAPSHOT_FILENAME));
@@ -189,7 +194,7 @@ export function locateSnapshot(includeSample = true): SnapshotSource | null {
   }
 
   const cfg = getUserConfig();
-  if (usableFile(cfg.snapshotFile)) {
+  if (usableFile(cfg.snapshotFile) && !isIncomingPath(cfg.snapshotFile)) {
     return { kind: "eso", path: cfg.snapshotFile, label: "chosen file" };
   }
 
