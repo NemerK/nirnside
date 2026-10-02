@@ -57,6 +57,10 @@ function isSampleSource(src: SnapshotSource): boolean {
   return src.kind === "sample" || isBundledSamplePath(src.path);
 }
 
+function isIncomingPath(path: string): boolean {
+  return path.replace(/\\/g, "/").toLowerCase().includes("/data/incoming/");
+}
+
 function liveAccountName(): string | null {
   try {
     const name = getMeta<{ displayName?: string }>("account")?.displayName;
@@ -68,14 +72,14 @@ function liveAccountName(): string | null {
 }
 
 function rememberLiveSource(src: SnapshotSource) {
-  if (isSampleSource(src)) return;
+  if (isSampleSource(src) || src.kind === "uploaded" || isIncomingPath(src.path)) return;
   setMeta(LAST_LIVE_KEY, { path: src.path, kind: src.kind, label: src.label, at: Date.now() });
 }
 
 function lastLiveSource(): SnapshotSource | null {
   try {
     const prev = getMeta<{ path?: string; kind?: SnapshotSource["kind"]; label?: string }>(LAST_LIVE_KEY);
-    if (!prev?.path || !existsSync(prev.path) || isBundledSamplePath(prev.path)) return null;
+    if (!prev?.path || !existsSync(prev.path) || isBundledSamplePath(prev.path) || isIncomingPath(prev.path)) return null;
     const kind = prev.kind && prev.kind !== "sample" ? prev.kind : "eso";
     return { kind, path: prev.path, label: prev.label || "last live snapshot" };
   } catch {

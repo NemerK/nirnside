@@ -2,7 +2,6 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { getUserConfig } from "../setup/config";
-import { isBundledSampleAccount, loadSnapshotFromFile } from "./load";
 
 /**
  * Zero-config discovery of the ESO SavedVariables file the NirnsideSnapshot
@@ -14,9 +13,7 @@ import { isBundledSampleAccount, loadSnapshotFromFile } from "./load";
  *   1. NIRNSIDE_SV_FILE  (explicit file, escape hatch)
  *   2. NIRNSIDE_SV_DIR   (explicit SavedVariables dir)
  *   3. Path chosen in Setup (a snapshot file or ESO folder)
- *   4. Standard ESO data locations (liveeu and live are both valid; PTS last).
- *      If more than one NirnsideSnapshot.lua exists, keep a real @account and
- *      skip leftover @AzuraStar copies. Incoming is never compared here.
+ *   4. Standard ESO data locations (liveeu preferred, then live, then pts)
  *   5. data/incoming drop-in (machines without ESO)
  *   6. The bundled sample fixture (opt-in demo only)
  */
@@ -46,7 +43,7 @@ export function incomingCatalogPath(): string {
   return join(process.cwd(), "data", "incoming", CATALOG_FILENAME);
 }
 
-/** ESO environment folders to scan. liveeu and live are both valid; PTS is last. */
+/** ESO "live" environment folders, most-preferred first. */
 const ESO_ENVS = ["liveeu", "live", "pts"] as const;
 
 const ESO_DIRNAME = "Elder Scrolls Online";
@@ -149,12 +146,12 @@ export function candidatePaths(): string[] {
   const out: string[] = [];
   const cfg = getUserConfig();
   if (cfg.snapshotFile) out.push(cfg.snapshotFile);
+  out.push(incomingPath());
   for (const root of esoRoots()) {
     for (const env of envFolders(root)) {
       out.push(join(root, env, "SavedVariables", SNAPSHOT_FILENAME));
     }
   }
-  out.push(incomingPath());
   return Array.from(new Set(out));
 }
 
@@ -173,30 +170,6 @@ export function bundledSamplePath(): string {
 
 function usableFile(path: string | null | undefined): path is string {
   return !!path && existsSync(path) && !isBundledSamplePath(path);
-}
-
-/**
- * Among ESO SavedVariables files only — never incoming, never the bundled
- * sample path. Setup-chosen files are handled by the caller and are not
- * passed in. Skip @AzuraStar leftovers so an old liveeu copy cannot hide a
- * real live roster, and the reverse.
- */
-export function chooseEsoSnapshot(paths: string[]): string | null {
-  let best: { path: string; score: number } | null = null;
-  for (const path of paths) {
-    if (!usableFile(path)) continue;
-    try {
-      const snap = loadSnapshotFromFile(path);
-      if (isBundledSampleAccount(snap.displayName)) continue;
-      const live = (snap.characters ?? []).filter((c) => !c.archivedAt).length;
-      const n = live || (snap.characters ?? []).length;
-      const score = n * 1_000_000 + (snap.lastSnapshot ?? 0);
-      if (!best || score > best.score) best = { path, score };
-    } catch {
-      // Unreadable / the addon program — keep looking.
-    }
-  }
-  return best?.path ?? null;
 }
 
 /**
@@ -220,20 +193,15 @@ export function locateSnapshot(includeSample = true): SnapshotSource | null {
     return { kind: "eso", path: cfg.snapshotFile, label: "chosen file" };
   }
 
-  const esoFiles: { path: string; root: string; env: string }[] = [];
   for (const root of esoRoots()) {
     for (const env of envFolders(root)) {
       const p = join(root, env, "SavedVariables", SNAPSHOT_FILENAME);
-      if (existsSync(p)) esoFiles.push({ path: p, root, env });
+      if (existsSync(p)) {
+        const envLabel = env || basenameLabel(root);
+        const chosen = cfg.esoDir && samePath(root, cfg.esoDir);
+        return { kind: "eso", path: p, label: chosen ? `chosen folder (${envLabel})` : envLabel };
+      }
     }
-  }
-  const picked =
-    chooseEsoSnapshot(esoFiles.map((f) => f.path)) ?? (esoFiles.length === 1 ? esoFiles[0].path : null);
-  if (picked) {
-    const meta = esoFiles.find((f) => samePath(f.path, picked));
-    const envLabel = meta?.env || basenameLabel(meta?.root ?? picked);
-    const chosen = !!(cfg.esoDir && meta && samePath(meta.root, cfg.esoDir));
-    return { kind: "eso", path: picked, label: chosen ? `chosen folder (${envLabel})` : envLabel };
   }
 
   const incoming = incomingPath();

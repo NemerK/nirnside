@@ -209,17 +209,13 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
             writes your account files under Documents:
           </p>
           <code className="mb-4 block overflow-x-auto rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs text-fg">
-            Documents\Elder Scrolls Online\live\SavedVariables\NirnsideSnapshot.lua
-            <br />
-            Documents\Elder Scrolls Online\liveeu\SavedVariables\NirnsideSnapshot.lua
+            Documents\Elder Scrolls Online\liveeu
           </code>
           <p className="mb-4 text-xs text-fg-subtle">
-            That is the file the Snapshot addon writes on logout. NA is{" "}
-            <code className="rounded bg-surface-2 px-1">live</code>. EU may be{" "}
-            <code className="rounded bg-surface-2 px-1">live</code> or{" "}
-            <code className="rounded bg-surface-2 px-1">liveeu</code> — both are valid. Pick the{" "}
-            <code className="rounded bg-surface-2 px-1">.lua</code> you actually play with, or that env folder. A Setup
-            pick always wins. If you have not picked one, Nirnside uses a real @account and skips leftover sample copies.
+            EU players usually have <code className="rounded bg-surface-2 px-1">liveeu</code>. NA is{" "}
+            <code className="rounded bg-surface-2 px-1">live</code>. Either the parent{" "}
+            <code className="rounded bg-surface-2 px-1">Elder Scrolls Online</code> folder or the live folder itself is
+            fine.
           </p>
 
           {status.detected.length > 0 && (

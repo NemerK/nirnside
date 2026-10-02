@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, FolderSearch, PackageCheck, TriangleAlert } from "lucide-react";
 import type { AutoSetup, DataSource } from "@/lib/db/queries";
 import { Card } from "./ui";
-import { LoadLiveAccountButton } from "./demo-controls";
+import { ExitDemoButton } from "./demo-controls";
 
 /**
  * Tells the user exactly where their data is coming from. The whole app is
@@ -27,19 +27,31 @@ export function DataSourceBanner({
         ) : (
           <FolderSearch className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
         )}
-        <div className="min-w-0 text-sm text-fg">
-          <div className="font-medium">This is the sample account (@AzuraStar), not yours.</div>
-          <p className="mt-1 text-fg-muted">
-            {foundEso
-              ? "Nirnside can see your ESO install. In Setup, pick your live or liveeu SavedVariables\\NirnsideSnapshot.lua — whichever folder you play in."
-              : "Open Setup and point Nirnside at Documents\\Elder Scrolls Online\\live or liveeu\\SavedVariables\\NirnsideSnapshot.lua."}{" "}
-            <Link href="/setup" className="text-accent hover:underline">
-              Setup
-            </Link>
-          </p>
+        <div className="text-sm text-fg">
+          <span className="font-medium">Showing sample data.</span>{" "}
+          {foundEso ? (
+            <span className="text-fg-muted">
+              Nirnside found your ESO install and set up its addon in{" "}
+              <code className="rounded bg-surface-2 px-1">{setup!.addOnsDirs.length}</code> AddOns folder(s) for you.
+              Enable <span className="font-medium text-fg">Nirnside Snapshot</span> in the in-game AddOns menu once,
+              then log a character out or <code className="rounded bg-surface-2 px-1">/reloadui</code> — your real
+              account loads here automatically within seconds.{" "}
+              <Link href="/setup" className="text-accent hover:underline">
+                Setup
+              </Link>
+            </span>
+          ) : (
+            <span className="text-fg-muted">
+              No ESO SavedVariables file was found yet. Open{" "}
+              <Link href="/setup" className="text-accent hover:underline">
+                Setup
+              </Link>{" "}
+              to point Nirnside at your Documents\Elder Scrolls Online folder, or run it on the PC where you play.
+            </span>
+          )}
         </div>
         <div className="ml-auto shrink-0">
-          <LoadLiveAccountButton />
+          <ExitDemoButton />
         </div>
       </Card>
     );
@@ -55,9 +67,6 @@ export function DataSourceBanner({
           <span className="font-medium">Found your file but couldn&apos;t read it.</span>{" "}
           <span className="text-fg-muted">{source.path}</span>
           {source.error && <div className="mt-1 font-mono text-xs text-danger">{source.error}</div>}
-          <div className="mt-2">
-            <LoadLiveAccountButton />
-          </div>
         </div>
       </Card>
     );
