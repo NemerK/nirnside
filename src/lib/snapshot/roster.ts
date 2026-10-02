@@ -64,3 +64,17 @@ export function accountTelVar(opts: { characters: Character[]; legacyTelVar?: nu
   if (fromChars > 0) return fromChars;
   return opts.legacyTelVar ?? 0;
 }
+
+/**
+ * Alliance Points are character-bound. Sum live toons so Home is not whoever
+ * logged out last. Fall back to an older account-wide field when no per-toon
+ * AP has been scanned yet.
+ */
+export function accountAlliancePoints(opts: {
+  characters: Character[];
+  legacyAlliancePoints?: number;
+}): number {
+  const fromChars = liveCharacters(opts.characters).reduce((sum, c) => sum + (c.alliancePoints ?? 0), 0);
+  if (fromChars > 0) return fromChars;
+  return opts.legacyAlliancePoints ?? 0;
+}

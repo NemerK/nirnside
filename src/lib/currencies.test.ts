@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { dashboardWallet, walletEntries } from "./currencies";
+import { canonicalizeCurrencies, dashboardWallet, walletEntries } from "./currencies";
 
 describe("walletEntries", () => {
   it("keeps in-game order and always shows AP / transmutes / keys / writs", () => {
@@ -70,5 +70,55 @@ describe("walletEntries", () => {
       rows.some((r) => r.key === "bankGold"),
       false,
     );
+  });
+
+  it("folds singular leftover keys into the stable wallet rows", () => {
+    const rows = dashboardWallet({
+      gold: 1,
+      telVar: 2,
+      currencies: {
+        alliancePoints: 0,
+        alliancePoint: 0,
+        crowns: 2295,
+        crown: 2295,
+        tradeBars: 11606,
+        tradeBar: 11606,
+        premiumTomeTokens: 0,
+        premiumTomeToken: 10,
+        undauntedCrest: 0,
+        challengeReroll: 12,
+        transmuteCrystals: 506,
+        transmuteCrystal: 506,
+      },
+    });
+    const keys = rows.map((r) => r.key);
+    assert.equal(keys.filter((k) => k === "crowns" || k === "crown").length, 1);
+    assert.equal(rows.find((r) => r.key === "crowns")?.amount, 2295);
+    assert.equal(rows.find((r) => r.key === "tradeBars")?.amount, 11606);
+    assert.equal(rows.find((r) => r.key === "premiumTomeTokens")?.amount, 10);
+    assert.equal(rows.find((r) => r.key === "transmuteCrystals")?.amount, 506);
+    assert.equal(
+      keys.some((k) => k === "crown" || k === "tradeBar" || k === "premiumTomeToken" || k === "transmuteCrystal"),
+      false,
+    );
+    assert.ok(rows.some((r) => r.key === "challengeReroll" && r.amount === 12));
+    assert.ok(rows.some((r) => r.key === "undauntedCrest" && r.amount === 0));
+  });
+
+  it("canonicalizes a live snapshot that wrote both plural and singular keys", () => {
+    const folded = canonicalizeCurrencies({
+      crowns: 2295,
+      crown: 2295,
+      seal: 15575,
+      seals: 15575,
+      archivalFortune: 8010,
+      archivalFortunes: 8010,
+    });
+    assert.equal(folded.crowns, 2295);
+    assert.equal(folded.seals, 15575);
+    assert.equal(folded.archivalFortunes, 8010);
+    assert.equal("crown" in folded, false);
+    assert.equal("seal" in folded, false);
+    assert.equal("archivalFortune" in folded, false);
   });
 });

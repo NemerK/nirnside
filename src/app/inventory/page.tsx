@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Backpack, Ban, Coins, Hand } from "lucide-react";
 import { getAccount, getArchivedCharacters, getCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
 import { setHref } from "@/lib/db/catalog-queries";
-import { goldBreakdown } from "@/lib/snapshot/roster";
+import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryTabs } from "@/components/inventory-tabs";
 import { CurrencyTable } from "@/components/currency-table";
@@ -32,7 +32,13 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
     owners: [],
   };
   let archivedOwner = false;
-  let ownerWallet: { name: string; gold: number; telVar: number; lastSeen: number | null } | null = null;
+  let ownerWallet: {
+    name: string;
+    gold: number;
+    telVar: number;
+    alliancePoints: number;
+    lastSeen: number | null;
+  } | null = null;
   try {
     items = getItems(filters);
     facets = getItemFacets();
@@ -46,6 +52,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
           name: owner.name,
           gold: owner.gold ?? 0,
           telVar: owner.telVar ?? 0,
+          alliancePoints: owner.alliancePoints ?? 0,
           lastSeen: owner.lastSeen,
         };
       }
@@ -63,7 +70,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
         title="Inventory"
         subtitle={
           view === "currency"
-            ? "Gold and Tel Var per character, plus account-wide currencies from the last snapshot."
+            ? "Gold, Tel Var, and Alliance Points per character, plus account-wide currencies from the last snapshot."
             : "Live bags only — worn gear, backpacks, bank, subscriber bank and craft bag. Deleted characters' last-known stacks live on their Archive page."
         }
       />
@@ -87,6 +94,10 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
                 <span className="text-sky-300">
                   {ownerWallet.lastSeen ? formatNumber(ownerWallet.telVar) : "—"}
                   <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">Tel Var</span>
+                </span>
+                <span className="text-emerald-400">
+                  {ownerWallet.lastSeen ? formatNumber(ownerWallet.alliancePoints) : "—"}
+                  <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">AP</span>
                 </span>
               </span>
             </Card>
@@ -182,7 +193,13 @@ function CurrencyView() {
     characters = getCharacters();
     const account = getAccount();
     bankGold = account?.currencies?.bankGold ?? 0;
-    currencies = account?.currencies ?? {};
+    currencies = {
+      ...(account?.currencies ?? {}),
+      alliancePoints: accountAlliancePoints({
+        characters,
+        legacyAlliancePoints: account?.currencies?.alliancePoints,
+      }),
+    };
     gold = goldBreakdown({
       characters,
       bankGold,

@@ -121,6 +121,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
                 isVampire, vampireStage, isWerewolf, lastSeen,
                 json_extract(json, '$.gold') AS gold,
                 json_extract(json, '$.telVar') AS telVar,
+                json_extract(json, '$.alliancePoints') AS alliancePoints,
                 json_extract(json, '$.classMastery') AS classMastery,
                 json_extract(json, '$.archivedAt') AS archivedAt,
                 json_extract(json, '$.gender') AS gender,
@@ -151,6 +152,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
       lastSeen: number | null;
       gold: number | null;
       telVar: number | null;
+      alliancePoints: number | null;
       classMastery: number | null;
       archivedAt: number | null;
       gender: string | null;
@@ -207,6 +209,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
         lastSeen: row.lastSeen,
         gold: intOr(row.gold),
         telVar: intOr(row.telVar),
+        alliancePoints: intOr(row.alliancePoints),
         archivedAt: archivedAt && archivedAt > 0 ? archivedAt : null,
       } satisfies Character;
     });

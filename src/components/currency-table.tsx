@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Coins } from "lucide-react";
 import type { Character } from "@/lib/snapshot/schema";
 import type { GoldBreakdown } from "@/lib/snapshot/roster";
-import { accountTelVar } from "@/lib/snapshot/roster";
+import { accountAlliancePoints, accountTelVar } from "@/lib/snapshot/roster";
 import { formatGold, formatNumber } from "@/lib/format";
 import { AccountWallet } from "./account-wallet";
 import { Card, SectionTitle } from "./ui";
@@ -27,6 +27,10 @@ export function CurrencyTable({
     characters,
     legacyTelVar: 0,
   });
+  const apTotal = accountAlliancePoints({
+    characters,
+    legacyAlliancePoints: currencies.alliancePoints,
+  });
 
   return (
     <div className="space-y-8">
@@ -38,7 +42,7 @@ export function CurrencyTable({
         {gold.usedLegacy ? (
           <Card className="px-4 py-3 text-sm text-fg-muted">
             Account gold is {formatGold(gold.total)} from the last snapshot, but wallets are not split yet. Log each
-            character out (or ReloadUI) once to fill per-character gold and Tel Var the way Inventory Insight does.
+            character out (or ReloadUI) once to fill per-character gold, Tel Var, and Alliance Points the way Inventory Insight does.
           </Card>
         ) : (
           <Card className="overflow-hidden">
@@ -49,6 +53,7 @@ export function CurrencyTable({
                     <th className="px-4 py-2.5 font-medium">Character</th>
                     <th className="px-3 py-2.5 font-medium text-right">Gold</th>
                     <th className="px-3 py-2.5 font-medium text-right">Tel Var</th>
+                    <th className="px-3 py-2.5 font-medium text-right">Alliance Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -65,11 +70,15 @@ export function CurrencyTable({
                       <td className="px-3 py-2 text-right tabular-nums text-sky-300">
                         {walletCell(c.lastSeen, c.telVar ?? 0)}
                       </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-emerald-400">
+                        {walletCell(c.lastSeen, c.alliancePoints ?? 0)}
+                      </td>
                     </tr>
                   ))}
                   <tr className="border-b border-border/60">
                     <td className="px-4 py-2 text-fg-muted">Bank</td>
                     <td className="px-3 py-2 text-right tabular-nums text-yellow-200">{formatGold(bankGold)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-fg-subtle">—</td>
                     <td className="px-3 py-2 text-right tabular-nums text-fg-subtle">—</td>
                   </tr>
                 </tbody>
@@ -81,6 +90,9 @@ export function CurrencyTable({
                     </td>
                     <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-sky-300">
                       {formatNumber(telVarTotal)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-emerald-400">
+                      {formatNumber(apTotal)}
                     </td>
                   </tr>
                 </tfoot>

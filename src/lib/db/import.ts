@@ -1,6 +1,7 @@
 import { getDb, getMeta } from "./index";
 import type { AccountSnapshot } from "../snapshot/schema";
-import { accountGold, accountTelVar } from "../snapshot/roster";
+import { accountAlliancePoints, accountGold, accountTelVar } from "../snapshot/roster";
+import { canonicalizeCurrencies } from "../currencies";
 import {
   collectCompletedAchievementIdsFromSnapshot,
   unionCompletedAchievementIds,
@@ -69,10 +70,14 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
           legacyGold: snap.gold,
         }),
         currencies: {
-          ...snap.currencies,
+          ...canonicalizeCurrencies(snap.currencies),
           telVar: accountTelVar({
             characters: rosterForGold,
             legacyTelVar: snap.currencies.telVar,
+          }),
+          alliancePoints: accountAlliancePoints({
+            characters: rosterForGold,
+            legacyAlliancePoints: snap.currencies.alliancePoints,
           }),
         },
         guilds: snap.guilds,

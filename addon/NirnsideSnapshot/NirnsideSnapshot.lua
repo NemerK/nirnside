@@ -930,6 +930,7 @@ local function gatherCharacter()
     lastSeen = GetTimeStamp(),
     gold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0),
     telVar = safe(function() return GetCurrencyAmount(CURT_TELVAR_STONES, CURRENCY_LOCATION_CHARACTER) end, 0),
+    alliancePoints = safe(function() return GetCurrencyAmount(CURT_ALLIANCE_POINTS, CURRENCY_LOCATION_CHARACTER) end, 0),
     archivedAt = nil,
     wardrobe = gatherWardrobe(charId),
   }
@@ -954,33 +955,60 @@ local function gatherGuilds()
   return guilds
 end
 
+-- Strip color/grammar markers without zo_strformat("<<1>>"), which singularizes
+-- "^pAlliance Points" into "Alliance Point" and used to write a second key.
+local function cleanCurrencyName(raw)
+  if not raw or raw == "" then return nil end
+  local name = raw:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("%^%a", "")
+  name = name:match("^%s*(.-)%s*$")
+  if not name or name == "" then return nil end
+  return name
+end
+
 local function currencyKeyFromName(name)
   if not name or name == "" then return nil end
   local lower = name:lower()
   local known = {
     ["alliance points"] = "alliancePoints",
+    ["alliance point"] = "alliancePoints",
     ["archival fortunes"] = "archivalFortunes",
+    ["archival fortune"] = "archivalFortunes",
     ["caches of tome points"] = "cachesOfTomePoints",
     ["cache of tome points"] = "cachesOfTomePoints",
     ["crown gems"] = "crownGems",
+    ["crown gem"] = "crownGems",
     ["crowns"] = "crowns",
+    ["crown"] = "crowns",
     ["imperial fragments"] = "imperialFragments",
+    ["imperial fragment"] = "imperialFragments",
     ["outfit change tokens"] = "outfitChangeTokens",
+    ["outfit change token"] = "outfitChangeTokens",
     ["style stones"] = "outfitChangeTokens",
+    ["style stone"] = "outfitChangeTokens",
     ["premium tome tokens"] = "premiumTomeTokens",
+    ["premium tome token"] = "premiumTomeTokens",
     ["seals"] = "seals",
+    ["seal"] = "seals",
     ["seals of endeavor"] = "seals",
+    ["seal of endeavor"] = "seals",
     ["tome points"] = "tomePoints",
+    ["tome point"] = "tomePoints",
     ["trade bars"] = "tradeBars",
+    ["trade bar"] = "tradeBars",
     ["transmute crystals"] = "transmuteCrystals",
+    ["transmute crystal"] = "transmuteCrystals",
     ["chaotic creatia"] = "transmuteCrystals",
     ["undaunted keys"] = "undauntedKeys",
+    ["undaunted key"] = "undauntedKeys",
     ["writ vouchers"] = "writVouchers",
+    ["writ voucher"] = "writVouchers",
     ["event tickets"] = "eventTickets",
+    ["event ticket"] = "eventTickets",
   }
   if known[lower] then return known[lower] end
   -- Skip character-bound / gold — those live on the character and gold table.
-  if lower == "gold" or lower == "money" or lower == "tel var stones" or lower == "tel var" then
+  if lower == "gold" or lower == "money" or lower == "tel var stones" or lower == "tel var"
+    or lower == "alliance points" or lower == "alliance point" then
     return nil
   end
   local parts = {}
@@ -997,20 +1025,48 @@ local function currencyKeyFromName(name)
   return key
 end
 
+-- AP (and gold / Tel Var) are character-bound. Never store them on the account
+-- wallet as "whoever logged out last".
+local CHARACTER_ONLY_CURRENCY_KEYS = {
+  alliancePoints = true,
+  alliancePoint = true,
+  gold = true,
+  telVar = true,
+}
+
+local function accountCurrencyAmount(curt)
+  if not curt then return 0 end
+  if CURRENCY_LOCATION_ACCOUNT and DoesCurrencyLocationHaveCurrencyType
+    and DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_ACCOUNT, curt) then
+    return GetCurrencyAmount(curt, CURRENCY_LOCATION_ACCOUNT) or 0
+  end
+  -- Character-only types are gathered on the toon, not here.
+  if CURRENCY_LOCATION_CHARACTER and DoesCurrencyLocationHaveCurrencyType
+    and DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_CHARACTER, curt)
+    and not DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_ACCOUNT, curt) then
+    return nil
+  end
+  return GetCurrencyAmount(curt, CURRENCY_LOCATION_ACCOUNT) or 0
+end
+
 local function gatherCurrencies()
   local out = {
     bankGold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_BANK) end, 0),
   }
+  local seenTypes = {}
 
   local function put(key, amount)
-    if not key or out[key] ~= nil then return end
-    out[key] = type(amount) == "number" and amount or 0
+    if not key or CHARACTER_ONLY_CURRENCY_KEYS[key] then return end
+    amount = type(amount) == "number" and amount or 0
+    -- Upgrade a named-constant 0 when the live iterator finds the real amount.
+    if out[key] == nil or (out[key] == 0 and amount > 0) then
+      out[key] = amount
+    end
   end
 
   -- Named constants first so keys stay stable across patches.
   local named = {
     { "transmuteCrystals",  function() return CURT_CHAOTIC_CREATIA end },
-    { "alliancePoints",     function() return CURT_ALLIANCE_POINTS end },
     { "writVouchers",       function() return CURT_WRIT_VOUCHERS end },
     { "eventTickets",       function() return CURT_EVENT_TICKETS end },
     { "tradeBars",          function() return CURT_TRADE_BARS end },
@@ -1029,13 +1085,9 @@ local function gatherCurrencies()
     local key, curtFn = row[1], row[2]
     local curt = safe(curtFn, nil)
     if type(curt) == "number" then
-      put(key, safe(function()
-        if CURRENCY_LOCATION_ACCOUNT and DoesCurrencyLocationHaveCurrencyType
-          and not DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_ACCOUNT, curt) then
-          return GetCurrencyAmount(curt, CURRENCY_LOCATION_CHARACTER) or 0
-        end
-        return GetCurrencyAmount(curt, CURRENCY_LOCATION_ACCOUNT) or 0
-      end, 0))
+      seenTypes[curt] = true
+      local amount = safe(function() return accountCurrencyAmount(curt) end, 0)
+      if amount ~= nil then put(key, amount) end
     end
   end
 
@@ -1044,19 +1096,17 @@ local function gatherCurrencies()
     local beginT = CURRENCY_TYPE_ITERATION_BEGIN or 1
     local endT = CURRENCY_TYPE_ITERATION_END or 40
     for t = beginT, endT do
-      if t ~= (CURT_NONE or 0) and t ~= CURT_MONEY and t ~= CURT_TELVAR_STONES then
-        local name = safe(function()
-          return GetCurrencyName and GetCurrencyName(t, true) or nil
-        end, nil)
-        local key = currencyKeyFromName(name and zo_strformat("<<1>>", name) or "")
-        if key then
-          put(key, safe(function()
-            if CURRENCY_LOCATION_ACCOUNT and DoesCurrencyLocationHaveCurrencyType
-              and not DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_ACCOUNT, t) then
-              return GetCurrencyAmount(t, CURRENCY_LOCATION_CHARACTER) or 0
-            end
-            return GetCurrencyAmount(t, CURRENCY_LOCATION_ACCOUNT) or 0
-          end, 0))
+      if t ~= (CURT_NONE or 0) and t ~= CURT_MONEY and t ~= CURT_TELVAR_STONES and t ~= CURT_ALLIANCE_POINTS then
+        if not seenTypes[t] then
+          local raw = safe(function()
+            return GetCurrencyName and (GetCurrencyName(t, true) or GetCurrencyName(t, false)) or nil
+          end, nil)
+          local key = currencyKeyFromName(cleanCurrencyName(raw) or "")
+          if key then
+            local amount = safe(function() return accountCurrencyAmount(t) end, 0)
+            if amount ~= nil then put(key, amount) end
+          end
+          seenTypes[t] = true
         end
       end
     end

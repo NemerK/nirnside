@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import type { Character } from "./schema";
 import { loadSnapshotFromFile } from "./load";
-import { accountGold, accountTelVar, archivedCharacters, goldBreakdown, liveCharacters } from "./roster";
+import { accountAlliancePoints, accountGold, accountTelVar, archivedCharacters, goldBreakdown, liveCharacters } from "./roster";
 
 function char(partial: Partial<Character> & { id: string; name: string }): Character {
   return {
@@ -28,6 +28,7 @@ function char(partial: Partial<Character> & { id: string; name: string }): Chara
     lastSeen: 1,
     gold: 0,
     telVar: 0,
+    alliancePoints: 0,
     archivedAt: null,
     wardrobe: null,
     ...partial,
@@ -110,6 +111,13 @@ describe("roster gold and archive", () => {
     assert.equal(snap.currencies.alliancePoints, 402118);
     assert.equal(snap.currencies.tradeBars, 11156);
     assert.equal(snap.currencies.tomePoints, 4923);
+    assert.equal(
+      accountAlliancePoints({
+        characters: [...snap.characters, ...snap.archivedCharacters],
+        legacyAlliancePoints: 0,
+      }),
+      402118,
+    );
   });
 
   it("sums live Tel Var instead of last-logout Tel Var", () => {
@@ -119,5 +127,14 @@ describe("roster gold and archive", () => {
       char({ id: "c", name: "Deleted", telVar: 9999, archivedAt: 1 }),
     ];
     assert.equal(accountTelVar({ characters, legacyTelVar: 1 }), 120);
+  });
+
+  it("sums live Alliance Points instead of the account-location zero", () => {
+    const characters = [
+      char({ id: "a", name: "PvP", alliancePoints: 80000 }),
+      char({ id: "b", name: "PvE", alliancePoints: 150 }),
+      char({ id: "c", name: "Deleted", alliancePoints: 999999, archivedAt: 1 }),
+    ];
+    assert.equal(accountAlliancePoints({ characters, legacyAlliancePoints: 0 }), 80150);
   });
 });
