@@ -31,8 +31,8 @@ export function DataSourceBanner({
           <div className="font-medium">This is the sample account (@AzuraStar), not yours.</div>
           <p className="mt-1 text-fg-muted">
             {foundEso
-              ? "Nirnside can see your ESO install. In Setup, pick Documents\\Elder Scrolls Online\\live\\SavedVariables\\NirnsideSnapshot.lua (EU on live, not the sample)."
-              : "Open Setup and point Nirnside at Documents\\Elder Scrolls Online\\live\\SavedVariables\\NirnsideSnapshot.lua."}{" "}
+              ? "Nirnside can see your ESO install. In Setup, pick your live or liveeu SavedVariables\\NirnsideSnapshot.lua — whichever folder you play in."
+              : "Open Setup and point Nirnside at Documents\\Elder Scrolls Online\\live or liveeu\\SavedVariables\\NirnsideSnapshot.lua."}{" "}
             <Link href="/setup" className="text-accent hover:underline">
               Setup
             </Link>
