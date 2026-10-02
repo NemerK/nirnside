@@ -31,8 +31,8 @@ export function DataSourceBanner({
           <div className="font-medium">This is the sample account (@AzuraStar), not yours.</div>
           <p className="mt-1 text-fg-muted">
             {foundEso
-              ? "Nirnside can see your ESO install. Click Load my ESO account to read SavedVariables (the file the Snapshot addon writes on logout)."
-              : "Open Setup and point Nirnside at Documents\\Elder Scrolls Online, then click Load my ESO account."}{" "}
+              ? "Nirnside can see your ESO install. In Setup, pick Documents\\Elder Scrolls Online\\live\\SavedVariables\\NirnsideSnapshot.lua (EU on live, not the sample)."
+              : "Open Setup and point Nirnside at Documents\\Elder Scrolls Online\\live\\SavedVariables\\NirnsideSnapshot.lua."}{" "}
             <Link href="/setup" className="text-accent hover:underline">
               Setup
             </Link>
