@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { clearLoadingRetry } from "./loading-recovery";
 import {
   Backpack,
   BookMarked,
@@ -38,14 +38,14 @@ const NAV = [
 
 function Wordmark() {
   return (
-    <Link href="/" className="flex items-center gap-2.5">
+    <a href="/" className="flex items-center gap-2.5">
       <span className="flex h-8 w-8 items-center justify-center rounded-md border border-accent/40 bg-accent-soft text-accent">
         <ScrollText className="h-4.5 w-4.5" />
       </span>
       <span className="text-lg font-semibold tracking-wide text-fg">
         Nirn<span className="text-accent">side</span>
       </span>
-    </Link>
+    </a>
   );
 }
 
@@ -56,7 +56,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
       {NAV.map(({ href, label, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
         return (
-          <Link
+          <a
             key={href}
             href={href}
             onClick={onNavigate}
@@ -68,7 +68,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           >
             <Icon className={`h-4.5 w-4.5 ${active ? "text-accent" : "text-fg-subtle group-hover:text-fg"}`} />
             {label}
-          </Link>
+          </a>
         );
       })}
     </nav>
@@ -76,13 +76,12 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function SearchBox({ onSubmit }: { onSubmit?: () => void }) {
-  const router = useRouter();
   const [q, setQ] = useState("");
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (q.trim()) router.push(`/search?q=${encodeURIComponent(q.trim())}`);
+        if (q.trim()) window.location.assign(`/search?q=${encodeURIComponent(q.trim())}`);
         onSubmit?.();
       }}
       className="relative w-full max-w-sm"
@@ -106,6 +105,10 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  useEffect(() => {
+    clearLoadingRetry();
+  }, [pathname]);
 
   return (
     <div className="app-bg flex h-full flex-col overflow-hidden md:flex-row">

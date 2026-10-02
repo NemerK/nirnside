@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { watch, type FSWatcher } from "chokidar";
 import { loadSnapshotFromFile } from "./load";
@@ -44,10 +45,21 @@ let debounce: NodeJS.Timeout | null = null;
 let pollTimer: NodeJS.Timeout | null = null;
 let catalogLoaded = false;
 
+function snapshotFingerprint(path: string): string {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
 function doImport(src: SnapshotSource, reason: string) {
   try {
+    const hash = snapshotFingerprint(src.path);
+    const prev = getMeta<{ hash?: string }>("snapshotHash");
+    if (reason !== "startup" && reason !== "demo" && reason !== "upload" && prev?.hash === hash) {
+      console.log(`[nirnside] (${reason}) snapshot unchanged — skip import`);
+      return;
+    }
     const snap = loadSnapshotFromFile(src.path);
     const result = importSnapshot(snap);
+    setMeta("snapshotHash", { hash, at: Date.now() });
     const status: DataSourceStatus = {
       kind: src.kind,
       path: src.path,

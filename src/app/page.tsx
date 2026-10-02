@@ -5,6 +5,7 @@ import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { candidatePaths } from "@/lib/snapshot/locate";
 import { accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
+import { dashboardWallet } from "@/lib/currencies";
 import { Card, PageHeader, Stat, EmptyState, Badge, SectionTitle } from "@/components/ui";
 import { DataSourceBanner } from "@/components/data-source-banner";
 import { LoadDemoButton } from "@/components/demo-controls";
@@ -12,7 +13,7 @@ import { GoalsBoard } from "@/components/goals-board";
 import { AccountWallet } from "@/components/account-wallet";
 import { toGoalSubject } from "@/lib/goals/progress";
 import type { Goal } from "@/lib/goals/types";
-import { formatDateTime, formatGold, formatNumber, timeAgo } from "@/lib/format";
+import { formatDateTime, formatGold, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -83,19 +84,25 @@ export default function HomePage() {
             Per character →
           </Link>
         </div>
-        <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
-          <Link href="/inventory?view=currency" className="block rounded-xl transition-colors hover:brightness-110">
-            <Stat
-              label="Gold"
-              value={formatGold(gold.total)}
-              hint={gold.usedLegacy ? "last snapshot" : `${formatGold(gold.wallets)} wallets · ${formatGold(gold.bank)} bank`}
-            />
-          </Link>
-          <Link href="/inventory?view=currency" className="block rounded-xl transition-colors hover:brightness-110">
-            <Stat label="Tel Var" value={formatNumber(telVar)} hint="across live characters" />
-          </Link>
-        </div>
-        <AccountWallet currencies={account.currencies ?? {}} title="Account-wide" compact />
+        {gold.usedLegacy ? (
+          <p className="mb-3 text-xs text-fg-subtle">
+            Gold is {formatGold(gold.total)} from the last snapshot (wallets not split yet). Log each character out
+            once to fill per-character gold.
+          </p>
+        ) : (
+          <p className="mb-3 text-xs text-fg-subtle">
+            Gold is {formatGold(gold.wallets)} on characters + {formatGold(gold.bank)} in the bank.
+          </p>
+        )}
+        <AccountWallet
+          rows={dashboardWallet({
+            gold: gold.total,
+            telVar,
+            currencies: account.currencies ?? {},
+          })}
+          title="Account-wide"
+          compact
+        />
       </section>
 
       <GoalsBoard

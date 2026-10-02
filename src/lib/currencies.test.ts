@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { walletEntries } from "./currencies";
+import { dashboardWallet, walletEntries } from "./currencies";
 
 describe("walletEntries", () => {
   it("keeps in-game order and always shows AP / transmutes / keys / writs", () => {
@@ -52,5 +52,23 @@ describe("walletEntries", () => {
     const rows = walletEntries({ alliancePoints: 0, transmuteCrystals: 0 }, { includeZero: true });
     assert.ok(rows.some((r) => r.key === "crowns" && r.amount === 0));
     assert.ok(rows.some((r) => r.key === "alliancePoints"));
+  });
+
+  it("lists gold, Tel Var, and every account currency on the home dashboard", () => {
+    const rows = dashboardWallet({
+      gold: 4218764,
+      telVar: 15230,
+      currencies: { alliancePoints: 402118, writVouchers: 0 },
+    });
+    assert.equal(rows[0]?.key, "gold");
+    assert.equal(rows[0]?.amount, 4218764);
+    assert.equal(rows[1]?.key, "telVar");
+    assert.ok(rows.some((r) => r.key === "crowns" && r.amount === 0));
+    assert.ok(rows.some((r) => r.key === "alliancePoints" && r.amount === 402118));
+    assert.ok(rows.some((r) => r.key === "writVouchers" && r.amount === 0));
+    assert.equal(
+      rows.some((r) => r.key === "bankGold"),
+      false,
+    );
   });
 });

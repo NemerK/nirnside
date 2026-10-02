@@ -55,6 +55,22 @@ function labelFromKey(key: string): string {
 }
 
 /**
+ * Home dashboard: Gold, Tel Var, then every live account-wide currency
+ * (including zeros) so the list matches the in-game wallet window.
+ */
+export function dashboardWallet(opts: {
+  gold: number;
+  telVar: number;
+  currencies?: Record<string, number>;
+}): WalletEntry[] {
+  return [
+    { key: "gold", label: "Gold", amount: opts.gold, colorClass: "text-yellow-200" },
+    { key: "telVar", label: "Tel Var Stones", amount: opts.telVar, colorClass: "text-sky-300" },
+    ...walletEntries(opts.currencies, { includeZero: true }),
+  ];
+}
+
+/**
  * Account wallet rows for Home and Inventory. Known currencies keep in-game
  * order; anything extra the live patch wrote is appended. Zero amounts hide
  * unless the currency is always-shown or `includeZero` is set.
