@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { getDb, getMeta } from "./index";
-import type { AccountSnapshot, AchievementRecord, Character, Item, SkillLine, StickerbookSet } from "../snapshot/schema";
+import type { AccountSnapshot, AchievementRecord, Character, House, Item, SkillLine, StickerbookSet } from "../snapshot/schema";
 import { archivedCharacters, archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
 import { unionCompletedAchievementIds } from "../achievements/pithka";
 
@@ -17,6 +17,7 @@ export type AccountMeta = Pick<
   | "guilds"
   | "achievements"
   | "completedAchievementIds"
+  | "houses"
 >;
 
 export function getAccount(): AccountMeta | null {
@@ -212,6 +213,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
         gold: intOr(row.gold),
         telVar: intOr(row.telVar),
         alliancePoints: intOr(row.alliancePoints),
+        dailies: null,
         archivedAt: archivedAt && archivedAt > 0 ? archivedAt : null,
       } satisfies Character;
     });
@@ -231,6 +233,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
         wardrobe: null,
         scribingScripts: [],
         classMasteries: [],
+        dailies: null,
       };
     });
   }
@@ -382,4 +385,9 @@ export function getStickerbookStats(): { total: number; collected: number; sets:
 
 export function getItemCount(): number {
   return getItems().length;
+}
+
+/** Unlocked houses on this account. Empty means none owned, or an older addon. */
+export function getHouses(): House[] {
+  return getAccount()?.houses ?? [];
 }

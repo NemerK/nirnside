@@ -83,6 +83,7 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         guilds: snap.guilds,
         achievements: snap.achievements,
         completedAchievementIds,
+        houses: snap.houses ?? [],
       }),
     );
 

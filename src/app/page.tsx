@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Download, MonitorSmartphone, Users } from "lucide-react";
-import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getDataSource, getItemCount, getStickerbookStats } from "@/lib/db/queries";
+import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getDataSource, getHouses, getItemCount, getStickerbookStats } from "@/lib/db/queries";
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
@@ -83,6 +83,18 @@ export default function HomePage() {
         </Link>
         <Link href="/stickerbook" className="block rounded-xl transition-colors hover:brightness-110">
           <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
+        </Link>
+      </div>
+      <div className="mb-8 grid grid-cols-2 gap-3">
+        <Link href="/dailies" className="block rounded-xl transition-colors hover:brightness-110">
+          <Stat label="Dailies" value="Board" hint="randoms, writs, pledges" />
+        </Link>
+        <Link href="/houses" className="block rounded-xl transition-colors hover:brightness-110">
+          <Stat
+            label="Houses"
+            value={(safe(() => getHouses()) ?? []).length}
+            hint="owned on this account"
+          />
         </Link>
       </div>
 

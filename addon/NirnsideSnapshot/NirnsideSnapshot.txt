@@ -1,10 +1,10 @@
 ## Title: Nirnside Snapshot
 ## Author: Nirnside
-## Version: 0.9.18
+## Version: 0.9.19
 ## APIVersion: 101046
-## AddOnVersion: 20
+## AddOnVersion: 21
 ## SavedVariables: NirnsideData
 ## OptionalDependsOn: WizardsWardrobe
-## Description: Writes your ESO account/character data to disk on logout, ReloadUI, or a manual /nirnside / keybind. Never on zone or instance changes. Never during combat. Never uploads anything. Reads Wizard's Wardrobe setups if that addon is installed.
+## Description: Writes your ESO account/character data to disk on logout, ReloadUI, or a manual /nirnside / keybind. Includes dailies (randoms, writs, pledges) and owned houses. Never on zone or instance changes. Never during combat. Never uploads anything. Reads Wizard's Wardrobe setups if that addon is installed.
 
 NirnsideSnapshot.lua

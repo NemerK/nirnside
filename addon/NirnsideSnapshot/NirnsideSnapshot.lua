@@ -938,6 +938,339 @@ local function gatherWardrobe(charId)
   end, nil)
 end
 
+----------------------------------------------------------------------
+-- Dailies: random dungeon rewards, crafting writs, Undaunted pledges
+--
+-- Journal + LFG APIs at logout, plus tiny EVENT_QUEST_COMPLETE flags so a
+-- turn-in still counts after the quest leaves the journal. Flags live in
+-- sv.dailyFlags (addon-internal) and expire at the 10:00 UTC reset.
+-- Event handlers only write a flag — they never scan bags or take a snapshot.
+----------------------------------------------------------------------
+
+local ESO_DAILY_RESET_HOUR = 10
+
+local WRIT_DEFS = {
+  { craft = "blacksmithing", name = "Blacksmith Writ", match = "blacksmith" },
+  { craft = "clothing", name = "Clothier Writ", match = "clothier" },
+  { craft = "woodworking", name = "Woodworker Writ", match = "woodworker" },
+  { craft = "enchanting", name = "Enchanter Writ", match = "enchanter" },
+  { craft = "alchemy", name = "Alchemist Writ", match = "alchemist" },
+  { craft = "provisioning", name = "Provisioner Writ", match = "provisioner" },
+  { craft = "jewelry", name = "Jewelry Crafting Writ", match = "jewelry" },
+}
+
+-- Same giver split the hub uses. English names only.
+local PLEDGE_GIVERS = {
+  maj = {
+    "Fungal Grotto I", "Fungal Grotto II",
+    "Banished Cells I", "Banished Cells II",
+    "Spindleclutch I", "Spindleclutch II",
+    "Darkshade Caverns I", "Darkshade Caverns II",
+    "Elden Hollow I", "Elden Hollow II",
+    "Wayrest Sewers I", "Wayrest Sewers II",
+    "Crypt of Hearts I", "Crypt of Hearts II",
+    "City of Ash I", "City of Ash II",
+  },
+  glirion = {
+    "Arx Corinium", "Blackheart Haven", "Blessed Crucible", "Direfrost Keep",
+    "Selene's Web", "Tempest Island", "Vaults of Madness", "Volenfell",
+    "Imperial City Prison", "White-Gold Tower", "White Gold Tower",
+    "Ruins of Mazzatun", "Cradle of Shadows",
+    "Bloodroot Forge", "Falkreath Hold",
+    "Fang Lair", "Scalecaller Peak",
+    "Moon Hunter Keep", "March of Sacrifices",
+    "Frostvault", "Depths of Malatar",
+    "Lair of Maarselok", "Moongrave Fane",
+    "Icereach", "Unhallowed Grave",
+  },
+  urgarlag = {
+    "Stone Garden", "Castle Thorn",
+    "Black Drake Villa", "The Cauldron", "Cauldron",
+    "Red Petal Bastion", "Dread Cellar",
+    "Coral Aerie", "Shipwright's Regret",
+    "Earthen Root Enclave", "Graven Deep",
+    "Bal Sunnar", "Scrivener's Hall",
+    "Oathsworn Pit", "Bedlam Veil",
+    "Exiled Redoubt", "Lep Seclusa",
+    "Naj-Caldeesh", "Black Gem Foundry",
+  },
+}
+
+local PLEDGE_GIVER_NAMES = {
+  maj = "Maj al-Ragath",
+  glirion = "Glirion the Redbeard",
+  urgarlag = "Urgarlag Chief-bane",
+}
+
+local PLEDGE_ORDER = { "maj", "glirion", "urgarlag" }
+
+local function normDungeon(name)
+  if not name then return "" end
+  local s = tostring(name):lower()
+  s = s:gsub("^pledge:%s*", "")
+  s = s:gsub("^the%s+", "")
+  s = s:gsub("%-", " ")
+  s = s:gsub("%s+", " ")
+  s = s:match("^%s*(.-)%s*$") or ""
+  return s
+end
+
+local PLEDGE_BY_DUNGEON = {}
+for giver, list in pairs(PLEDGE_GIVERS) do
+  for _, name in ipairs(list) do
+    PLEDGE_BY_DUNGEON[normDungeon(name)] = giver
+  end
+end
+
+local function nextResetAt(ts)
+  ts = ts or GetTimeStamp()
+  local secs = ts % 86400
+  local today = ts - secs + ESO_DAILY_RESET_HOUR * 3600
+  if ts < today then return today end
+  return today + 86400
+end
+
+local function esoDayKey(ts)
+  ts = ts or GetTimeStamp()
+  local adjusted = ts - ESO_DAILY_RESET_HOUR * 3600
+  local ok, s = pcall(function()
+    return os.date("!%Y-%m-%d", adjusted)
+  end)
+  if ok and type(s) == "string" and #s >= 10 then return s end
+  return tostring(math.floor(adjusted / 86400))
+end
+
+local function currentCharId()
+  return safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, nil)
+end
+
+local function ensureDailyBucket(charId)
+  if not sv or not charId then return nil end
+  sv.dailyFlags = sv.dailyFlags or {}
+  local key = esoDayKey()
+  local bucket = sv.dailyFlags[charId]
+  if type(bucket) ~= "table" or bucket.dayKey ~= key then
+    bucket = { dayKey = key, writs = {}, pledges = {} }
+    sv.dailyFlags[charId] = bucket
+  end
+  bucket.writs = bucket.writs or {}
+  bucket.pledges = bucket.pledges or {}
+  return bucket
+end
+
+local function matchWrit(questName)
+  if not questName then return nil end
+  local lower = tostring(questName):lower()
+  if lower:find("masterful", 1, true) or lower:find("master writ", 1, true) then
+    return nil
+  end
+  for _, def in ipairs(WRIT_DEFS) do
+    if lower:find(def.match, 1, true) then return def end
+  end
+  return nil
+end
+
+local function matchPledge(questName)
+  if not questName then return nil, nil end
+  local dungeon = tostring(questName):gsub("^Pledge:%s*", ""):gsub("^pledge:%s*", "")
+  dungeon = dungeon:match("^%s*(.-)%s*$") or dungeon
+  local giver = PLEDGE_BY_DUNGEON[normDungeon(dungeon)]
+  if not giver then return nil, dungeon end
+  return giver, dungeon
+end
+
+local function flagWritDone(questName)
+  local def = matchWrit(questName)
+  if not def then return end
+  local bucket = ensureDailyBucket(currentCharId())
+  if not bucket then return end
+  bucket.writs[def.craft] = "done"
+end
+
+local function flagPledgeDone(questName)
+  local giver, dungeon = matchPledge(questName)
+  if not giver then return end
+  local bucket = ensureDailyBucket(currentCharId())
+  if not bucket then return end
+  bucket.pledges[giver] = { status = "done", dungeon = dungeon }
+end
+
+-- Tiny flag write only. Safe in combat so a turn-in mid-fight is not lost.
+local function onQuestComplete(_, questName, _level, _prevXp, _xp, _cp, questType)
+  safe(function()
+    if not questName or questName == "" then return end
+    local isWrit = (QUEST_TYPE_CRAFTING ~= nil and questType == QUEST_TYPE_CRAFTING) or matchWrit(questName)
+    local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and questType == QUEST_TYPE_UNDAUNTED_PLEDGE)
+      or tostring(questName):lower():find("pledge", 1, true)
+    if isWrit then flagWritDone(questName) end
+    if isPledge then flagPledgeDone(questName) end
+  end)
+end
+
+local function lfgRemaining()
+  if not GetLFGCooldownTimeRemainingSeconds then return 0 end
+  local types = {
+    LFG_COOLDOWN_DUNGEON_REWARD_GRANTED,
+    LFG_COOLDOWN_ACTIVITY_STARTED,
+  }
+  for _, t in ipairs(types) do
+    if t ~= nil then
+      local n = safe(function() return GetLFGCooldownTimeRemainingSeconds(t) end, 0)
+      if type(n) == "number" and n > 0 then return math.floor(n) end
+    end
+  end
+  return 0
+end
+
+local function randomStatus(activityType)
+  if not activityType or not IsActivityEligibleForDailyReward then
+    return { status = "unknown" }
+  end
+  local eligible = safe(function() return IsActivityEligibleForDailyReward(activityType) end, nil)
+  if eligible == nil then return { status = "unknown" } end
+  if eligible then return { status = "available" } end
+  local remain = lfgRemaining()
+  if remain > 0 then
+    return { status = "cooldown", remainingSeconds = remain }
+  end
+  return { status = "done" }
+end
+
+local function gatherDailies(charId)
+  local now = GetTimeStamp()
+  local bucket = ensureDailyBucket(charId)
+  local writStatus = {}
+  local pledgeStatus = {}
+  if bucket then
+    for craft, status in pairs(bucket.writs or {}) do
+      writStatus[craft] = status
+    end
+    for giver, info in pairs(bucket.pledges or {}) do
+      pledgeStatus[giver] = info
+    end
+  end
+
+  safe(function()
+    local n = GetNumJournalQuests and GetNumJournalQuests() or 0
+    for i = 1, n do
+      local name = safe(function() return zo_strformat("<<1>>", GetJournalQuestName(i)) end, nil)
+      if name and name ~= "" then
+        local qtype = safe(function() return GetJournalQuestType(i) end, nil)
+        local complete = safe(function()
+          return GetJournalQuestIsComplete and GetJournalQuestIsComplete(i)
+        end, false)
+        local status = complete and "ready" or "accepted"
+        local isWrit = (QUEST_TYPE_CRAFTING ~= nil and qtype == QUEST_TYPE_CRAFTING) or matchWrit(name)
+        if isWrit then
+          local def = matchWrit(name)
+          if def and writStatus[def.craft] ~= "done" then
+            writStatus[def.craft] = status
+          end
+        end
+        local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
+          or tostring(name):lower():find("^pledge")
+        if isPledge then
+          local giver, dungeon = matchPledge(name)
+          if giver and (not pledgeStatus[giver] or pledgeStatus[giver].status ~= "done") then
+            pledgeStatus[giver] = { status = status, dungeon = dungeon }
+          end
+        end
+      end
+    end
+  end)
+
+  local writs = {}
+  for _, def in ipairs(WRIT_DEFS) do
+    writs[#writs + 1] = {
+      craft = def.craft,
+      name = def.name,
+      status = writStatus[def.craft] or "available",
+    }
+  end
+
+  local pledges = {}
+  for _, giver in ipairs(PLEDGE_ORDER) do
+    local info = pledgeStatus[giver]
+    pledges[#pledges + 1] = {
+      giver = giver,
+      giverName = PLEDGE_GIVER_NAMES[giver],
+      dungeon = info and info.dungeon or nil,
+      status = (info and info.status) or "available",
+    }
+  end
+
+  return {
+    dayKey = esoDayKey(now),
+    resetAt = nextResetAt(now),
+    capturedAt = now,
+    randomNormal = randomStatus(LFG_ACTIVITY_DUNGEON),
+    randomVeteran = randomStatus(LFG_ACTIVITY_MASTER_DUNGEON),
+    writs = writs,
+    pledges = pledges,
+  }
+end
+
+----------------------------------------------------------------------
+-- Houses: unlocked house collectibles (ownership only — not house banks)
+----------------------------------------------------------------------
+
+local function houseLocation(collectibleId, houseId)
+  local loc = safe(function()
+    if houseId and houseId > 0 and GetHouseFoundInZoneId and GetZoneNameById then
+      local zoneId = GetHouseFoundInZoneId(houseId)
+      if zoneId and zoneId > 0 then
+        local name = zo_strformat("<<1>>", GetZoneNameById(zoneId))
+        if name and name ~= "" then return name end
+      end
+    end
+    return nil
+  end, nil)
+  if loc then return loc end
+  return safe(function()
+    if GetCollectibleHint then
+      local hint = GetCollectibleHint(collectibleId)
+      if hint and hint ~= "" then
+        local cleaned = zo_strformat("<<1>>", hint)
+        if cleaned and #cleaned < 80 then return cleaned end
+      end
+    end
+    return nil
+  end, nil)
+end
+
+local function gatherHouses()
+  local out = {}
+  safe(function()
+    if not COLLECTIBLE_CATEGORY_TYPE_HOUSE then return end
+    if not GetTotalCollectiblesByCategoryType or not GetCollectibleIdFromType then return end
+    local n = GetTotalCollectiblesByCategoryType(COLLECTIBLE_CATEGORY_TYPE_HOUSE)
+    if type(n) ~= "number" or n < 1 then return end
+    local primaryHouseId = safe(function()
+      return GetHousingPrimaryHouse and GetHousingPrimaryHouse()
+    end, nil)
+    for i = 1, n do
+      local id = safe(function() return GetCollectibleIdFromType(COLLECTIBLE_CATEGORY_TYPE_HOUSE, i) end, nil)
+      if id and id > 0 then
+        local unlocked = safe(function() return IsCollectibleUnlocked(id) end, false)
+        if unlocked then
+          local houseId = safe(function()
+            return GetCollectibleReferenceId and GetCollectibleReferenceId(id)
+          end, nil)
+          out[#out + 1] = {
+            collectibleId = id,
+            houseId = houseId,
+            name = safe(function() return zo_strformat("<<1>>", GetCollectibleName(id)) end, "House"),
+            location = houseLocation(id, houseId),
+            icon = safe(function() return normIcon(GetCollectibleIcon(id)) end, nil),
+            primary = primaryHouseId ~= nil and houseId ~= nil and houseId == primaryHouseId,
+          }
+        end
+      end
+    end
+  end)
+  return out
+end
+
 local function gatherCharacter()
   local name = safe(function() return zo_strformat("<<1>>", GetUnitName("player")) end, "Unknown")
   local vampire, werewolf = gatherCurse()
@@ -975,6 +1308,7 @@ local function gatherCharacter()
     gold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0),
     telVar = safe(function() return GetCurrencyAmount(CURT_TELVAR_STONES, CURRENCY_LOCATION_CHARACTER) end, 0),
     alliancePoints = safe(function() return GetCurrencyAmount(CURT_ALLIANCE_POINTS, CURRENCY_LOCATION_CHARACTER) end, 0),
+    dailies = safe(function() return gatherDailies(charId) end, nil),
     archivedAt = nil,
     wardrobe = gatherWardrobe(charId),
   }
@@ -1746,6 +2080,7 @@ local function takeSnapshot(reason)
   sv.achievementRecords = achRecords
   sv.achievements = achNames
   sv.completedAchievementIds = gatherCompletedAchievementIds(charId, achRecords)
+  sv.houses = gatherHouses()
 
   upsertCharacter(gatherCharacter())
   syncRosterWithGame()
@@ -1800,6 +2135,8 @@ local function onAddOnLoaded(_, name)
     achievementRecords = {},
     completedAchievementIds = {},
     characterCompletedIds = {},
+    houses = {},
+    dailyFlags = {},
   })
 
   -- Do not use EVENT_PLAYER_ACTIVATED: its `initial` flag is true on login *and*
@@ -1807,6 +2144,10 @@ local function onAddOnLoaded(_, name)
   hookUnload("ReloadUI", "reloadui")
   hookUnload("Logout", "logout")
   hookUnload("Quit", "quit")
+
+  -- Flag-only: a completed writ/pledge must survive leaving the journal.
+  -- Writes a table entry; never scans bags or snapshots. Allowed in combat.
+  EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_COMPLETE, onQuestComplete)
 
   SLASH_COMMANDS["/nirnside"] = function() safe(function() takeSnapshot("manual") end) end
 end

@@ -3,6 +3,7 @@ import { getDb } from "./index";
 import { archivedOwnerNames, isArchived } from "../snapshot/roster";
 import type { Character } from "../snapshot/schema";
 import { ensureRoleTables } from "./roles";
+import { getAccount } from "./queries";
 
 export interface SearchHit {
   kind: string; // Set, Skill line, Ability, Champion star, Grimoire, Script, Achievement, Character, Item
@@ -138,6 +139,21 @@ export function globalSearch(q: string, limit = 40): SearchResults {
       detail: it.setName ?? undefined,
       href: `/inventory?search=${encodeURIComponent(it.name)}`,
     });
+  }
+
+  const qLower = term.toLowerCase();
+  const houses = getAccount()?.houses ?? [];
+  for (const h of houses) {
+    if (account.length >= limit) break;
+    const loc = (h.location ?? "").toLowerCase();
+    if (h.name.toLowerCase().includes(qLower) || loc.includes(qLower)) {
+      account.push({
+        kind: "House",
+        name: h.name,
+        detail: h.primary ? `${h.location ?? "House"} · primary` : h.location ?? undefined,
+        href: "/houses",
+      });
+    }
   }
 
   return { catalog, account, total: catalog.length + account.length };

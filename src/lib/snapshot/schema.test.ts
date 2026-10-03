@@ -90,4 +90,58 @@ SLASH_COMMANDS["/nirnside"] = takeSnapshot`;
     assert.equal(snap.displayName, "@Jaegeron");
     assert.equal(snap.characters.length, 2);
   });
+
+  it("keeps dailies and houses, dropping a malformed house", () => {
+    const parsed = AccountSnapshot.safeParse({
+      displayName: "@Nemer",
+      houses: [
+        { collectibleId: 1, name: "Snugpod", location: "Grahtwood", primary: true },
+        { name: "missing-id" },
+      ],
+      characters: [
+        {
+          id: "c1",
+          name: "Ardent",
+          class: "Dragonknight",
+          race: "Nord",
+          alliance: "Ebonheart Pact",
+          dailies: {
+            dayKey: "2026-10-03",
+            resetAt: 1759572000,
+            capturedAt: 1759500000,
+            randomNormal: { status: "done" },
+            randomVeteran: { status: "available" },
+            writs: [{ craft: "blacksmithing", name: "Blacksmith Writ", status: "accepted" }],
+            pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done" }],
+          },
+        },
+      ],
+    });
+    assert.equal(parsed.success, true, parsed.success ? "" : JSON.stringify(parsed.error?.format()));
+    if (!parsed.success) return;
+    assert.equal(parsed.data.houses.length, 1);
+    assert.equal(parsed.data.houses[0].name, "Snugpod");
+    assert.equal(parsed.data.characters[0].dailies?.randomNormal.status, "done");
+    assert.equal(parsed.data.characters[0].dailies?.writs[0].status, "accepted");
+  });
+
+  it("drops a broken dailies block instead of the character", () => {
+    const parsed = AccountSnapshot.safeParse({
+      displayName: "@Nemer",
+      characters: [
+        {
+          id: "c1",
+          name: "Ardent",
+          class: "Dragonknight",
+          race: "Nord",
+          alliance: "Ebonheart Pact",
+          dailies: { randomNormal: "nope" },
+        },
+      ],
+    });
+    assert.equal(parsed.success, true);
+    if (!parsed.success) return;
+    assert.equal(parsed.data.characters.length, 1);
+    assert.equal(parsed.data.characters[0].dailies, null);
+  });
 });

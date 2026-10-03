@@ -195,6 +195,72 @@ export const Companion = z.object({
 });
 
 /**
+ * Daily board cell. `available` / `accepted` / `done` come from the game
+ * (LFG reward eligibility or the journal). `cooldown` is the random-dungeon
+ * reward timer. After the 10:00 UTC reset we never reuse yesterday's leftovers
+ * — the hub shows `unknown` until the next logout scan.
+ */
+export const DailyStatus = z.enum(["available", "accepted", "ready", "done", "cooldown", "unknown"]);
+export type DailyStatus = z.infer<typeof DailyStatus>;
+
+export const DailyRandom = z.object({
+  status: DailyStatus.default("unknown").catch("unknown"),
+  remainingSeconds: z.number().int().nonnegative().optional(),
+});
+export type DailyRandom = z.infer<typeof DailyRandom>;
+
+export const WritCraft = z.enum([
+  "blacksmithing",
+  "clothing",
+  "woodworking",
+  "enchanting",
+  "alchemy",
+  "provisioning",
+  "jewelry",
+]);
+
+export const DailyWrit = z.object({
+  craft: WritCraft,
+  name: z.string().default(""),
+  status: DailyStatus.default("unknown").catch("unknown"),
+});
+export type DailyWrit = z.infer<typeof DailyWrit>;
+
+export const PledgeGiver = z.enum(["maj", "glirion", "urgarlag"]);
+
+export const DailyPledge = z.object({
+  giver: PledgeGiver,
+  giverName: z.string().default(""),
+  dungeon: z.string().nullable().optional(),
+  status: DailyStatus.default("unknown").catch("unknown"),
+});
+export type DailyPledge = z.infer<typeof DailyPledge>;
+
+export const CharacterDailies = z.object({
+  /** ESO day this scan belongs to (rolls at 10:00 UTC). */
+  dayKey: z.string(),
+  /** Unix seconds of the next 10:00 UTC reset after this scan. */
+  resetAt: z.number().int().nonnegative(),
+  capturedAt: z.number().int().nonnegative(),
+  randomNormal: DailyRandom.default({ status: "unknown" }),
+  randomVeteran: DailyRandom.default({ status: "unknown" }),
+  writs: lenientArray(DailyWrit).default([]),
+  pledges: lenientArray(DailyPledge).default([]),
+});
+export type CharacterDailies = z.infer<typeof CharacterDailies>;
+
+/** One unlocked house collectible. Account-wide — not a house bank. */
+export const House = z.object({
+  collectibleId: z.number().int().nonnegative(),
+  houseId: z.number().int().nonnegative().optional(),
+  name: z.string(),
+  location: z.string().nullable().optional(),
+  icon: z.string().nullable().optional(),
+  primary: z.boolean().default(false),
+});
+export type House = z.infer<typeof House>;
+
+/**
  * Wizard's Wardrobe setups, read from that addon's own SavedVariables
  * (`WizardsWardrobeSV`) on disk — the same sanctioned local-only data path we
  * already use. The in-game reader resolves item/skill names and icons, so the
@@ -299,6 +365,12 @@ export const Character = z.object({
   telVar: z.number().int().nonnegative().default(0),
   /** Alliance Points on this character. AP is character-bound in live ESO. */
   alliancePoints: z.number().int().nonnegative().default(0),
+  /**
+   * Random dungeon / writ / pledge state as of last logout. Null on older
+   * snapshots and on roster stubs that have never logged in with the addon.
+   * A malformed block degrades to null — it must never drop the character.
+   */
+  dailies: CharacterDailies.nullable().optional().default(null).catch(null),
   /**
    * Set when this character is gone from the live ESO roster (deleted).
    * The last snapshot is kept in Archive; it must not appear as a current toon.
@@ -460,5 +532,10 @@ export const AccountSnapshot = z.object({
       return out;
     }, z.record(z.string(), z.array(z.number().int().nonnegative())))
     .catch({}),
+  /**
+   * Houses this account has unlocked (collectibles). Never a house bank —
+   * only ownership, location, and which one is the primary residence.
+   */
+  houses: lenientArray(House).default([]),
 });
 export type AccountSnapshot = z.infer<typeof AccountSnapshot>;

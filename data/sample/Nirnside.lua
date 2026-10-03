@@ -55,6 +55,15 @@ NirnsideData =
                         ["trader"] = false,
                     },
                 },
+                ["houses"] =
+                {
+                    { ["collectibleId"] = 1207, ["houseId"] = 1, ["name"] = "Snugpod", ["location"] = "Grahtwood", ["icon"] = "/esoui/art/icons/housing_uni_inc_housingpreview_snugpod.dds", ["primary"] = false },
+                    { ["collectibleId"] = 2114, ["houseId"] = 46, ["name"] = "Grand Psijic Villa", ["location"] = "Artaeum", ["icon"] = "/esoui/art/icons/housing_uni_inc_housingpreview_psijicvilla.dds", ["primary"] = true },
+                    { ["collectibleId"] = 1244, ["houseId"] = 14, ["name"] = "Hunding's Palatial Hall", ["location"] = "Hew's Bane", ["primary"] = false },
+                    { ["collectibleId"] = 1725, ["houseId"] = 36, ["name"] = "Linchal Grand Manor", ["location"] = "Gold Coast", ["primary"] = false },
+                    { ["collectibleId"] = 2312, ["houseId"] = 55, ["name"] = "The Fair Winds", ["location"] = "High Isle", ["primary"] = false },
+                    { ["collectibleId"] = 2550, ["houseId"] = 68, ["name"] = "Frostvault Chasm", ["location"] = "Eastmarch", ["primary"] = false },
+                },
                 ["characters"] =
                 {
                     {
@@ -510,6 +519,30 @@ NirnsideData =
                                 },
                             },
                         },
+                        ["dailies"] =
+                        {
+                            ["dayKey"] = "2025-09-13",
+                            ["resetAt"] = 1757865600,
+                            ["capturedAt"] = 1757800920,
+                            ["randomNormal"] = { ["status"] = "cooldown", ["remainingSeconds"] = 28380 },
+                            ["randomVeteran"] = { ["status"] = "available" },
+                            ["writs"] =
+                            {
+                                { ["craft"] = "blacksmithing", ["name"] = "Blacksmith Writ", ["status"] = "done" },
+                                { ["craft"] = "clothing", ["name"] = "Clothier Writ", ["status"] = "done" },
+                                { ["craft"] = "woodworking", ["name"] = "Woodworker Writ", ["status"] = "done" },
+                                { ["craft"] = "enchanting", ["name"] = "Enchanter Writ", ["status"] = "done" },
+                                { ["craft"] = "alchemy", ["name"] = "Alchemist Writ", ["status"] = "accepted" },
+                                { ["craft"] = "provisioning", ["name"] = "Provisioner Writ", ["status"] = "done" },
+                                { ["craft"] = "jewelry", ["name"] = "Jewelry Crafting Writ", ["status"] = "available" },
+                            },
+                            ["pledges"] =
+                            {
+                                { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Fungal Grotto I", ["status"] = "done" },
+                                { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Icereach", ["status"] = "accepted" },
+                                { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["status"] = "available" },
+                            },
+                        },
                     },
                     {
                         ["id"] = "char-002",
@@ -644,6 +677,30 @@ NirnsideData =
                         ["companions"] = {},
                         ["scribingScripts"] = { "Class Mastery: Draconic", "Vault" },
                         ["research"] = {},
+                        ["dailies"] =
+                        {
+                            ["dayKey"] = "2025-09-12",
+                            ["resetAt"] = 1757779200,
+                            ["capturedAt"] = 1757714520,
+                            ["randomNormal"] = { ["status"] = "done" },
+                            ["randomVeteran"] = { ["status"] = "done" },
+                            ["writs"] =
+                            {
+                                { ["craft"] = "blacksmithing", ["name"] = "Blacksmith Writ", ["status"] = "done" },
+                                { ["craft"] = "clothing", ["name"] = "Clothier Writ", ["status"] = "done" },
+                                { ["craft"] = "woodworking", ["name"] = "Woodworker Writ", ["status"] = "done" },
+                                { ["craft"] = "enchanting", ["name"] = "Enchanter Writ", ["status"] = "done" },
+                                { ["craft"] = "alchemy", ["name"] = "Alchemist Writ", ["status"] = "done" },
+                                { ["craft"] = "provisioning", ["name"] = "Provisioner Writ", ["status"] = "done" },
+                                { ["craft"] = "jewelry", ["name"] = "Jewelry Crafting Writ", ["status"] = "done" },
+                            },
+                            ["pledges"] =
+                            {
+                                { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Spindleclutch II", ["status"] = "done" },
+                                { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Unhallowed Grave", ["status"] = "done" },
+                                { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["dungeon"] = "Stone Garden", ["status"] = "done" },
+                            },
+                        },
                     },
                     {
                         ["id"] = "char-003",

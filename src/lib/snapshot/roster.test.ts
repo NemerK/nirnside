@@ -29,6 +29,7 @@ function char(partial: Partial<Character> & { id: string; name: string }): Chara
     gold: 0,
     telVar: 0,
     alliancePoints: 0,
+    dailies: null,
     archivedAt: null,
     wardrobe: null,
     ...partial,
@@ -118,6 +119,14 @@ describe("roster gold and archive", () => {
       }),
       402118,
     );
+    assert.equal(snap.houses.length, 6);
+    assert.equal(snap.houses.filter((h) => h.primary).length, 1);
+    assert.equal(snap.houses.find((h) => h.primary)?.name, "Grand Psijic Villa");
+    const sings = snap.characters.find((c) => c.name === "Sings-With-Shadows");
+    assert.equal(sings?.dailies?.randomNormal.status, "cooldown");
+    assert.equal(sings?.dailies?.pledges.find((p) => p.giver === "maj")?.dungeon, "Fungal Grotto I");
+    const baker = snap.characters.find((c) => c.name === "Bakes-Sweet-Rolls");
+    assert.equal(baker?.dailies ?? null, null);
   });
 
   it("sums live Tel Var instead of last-logout Tel Var", () => {
