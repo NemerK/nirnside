@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { canonicalizeCurrencies, dashboardWallet, walletEntries } from "./currencies";
+import { canonicalizeCurrencies, characterWalletBreakdown, dashboardWallet, walletEntries } from "./currencies";
 
 describe("walletEntries", () => {
   it("keeps in-game order and always shows AP / transmutes / keys / writs", () => {
@@ -120,5 +120,34 @@ describe("walletEntries", () => {
     assert.equal("crown" in folded, false);
     assert.equal("seal" in folded, false);
     assert.equal("archivalFortune" in folded, false);
+  });
+
+  it("builds a per-character hover list and keeps bank last", () => {
+    const rows = characterWalletBreakdown(
+      [
+        { name: "B", lastSeen: 1, gold: 10 },
+        { name: "A", lastSeen: 1, gold: 50 },
+        { name: "C", lastSeen: null, gold: 0 },
+      ],
+      "gold",
+      [{ name: "Bank", amount: 500 }],
+    );
+    assert.deepEqual(
+      rows.map((r) => r.name),
+      ["A", "B", "C", "Bank"],
+    );
+    assert.equal(rows[0]?.amount, 50);
+    assert.equal(rows[2]?.amount, null);
+    assert.equal(rows[3]?.amount, 500);
+
+    const wallet = dashboardWallet({
+      gold: 1,
+      telVar: 2,
+      currencies: { alliancePoints: 3 },
+      breakdowns: { gold: rows, alliancePoints: [{ name: "A", amount: 3 }] },
+    });
+    assert.equal(wallet.find((r) => r.key === "gold")?.breakdown?.length, 4);
+    assert.equal(wallet.find((r) => r.key === "alliancePoints")?.breakdown?.[0]?.amount, 3);
+    assert.match(wallet.find((r) => r.key === "crowns")?.sharedNote ?? "", /Account-wide/);
   });
 });

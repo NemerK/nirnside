@@ -1,26 +1,22 @@
 import Link from "next/link";
 import { Download, MonitorSmartphone, Users } from "lucide-react";
-import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getDataSource, getHouses, getItemCount, getStickerbookStats } from "@/lib/db/queries";
+import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getHouses, getItemCount, getStickerbookStats } from "@/lib/db/queries";
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
-import { isBundledSampleAccount } from "@/lib/snapshot/load";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
-import { dashboardWallet } from "@/lib/currencies";
+import { characterWalletBreakdown, dashboardWallet } from "@/lib/currencies";
 import { Card, PageHeader, Stat, EmptyState, Badge, SectionTitle } from "@/components/ui";
-import { DataSourceBanner } from "@/components/data-source-banner";
 import { LoadDemoButton } from "@/components/demo-controls";
 import { GoalsBoard } from "@/components/goals-board";
 import { AccountWallet } from "@/components/account-wallet";
 import { toGoalSubject } from "@/lib/goals/progress";
 import type { Goal } from "@/lib/goals/types";
-import { formatDateTime, formatGold, timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   const account = safe(() => getAccount());
-  const dataSource = safe(() => getDataSource());
   const autoSetup = safe(() => getAutoSetup());
   if (!account)
     return (
@@ -54,74 +50,52 @@ export default function HomePage() {
     legacyAlliancePoints: account.currencies?.alliancePoints,
   });
 
+  const houses = safe(() => getHouses()) ?? [];
+
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader
-        title={`Welcome back, ${account.displayName}`}
-        subtitle={`Everything below is a snapshot as of ${formatDateTime(account.lastSnapshot)} · ${timeAgo(
-          account.lastSnapshot,
-        )}`}
-      />
-
-      <DataSourceBanner
-        source={dataSource}
-        setup={autoSetup}
-        sampleAccount={isBundledSampleAccount(account.displayName)}
-      />
-
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href="/characters" className="block rounded-xl transition-colors hover:brightness-110">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Link href="/characters" className="block h-full rounded-xl transition-colors hover:brightness-110">
           <Stat
             label="Characters"
             value={characters.length}
-            hint={archived.length > 0 ? `${archived.length} archived` : undefined}
+            hint={archived.length > 0 ? `${archived.length} archived` : "live roster"}
           />
         </Link>
         <Stat label="Champion Points" value={accountCP.toLocaleString("en-US")} hint="account-wide" />
-        <Link href="/inventory" className="block rounded-xl transition-colors hover:brightness-110">
-          <Stat label="Items tracked" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
+        <Link href="/inventory" className="block h-full rounded-xl transition-colors hover:brightness-110">
+          <Stat label="Items" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
         </Link>
-        <Link href="/stickerbook" className="block rounded-xl transition-colors hover:brightness-110">
+        <Link href="/stickerbook" className="block h-full rounded-xl transition-colors hover:brightness-110">
           <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
         </Link>
-      </div>
-      <div className="mb-8 grid grid-cols-2 gap-3">
-        <Link href="/dailies" className="block rounded-xl transition-colors hover:brightness-110">
+        <Link href="/dailies" className="block h-full rounded-xl transition-colors hover:brightness-110">
           <Stat label="Dailies" value="Board" hint="randoms, writs, pledges" />
         </Link>
-        <Link href="/houses" className="block rounded-xl transition-colors hover:brightness-110">
-          <Stat
-            label="Houses"
-            value={(safe(() => getHouses()) ?? []).length}
-            hint="owned on this account"
-          />
+        <Link href="/houses" className="block h-full rounded-xl transition-colors hover:brightness-110">
+          <Stat label="Houses" value={houses.length} hint="owned on this account" />
         </Link>
       </div>
 
       <section className="mb-8">
         <div className="mb-3 flex items-end justify-between gap-2">
           <SectionTitle className="mb-0">Currencies</SectionTitle>
-          <Link href="/inventory?view=currency" className="text-xs text-accent hover:underline">
-            Per character →
+          <Link href="/inventory?view=currency" className="text-xs text-fg-subtle hover:text-accent">
+            Full table
           </Link>
         </div>
-        {gold.usedLegacy ? (
-          <p className="mb-3 text-xs text-fg-subtle">
-            Gold is {formatGold(gold.total)} from the last snapshot (wallets not split yet). Log each character out
-            once to fill per-character gold.
-          </p>
-        ) : (
-          <p className="mb-3 text-xs text-fg-subtle">
-            Gold is {formatGold(gold.wallets)} on characters + {formatGold(gold.bank)} in the bank.
-          </p>
-        )}
         <AccountWallet
           rows={dashboardWallet({
             gold: gold.total,
             telVar,
             currencies: { ...(account.currencies ?? {}), alliancePoints },
+            breakdowns: {
+              gold: characterWalletBreakdown(characters, "gold", [{ name: "Bank", amount: gold.bank }]),
+              telVar: characterWalletBreakdown(characters, "telVar"),
+              alliancePoints: characterWalletBreakdown(characters, "alliancePoints"),
+            },
           })}
-          title="Account-wide"
+          title=""
           compact
         />
       </section>

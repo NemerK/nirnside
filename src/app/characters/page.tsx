@@ -29,7 +29,7 @@ export default function CharactersPage() {
     <PageFrame>
       <PageHeader
         title="Characters"
-        subtitle="The live ESO roster. Click a class icon to filter instantly, or search by name, race, or role."
+        subtitle="The live ESO roster."
         action={
           <div className="flex flex-wrap items-center gap-2">
             {accountCP > 0 ? (

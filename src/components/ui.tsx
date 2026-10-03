@@ -134,10 +134,10 @@ export function EmptyState({
 
 export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
-    <Card className="px-4 py-3">
+    <Card className="flex h-full min-h-[5.75rem] flex-col justify-center px-4 py-3">
       <div className="text-xs uppercase tracking-wider text-fg-subtle">{label}</div>
-      <div className="mt-1 text-xl font-semibold text-fg">{value}</div>
-      {hint && <div className="mt-0.5 text-xs text-fg-muted">{hint}</div>}
+      <div className="mt-1 text-xl font-semibold tabular-nums text-fg">{value}</div>
+      <div className="mt-0.5 min-h-[1rem] text-xs text-fg-muted">{hint ?? "\u00a0"}</div>
     </Card>
   );
 }

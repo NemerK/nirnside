@@ -48,48 +48,51 @@ export function CharacterRoster({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <StickyMenu className="space-y-2">
-        <ClassPicker classes={classes} counts={classCounts} value={className} onChange={setClassName} />
-        <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name, class, race, role…"
-            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
-          />
-        </div>
-        <FilterSelect label="Race" value={race} onChange={setRace} options={races} />
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className={`rounded-lg border bg-surface py-2 pl-2.5 pr-7 text-sm focus:border-accent focus:outline-none ${
-            role ? "border-accent/50 text-fg" : "border-border text-fg-muted"
-          }`}
-        >
-          <option value="">Role</option>
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-          <option value="none">Unassigned</option>
-        </select>
-        {hasFilters && (
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search name, class, race, role…"
+              className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+            />
+          </div>
+          <FilterSelect label="Race" value={race} onChange={setRace} options={races} />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className={`shrink-0 rounded-lg border bg-surface py-2 pl-2.5 pr-7 text-sm focus:border-accent focus:outline-none ${
+              role ? "border-accent/50 text-fg" : "border-border text-fg-muted"
+            }`}
+          >
+            <option value="">Role</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+            <option value="none">Unassigned</option>
+          </select>
           <button
             type="button"
+            disabled={!hasFilters}
             onClick={() => {
               setQ("");
               setClassName("");
               setRace("");
               setRole("");
             }}
-            className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-sm text-fg-muted hover:text-fg"
+            className={`inline-flex w-[5.75rem] shrink-0 items-center justify-center gap-1 rounded-lg border px-2.5 py-2 text-sm ${
+              hasFilters
+                ? "border-border text-fg-muted hover:text-fg"
+                : "cursor-default border-transparent text-transparent"
+            }`}
           >
             <X className="h-4 w-4" /> Clear
           </button>
-        )}
         </div>
+        <ClassPicker classes={classes} counts={classCounts} value={className} onChange={setClassName} />
       </StickyMenu>
 
       <PageScroll>
@@ -161,7 +164,7 @@ function ClassPicker({
 }) {
   if (classes.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-stretch gap-1.5" role="group" aria-label="Filter by class">
+    <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filter by class">
       {classes.map((c) => {
         const active = value === c;
         const count = counts.get(c) ?? 0;
@@ -172,17 +175,18 @@ function ClassPicker({
             title={count === 1 ? `${c} · 1 character` : `${c} · ${count} characters`}
             aria-pressed={active}
             onClick={() => onChange(active ? "" : c)}
-            className={`flex min-w-[4.5rem] flex-col items-center gap-1 rounded-lg border px-2 py-1.5 transition ${
+            className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-1.5 transition ${
               active
                 ? "border-accent bg-accent-soft"
                 : count === 0
-                  ? "border-border/60 opacity-50 hover:border-border-strong hover:opacity-80"
+                  ? "border-border/60 opacity-45 hover:border-border-strong hover:opacity-80"
                   : "border-border hover:border-border-strong"
             }`}
           >
-            <GameIcon name={c} icon={classIcon(c)} size={32} className={active ? "" : "opacity-90"} />
-            <span className={`text-[10px] leading-none ${active ? "text-accent" : "text-fg-muted"}`}>{c}</span>
-            <span className="text-[10px] tabular-nums leading-none text-fg-subtle">{count}</span>
+            <GameIcon name={c} icon={classIcon(c)} size={18} className={active ? "" : "opacity-90"} />
+            <span className={`text-[11px] tabular-nums leading-none ${active ? "text-accent" : "text-fg-subtle"}`}>
+              {count}
+            </span>
           </button>
         );
       })}
@@ -206,7 +210,7 @@ function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`rounded-lg border bg-surface py-2 pl-2.5 pr-7 text-sm focus:border-accent focus:outline-none ${
+      className={`shrink-0 rounded-lg border bg-surface py-2 pl-2.5 pr-7 text-sm focus:border-accent focus:outline-none ${
         value ? "border-accent/50 text-fg" : "border-border text-fg-muted"
       }`}
     >

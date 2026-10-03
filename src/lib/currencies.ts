@@ -68,11 +68,21 @@ const KEY_ALIASES: Record<string, string> = {
 /** Stored on the account record but shown in the gold/Tel Var table, not the wallet grid. */
 const HIDDEN_KEYS = new Set(["bankGold", "telVar", "gold"]);
 
+export type WalletBreakdownLine = {
+  name: string;
+  /** Null when this character has not been snapshotted yet. */
+  amount: number | null;
+};
+
 export type WalletEntry = {
   key: string;
   label: string;
   amount: number;
   colorClass: string;
+  /** Per-character (or bank) amounts shown on hover. */
+  breakdown?: WalletBreakdownLine[];
+  /** Short note when the amount is shared, not per character. */
+  sharedNote?: string;
 };
 
 function canonicalKey(key: string): string {
@@ -115,12 +125,44 @@ export function dashboardWallet(opts: {
   gold: number;
   telVar: number;
   currencies?: Record<string, number>;
+  breakdowns?: Partial<Record<string, WalletBreakdownLine[]>>;
 }): WalletEntry[] {
+  const attach = (row: WalletEntry): WalletEntry => {
+    const breakdown = opts.breakdowns?.[row.key];
+    if (breakdown?.length) return { ...row, breakdown };
+    if (row.key !== "gold" && row.key !== "telVar") {
+      return { ...row, sharedNote: "Account-wide — every character shares this wallet." };
+    }
+    return row;
+  };
   return [
-    { key: "gold", label: "Gold", amount: opts.gold, colorClass: "text-yellow-200" },
-    { key: "telVar", label: "Tel Var Stones", amount: opts.telVar, colorClass: "text-sky-300" },
-    ...walletEntries(opts.currencies, { includeZero: true }),
+    attach({ key: "gold", label: "Gold", amount: opts.gold, colorClass: "text-yellow-200" }),
+    attach({ key: "telVar", label: "Tel Var Stones", amount: opts.telVar, colorClass: "text-sky-300" }),
+    ...walletEntries(opts.currencies, { includeZero: true }).map(attach),
   ];
+}
+
+type CharWallet = {
+  name: string;
+  lastSeen?: number | null;
+  gold?: number;
+  telVar?: number;
+  alliancePoints?: number;
+};
+
+/** Per-character lines for Gold / Tel Var / Alliance Points. Unscanned toons are null. */
+export function characterWalletBreakdown(
+  characters: CharWallet[],
+  key: "gold" | "telVar" | "alliancePoints",
+  extra: WalletBreakdownLine[] = [],
+): WalletBreakdownLine[] {
+  const rows = [...characters]
+    .map((c) => ({
+      name: c.name,
+      amount: c.lastSeen ? (c[key] ?? 0) : null,
+    }))
+    .sort((a, b) => (b.amount ?? -1) - (a.amount ?? -1) || a.name.localeCompare(b.name));
+  return [...rows, ...extra];
 }
 
 /**
