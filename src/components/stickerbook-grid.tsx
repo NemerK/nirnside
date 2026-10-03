@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Check, ChevronRight, Minus, Search } from "lucide-react";
-import type { StickerbookSet } from "@/lib/snapshot/schema";
+import type { StickerbookSetView } from "@/lib/stickerbook/seen";
 import { GameIcon } from "./game-icon";
 
-type SetWithTotals = StickerbookSet & { total: number; collected: number; href?: string };
+type SetWithTotals = StickerbookSetView & { href?: string };
 
 const STATUS = [
   { key: "all", label: "All" },
+  { key: "new", label: "New" },
   { key: "incomplete", label: "Incomplete" },
   { key: "complete", label: "Complete" },
 ] as const;
@@ -21,12 +22,14 @@ interface SubNode {
   order: number;
   collected: number;
   total: number;
+  newCount: number;
 }
 interface ParentNode {
   name: string;
   order: number;
   collected: number;
   total: number;
+  newCount: number;
   subs: SubNode[];
 }
 
@@ -36,6 +39,29 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
   const [parent, setParent] = useState<string | null>(null);
   const [sub, setSub] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [hoveredSeen, setHoveredSeen] = useState<Set<string>>(new Set());
+
+  function pieceIsNew(p: { isNew: boolean; pieceKey: string }): boolean {
+    return p.isNew && !hoveredSeen.has(p.pieceKey);
+  }
+
+  function markPieceSeen(key: string) {
+    if (!key || hoveredSeen.has(key)) return;
+    setHoveredSeen((prev) => new Set(prev).add(key));
+    void fetch("/api/stickerbook/seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keys: [key] }),
+    });
+  }
+
+  const visibleNewBySet = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const s of sets) {
+      map.set(s.setId, s.pieces.filter((p) => pieceIsNew(p)).length);
+    }
+    return map;
+  }, [sets, hoveredSeen]);
 
   // Build the in-game two-level tree (category -> subcategory) in game order.
   const tree = useMemo<ParentNode[]>(() => {
@@ -45,20 +71,30 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
       const p =
         parents.get(pName) ??
         (() => {
-          const node = { name: pName, order: s.categoryOrder ?? 0, collected: 0, total: 0, subs: [], subMap: new Map() };
+          const node = {
+            name: pName,
+            order: s.categoryOrder ?? 0,
+            collected: 0,
+            total: 0,
+            newCount: 0,
+            subs: [],
+            subMap: new Map(),
+          };
           parents.set(pName, node);
           return node;
         })();
       p.collected += s.collected;
       p.total += s.total;
+      p.newCount += visibleNewBySet.get(s.setId) ?? 0;
       p.order = Math.min(p.order || s.categoryOrder || 0, s.categoryOrder || 0) || p.order;
 
       const subName = s.subcategory;
       if (subName) {
         const sn =
-          p.subMap.get(subName) ?? { name: subName, order: s.subOrder ?? 0, collected: 0, total: 0 };
+          p.subMap.get(subName) ?? { name: subName, order: s.subOrder ?? 0, collected: 0, total: 0, newCount: 0 };
         sn.collected += s.collected;
         sn.total += s.total;
+        sn.newCount += visibleNewBySet.get(s.setId) ?? 0;
         p.subMap.set(subName, sn);
       }
     }
@@ -67,10 +103,11 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
       order: p.order,
       collected: p.collected,
       total: p.total,
+      newCount: p.newCount,
       subs: Array.from(p.subMap.values()).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)),
     }));
     return arr.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
-  }, [sets]);
+  }, [sets, visibleNewBySet]);
 
   const grand = useMemo(
     () => sets.reduce((a, s) => ({ collected: a.collected + s.collected, total: a.total + s.total }), {
@@ -87,11 +124,13 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
       if (sub && s.subcategory !== sub) return false;
       if (q && !s.name.toLowerCase().includes(q)) return false;
       const complete = s.total > 0 && s.collected === s.total;
+      const fresh = (visibleNewBySet.get(s.setId) ?? 0) > 0;
+      if (status === "new" && !fresh) return false;
       if (status === "complete" && !complete) return false;
       if (status === "incomplete" && complete) return false;
       return true;
     });
-  }, [sets, search, status, parent, sub]);
+  }, [sets, search, status, parent, sub, visibleNewBySet]);
 
   function selectAll() {
     setParent(null);
@@ -126,7 +165,10 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
                 : "border-border bg-surface/70 text-fg-muted hover:text-fg"
             }`}
           >
-            <span className="font-medium">All Sets</span>
+            <span className="flex min-w-0 items-center gap-1.5 font-medium">
+              All Sets
+              {(sets.reduce((n, s) => n + (visibleNewBySet.get(s.setId) ?? 0), 0) > 0) && <NewBang />}
+            </span>
             <span className={`text-xs ${!parent ? "text-accent" : "text-fg-subtle"}`}>
               {grand.collected}/{grand.total}
             </span>
@@ -163,6 +205,7 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
                       <span className={`truncate font-medium ${parentActive ? "text-fg" : "text-fg-muted"}`}>
                         {p.name}
                       </span>
+                      {p.newCount > 0 && <NewBang />}
                     </span>
                     <span className={`shrink-0 text-xs ${parentActive ? "text-accent" : "text-fg-subtle"}`}>
                       {p.collected}/{p.total}
@@ -188,6 +231,7 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
                         <span className="flex min-w-0 items-center gap-1.5">
                           {subDone && <Check className="h-3 w-3 shrink-0 text-accent" />}
                           <span className="truncate">{sn.name}</span>
+                          {sn.newCount > 0 && <NewBang />}
                         </span>
                         <span className={`shrink-0 text-xs ${active ? "text-accent" : "text-fg-subtle"}`}>
                           {sn.collected}/{sn.total}
@@ -242,7 +286,13 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
           ) : (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {filtered.map((s) => (
-                <SetCard key={s.setId} set={s} />
+                <SetCard
+                  key={s.setId}
+                  set={s}
+                  newCount={visibleNewBySet.get(s.setId) ?? 0}
+                  pieceIsNew={pieceIsNew}
+                  onSeePiece={markPieceSeen}
+                />
               ))}
             </div>
           )}
@@ -288,7 +338,28 @@ function pieceLabel(p: { name?: string; type?: string; slot?: string }, setName:
   return `${setName} ${slotWord}`;
 }
 
-function SetCard({ set: s }: { set: SetWithTotals }) {
+function NewBang({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black leading-none text-black shadow-sm ${className}`}
+      aria-hidden
+    >
+      !
+    </span>
+  );
+}
+
+function SetCard({
+  set: s,
+  newCount,
+  pieceIsNew,
+  onSeePiece,
+}: {
+  set: SetWithTotals;
+  newCount: number;
+  pieceIsNew: (p: { isNew: boolean; pieceKey: string }) => boolean;
+  onSeePiece: (key: string) => void;
+}) {
   const complete = s.total > 0 && s.collected === s.total;
   const pct = s.total > 0 ? Math.round((s.collected / s.total) * 100) : 0;
 
@@ -309,34 +380,50 @@ function SetCard({ set: s }: { set: SetWithTotals }) {
           )}
           <div className="mt-0.5 text-xs text-fg-subtle">{s.subcategory ?? s.category}</div>
         </div>
-        {complete ? (
-          <span className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-accent/40 bg-accent-soft px-1.5 text-xs text-accent">
-            <Check className="h-3 w-3" /> Complete
-          </span>
-        ) : (
-          <span className="shrink-0 text-xs text-fg-muted">
-            {s.collected}/{s.total}
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {newCount > 0 && <NewBang />}
+          {complete ? (
+            <span className="flex h-6 items-center gap-1 rounded-md border border-accent/40 bg-accent-soft px-1.5 text-xs text-accent">
+              <Check className="h-3 w-3" /> Complete
+            </span>
+          ) : (
+            <span className="text-xs text-fg-muted">
+              {s.collected}/{s.total}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         {s.pieces.map((p, i) => {
           const label = pieceLabel(p, s.name);
+          const fresh = pieceIsNew(p);
           return (
             <span
               key={`${p.slot}-${i}`}
               title={`${p.name || label || "Piece"}${p.type && p.type !== p.name ? ` · ${p.type}` : ""} · ${
-                p.collected ? "collected" : "missing"
+                fresh ? "newly collected" : p.collected ? "collected" : "missing"
               }`}
+              tabIndex={fresh ? 0 : undefined}
+              onMouseEnter={() => {
+                if (fresh) onSeePiece(p.pieceKey);
+              }}
+              onFocus={() => {
+                if (fresh) onSeePiece(p.pieceKey);
+              }}
               className={`flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-xs ${
                 p.collected
                   ? "border-accent/40 bg-accent-soft text-fg"
                   : "border-border/70 bg-surface-2/50 text-fg-subtle"
-              }`}
+              } ${fresh ? "ring-1 ring-amber-400/70" : ""}`}
             >
               <span className={`relative shrink-0 ${p.collected ? "" : "opacity-40 grayscale"}`}>
                 <GameIcon name={label || p.name || "?"} icon={p.icon} size={22} />
+                {fresh && (
+                  <span className="absolute -right-1.5 -top-1.5">
+                    <NewBang />
+                  </span>
+                )}
               </span>
               <span className="min-w-0 flex-1 truncate">{label}</span>
               {p.collected ? (

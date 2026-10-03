@@ -2,6 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { getDb, getMeta } from "./index";
 import type { AccountSnapshot, AchievementRecord, Character, House, Item, SkillLine, StickerbookSet } from "../snapshot/schema";
+import { annotateStickerbookSets, collectedPieceKeys, type StickerbookSetView } from "../stickerbook/seen";
+import { stickerbookSeenIds } from "../stickerbook/seen-store";
 import { archivedCharacters, archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
 import { unionCompletedAchievementIds } from "../achievements/pithka";
 
@@ -369,11 +371,14 @@ export function getItemsForCharacter(c: Character): Item[] {
   });
 }
 
-export function getStickerbook(): (StickerbookSet & { total: number; collected: number })[] {
+export function getStickerbook(): StickerbookSetView[] {
   const rows = getDb()
     .prepare("SELECT json, total, collected FROM stickerbook ORDER BY category ASC, name ASC")
     .all() as { json: string; total: number; collected: number }[];
-  return rows.map((r) => ({ ...(JSON.parse(r.json) as StickerbookSet), total: r.total, collected: r.collected }));
+  const sets = rows.map((r) => ({ ...(JSON.parse(r.json) as StickerbookSet), total: r.total, collected: r.collected }));
+  const account = getAccount()?.displayName ?? "";
+  const seen = stickerbookSeenIds(account, collectedPieceKeys(sets));
+  return annotateStickerbookSets(sets, seen);
 }
 
 export function getStickerbookStats(): { total: number; collected: number; sets: number } {

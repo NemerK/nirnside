@@ -18,12 +18,13 @@ export default function StickerbookPage() {
 
   const pct = stats.total ? Math.round((stats.collected / stats.total) * 100) : 0;
   const completeSets = sets.filter((s) => s.total > 0 && s.collected === s.total).length;
+  const newPieces = sets.reduce((n, s) => n + s.newCount, 0);
 
   return (
     <PageFrame>
       <PageHeader
         title="Stickerbook"
-        subtitle="Your item set collection — what you've reconstructed and what's still missing."
+        subtitle="Your item set collection — what you've reconstructed and what's still missing. New pieces get a gold ! until you hover them."
       />
 
       {sets.length === 0 ? (
@@ -37,7 +38,11 @@ export default function StickerbookPage() {
             <Stat label="Overall" value={`${pct}%`} hint={`${stats.collected}/${stats.total} pieces`} />
             <Stat label="Sets tracked" value={stats.sets} />
             <Stat label="Complete sets" value={completeSets} />
-            <Stat label="Pieces missing" value={stats.total - stats.collected} />
+            <Stat
+              label="Pieces missing"
+              value={stats.total - stats.collected}
+              hint={newPieces > 0 ? `${newPieces} new` : undefined}
+            />
           </div>
           <StickerbookGrid
             sets={sets.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }))}
