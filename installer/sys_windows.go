@@ -22,8 +22,8 @@ func detachProcess(cmd *exec.Cmd) {
 var jobHandle syscall.Handle
 
 const (
-	jobObjectExtendedLimitInformation = 9
-	jobObjectLimitKillOnJobClose      = 0x2000
+	jobObjectExtendedLimitInfoClass = 9
+	jobObjectLimitKillOnJobClose    = 0x2000
 )
 
 type jobObjectBasicLimitInformation struct {
@@ -59,7 +59,7 @@ func holdJobForChildren() {
 	jobHandle = syscall.Handle(h)
 	var info jobObjectExtendedLimitInformation
 	info.BasicLimitInformation.LimitFlags = jobObjectLimitKillOnJobClose
-	r, _, err := setInfo.Call(uintptr(jobHandle), jobObjectExtendedLimitInformation, uintptr(unsafe.Pointer(&info)), unsafe.Sizeof(info))
+	r, _, err := setInfo.Call(uintptr(jobHandle), jobObjectExtendedLimitInfoClass, uintptr(unsafe.Pointer(&info)), unsafe.Sizeof(info))
 	if r == 0 {
 		fmt.Fprintf(os.Stderr, "[nirnside] job limit: %v\n", err)
 	}
