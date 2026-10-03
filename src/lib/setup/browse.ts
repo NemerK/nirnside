@@ -50,14 +50,14 @@ export function browsePlaces(): BrowsePlace[] {
 
   const docs = [
     ...windowsMountRoots(),
-    process.env.OneDrive ? join(process.env.OneDrive, "Documents") : "",
-    process.env.USERPROFILE ? join(process.env.USERPROFILE, "Documents") : "",
-    join(homedir(), "Documents"),
+    process.env.OneDrive ? join(/* turbopackIgnore: true */ process.env.OneDrive, "Documents") : "",
+    process.env.USERPROFILE ? join(/* turbopackIgnore: true */ process.env.USERPROFILE, "Documents") : "",
+    join(/* turbopackIgnore: true */ homedir(), "Documents"),
   ];
   for (const dir of docs) {
     if (!dir) continue;
     add("Documents", dir);
-    add("Elder Scrolls Online", join(dir, "Elder Scrolls Online"));
+    add("Elder Scrolls Online", join(/* turbopackIgnore: true */ dir, "Elder Scrolls Online"));
   }
 
   if (process.platform === "win32") {
@@ -75,12 +75,12 @@ export function defaultBrowsePath(): string {
   if (eso) return eso;
 
   const docs: string[] = [...windowsMountRoots()];
-  if (process.env.OneDrive) docs.push(join(process.env.OneDrive, "Documents"));
-  if (process.env.USERPROFILE) docs.push(join(process.env.USERPROFILE, "Documents"));
-  docs.push(join(homedir(), "Documents"));
+  if (process.env.OneDrive) docs.push(join(/* turbopackIgnore: true */ process.env.OneDrive, "Documents"));
+  if (process.env.USERPROFILE) docs.push(join(/* turbopackIgnore: true */ process.env.USERPROFILE, "Documents"));
+  docs.push(join(/* turbopackIgnore: true */ homedir(), "Documents"));
 
   for (const dir of docs) {
-    const esoDir = join(dir, "Elder Scrolls Online");
+    const esoDir = join(/* turbopackIgnore: true */ dir, "Elder Scrolls Online");
     if (isDir(esoDir)) return esoDir;
   }
   for (const dir of docs) {
@@ -112,7 +112,7 @@ export function browseDir(requested?: string | null): BrowseResult {
   try {
     for (const name of readdirSync(path)) {
       if (HIDDEN.has(name) || name.startsWith(".")) continue;
-      const full = join(path, name);
+      const full = join(/* turbopackIgnore: true */ path, name);
       try {
         const st = statSync(full);
         if (st.isDirectory()) entries.push({ name, path: full, kind: "dir" });

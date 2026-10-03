@@ -50,7 +50,10 @@ function looksLikeEsoRoot(dir: string): boolean {
 function looksLikeEnvFolder(dir: string): boolean {
   const name = basename(dir).toLowerCase();
   if (ENV_NAMES.has(name)) return true;
-  return isDir(join(dir, "SavedVariables")) || isDir(join(dir, "AddOns"));
+  return (
+    isDir(join(/* turbopackIgnore: true */ dir, "SavedVariables")) ||
+    isDir(join(/* turbopackIgnore: true */ dir, "AddOns"))
+  );
 }
 
 /** Walk up from a file/folder until we find the ESO data root, if it's there. */
@@ -63,7 +66,7 @@ function inferEsoRoot(start: string): string | undefined {
       if (looksLikeEsoRoot(parent)) return parent;
       return dir;
     }
-    const child = join(dir, "Elder Scrolls Online");
+    const child = join(/* turbopackIgnore: true */ dir, "Elder Scrolls Online");
     if (isDir(child) && looksLikeEsoRoot(child)) return child;
     const parent = dirname(dir);
     if (parent === dir) break;

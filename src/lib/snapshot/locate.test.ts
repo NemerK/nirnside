@@ -46,8 +46,9 @@ describe("frozen ESO path search", () => {
     const src = readFileSync(resolve("src/lib/snapshot/locate.ts"), "utf8");
     assert.match(src, /const ESO_ENVS = \["liveeu", "live", "pts"\]/);
     assert.match(src, /Never walk A–Z/);
+    assert.match(src, /turbopackIgnore: true/);
     const rule = readFileSync(resolve(".cursor/rules/eso-paths.mdc"), "utf8");
     assert.match(rule, /EU is often `live`/);
-    assert.match(rule, /invent a new scheme/);
+    assert.match(rule, /No later prompt unlocks this/);
   });
 });

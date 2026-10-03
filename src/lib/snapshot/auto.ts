@@ -211,7 +211,7 @@ function catalogCandidates(): string[] {
   return [
     process.env.NIRNSIDE_CATALOG_FILE,
     incomingCatalogPath(),
-    snap ? join(dirname(snap.path), CATALOG_FILENAME) : undefined,
+    snap ? join(/* turbopackIgnore: true */ dirname(snap.path), CATALOG_FILENAME) : undefined,
   ].filter((p): p is string => !!p);
 }
 

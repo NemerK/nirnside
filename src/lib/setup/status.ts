@@ -45,7 +45,7 @@ export interface SetupStatus {
 
 export function getSetupStatus(): SetupStatus {
   const snap = locateSnapshot(false);
-  const catalogNextToSnap = snap ? join(dirname(snap.path), CATALOG_FILENAME) : null;
+  const catalogNextToSnap = snap ? join(/* turbopackIgnore: true */ dirname(snap.path), CATALOG_FILENAME) : null;
   const catalogPath = [
     process.env.NIRNSIDE_CATALOG_FILE,
     incomingCatalogPath(),
@@ -55,12 +55,12 @@ export function getSetupStatus(): SetupStatus {
   const detected: DetectedInstall[] = esoRoots().map((root) => ({
     root,
     envs: envFolders(root).map((env) => {
-      const envPath = join(root, env);
-      const addOns = join(envPath, "AddOns");
+      const envPath = join(/* turbopackIgnore: true */ root, env);
+      const addOns = join(/* turbopackIgnore: true */ envPath, "AddOns");
       return {
         name: env || basename(root),
-        snapshot: existsSync(join(envPath, "SavedVariables", SNAPSHOT_FILENAME)),
-        catalog: existsSync(join(envPath, "SavedVariables", CATALOG_FILENAME)),
+        snapshot: existsSync(join(/* turbopackIgnore: true */ envPath, "SavedVariables", SNAPSHOT_FILENAME)),
+        catalog: existsSync(join(/* turbopackIgnore: true */ envPath, "SavedVariables", CATALOG_FILENAME)),
         addOns,
       };
     }),

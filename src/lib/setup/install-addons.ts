@@ -39,10 +39,10 @@ export function findAddOnsDirs(): string[] {
   const dirs: string[] = [];
   for (const root of esoRoots()) {
     for (const env of envFolders(root)) {
-      const addOns = join(root, env, "AddOns");
+      const addOns = join(/* turbopackIgnore: true */ root, env, "AddOns");
       if (existsSync(addOns)) {
         dirs.push(addOns);
-      } else if (existsSync(join(root, env))) {
+      } else if (existsSync(join(/* turbopackIgnore: true */ root, env))) {
         // The env exists (real ESO install) but no AddOns folder yet — safe to create.
         try {
           mkdirSync(addOns, { recursive: true });
@@ -65,13 +65,13 @@ export function installAddons(): AddonInstallResult {
   for (const addon of ADDONS) {
     const src = sourceDir(addon);
     if (!existsSync(src)) continue;
-    const srcVer = manifestVersion(join(src, `${addon}.txt`));
+    const srcVer = manifestVersion(join(/* turbopackIgnore: true */ src, `${addon}.txt`));
 
     for (const dir of dirs) {
-      const dest = join(dir, addon);
+      const dest = join(/* turbopackIgnore: true */ dir, addon);
       try {
         const existed = existsSync(dest);
-        const destVer = existed ? manifestVersion(join(dest, `${addon}.txt`)) : null;
+        const destVer = existed ? manifestVersion(join(/* turbopackIgnore: true */ dest, `${addon}.txt`)) : null;
         // Always copy. A matching Version: line used to skip, which left missing
         // files (e.g. Bindings.xml) and no "modified today" on disk.
         cpSync(src, dest, { recursive: true });
