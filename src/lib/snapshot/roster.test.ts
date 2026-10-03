@@ -110,6 +110,8 @@ describe("roster gold and archive", () => {
       15230,
     );
     assert.equal(snap.currencies.alliancePoints, 402118);
+    assert.equal(snap.currencies.writVouchers, 6640);
+    assert.equal(snap.currencies.eventTickets, undefined);
     assert.equal(snap.currencies.tradeBars, 11156);
     assert.equal(snap.currencies.tomePoints, 4923);
     assert.equal(

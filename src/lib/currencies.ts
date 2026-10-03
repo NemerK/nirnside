@@ -1,7 +1,10 @@
 /**
  * Live ESO wallet layout. Gold, Tel Var, and Alliance Points are character-bound
- * (plus bank gold). Everything else is account-wide. Keys match what the
- * snapshot addon writes; singular leftovers from older snapshots are folded in.
+ * (plus bank gold). Everything else is account-wide — including Writ Vouchers,
+ * which the game stores at the character currency location even though the
+ * balance is shared. Keys match what the snapshot addon writes; singular
+ * leftovers from older snapshots are folded in. Currencies removed from live
+ * (Event Tickets → Trade Bars in Update 49) are dropped, never shown.
  */
 
 export type CurrencyScope = "account" | "hidden";
@@ -33,7 +36,6 @@ export const ACCOUNT_CURRENCIES: CurrencyDef[] = [
   { key: "transmuteCrystals", label: "Transmute Crystals", colorClass: "text-violet-300", always: true, scope: "account" },
   { key: "undauntedKeys", label: "Undaunted Keys", colorClass: "text-fg", always: true, scope: "account" },
   { key: "writVouchers", label: "Writ Vouchers", colorClass: "text-emerald-300", always: true, scope: "account" },
-  { key: "eventTickets", label: "Event Tickets", colorClass: "text-orange-300", scope: "account" },
 ];
 
 const BY_KEY = new Map(ACCOUNT_CURRENCIES.map((c) => [c.key, c]));
@@ -65,6 +67,9 @@ const KEY_ALIASES: Record<string, string> = {
   eventTicket: "eventTickets",
 };
 
+/** Removed from live ESO. Fold leftovers here, then drop them. */
+const REMOVED_KEYS = new Set(["eventTickets"]);
+
 /** Stored on the account record but shown in the gold/Tel Var table, not the wallet grid. */
 const HIDDEN_KEYS = new Set(["bankGold", "telVar", "gold"]);
 
@@ -95,6 +100,7 @@ export function canonicalizeCurrencies(
   const out: Record<string, number> = {};
   for (const [key, raw] of Object.entries(currencies ?? {})) {
     const canon = canonicalKey(key);
+    if (REMOVED_KEYS.has(canon)) continue;
     out[canon] = Math.max(out[canon] ?? 0, asAmount(raw));
   }
   return out;
@@ -146,7 +152,7 @@ export function walletEntries(
   }
 
   for (const [key, raw] of Object.entries(src)) {
-    if (seen.has(key) || HIDDEN_KEYS.has(key)) continue;
+    if (seen.has(key) || HIDDEN_KEYS.has(key) || REMOVED_KEYS.has(key)) continue;
     const amount = asAmount(raw);
     if (amount === 0 && !includeZero) continue;
     out.push({

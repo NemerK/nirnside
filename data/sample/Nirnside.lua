@@ -24,7 +24,6 @@ NirnsideData =
                     ["telVar"] = 15230,
                     ["alliancePoints"] = 402118,
                     ["writVouchers"] = 6640,
-                    ["eventTickets"] = 12,
                     ["undauntedKeys"] = 21,
                     ["crowns"] = 2295,
                     ["crownGems"] = 456,
