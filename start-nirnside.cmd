@@ -79,6 +79,36 @@ echo Copying Nirnside addons into your ESO AddOns folder...
 call npx tsx scripts/install-addons.ts
 echo.
 
+set HOSTNAME=127.0.0.1
+
+REM Bundled runtime (Nirnside.exe install): production server on 127.0.0.1.
+REM Git / zip copies without runtime keep `next dev`.
+if exist "%~dp0runtime\node.exe" goto bundled_start
+
 echo Starting Nirnside... a browser tab will open shortly.
 start "" http://127.0.0.1:43219
 call npm run dev
+goto :eof
+
+:bundled_start
+if exist ".nirnside-need-build" goto do_build
+if not exist ".next\BUILD_ID" goto do_build
+goto do_start
+
+:do_build
+echo Building Nirnside... first run takes a minute.
+call npm run build
+if errorlevel 1 (
+  echo.
+  echo Nirnside could not build. The text above is the reason.
+  echo Close other copies of Nirnside and try again.
+  echo.
+  pause
+  exit /b 1
+)
+if exist ".nirnside-need-build" del ".nirnside-need-build"
+
+:do_start
+echo Starting Nirnside... a browser tab will open shortly.
+start "" http://127.0.0.1:43219
+call npm run start

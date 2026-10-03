@@ -135,7 +135,6 @@ func (in *installer) launchExisting(root string) error {
 }
 
 func (in *installer) launch(root string, log *os.File) error {
-	in.progress(98, "Starting Nirnside", "A browser tab will open.")
 	url := appURL()
 	if looksLikeNirnside() {
 		in.markReady()
@@ -145,10 +144,17 @@ func (in *installer) launch(root string, log *os.File) error {
 	if portBusy(appPort) {
 		return fmt.Errorf("port %d is already in use by another program, so Nirnside cannot start. Close that program (or another Nirnside / forwarded tab using 127.0.0.1:%d) and try again.", appPort, appPort)
 	}
+	if needBuild(root) {
+		in.progress(94, "Building Nirnside", "First run takes a minute. Later clicks are faster.")
+		if err := buildApp(log, root); err != nil {
+			return err
+		}
+	}
+	in.progress(98, "Starting Nirnside", "A browser tab will open.")
 	if _, err := startApp(log, root); err != nil {
 		return fmt.Errorf("could not start Nirnside: %w", err)
 	}
-	if err := waitHTTP(url, 3*time.Minute); err != nil {
+	if err := waitHTTP(url, 90*time.Second); err != nil {
 		logPath := filepath.Join(root, "nirnside-installer.log")
 		if tail := strings.TrimSpace(tailFile(logPath, 1800)); tail != "" {
 			return fmt.Errorf("%w\n\nLast lines from %s:\n%s", err, logPath, tail)

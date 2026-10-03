@@ -41,6 +41,7 @@ describe("self-update overlay", () => {
     assert.equal(readFileSync(join(to, "data", "nirnside.db"), "utf8"), "MY-ACCOUNT");
     assert.equal(readFileSync(join(to, "data", "incoming", "NirnsideSnapshot.lua"), "utf8"), "-- mine");
     assert.equal(existsSync(join(to, "data", "incoming", "NirnsideSnapshot.lua")), true);
+    assert.equal(readFileSync(join(to, ".nirnside-need-build"), "utf8").trim(), "1");
 
     rmSync(from, { recursive: true, force: true });
     rmSync(to, { recursive: true, force: true });

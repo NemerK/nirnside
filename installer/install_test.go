@@ -145,6 +145,28 @@ func TestLooksLikeNirnsideWhenNothingListens(t *testing.T) {
 	}
 }
 
+func TestNeedBuild(t *testing.T) {
+	dir := t.TempDir()
+	if !needBuild(dir) {
+		t.Fatal("missing .next should need a build")
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".next"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".next", "BUILD_ID"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if needBuild(dir) {
+		t.Fatal("existing BUILD_ID should skip build")
+	}
+	if err := os.WriteFile(filepath.Join(dir, needBuildName), []byte("1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !needBuild(dir) {
+		t.Fatal("need-build flag should force a rebuild")
+	}
+}
+
 func TestLooksInstalled(t *testing.T) {
 	dir := t.TempDir()
 	if looksInstalled(dir) {

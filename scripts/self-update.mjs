@@ -52,6 +52,7 @@ export function overlayCopy(fromDir, toDir) {
     }
   }
   walk(fromDir);
+  writeFileSync(join(toDir, ".nirnside-need-build"), "1\n");
   return files;
 }
 

@@ -18,6 +18,8 @@ describe("Windows first-run must not compile SQLite", () => {
     assert.match(cmd, /check-sqlite\.mjs/);
     assert.match(cmd, /LSS 22/);
     assert.match(cmd, /Visual Studio is not required/i);
+    assert.match(cmd, /npm run start/);
+    assert.match(cmd, /BUILD_ID/);
   });
 
   it("start-nirnside.sh skips scripts and requires Node 22+", () => {

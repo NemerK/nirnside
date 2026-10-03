@@ -90,15 +90,45 @@ func runNodeScript(log *os.File, root string, script string, extra ...string) er
 	return runLogged(log, root, runtimeEnv(root), runtimeNode(root), args...)
 }
 
+const needBuildName = ".nirnside-need-build"
+
+func nextBin(root string) (string, error) {
+	p := filepath.Join(root, "node_modules", "next", "dist", "bin", "next")
+	if _, err := os.Stat(p); err != nil {
+		return "", fmt.Errorf("the app files are missing. Try Install again.")
+	}
+	return p, nil
+}
+
+func needBuild(root string) bool {
+	if _, err := os.Stat(filepath.Join(root, ".next", "BUILD_ID")); err != nil {
+		return true
+	}
+	_, err := os.Stat(filepath.Join(root, needBuildName))
+	return err == nil
+}
+
+func buildApp(log *os.File, root string) error {
+	next, err := nextBin(root)
+	if err != nil {
+		return err
+	}
+	if err := runLogged(log, root, runtimeEnv(root), runtimeNode(root), next, "build"); err != nil {
+		return fmt.Errorf("could not build Nirnside: %w", err)
+	}
+	_ = os.Remove(filepath.Join(root, needBuildName))
+	return nil
+}
+
 func startApp(log *os.File, root string) (*exec.Cmd, error) {
 	env := runtimeEnv(root)
-	next := filepath.Join(root, "node_modules", "next", "dist", "bin", "next")
-	if _, err := os.Stat(next); err != nil {
-		return nil, fmt.Errorf("the app files are missing. Try Install again.")
+	next, err := nextBin(root)
+	if err != nil {
+		return nil, err
 	}
-	// Bind IPv4 localhost so the health check and the browser use the same address.
-	// Bare `next dev -p` often listens on localhost/IPv6 only; then 127.0.0.1 never answers.
-	cmd := exec.Command(runtimeNode(root), next, "dev", "-H", "127.0.0.1", "-p", fmt.Sprintf("%d", appPort))
+	// Production server on IPv4 localhost. `next dev` is for git clones;
+	// the exe waits on 127.0.0.1 and IPv6-only / compile-on-request dies there.
+	cmd := exec.Command(runtimeNode(root), next, "start", "-H", "127.0.0.1", "-p", fmt.Sprintf("%d", appPort))
 	cmd.Dir = root
 	cmd.Env = env
 	if log != nil {
