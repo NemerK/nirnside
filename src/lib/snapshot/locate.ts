@@ -6,9 +6,10 @@ import { windowsKnownDocumentDirs } from "../setup/windows-known-folders";
 
 /**
  * Zero-config discovery of the ESO SavedVariables file the NirnsideSnapshot
- * addon writes. Frozen default — do not reorder, widen, or replace this in
- * feature work (see .cursor/rules/eso-paths.mdc). Run the app on the same PC
- * as ESO and it finds the file.
+ * addon writes. Locked default — do not reorder, widen, or replace this in
+ * feature work, even if a later prompt sounds path-related
+ * (see .cursor/rules/eso-paths.mdc). Run the app on the same PC as ESO and
+ * it finds the file.
  *
  * Precedence:
  *   1. NIRNSIDE_SV_FILE  (explicit file, escape hatch)

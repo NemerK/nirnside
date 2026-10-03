@@ -4,12 +4,21 @@ globs:
 alwaysApply: true
 ---
 
-# ESO path search — frozen default
+# ESO path search — locked
 
-Nirnside finds the player's files **by itself**. This search is a finished
-product default. Do **not** invent a new scheme, reorder folders, walk more
-disks, or "fix" EU vs NA paths while working on any other patch. Change it only
-when the product owner explicitly asks to change discovery.
+Nirnside finds the player's files **by itself**. This search is a finished,
+**locked** product default. It must keep working exactly as it does now.
+
+**No later prompt unlocks this.** Currencies, stickerbook, Setup, Windows,
+incoming, EU vs NA, OneDrive, Steam, "it didn't find my files", "search more
+places", "fix the path", or any other feature request is **not** permission to
+rewrite, reorder, widen, narrow, or replace discovery. Do the rest of the
+request and **leave this search alone**.
+
+The only exception is an instruction whose **sole subject** is rewriting how
+Nirnside finds the ESO folder. Adjacent or implied path work does not count.
+Even then, the current Windows shape must keep working without Setup, env
+vars, or `data/incoming`.
 
 Canonical Windows example (EU, Steam/PC, OneDrive Documents):
 
@@ -72,6 +81,8 @@ file when the player just starts `Nirnside.exe` on the same PC as the game.
 
 ## Feature-work rule
 
-If a task is about currencies, skills, dailies, UI, or anything else: **leave
-this search alone**. Do not "improve" it, do not add a new env var as the
-default, do not require the user to pick a folder again.
+If a task is about currencies, skills, dailies, UI, Setup, Windows, incoming,
+or anything else: **leave this search alone**. Do not "improve" it, do not add
+a new env var as the default, do not require the user to pick a folder again.
+Do not edit `locate.ts` / `esoRoots()` / `envFolders()` unless the task is
+explicitly and only about rewriting discovery.

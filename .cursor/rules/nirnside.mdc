@@ -89,10 +89,11 @@ the product owner. Do not relax them without explicit approval.
 - Prefer in-game-derived strings/icons where we already have them from a snapshot;
   otherwise community sources, clearly credited.
 
-## 8. Folder search is frozen
+## 8. Folder search is locked (no later prompt unlocks this)
 - How Nirnside finds Documents / OneDrive / `Elder Scrolls Online` / `live` /
-  `liveeu` / SavedVariables is a **finished default**. Do not change it in
-  feature work. See `.cursor/rules/eso-paths.mdc`.
+  `liveeu` / SavedVariables is a **locked default**. Do not change it in
+  feature work, and do not treat a later request as permission to change it.
+  See `.cursor/rules/eso-paths.mdc`.
 - Steam/PC EU is often `...\Elder Scrolls Online\live\...`, not `liveeu`.
   Folder name is not the megaserver. First existing `NirnsideSnapshot.lua` wins.
 - `data/incoming` is only for machines without ESO. Never walk A–Z drives.
