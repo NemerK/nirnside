@@ -1,5 +1,5 @@
 import type { Character, CharacterDailies, DailyPledge, DailyStatus, DailyWrit } from "../snapshot/schema";
-import { esoDayKey, formatRemainingSeconds } from "./day";
+import { esoDayKey } from "./day";
 import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "./pledges";
 
 export const WRIT_CRAFTS = [
@@ -62,11 +62,12 @@ const UNKNOWN: DailyCell = {
 
 function cell(status: DailyStatus, title: string, extra?: Partial<DailyCell>): DailyCell {
   const labels: Record<DailyStatus, string> = {
-    available: "—",
+    available: "",
     accepted: "ACCEPT",
     ready: "TURN IN",
     done: "✓",
-    cooldown: extra?.remainingSeconds != null ? formatRemainingSeconds(extra.remainingSeconds) : "CD",
+    // Random-dungeon cooldown means the daily reward is already claimed.
+    cooldown: "✓",
     unknown: "?",
   };
   return { status, label: labels[status], title, ...extra };
@@ -117,13 +118,10 @@ function randomCell(
   random: CharacterDailies["randomNormal"] | undefined,
 ): DailyCell {
   if (!random) return { ...UNKNOWN, title: `${kind} — not scanned since reset` };
-  if (random.status === "done") return cell("done", `${kind} — daily reward claimed`);
-  if (random.status === "available") return cell("available", `${kind} — daily reward available`);
-  if (random.status === "cooldown") {
-    return cell("cooldown", `${kind} — on cooldown`, {
-      remainingSeconds: random.remainingSeconds,
-    });
+  if (random.status === "done" || random.status === "cooldown") {
+    return cell("done", `${kind} — done`);
   }
+  if (random.status === "available") return cell("available", `${kind} — not done today`);
   return cell("unknown", `${kind} — not scanned since reset`);
 }
 
@@ -153,9 +151,36 @@ export function unknownCharacterDailies(
   };
 }
 
+/** After the 10:00 UTC reset, yesterday's checks clear. Empty ≠ scanned available. */
+export function resetClearedCharacterDailies(
+  character: Pick<Character, "id" | "name" | "class" | "lastSeen">,
+  capturedAt: number | null,
+): PresentedCharacterDailies {
+  const reason = "cleared at the 10:00 UTC reset";
+  const empty = cell("available", reason);
+  return {
+    characterId: character.id,
+    name: character.name,
+    className: character.class,
+    stale: true,
+    scanned: false,
+    capturedAt,
+    randomNormal: { ...empty, title: `Random Normal — ${reason}` },
+    randomVeteran: { ...empty, title: `Random Veteran — ${reason}` },
+    writs: Object.fromEntries(
+      WRIT_CRAFTS.map((c) => [c, { ...empty, title: `${WRIT_LABELS[c]} — ${reason}` }]),
+    ) as Record<WritCraft, DailyCell>,
+    pledges: {
+      maj: { ...empty, title: `${PLEDGE_GIVER_NAMES.maj} — ${reason}` },
+      glirion: { ...empty, title: `${PLEDGE_GIVER_NAMES.glirion} — ${reason}` },
+      urgarlag: { ...empty, title: `${PLEDGE_GIVER_NAMES.urgarlag} — ${reason}` },
+    },
+  };
+}
+
 /**
- * Board row for one character. After daily reset, every cell is unknown with a
- * timestamp — we do not pretend yesterday's leftovers are still available.
+ * Board row for one character. A check is done today. After the 10:00 UTC
+ * reset, yesterday's checks clear — we do not keep leftover timers or marks.
  */
 export function presentCharacterDailies(
   character: Character,
@@ -168,11 +193,14 @@ export function presentCharacterDailies(
     return unknownCharacterDailies(character, "not scanned since last login");
   }
   const stale = options?.treatAsFresh ? false : isDailyScanStale(dailies, nowUnix);
-  if (!dailies || stale) {
-    const reason = dailies
-      ? "not scanned since reset"
-      : "not scanned — update the Snapshot addon and log out once";
-    return unknownCharacterDailies(character, reason);
+  if (!dailies) {
+    return unknownCharacterDailies(
+      character,
+      "not scanned — update the Snapshot addon and log out once",
+    );
+  }
+  if (stale) {
+    return resetClearedCharacterDailies(character, dailies.capturedAt || character.lastSeen);
   }
   return {
     characterId: character.id,

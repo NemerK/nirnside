@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, HelpCircle, Minus, Search } from "lucide-react";
+import { Check, HelpCircle, Search } from "lucide-react";
 import { PageScroll, StickyMenu } from "@/components/ui";
 import {
   WRIT_ABBR,
@@ -31,7 +31,7 @@ function rowOpen(row: PresentedCharacterDailies): boolean {
 }
 
 function DailyCellView({ cell }: { cell: DailyCell }) {
-  if (cell.status === "done") {
+  if (cell.status === "done" || cell.status === "cooldown") {
     return (
       <span
         title={cell.title}
@@ -55,13 +55,6 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
       </span>
     );
   }
-  if (cell.status === "cooldown") {
-    return (
-      <span title={cell.title} className="font-mono text-xs tabular-nums text-fg-muted">
-        {cell.label}
-      </span>
-    );
-  }
   if (cell.status === "unknown") {
     return (
       <span title={cell.title} className="inline-flex text-fg-subtle/70">
@@ -70,9 +63,10 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
     );
   }
   return (
-    <span title={cell.title} className="inline-flex h-5 w-5 items-center justify-center text-fg-subtle/40">
-      <Minus className="h-3 w-3" />
-    </span>
+    <span
+      title={cell.title}
+      className="inline-flex h-5 w-5 items-center justify-center rounded border border-border/80 bg-surface"
+    />
   );
 }
 
@@ -160,7 +154,10 @@ export function DailiesBoard({ rows }: { rows: PresentedCharacterDailies[] }) {
                     <a href={`/characters/${encodeURIComponent(r.characterId)}`} className="font-medium text-fg hover:text-accent">
                       {r.name}
                     </a>
-                    <div className="text-[11px] text-fg-subtle">{r.className}</div>
+                    <div className="text-[11px] text-fg-subtle">
+                      {r.className}
+                      {r.stale && r.capturedAt != null ? " · since reset" : ""}
+                    </div>
                   </td>
                   <td className="px-2 py-1.5 text-center">
                     <DailyCellView cell={r.randomNormal} />
@@ -195,10 +192,9 @@ export function DailiesBoard({ rows }: { rows: PresentedCharacterDailies[] }) {
         )}
 
         <p className="mt-3 text-xs text-fg-subtle">
-          Check = done. ACCEPT = in the journal. A timer is the random-dungeon reward cooldown as of last
-          logout. A dash on randoms means the daily reward is still available. A question mark on a writ or
-          pledge means it is not in the journal and we did not see the turn-in — we never invent
-          &quot;available&quot; after it leaves the book.
+          Check = done today. Empty = not done today. ACCEPT / TURN IN = still in the journal. After the
+          10:00 UTC ESO reset, yesterday&apos;s checks clear. A question mark means this toon has not been
+          scanned — we never invent a check or a pickup.
         </p>
       </PageScroll>
     </div>
