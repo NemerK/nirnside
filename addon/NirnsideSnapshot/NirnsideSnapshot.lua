@@ -1151,14 +1151,111 @@ local function flagWrit(questName, status, journalIndex)
   end
 end
 
-local function flagPledge(questName, status)
+-- Instance mode for the current dungeon. Never guessed: missing APIs stay nil.
+-- hardMode is true only when the game shows a hard-mode signal (vitality pool,
+-- deadly boss, or "hard mode" in the pledge condition text).
+local function instancePledgeMode(journalIndex)
+  local difficulty = nil
+  local hardMode = nil
+  local zoneDiff = safe(function()
+    if GetCurrentZoneDungeonDifficulty then return GetCurrentZoneDungeonDifficulty() end
+  end, nil)
+  if DUNGEON_DIFFICULTY_VETERAN and zoneDiff == DUNGEON_DIFFICULTY_VETERAN then
+    difficulty = "veteran"
+  elseif DUNGEON_DIFFICULTY_NORMAL and zoneDiff == DUNGEON_DIFFICULTY_NORMAL then
+    difficulty = "normal"
+  end
+
+  local starting = safe(function()
+    if GetCurrentRaidStartingReviveCounters then return GetCurrentRaidStartingReviveCounters() end
+  end, nil)
+  if type(starting) == "number" and starting > 0 then hardMode = true end
+
+  if hardMode ~= true then
+    for _, tag in ipairs({ "boss1", "reticleover" }) do
+      local d = safe(function()
+        if GetUnitDifficulty then return GetUnitDifficulty(tag) end
+      end, nil)
+      if d ~= nil and MONSTER_DIFFICULTY_DEADLY ~= nil and d >= MONSTER_DIFFICULTY_DEADLY then
+        hardMode = true
+        break
+      end
+    end
+  end
+
+  if hardMode ~= true and journalIndex and GetJournalQuestConditionInfo then
+    for step = 1, 2 do
+      for cond = 1, 8 do
+        local packed = { pcall(GetJournalQuestConditionInfo, journalIndex, step, cond) }
+        if packed[1] then
+          local text = packed[2]
+          if type(text) == "string" and text:lower():find("hard mode", 1, true) then
+            hardMode = true
+            break
+          end
+        end
+      end
+      if hardMode == true then break end
+    end
+  end
+
+  -- Normal instances cannot be hard mode. Veteran without a signal stays unknown.
+  if hardMode == nil and difficulty == "normal" then hardMode = false end
+  return difficulty, hardMode
+end
+
+local function mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
+  local row = { status = status, dungeon = dungeon }
+  if prev then
+    if not dungeon or dungeon == "" then row.dungeon = prev.dungeon end
+    row.difficulty = prev.difficulty
+    row.hardMode = prev.hardMode
+  end
+  if difficulty then row.difficulty = difficulty end
+  if hardMode == true then
+    row.hardMode = true
+  elseif hardMode == false and row.hardMode ~= true then
+    row.hardMode = false
+  end
+  return row
+end
+
+local function zoneMatchesPledge(dungeon)
+  if not dungeon or dungeon == "" then return false end
+  local zone = cleanQuestName(safe(function()
+    if GetUnitZone then return GetUnitZone("player") end
+  end, ""))
+  if zone == "" then
+    zone = cleanQuestName(safe(function()
+      if GetMapName then return GetMapName() end
+    end, ""))
+  end
+  if zone == "" then return false end
+  local a, b = normDungeon(zone), normDungeon(dungeon)
+  return a == b or a:find(b, 1, true) or b:find(a, 1, true)
+end
+
+local function flagPledge(questName, status, journalIndex)
   local giver, dungeon = matchPledge(questName)
   if not giver then return end
   local bucket = ensureDailyBucket(currentCharId())
   if not bucket then return end
+  local difficulty, hardMode = instancePledgeMode(journalIndex)
+  if dungeon and dungeon ~= "" and not zoneMatchesPledge(dungeon) then
+    difficulty, hardMode = nil, nil
+  end
   local prev = bucket.pledges[giver]
+  local row = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
   if status == "done" or not prev or prev.status ~= "done" then
-    bucket.pledges[giver] = { status = status, dungeon = dungeon }
+    bucket.pledges[giver] = row
+  elseif prev then
+    -- Keep a later hard-mode stamp even after the quest already left as done.
+    if row.hardMode == true or (row.difficulty and not prev.difficulty) then
+      prev.dungeon = row.dungeon or prev.dungeon
+      prev.difficulty = row.difficulty or prev.difficulty
+      if row.hardMode == true then prev.hardMode = true end
+      bucket.pledges[giver] = prev
+    end
   end
 end
 
@@ -1185,7 +1282,7 @@ local function onQuestRemoved(_, isCompleted, journalIndex, questName)
       name = cleanQuestName(safe(function() return GetJournalQuestName(journalIndex) end, ""))
     end
     flagWrit(name, "done", journalIndex)
-    if name ~= "" then flagPledge(name, "done") end
+    if name ~= "" then flagPledge(name, "done", journalIndex) end
   end)
 end
 
@@ -1193,7 +1290,28 @@ local function onQuestAdded(_, journalIndex, questName)
   safe(function()
     local name = cleanQuestName(questName)
     flagWrit(name, "accepted", journalIndex)
-    if name ~= "" then flagPledge(name, "accepted") end
+    if name ~= "" then flagPledge(name, "accepted", journalIndex) end
+  end)
+end
+
+-- Last pledge step usually completes in the instance, before the Undaunted turn-in.
+-- Flag-only: stamp normal vs hard mode while the game still knows the dungeon.
+local function onQuestCondition(_, journalIndex, questName)
+  safe(function()
+    if not journalIndex then return end
+    local complete = safe(function()
+      return GetJournalQuestIsComplete and GetJournalQuestIsComplete(journalIndex)
+    end, false)
+    if not complete then return end
+    local name = cleanQuestName(questName)
+    if name == "" then
+      name = cleanQuestName(safe(function() return GetJournalQuestName(journalIndex) end, ""))
+    end
+    if name == "" then return end
+    local qtype = safe(function() return GetJournalQuestType(journalIndex) end, nil)
+    local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
+      or name:lower():find("pledge", 1, true)
+    if isPledge then flagPledge(name, "ready", journalIndex) end
   end)
 end
 
@@ -1265,8 +1383,17 @@ local function gatherDailies(charId)
         or (name ~= "" and name:lower():find("pledge", 1, true))
       if isPledge then
         local giver, dungeon = matchPledge(name)
-        if giver and (not pledgeStatus[giver] or pledgeStatus[giver].status ~= "done") then
-          pledgeStatus[giver] = { status = status, dungeon = dungeon }
+        if giver then
+          local difficulty, hardMode = instancePledgeMode(i)
+          if dungeon and dungeon ~= "" and not zoneMatchesPledge(dungeon) then
+            difficulty, hardMode = nil, nil
+          end
+          local prev = pledgeStatus[giver]
+          if not prev or prev.status ~= "done" then
+            pledgeStatus[giver] = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
+          else
+            pledgeStatus[giver] = mergePledgeMode(prev, prev.dungeon or dungeon, prev.status, difficulty, hardMode)
+          end
         end
       end
     end
@@ -1292,6 +1419,8 @@ local function gatherDailies(charId)
       giverName = PLEDGE_GIVER_NAMES[giver],
       dungeon = info and info.dungeon or nil,
       status = (info and info.status) or "unknown",
+      difficulty = info and info.difficulty or nil,
+      hardMode = info and info.hardMode,
     }
   end
 
@@ -2246,6 +2375,9 @@ local function onAddOnLoaded(_, name)
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_COMPLETE, onQuestComplete)
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_REMOVED, onQuestRemoved)
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_ADDED, onQuestAdded)
+  if EVENT_QUEST_CONDITION_COUNTER_CHANGED then
+    EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_CONDITION_COUNTER_CHANGED, onQuestCondition)
+  end
 
   SLASH_COMMANDS["/nirnside"] = function() safe(function() takeSnapshot("manual") end) end
 end

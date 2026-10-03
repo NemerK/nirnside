@@ -112,7 +112,7 @@ SLASH_COMMANDS["/nirnside"] = takeSnapshot`;
             randomNormal: { status: "done" },
             randomVeteran: { status: "available" },
             writs: [{ craft: "blacksmithing", name: "Blacksmith Writ", status: "accepted" }],
-            pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done" }],
+            pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done", hardMode: true, difficulty: "veteran" }],
           },
         },
       ],
@@ -123,6 +123,7 @@ SLASH_COMMANDS["/nirnside"] = takeSnapshot`;
     assert.equal(parsed.data.houses[0].name, "Snugpod");
     assert.equal(parsed.data.characters[0].dailies?.randomNormal.status, "done");
     assert.equal(parsed.data.characters[0].dailies?.writs[0].status, "accepted");
+    assert.equal(parsed.data.characters[0].dailies?.pledges[0].hardMode, true);
   });
 
   it("drops a broken dailies block instead of the character", () => {

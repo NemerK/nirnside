@@ -46,7 +46,7 @@ const fresh: CharacterDailies = {
     { craft: "blacksmithing", name: "Blacksmith Writ", status: "done" },
     { craft: "jewelry", name: "Jewelry Crafting Writ", status: "accepted" },
   ],
-  pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done" }],
+  pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done", hardMode: true, difficulty: "veteran" }],
 };
 
 describe("dailies presentation", () => {
@@ -61,7 +61,22 @@ describe("dailies presentation", () => {
     assert.equal(row.writs.jewelry.label, "ACCEPT");
     assert.equal(row.pledges.maj.status, "done");
     assert.equal(row.pledges.maj.dungeon, "Fungal Grotto I");
+    assert.equal(row.pledges.maj.hardMode, true);
+    assert.match(row.pledges.maj.title, /hard mode/);
     assert.equal(row.stale, false);
+  });
+
+  it("marks a finished pledge as not hard mode when the snapshot says so", () => {
+    const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
+    const row = presentCharacterDailies(
+      char({
+        ...fresh,
+        pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done", hardMode: false }],
+      }),
+      now,
+    );
+    assert.equal(row.pledges.maj.hardMode, false);
+    assert.match(row.pledges.maj.title, /not hard mode/);
   });
 
   it("does not fake available after reset — unknown with timestamp", () => {

@@ -233,6 +233,10 @@ export const DailyPledge = z.object({
   giverName: z.string().default(""),
   dungeon: z.string().nullable().optional(),
   status: DailyStatus.default("unknown").catch("unknown"),
+  /** Veteran vs normal, from the instance when the pledge finished. */
+  difficulty: z.enum(["normal", "veteran"]).optional(),
+  /** True when the game showed a hard-mode signal on that run. */
+  hardMode: z.boolean().optional(),
 });
 export type DailyPledge = z.infer<typeof DailyPledge>;
 

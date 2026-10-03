@@ -31,6 +31,16 @@ function rowOpen(row: PresentedCharacterDailies): boolean {
 }
 
 function DailyCellView({ cell }: { cell: DailyCell }) {
+  if (cell.status === "done" && cell.hardMode === true) {
+    return (
+      <span
+        title={cell.title}
+        className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-amber-400/50 bg-amber-400/15 px-0.5 text-[9px] font-bold leading-none text-amber-600 dark:text-amber-400"
+      >
+        HM
+      </span>
+    );
+  }
   if (cell.status === "done") {
     return (
       <span
@@ -195,10 +205,11 @@ export function DailiesBoard({ rows }: { rows: PresentedCharacterDailies[] }) {
         )}
 
         <p className="mt-3 text-xs text-fg-subtle">
-          Check = done. ACCEPT = in the journal. A timer is the random-dungeon reward cooldown as of last
-          logout. A dash on randoms means the daily reward is still available. A question mark on a writ or
-          pledge means it is not in the journal and we did not see the turn-in — we never invent
-          &quot;available&quot; after it leaves the book.
+          Check = done. HM on a pledge = that run was hard mode; a plain check is not hard mode. ACCEPT = in
+          the journal. A timer is the random-dungeon reward cooldown as of last logout. A dash on randoms
+          means the daily reward is still available. A question mark on a writ or pledge means it is not in
+          the journal and we did not see the turn-in — we never invent &quot;available&quot; after it leaves
+          the book.
         </p>
       </PageScroll>
     </div>

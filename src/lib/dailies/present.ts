@@ -39,6 +39,8 @@ export interface DailyCell {
   title: string;
   dungeon?: string | null;
   remainingSeconds?: number;
+  difficulty?: "normal" | "veteran" | null;
+  hardMode?: boolean | null;
 }
 
 export interface PresentedCharacterDailies {
@@ -97,15 +99,32 @@ function writCell(writs: DailyWrit[] | undefined, craft: WritCraft): DailyCell {
   return cell("unknown", `${name} — not scanned since reset`);
 }
 
+function pledgeModeNote(row: DailyPledge): string {
+  if (row.hardMode === true) return " — hard mode";
+  if (row.hardMode === false) return " — not hard mode";
+  if (row.difficulty === "normal") return " — not hard mode";
+  if (row.difficulty === "veteran") return " — veteran (hard mode not scanned)";
+  return "";
+}
+
+function pledgeModeExtra(row: DailyPledge): Partial<DailyCell> {
+  return {
+    dungeon: row.dungeon || null,
+    difficulty: row.difficulty ?? null,
+    hardMode: row.hardMode ?? (row.difficulty === "normal" ? false : null),
+  };
+}
+
 function pledgeCell(pledges: DailyPledge[] | undefined, giver: PledgeGiver): DailyCell {
   const row = pledges?.find((p) => p.giver === giver);
   const who = PLEDGE_GIVER_NAMES[giver];
   if (!row) return { ...UNKNOWN, title: `${who} — not scanned since reset` };
-  const dungeon = row.dungeon || null;
-  const where = dungeon ? `${who} — ${dungeon}` : who;
-  if (row.status === "done") return cell("done", `${where} — done`, { dungeon });
-  if (row.status === "ready") return cell("ready", `${where} — ready to turn in`, { dungeon });
-  if (row.status === "accepted") return cell("accepted", `${where} — in journal`, { dungeon });
+  const where = row.dungeon ? `${who} — ${row.dungeon}` : who;
+  const extra = pledgeModeExtra(row);
+  const note = pledgeModeNote(row);
+  if (row.status === "done") return cell("done", `${where} — done${note}`, extra);
+  if (row.status === "ready") return cell("ready", `${where} — ready to turn in${note}`, extra);
+  if (row.status === "accepted") return cell("accepted", `${where} — in journal`, extra);
   if (row.status === "available") {
     return cell("unknown", `${who} — not in journal (turn-in not seen)`);
   }

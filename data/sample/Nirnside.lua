@@ -538,7 +538,7 @@ NirnsideData =
                             },
                             ["pledges"] =
                             {
-                                { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Fungal Grotto I", ["status"] = "done" },
+                                { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Fungal Grotto I", ["status"] = "done", ["hardMode"] = false, ["difficulty"] = "normal" },
                                 { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Icereach", ["status"] = "accepted" },
                                 { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["status"] = "unknown" },
                             },
@@ -696,9 +696,9 @@ NirnsideData =
                             },
                             ["pledges"] =
                             {
-                                { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Spindleclutch II", ["status"] = "done" },
-                                { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Unhallowed Grave", ["status"] = "done" },
-                                { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["dungeon"] = "Stone Garden", ["status"] = "done" },
+                                { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Spindleclutch II", ["status"] = "done", ["hardMode"] = true, ["difficulty"] = "veteran" },
+                                { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Unhallowed Grave", ["status"] = "done", ["hardMode"] = true, ["difficulty"] = "veteran" },
+                                { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["dungeon"] = "Stone Garden", ["status"] = "done", ["hardMode"] = false, ["difficulty"] = "veteran" },
                             },
                         },
                     },
