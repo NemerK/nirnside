@@ -144,6 +144,28 @@ func TestPortBusy(t *testing.T) {
 	}
 }
 
+func TestParseListeningPIDs(t *testing.T) {
+	out := `
+  TCP    127.0.0.1:43219        0.0.0.0:0              LISTENING       18724
+  TCP    [::1]:43219            [::]:0                 LISTENING       18724
+  TCP    127.0.0.1:43219        127.0.0.1:51234        ESTABLISHED     99
+  TCP    127.0.0.1:443219       0.0.0.0:0              LISTENING       7
+`
+	got := parseListeningPIDs(out, 43219)
+	if len(got) != 1 || got[0] != 18724 {
+		t.Fatalf("%v", got)
+	}
+}
+
+func TestReclaimAppPortWhenFree(t *testing.T) {
+	if portBusy(appPort) {
+		t.Skip("43219 is already in use on this host")
+	}
+	if err := reclaimAppPort(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLooksLikeNirnsideWhenNothingListens(t *testing.T) {
 	if looksLikeNirnside() {
 		t.Fatal("nothing should be serving Nirnside on this test host")

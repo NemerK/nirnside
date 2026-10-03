@@ -142,15 +142,10 @@ func (in *installer) launch(root string, log *os.File) error {
 		return nil
 	}
 	if portBusy(appPort) {
-		in.progress(98, "Starting Nirnside", "Waiting for the copy already on this port…")
-		if err := waitReady(url, nil, 20*time.Second, func(waited time.Duration) {
-			in.progress(98, "Starting Nirnside", fmt.Sprintf("Waiting for the copy already on this port… %ds", int(waited.Seconds())))
-		}); err == nil {
-			in.markReady()
-			_ = openURL(url)
-			return nil
+		in.progress(97, "Starting Nirnside", "Closing the leftover copy from last time…")
+		if err := reclaimAppPort(); err != nil {
+			return err
 		}
-		return fmt.Errorf("port %d is already in use by another program, so Nirnside cannot start. Close that program (or another Nirnside / forwarded tab using 127.0.0.1:%d) and try again.", appPort, appPort)
 	}
 	if needBuild(root) {
 		in.progress(94, "Building Nirnside", "First run takes a minute. Later clicks are faster.")

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"runtime"
 )
@@ -10,6 +11,19 @@ import (
 func hideWindow(cmd *exec.Cmd) {}
 
 func detachProcess(cmd *exec.Cmd) {}
+
+func holdJobForChildren() {}
+
+func assignToJob(cmd *exec.Cmd) {}
+
+func killProcessTree(pid int) {
+	if pid <= 0 || pid == os.Getpid() {
+		return
+	}
+	if proc, err := os.FindProcess(pid); err == nil {
+		_ = proc.Kill()
+	}
+}
 
 func openURL(u string) error {
 	switch runtime.GOOS {

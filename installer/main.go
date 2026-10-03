@@ -24,6 +24,7 @@ func main() {
 	exe, _ := os.Executable()
 	exeDir := filepath.Dir(exe)
 	existing := detectExistingRoot(exeDir)
+	holdJobForChildren()
 
 	in := newInstaller()
 	if existing != "" {

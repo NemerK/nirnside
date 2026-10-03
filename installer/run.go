@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -135,10 +136,11 @@ func startApp(log *os.File, root string) (*exec.Cmd, error) {
 		cmd.Stdout = log
 		cmd.Stderr = log
 	}
-	detachProcess(cmd)
+	hideWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
+	assignToJob(cmd)
 	return cmd, nil
 }
 
@@ -240,7 +242,98 @@ func looksLikeNirnside() bool {
 }
 
 func appAlreadyUp() bool {
-	return looksLikeNirnside()
+	// Health only, and fast. A leftover hung `next start` still occupies
+	// 43219; probing `/` would sit on that dead connection for seconds.
+	client := &http.Client{Timeout: 800 * time.Millisecond}
+	res, err := client.Get(strings.TrimRight(appURL(), "/") + "/api/health")
+	if err != nil {
+		return false
+	}
+	buf := make([]byte, 512)
+	n, _ := res.Body.Read(buf)
+	res.Body.Close()
+	if res.StatusCode >= 500 {
+		return false
+	}
+	body := strings.ToLower(string(buf[:n]))
+	return strings.Contains(body, "nirnside") || strings.Contains(body, `"ok"`)
+}
+
+func parseListeningPIDs(output string, port int) []int {
+	suffix := fmt.Sprintf(":%d", port)
+	seen := map[int]bool{}
+	var pids []int
+	me := os.Getpid()
+	for _, line := range strings.Split(output, "\n") {
+		if !strings.Contains(strings.ToUpper(line), "LISTEN") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		hit := false
+		for _, f := range fields {
+			if strings.HasSuffix(f, suffix) || strings.Contains(f, suffix+"]") {
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			continue
+		}
+		pid, err := strconv.Atoi(fields[len(fields)-1])
+		if err != nil || pid <= 0 || pid == me {
+			continue
+		}
+		if seen[pid] {
+			continue
+		}
+		seen[pid] = true
+		pids = append(pids, pid)
+	}
+	return pids
+}
+
+func listeningPIDs(port int) []int {
+	if runtime.GOOS == "windows" {
+		out, err := exec.Command("netstat", "-ano").Output()
+		if err != nil {
+			return nil
+		}
+		return parseListeningPIDs(string(out), port)
+	}
+	out, err := exec.Command("ss", "-lptn", fmt.Sprintf("sport = :%d", port)).Output()
+	if err != nil {
+		return nil
+	}
+	return parseListeningPIDs(string(out), port)
+}
+
+func reclaimAppPort() error {
+	if looksLikeNirnside() {
+		return nil
+	}
+	if !portBusy(appPort) {
+		return nil
+	}
+	for _, pid := range listeningPIDs(appPort) {
+		killProcessTree(pid)
+	}
+	deadline := time.Now().Add(8 * time.Second)
+	for time.Now().Before(deadline) {
+		if !portBusy(appPort) {
+			return nil
+		}
+		if looksLikeNirnside() {
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	if portBusy(appPort) && !looksLikeNirnside() {
+		return fmt.Errorf("port %d is still in use. Close the old Nirnside window (or Task Manager → node.exe) and try again.", appPort)
+	}
+	return nil
 }
 
 func portBusy(port int) bool {

@@ -16,10 +16,78 @@ func hideWindow(cmd *exec.Cmd) {
 }
 
 func detachProcess(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		HideWindow:    false,
-		CreationFlags: 0x00000200, // CREATE_NEW_PROCESS_GROUP
+	hideWindow(cmd)
+}
+
+var jobHandle syscall.Handle
+
+const (
+	jobObjectExtendedLimitInformation = 9
+	jobObjectLimitKillOnJobClose      = 0x2000
+)
+
+type jobObjectBasicLimitInformation struct {
+	PerProcessUserTimeLimit int64
+	PerJobUserTimeLimit     int64
+	LimitFlags              uint32
+	MinimumWorkingSetSize   uintptr
+	MaximumWorkingSetSize   uintptr
+	ActiveProcessLimit      uint32
+	Affinity                uintptr
+	PriorityClass           uint32
+	SchedulingClass         uint32
+}
+
+type jobObjectExtendedLimitInformation struct {
+	BasicLimitInformation jobObjectBasicLimitInformation
+	IoInfo                [48]byte
+	ProcessMemoryLimit    uintptr
+	JobMemoryLimit        uintptr
+	PeakProcessMemoryUsed uintptr
+	PeakJobMemoryUsed     uintptr
+}
+
+func holdJobForChildren() {
+	k32 := syscall.NewLazyDLL("kernel32.dll")
+	create := k32.NewProc("CreateJobObjectW")
+	setInfo := k32.NewProc("SetInformationJobObject")
+	h, _, err := create.Call(0, 0)
+	if h == 0 {
+		fmt.Fprintf(os.Stderr, "[nirnside] job object: %v\n", err)
+		return
 	}
+	jobHandle = syscall.Handle(h)
+	var info jobObjectExtendedLimitInformation
+	info.BasicLimitInformation.LimitFlags = jobObjectLimitKillOnJobClose
+	r, _, err := setInfo.Call(uintptr(jobHandle), jobObjectExtendedLimitInformation, uintptr(unsafe.Pointer(&info)), unsafe.Sizeof(info))
+	if r == 0 {
+		fmt.Fprintf(os.Stderr, "[nirnside] job limit: %v\n", err)
+	}
+}
+
+func assignToJob(cmd *exec.Cmd) {
+	if jobHandle == 0 || cmd == nil || cmd.Process == nil {
+		return
+	}
+	k32 := syscall.NewLazyDLL("kernel32.dll")
+	assign := k32.NewProc("AssignProcessToJobObject")
+	const processTerminate = 0x0001
+	const processSetQuota = 0x0100
+	p, err := syscall.OpenProcess(processTerminate|processSetQuota, false, uint32(cmd.Process.Pid))
+	if err != nil {
+		return
+	}
+	defer syscall.CloseHandle(p)
+	_, _, _ = assign.Call(uintptr(jobHandle), uintptr(p))
+}
+
+func killProcessTree(pid int) {
+	if pid <= 0 || pid == os.Getpid() {
+		return
+	}
+	cmd := exec.Command("taskkill.exe", "/PID", fmt.Sprintf("%d", pid), "/T", "/F")
+	hideWindow(cmd)
+	_ = cmd.Run()
 }
 
 func openURL(u string) error {

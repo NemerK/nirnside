@@ -62,8 +62,9 @@ func (in *installer) progress(pct int, step, detail string) {
 }
 
 type installReq struct {
-	Dest     string `json:"dest"`
-	Shortcut *bool  `json:"shortcut"`
+	Dest       string `json:"dest"`
+	Shortcut   *bool  `json:"shortcut"`
+	LaunchOnly bool   `json:"launchOnly"`
 }
 
 func (in *installer) handleState(w http.ResponseWriter, _ *http.Request) {
@@ -104,7 +105,12 @@ func (in *installer) handleInstall(w http.ResponseWriter, r *http.Request) {
 	in.busy = true
 	in.mu.Unlock()
 	go func() {
-		err := in.runInstall(dest, shortcut)
+		var err error
+		if req.LaunchOnly && looksInstalled(dest) {
+			err = in.launchExisting(dest)
+		} else {
+			err = in.runInstall(dest, shortcut)
+		}
 		in.mu.Lock()
 		in.busy = false
 		in.mu.Unlock()
@@ -112,9 +118,9 @@ func (in *installer) handleInstall(w http.ResponseWriter, r *http.Request) {
 			in.set(func(s *jobState) {
 				s.Phase = "error"
 				s.Error = err.Error()
-				s.Step = "Install did not finish"
+				s.Step = "Could not start Nirnside"
 			})
-			fmt.Fprintf(os.Stderr, "[nirnside] install failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[nirnside] %v\n", err)
 		}
 	}()
 	w.Header().Set("Content-Type", "application/json")
