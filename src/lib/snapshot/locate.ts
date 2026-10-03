@@ -2,6 +2,7 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { getUserConfig } from "../setup/config";
+import { windowsKnownDocumentDirs } from "../setup/windows-known-folders";
 
 /**
  * Zero-config discovery of the ESO SavedVariables file the NirnsideSnapshot
@@ -79,7 +80,7 @@ function documentsDirs(): string[] {
   }
 
   const docNames = ["Documents", "Documenten", "Dokumente", "Documentos", "Documenti", "文档", "My Documents"];
-  const out: string[] = [];
+  const out: string[] = [...windowsKnownDocumentDirs()];
   for (const key of ["OneDrive", "OneDriveConsumer", "OneDriveCommercial"] as const) {
     const v = process.env[key];
     if (v) out.push(join(v, "Documents"));

@@ -27,6 +27,12 @@ describe("Windows first-run must not compile SQLite", () => {
     assert.match(sh, /NODE_MAJOR" -lt 22/);
   });
 
+  it("binds Next to 127.0.0.1 so the Windows launcher and browser use the same address", () => {
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    assert.match(pkg.scripts.dev, /-H 127\.0\.0\.1/);
+    assert.match(pkg.scripts.start, /-H 127\.0\.0\.1/);
+  });
+
   it("bundled SQLite loads without compiling", async () => {
     const { spawnSync } = await import("node:child_process");
     const r = spawnSync(process.execPath, [join(root, "scripts", "check-sqlite.mjs")], {

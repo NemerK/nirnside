@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -135,12 +136,24 @@ func (in *installer) launchExisting(root string) error {
 
 func (in *installer) launch(root string, log *os.File) error {
 	in.progress(98, "Starting Nirnside", "A browser tab will open.")
+	url := appURL()
+	if looksLikeNirnside() {
+		in.markReady()
+		_ = openURL(url)
+		return nil
+	}
+	if portBusy(appPort) {
+		return fmt.Errorf("port %d is already in use by another program, so Nirnside cannot start. Close that program (or another Nirnside / forwarded tab using 127.0.0.1:%d) and try again.", appPort, appPort)
+	}
 	if _, err := startApp(log, root); err != nil {
 		return fmt.Errorf("could not start Nirnside: %w", err)
 	}
-	url := fmt.Sprintf("http://127.0.0.1:%d/", appPort)
-	if err := waitHTTP(url, 90*time.Second); err != nil {
-		return err
+	if err := waitHTTP(url, 3*time.Minute); err != nil {
+		logPath := filepath.Join(root, "nirnside-installer.log")
+		if tail := strings.TrimSpace(tailFile(logPath, 1800)); tail != "" {
+			return fmt.Errorf("%w\n\nLast lines from %s:\n%s", err, logPath, tail)
+		}
+		return fmt.Errorf("%w\nThe start log is %s", err, logPath)
 	}
 	in.markReady()
 	_ = openURL(url)

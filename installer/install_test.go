@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -109,6 +110,38 @@ func TestSetPathEnv(t *testing.T) {
 	got := setPathEnv(env, "runtime;old")
 	if got[1] != "Path=runtime;old" {
 		t.Fatalf("%v", got)
+	}
+}
+
+func TestTailFile(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "log.txt")
+	if tailFile(p, 100) != "" {
+		t.Fatal("missing file")
+	}
+	if err := os.WriteFile(p, []byte("hello-nirnside"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if tailFile(p, 100) != "hello-nirnside" {
+		t.Fatalf("%q", tailFile(p, 100))
+	}
+}
+
+func TestPortBusy(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	port := ln.Addr().(*net.TCPAddr).Port
+	if !portBusy(port) {
+		t.Fatal("expected busy")
+	}
+}
+
+func TestLooksLikeNirnsideWhenNothingListens(t *testing.T) {
+	if looksLikeNirnside() {
+		t.Fatal("nothing should be serving Nirnside on this test host")
 	}
 }
 

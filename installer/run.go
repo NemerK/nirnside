@@ -46,6 +46,7 @@ func runtimeEnv(root string) []string {
 	return append(env,
 		"npm_config_build_from_source=false",
 		"NEXT_TELEMETRY_DISABLED=1",
+		"HOSTNAME=127.0.0.1",
 	)
 }
 
@@ -92,7 +93,12 @@ func runNodeScript(log *os.File, root string, script string, extra ...string) er
 func startApp(log *os.File, root string) (*exec.Cmd, error) {
 	env := runtimeEnv(root)
 	next := filepath.Join(root, "node_modules", "next", "dist", "bin", "next")
-	cmd := exec.Command(runtimeNode(root), next, "dev", "-p", fmt.Sprintf("%d", appPort))
+	if _, err := os.Stat(next); err != nil {
+		return nil, fmt.Errorf("the app files are missing. Try Install again.")
+	}
+	// Bind IPv4 localhost so the health check and the browser use the same address.
+	// Bare `next dev -p` often listens on localhost/IPv6 only; then 127.0.0.1 never answers.
+	cmd := exec.Command(runtimeNode(root), next, "dev", "-H", "127.0.0.1", "-p", fmt.Sprintf("%d", appPort))
 	cmd.Dir = root
 	cmd.Env = env
 	if log != nil {
@@ -131,14 +137,52 @@ func waitHTTP(url string, timeout time.Duration) error {
 	return fmt.Errorf("Nirnside did not start at %s", url)
 }
 
-func appAlreadyUp() bool {
+func appURL() string {
+	return fmt.Sprintf("http://127.0.0.1:%d/", appPort)
+}
+
+func readLocalApp() (int, string, error) {
 	c := &http.Client{Timeout: 800 * time.Millisecond}
-	res, err := c.Get(fmt.Sprintf("http://127.0.0.1:%d/", appPort))
+	res, err := c.Get(appURL())
 	if err != nil {
+		return 0, "", err
+	}
+	defer res.Body.Close()
+	buf := make([]byte, 8192)
+	n, _ := res.Body.Read(buf)
+	return res.StatusCode, string(buf[:n]), nil
+}
+
+func looksLikeNirnside() bool {
+	code, body, err := readLocalApp()
+	if err != nil || code >= 500 {
 		return false
 	}
-	res.Body.Close()
-	return res.StatusCode < 500
+	return strings.Contains(strings.ToLower(body), "nirnside")
+}
+
+func appAlreadyUp() bool {
+	return looksLikeNirnside()
+}
+
+func portBusy(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return true
+	}
+	_ = ln.Close()
+	return false
+}
+
+func tailFile(path string, max int) string {
+	b, err := os.ReadFile(path)
+	if err != nil || len(b) == 0 {
+		return ""
+	}
+	if len(b) > max {
+		b = b[len(b)-max:]
+	}
+	return string(b)
 }
 
 func listenLocal(preferred int) (net.Listener, int, error) {
