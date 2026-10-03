@@ -20,7 +20,9 @@ private and never gets committed.
 ### Where to find your files on your PC
 
 ```
-Documents/Elder Scrolls Online/liveeu/SavedVariables/NirnsideSnapshot.lua   (EU)
-Documents/Elder Scrolls Online/live/SavedVariables/NirnsideSnapshot.lua     (NA)
+Documents/Elder Scrolls Online/live/SavedVariables/NirnsideSnapshot.lua
+Documents/Elder Scrolls Online/liveeu/SavedVariables/NirnsideSnapshot.lua
 Documents/Elder Scrolls Online/live/SavedVariables/NirnsideCatalog.lua      (if you ran /nirncatalog)
 ```
+
+Steam/PC EU is often `live`, not `liveeu`. Folder name is not the megaserver.

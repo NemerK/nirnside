@@ -1,0 +1,77 @@
+---
+description: Frozen ESO folder / SavedVariables discovery. Do not change in feature work.
+globs:
+alwaysApply: true
+---
+
+# ESO path search — frozen default
+
+Nirnside finds the player's files **by itself**. This search is a finished
+product default. Do **not** invent a new scheme, reorder folders, walk more
+disks, or "fix" EU vs NA paths while working on any other patch. Change it only
+when the product owner explicitly asks to change discovery.
+
+Canonical Windows example (EU, Steam/PC, OneDrive Documents):
+
+`C:\Users\<account>\OneDrive\Documents\Elder Scrolls Online\live\SavedVariables\NirnsideSnapshot.lua`
+
+That shape must keep working without Setup, env vars, or `data/incoming`.
+
+## Do not confuse folder name with megaserver
+
+- The live game writes under `Documents\Elder Scrolls Online\<env>\SavedVariables\`.
+- `<env>` is `live`, `liveeu`, or `pts` — **not** "EU = liveeu, NA = live".
+- Steam/PC **EU is often `live`**, same folder name as NA. Region lives in the
+  snapshot (`region` flag), not the folder.
+- Search order inside one ESO root is `liveeu`, then `live`, then `pts`, then
+  any other folder that already has `SavedVariables`. **First existing file wins.**
+  Do not pick "newest", "largest", or "the EU one".
+
+## Where to look (and where not to)
+
+Implementation lives in `src/lib/snapshot/locate.ts` (plus
+`windows-known-folders.ts`, `resolve-path.ts`, `install-addons.ts`, `auto.ts`).
+Reuse those functions. Do not fork a second search.
+
+Precedence for `NirnsideSnapshot.lua`:
+
+1. `NIRNSIDE_SV_FILE` / `NIRNSIDE_SV_DIR` (escape hatch)
+2. Setup-chosen snapshot file (never an incoming path)
+3. Auto-detected ESO Documents trees
+4. `data/incoming/NirnsideSnapshot.lua` — **machines without ESO only**
+5. Bundled `data/sample/Nirnside.lua` — opt-in demo only
+
+Documents trees: Windows known folders (`GetFolderPath('MyDocuments')`),
+OneDrive / OneDrive Consumer / Commercial, `Documents` under home and
+`USERPROFILE`, any `OneDrive*` folder, localized Documents names. Chosen
+`esoDir` and `NIRNSIDE_ESO_DIR` sit in front of those roots.
+
+**Never walk A–Z drive letters** to find SavedVariables or AddOns. A disconnected
+network letter blocks `stat` and freezes the Windows exe at 98%. Only use the
+profile / system drive implied by `USERPROFILE` / `SystemDrive` / `homedir`.
+WSL may look at `/mnt/<letter>/Users` when that mount already exists.
+
+`data/incoming` is a drop-in for this repo/cloud box. It is not the player's
+live file. Never treat incoming or the bundled sample as a live account when a
+real SavedVariables file exists or was seen before. Sample (`@AzuraStar`) must
+not replace a live account.
+
+The file on disk is `SavedVariables\NirnsideSnapshot.lua` (addon name). Do not
+look for `Nirnside.lua` in SavedVariables. Do not pick the addon program at
+`AddOns\NirnsideSnapshot\NirnsideSnapshot.lua`.
+
+## Addons and Setup
+
+Install **only** `NirnsideSnapshot` and `NirnsideCatalog` into every `AddOns`
+folder under the same `esoRoots()` / `envFolders()` discovery. Do not invent
+another AddOns walk.
+
+Setup may accept Documents, the `Elder Scrolls Online` folder, `live` / `liveeu`
+/ `pts`, `SavedVariables`, or the `.lua` file. Zero-config must still find the
+file when the player just starts `Nirnside.exe` on the same PC as the game.
+
+## Feature-work rule
+
+If a task is about currencies, skills, dailies, UI, or anything else: **leave
+this search alone**. Do not "improve" it, do not add a new env var as the
+default, do not require the user to pick a folder again.
