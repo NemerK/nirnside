@@ -106,15 +106,17 @@ ESO does not store your account in the Steam/game folder. It writes files under
 **Documents**. The path looks like:
 
 ```
-Documents\Elder Scrolls Online\liveeu\SavedVariables\NirnsideSnapshot.lua
+Documents\Elder Scrolls Online\live\SavedVariables\NirnsideSnapshot.lua
 ```
 
-(`liveeu` = EU megaserver, `live` = NA. OneDrive-redirected Documents is fine.)
+Steam/PC EU is often `live` (same folder name as NA). Some installs use
+`liveeu`. Folder name is not the megaserver — region is in the snapshot.
+OneDrive-redirected Documents is the usual Windows path.
 
 ### What Nirnside does by itself
 
-On startup it searches the usual Documents locations (every Windows drive’s
-`Users\*`, OneDrive, localized Documents names, `liveeu` / `live` / `pts`) and:
+On startup it searches the usual Documents locations (this PC’s profile /
+OneDrive / known Documents folders, then `liveeu` / `live` / `pts`) and:
 
 1. **Installs its own addons** into every ESO `AddOns` folder it finds
    (`NirnsideSnapshot` + `NirnsideCatalog`). It never touches other addons.
@@ -127,7 +129,7 @@ Open **Setup** in the sidebar (or Home → Open Setup). You can:
 
 - Click a folder it already found
 - Paste a path
-- **Browse** your disks and hit **Use** on `Elder Scrolls Online` or `liveeu`
+- **Browse** your disks and hit **Use** on `Elder Scrolls Online` or `live` / `liveeu`
 - Upload a `.lua` SavedVariables file (for a machine that doesn’t have ESO)
 
 Nirnside remembers that choice.

@@ -6,16 +6,17 @@ import { windowsKnownDocumentDirs } from "../setup/windows-known-folders";
 
 /**
  * Zero-config discovery of the ESO SavedVariables file the NirnsideSnapshot
- * addon writes. We check every standard ESO location for the current OS so the
- * user never has to configure a path — run the app on the same PC as ESO and it
- * just finds it.
+ * addon writes. Frozen default — do not reorder, widen, or replace this in
+ * feature work (see .cursor/rules/eso-paths.mdc). Run the app on the same PC
+ * as ESO and it finds the file.
  *
  * Precedence:
  *   1. NIRNSIDE_SV_FILE  (explicit file, escape hatch)
  *   2. NIRNSIDE_SV_DIR   (explicit SavedVariables dir)
  *   3. Path chosen in Setup (a snapshot file or ESO folder)
- *   4. Standard ESO data locations (liveeu preferred, then live, then pts)
- *   5. data/incoming drop-in (machines without ESO)
+ *   4. Standard ESO data locations (liveeu, then live, then pts — first file
+ *      wins. Folder name is not the megaserver; Steam/PC EU is often `live`.)
+ *   5. data/incoming drop-in (machines without ESO only)
  *   6. The bundled sample fixture (opt-in demo only)
  */
 

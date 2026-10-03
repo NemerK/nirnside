@@ -7,8 +7,8 @@
  *   NIRNSIDE_SV_FILE=... npm run import
  *
  * On a real PC the file lives at:
- *   Documents/Elder Scrolls Online/liveeu/SavedVariables/Nirnside.lua   (EU)
- *   Documents/Elder Scrolls Online/live/SavedVariables/Nirnside.lua     (NA)
+ *   Documents/Elder Scrolls Online/live/SavedVariables/NirnsideSnapshot.lua
+ *   (Steam/PC EU is often `live`; some installs use `liveeu`. Not Nirnside.lua.)
  */
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";

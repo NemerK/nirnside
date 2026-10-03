@@ -19,7 +19,7 @@ In the game, once
   Log out (or /reloadui). Zoning / instances do not snapshot.
 
   If Setup did not find ESO by itself, pick
-  Documents\Elder Scrolls Online  (liveeu = EU, live = NA).
+  Documents\Elder Scrolls Online  (often live; some installs use liveeu).
 
 Updates
   Open Nirnside again (the desktop shortcut, the exe, or start-nirnside).

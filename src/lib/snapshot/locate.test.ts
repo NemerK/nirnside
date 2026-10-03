@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { driveLettersFromPaths, isBundledSamplePath, isIncomingPath } from "./locate";
@@ -36,5 +38,16 @@ describe("incoming drop-in path", () => {
       ),
       false,
     );
+  });
+});
+
+describe("frozen ESO path search", () => {
+  it("keeps liveeu then live then pts, and does not walk A–Z by itself", () => {
+    const src = readFileSync(resolve("src/lib/snapshot/locate.ts"), "utf8");
+    assert.match(src, /const ESO_ENVS = \["liveeu", "live", "pts"\]/);
+    assert.match(src, /Never walk A–Z/);
+    const rule = readFileSync(resolve(".cursor/rules/eso-paths.mdc"), "utf8");
+    assert.match(rule, /EU is often `live`/);
+    assert.match(rule, /invent a new scheme/);
   });
 });
