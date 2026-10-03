@@ -1,7 +1,7 @@
 "use client";
 
 import { formatGold, formatNumber } from "@/lib/format";
-import { walletEntries, type WalletEntry } from "@/lib/currencies";
+import { walletEntries, type WalletBreakdownLine, type WalletEntry } from "@/lib/currencies";
 import { Card, SectionTitle } from "./ui";
 
 function formatLine(key: string, amount: number | null): string {

@@ -11,7 +11,7 @@ export type StickerbookPieceView = StickerbookPiece & {
   isNew: boolean;
 };
 
-export type StickerbookSetView = StickerbookSet & {
+export type StickerbookSetView = Omit<StickerbookSet, "pieces"> & {
   total: number;
   collected: number;
   newCount: number;
