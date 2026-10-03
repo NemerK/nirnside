@@ -89,7 +89,11 @@ function writCell(writs: DailyWrit[] | undefined, craft: WritCraft): DailyCell {
   if (row.status === "done") return cell("done", `${name} — done`);
   if (row.status === "ready") return cell("ready", `${name} — ready to turn in`);
   if (row.status === "accepted") return cell("accepted", `${name} — in journal`);
-  if (row.status === "available") return cell("available", `${name} — available`);
+  // 0.9.19 wrote "available" when the writ was simply missing from the journal.
+  // That is not proof it can still be picked up — turn-in leaves the book.
+  if (row.status === "available") {
+    return cell("unknown", `${name} — not in journal (turn-in not seen)`);
+  }
   return cell("unknown", `${name} — not scanned since reset`);
 }
 
@@ -102,7 +106,9 @@ function pledgeCell(pledges: DailyPledge[] | undefined, giver: PledgeGiver): Dai
   if (row.status === "done") return cell("done", `${where} — done`, { dungeon });
   if (row.status === "ready") return cell("ready", `${where} — ready to turn in`, { dungeon });
   if (row.status === "accepted") return cell("accepted", `${where} — in journal`, { dungeon });
-  if (row.status === "available") return cell("available", `${who} — available`);
+  if (row.status === "available") {
+    return cell("unknown", `${who} — not in journal (turn-in not seen)`);
+  }
   return cell("unknown", `${who} — not scanned since reset`);
 }
 

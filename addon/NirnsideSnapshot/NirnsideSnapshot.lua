@@ -941,10 +941,12 @@ end
 ----------------------------------------------------------------------
 -- Dailies: random dungeon rewards, crafting writs, Undaunted pledges
 --
--- Journal + LFG APIs at logout, plus tiny EVENT_QUEST_COMPLETE flags so a
--- turn-in still counts after the quest leaves the journal. Flags live in
+-- Journal + LFG APIs at logout, plus tiny quest-event flags so a turn-in
+-- still counts after the quest leaves the journal. Flags live in
 -- sv.dailyFlags (addon-internal) and expire at the 10:00 UTC reset.
 -- Event handlers only write a flag — they never scan bags or take a snapshot.
+-- Writs/pledges not in the journal and not flagged done are unknown, never
+-- invented as available — the game does not say "already completed today".
 ----------------------------------------------------------------------
 
 local ESO_DAILY_RESET_HOUR = 10
@@ -1030,33 +1032,70 @@ local function nextResetAt(ts)
   return today + 86400
 end
 
+-- Civil date from a UTC unix timestamp. ESO's os.date is local and has no `!`.
+local function utcYmd(ts)
+  local z = math.floor(ts / 86400) + 719468
+  local era = math.floor(z / 146097)
+  if z < 0 then era = math.floor((z - 146096) / 146097) end
+  local doe = z - era * 146097
+  local yoe = math.floor((doe - math.floor(doe / 1460) + math.floor(doe / 36524) - math.floor(doe / 146096)) / 365)
+  local y = yoe + era * 400
+  local doy = doe - (365 * yoe + math.floor(yoe / 4) - math.floor(yoe / 100) + math.floor(yoe / 400))
+  local mp = math.floor((5 * doy + 2) / 153)
+  local d = doy - math.floor((153 * mp + 2) / 5) + 1
+  local m = mp + (mp < 10 and 3 or -9)
+  y = y + (m <= 2 and 1 or 0)
+  return string.format("%04d-%02d-%02d", y, m, d)
+end
+
 local function esoDayKey(ts)
   ts = ts or GetTimeStamp()
-  local adjusted = ts - ESO_DAILY_RESET_HOUR * 3600
-  local ok, s = pcall(function()
-    return os.date("!%Y-%m-%d", adjusted)
-  end)
-  if ok and type(s) == "string" and #s >= 10 then return s end
-  return tostring(math.floor(adjusted / 86400))
+  return utcYmd(ts - ESO_DAILY_RESET_HOUR * 3600)
 end
 
 local function currentCharId()
   return safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, nil)
 end
 
+local function cleanQuestName(name)
+  if not name or name == "" then return "" end
+  local formatted = safe(function() return zo_strformat("<<1>>", name) end, name)
+  return tostring(formatted or name)
+end
+
+-- ZO_SavedVars may reload a character id as a number or a string. Try both.
+local function dailyFlagKeys(charId)
+  local keys = { tostring(charId) }
+  local n = tonumber(charId)
+  if n then keys[#keys + 1] = n end
+  return keys
+end
+
 local function ensureDailyBucket(charId)
   if not sv or not charId then return nil end
   sv.dailyFlags = sv.dailyFlags or {}
-  local key = esoDayKey()
-  local bucket = sv.dailyFlags[charId]
-  if type(bucket) ~= "table" or bucket.dayKey ~= key then
-    bucket = { dayKey = key, writs = {}, pledges = {} }
-    sv.dailyFlags[charId] = bucket
+  local today = esoDayKey()
+  for _, k in ipairs(dailyFlagKeys(charId)) do
+    local bucket = sv.dailyFlags[k]
+    if type(bucket) == "table" and bucket.dayKey == today then
+      bucket.writs = bucket.writs or {}
+      bucket.pledges = bucket.pledges or {}
+      return bucket
+    end
   end
-  bucket.writs = bucket.writs or {}
-  bucket.pledges = bucket.pledges or {}
+  local bucket = { dayKey = today, writs = {}, pledges = {} }
+  sv.dailyFlags[tostring(charId)] = bucket
   return bucket
 end
+
+local CRAFT_BY_TYPE = {}
+if CRAFTING_TYPE_BLACKSMITHING then CRAFT_BY_TYPE[CRAFTING_TYPE_BLACKSMITHING] = "blacksmithing" end
+if CRAFTING_TYPE_CLOTHIER then CRAFT_BY_TYPE[CRAFTING_TYPE_CLOTHIER] = "clothing" end
+if CRAFTING_TYPE_WOODWORKING then CRAFT_BY_TYPE[CRAFTING_TYPE_WOODWORKING] = "woodworking" end
+if CRAFTING_TYPE_ENCHANTING then CRAFT_BY_TYPE[CRAFTING_TYPE_ENCHANTING] = "enchanting" end
+if CRAFTING_TYPE_ALCHEMY then CRAFT_BY_TYPE[CRAFTING_TYPE_ALCHEMY] = "alchemy" end
+if CRAFTING_TYPE_PROVISIONING then CRAFT_BY_TYPE[CRAFTING_TYPE_PROVISIONING] = "provisioning" end
+if CRAFTING_TYPE_JEWELRYCRAFTING then CRAFT_BY_TYPE[CRAFTING_TYPE_JEWELRYCRAFTING] = "jewelry" end
 
 local function matchWrit(questName)
   if not questName then return nil end
@@ -1079,31 +1118,82 @@ local function matchPledge(questName)
   return giver, dungeon
 end
 
-local function flagWritDone(questName)
-  local def = matchWrit(questName)
-  if not def then return end
-  local bucket = ensureDailyBucket(currentCharId())
-  if not bucket then return end
-  bucket.writs[def.craft] = "done"
+-- Journal writs sometimes have a blank name / QUEST_TYPE_NONE. Craft type from
+-- the condition is the in-game truth (same path Lazy Writ Crafter uses).
+local function journalWritCraft(journalIndex)
+  if GetQuestConditionItemInfo then
+    for step = 1, 2 do
+      for cond = 1, 6 do
+        local packed = { pcall(GetQuestConditionItemInfo, journalIndex, step, cond) }
+        if packed[1] then
+          local craftType = packed[4] or packed[3]
+          if type(craftType) == "number" and CRAFT_BY_TYPE[craftType] then
+            return CRAFT_BY_TYPE[craftType]
+          end
+        end
+      end
+    end
+  end
+  return nil
 end
 
-local function flagPledgeDone(questName)
+local function flagWrit(questName, status, journalIndex)
+  local craft = journalIndex and journalWritCraft(journalIndex) or nil
+  if not craft then
+    local def = matchWrit(questName)
+    craft = def and def.craft or nil
+  end
+  if not craft then return end
+  local bucket = ensureDailyBucket(currentCharId())
+  if not bucket then return end
+  if status == "done" or bucket.writs[craft] ~= "done" then
+    bucket.writs[craft] = status
+  end
+end
+
+local function flagPledge(questName, status)
   local giver, dungeon = matchPledge(questName)
   if not giver then return end
   local bucket = ensureDailyBucket(currentCharId())
   if not bucket then return end
-  bucket.pledges[giver] = { status = "done", dungeon = dungeon }
+  local prev = bucket.pledges[giver]
+  if status == "done" or not prev or prev.status ~= "done" then
+    bucket.pledges[giver] = { status = status, dungeon = dungeon }
+  end
 end
 
--- Tiny flag write only. Safe in combat so a turn-in mid-fight is not lost.
+-- Tiny flag writes only. Safe in combat so a turn-in mid-fight is not lost.
 local function onQuestComplete(_, questName, _level, _prevXp, _xp, _cp, questType)
   safe(function()
-    if not questName or questName == "" then return end
-    local isWrit = (QUEST_TYPE_CRAFTING ~= nil and questType == QUEST_TYPE_CRAFTING) or matchWrit(questName)
+    local name = cleanQuestName(questName)
+    if name == "" then return end
+    local isWrit = (QUEST_TYPE_CRAFTING ~= nil and questType == QUEST_TYPE_CRAFTING) or matchWrit(name)
     local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and questType == QUEST_TYPE_UNDAUNTED_PLEDGE)
-      or tostring(questName):lower():find("pledge", 1, true)
-    if isWrit then flagWritDone(questName) end
-    if isPledge then flagPledgeDone(questName) end
+      or name:lower():find("pledge", 1, true)
+    if isWrit then flagWrit(name, "done") end
+    if isPledge then flagPledge(name, "done") end
+  end)
+end
+
+-- Turn-in removes the quest from the journal. COMPLETE sometimes misses writs;
+-- REMOVED with isCompleted is the one WPamA-style boards actually catch.
+local function onQuestRemoved(_, isCompleted, journalIndex, questName)
+  safe(function()
+    if not isCompleted then return end
+    local name = cleanQuestName(questName)
+    if name == "" and journalIndex then
+      name = cleanQuestName(safe(function() return GetJournalQuestName(journalIndex) end, ""))
+    end
+    flagWrit(name, "done", journalIndex)
+    if name ~= "" then flagPledge(name, "done") end
+  end)
+end
+
+local function onQuestAdded(_, journalIndex, questName)
+  safe(function()
+    local name = cleanQuestName(questName)
+    flagWrit(name, "accepted", journalIndex)
+    if name ~= "" then flagPledge(name, "accepted") end
   end)
 end
 
@@ -1153,38 +1243,44 @@ local function gatherDailies(charId)
   safe(function()
     local n = GetNumJournalQuests and GetNumJournalQuests() or 0
     for i = 1, n do
-      local name = safe(function() return zo_strformat("<<1>>", GetJournalQuestName(i)) end, nil)
-      if name and name ~= "" then
-        local qtype = safe(function() return GetJournalQuestType(i) end, nil)
-        local complete = safe(function()
-          return GetJournalQuestIsComplete and GetJournalQuestIsComplete(i)
-        end, false)
-        local status = complete and "ready" or "accepted"
-        local isWrit = (QUEST_TYPE_CRAFTING ~= nil and qtype == QUEST_TYPE_CRAFTING) or matchWrit(name)
-        if isWrit then
-          local def = matchWrit(name)
-          if def and writStatus[def.craft] ~= "done" then
-            writStatus[def.craft] = status
-          end
+      local name = cleanQuestName(safe(function() return GetJournalQuestName(i) end, ""))
+      local qtype = safe(function() return GetJournalQuestType(i) end, nil)
+      local repeatType = safe(function()
+        return GetJournalQuestRepeatType and GetJournalQuestRepeatType(i)
+      end, nil)
+      local complete = safe(function()
+        return GetJournalQuestIsComplete and GetJournalQuestIsComplete(i)
+      end, false)
+      local status = complete and "ready" or "accepted"
+      local craft = journalWritCraft(i)
+      local def = matchWrit(name)
+      local daily = (QUEST_REPEAT_DAILY == nil) or (repeatType == QUEST_REPEAT_DAILY) or (repeatType == nil)
+      if daily and (craft or def or (QUEST_TYPE_CRAFTING ~= nil and qtype == QUEST_TYPE_CRAFTING)) then
+        local key = craft or (def and def.craft)
+        if key and writStatus[key] ~= "done" then
+          writStatus[key] = status
         end
-        local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
-          or tostring(name):lower():find("^pledge")
-        if isPledge then
-          local giver, dungeon = matchPledge(name)
-          if giver and (not pledgeStatus[giver] or pledgeStatus[giver].status ~= "done") then
-            pledgeStatus[giver] = { status = status, dungeon = dungeon }
-          end
+      end
+      local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
+        or (name ~= "" and name:lower():find("pledge", 1, true))
+      if isPledge then
+        local giver, dungeon = matchPledge(name)
+        if giver and (not pledgeStatus[giver] or pledgeStatus[giver].status ~= "done") then
+          pledgeStatus[giver] = { status = status, dungeon = dungeon }
         end
       end
     end
   end)
 
+  -- Not in the journal and no turn-in flag ≠ available. The game does not
+  -- expose "this daily was already completed today" after the quest leaves
+  -- the journal — inventing available is how the board filled with dashes.
   local writs = {}
   for _, def in ipairs(WRIT_DEFS) do
     writs[#writs + 1] = {
       craft = def.craft,
       name = def.name,
-      status = writStatus[def.craft] or "available",
+      status = writStatus[def.craft] or "unknown",
     }
   end
 
@@ -1195,7 +1291,7 @@ local function gatherDailies(charId)
       giver = giver,
       giverName = PLEDGE_GIVER_NAMES[giver],
       dungeon = info and info.dungeon or nil,
-      status = (info and info.status) or "available",
+      status = (info and info.status) or "unknown",
     }
   end
 
@@ -2148,6 +2244,8 @@ local function onAddOnLoaded(_, name)
   -- Flag-only: a completed writ/pledge must survive leaving the journal.
   -- Writes a table entry; never scans bags or snapshots. Allowed in combat.
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_COMPLETE, onQuestComplete)
+  EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_REMOVED, onQuestRemoved)
+  EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_ADDED, onQuestAdded)
 
   SLASH_COMMANDS["/nirnside"] = function() safe(function() takeSnapshot("manual") end) end
 end

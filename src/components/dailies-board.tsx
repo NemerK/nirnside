@@ -196,8 +196,9 @@ export function DailiesBoard({ rows }: { rows: PresentedCharacterDailies[] }) {
 
         <p className="mt-3 text-xs text-fg-subtle">
           Check = done. ACCEPT = in the journal. A timer is the random-dungeon reward cooldown as of last
-          logout. A question mark means we have not scanned this character since the 10:00 UTC reset — we
-          never pretend yesterday is still available.
+          logout. A dash on randoms means the daily reward is still available. A question mark on a writ or
+          pledge means it is not in the journal and we did not see the turn-in — we never invent
+          &quot;available&quot; after it leaves the book.
         </p>
       </PageScroll>
     </div>

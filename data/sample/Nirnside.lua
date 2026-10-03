@@ -534,13 +534,13 @@ NirnsideData =
                                 { ["craft"] = "enchanting", ["name"] = "Enchanter Writ", ["status"] = "done" },
                                 { ["craft"] = "alchemy", ["name"] = "Alchemist Writ", ["status"] = "accepted" },
                                 { ["craft"] = "provisioning", ["name"] = "Provisioner Writ", ["status"] = "done" },
-                                { ["craft"] = "jewelry", ["name"] = "Jewelry Crafting Writ", ["status"] = "available" },
+                                { ["craft"] = "jewelry", ["name"] = "Jewelry Crafting Writ", ["status"] = "unknown" },
                             },
                             ["pledges"] =
                             {
                                 { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Fungal Grotto I", ["status"] = "done" },
                                 { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Icereach", ["status"] = "accepted" },
-                                { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["status"] = "available" },
+                                { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["status"] = "unknown" },
                             },
                         },
                     },

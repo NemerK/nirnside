@@ -89,4 +89,24 @@ describe("dailies presentation", () => {
     assert.equal(row.stale, false);
     assert.equal(row.randomNormal.status, "done");
   });
+
+  it("does not treat a missing writ as available", () => {
+    const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
+    const row = presentCharacterDailies(char(fresh), now);
+    assert.equal(row.writs.clothing.status, "unknown");
+    assert.equal(row.pledges.urgarlag.status, "unknown");
+  });
+
+  it("does not keep a 0.9.19 leftover available writ as a dash", () => {
+    const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
+    const leaked: CharacterDailies = {
+      ...fresh,
+      writs: [{ craft: "blacksmithing", name: "Blacksmith Writ", status: "available" }],
+      pledges: [{ giver: "maj", giverName: "Maj al-Ragath", status: "available" }],
+    };
+    const row = presentCharacterDailies(char(leaked), now);
+    assert.equal(row.writs.blacksmithing.status, "unknown");
+    assert.equal(row.pledges.maj.status, "unknown");
+    assert.equal(row.randomVeteran.status, "available");
+  });
 });
