@@ -412,7 +412,28 @@ local function gatherScribingScripts()
   return out
 end
 
-local function gatherOneAbility(skillType, lineIndex, skillIndex)
+-- The skills window's own purchase bit. Class Mastery spends Class Mastery
+-- Points through the point allocator; GetSkillAbilityInfo's purchased flag
+-- still follows regular skill points and can stay false on a bought passive.
+local function skillDataPurchased(skillType, lineIndex, skillIndex)
+  return safe(function()
+    if not SKILLS_DATA_MANAGER or not SKILLS_DATA_MANAGER.GetSkillLineDataById then return false end
+    local skillLineId = select(4, GetSkillLineInfo(skillType, lineIndex))
+    if not skillLineId then return false end
+    local lineData = SKILLS_DATA_MANAGER:GetSkillLineDataById(skillLineId)
+    if not lineData then return false end
+    local skillData = lineData.GetSkillDataByIndex and lineData:GetSkillDataByIndex(skillIndex) or nil
+    if not skillData then return false end
+    if skillData.GetPointAllocator then
+      local alloc = skillData:GetPointAllocator()
+      if alloc and alloc.IsPurchased and alloc:IsPurchased() then return true end
+    end
+    if skillData.IsPurchased and skillData:IsPurchased() then return true end
+    return false
+  end, false)
+end
+
+local function gatherOneAbility(skillType, lineIndex, skillIndex, classMasteryLine)
   if IsCraftedAbilitySkill and IsCraftedAbilitySkill(skillType, lineIndex, skillIndex) then
     return gatherCraftedAbility(skillType, lineIndex, skillIndex)
   end
@@ -423,8 +444,13 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
   if not aName or aName == "" then return nil end
 
   -- earnedRank is 0 until a skill point is spent. `purchased` alone has been
-  -- true for abilities the player has not bought.
+  -- true for abilities the player has not bought. Class Mastery passives spend
+  -- Class Mastery Points instead, so the game's purchased flag is the truth
+  -- even when earnedRank stays 0.
   local abilityOwned = purchased == true and (earnedRank or 0) >= 1
+  if classMasteryLine and (purchased == true or skillDataPurchased(skillType, lineIndex, skillIndex)) then
+    abilityOwned = true
+  end
 
   local entry = {
     name = aName,
@@ -447,6 +473,10 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
     if cur ~= nil then entry.rank = cur end
     if maxUpgrade ~= nil then entry.maxRank = maxUpgrade end
     entry.purchased = (cur or 0) >= 1 or abilityOwned
+    if classMasteryLine and (purchased == true or abilityOwned) then
+      entry.purchased = true
+      if (entry.rank or 0) < 1 then entry.rank = 1 end
+    end
     -- Keep the upgrade rank even when not purchased so the skill book can show
     -- which level every ability is at on this character.
     local abilityId = GetSkillAbilityId and GetSkillAbilityId(skillType, lineIndex, skillIndex, false)
@@ -591,6 +621,11 @@ local function gatherOneAbility(skillType, lineIndex, skillIndex)
   return entry
 end
 
+local function isClassMasteryLineName(name)
+  if type(name) ~= "string" then return false end
+  return zo_strlower(name) == "class mastery"
+end
+
 -- Subclassing (U46+): a class skill line active on this character that is not
 -- one of the character's own class lines is "subclassed" (borrowed). A class
 -- line leveled to 50 becomes "mastered" and unlocks account-wide. We read this
@@ -615,7 +650,7 @@ local function skillLineTraits(skillType, lineIndex)
   end, nil)
 end
 
-local function gatherSkills(masteriesOut)
+local function gatherSkills(masteriesOut, classMasteryOut)
   local lines = {}
   local seenMastery = {}
   safe(function()
@@ -624,18 +659,22 @@ local function gatherSkills(masteriesOut)
       local numLines = GetNumSkillLines(skillType)
       for lineIndex = 1, numLines do
         local name, rank, discovered = GetSkillLineInfo(skillType, lineIndex)
-        if discovered then
+        local lineName = zo_strformat("<<1>>", name)
+        local classMasteryLine = isClassMasteryLineName(lineName)
+        -- Class Mastery is greyed-out (still listed) until unlocked, and hidden
+        -- while subclassing. Always dump the line when the game still lists it
+        -- so purchased passives can show; skip only when the API omits it.
+        if discovered or classMasteryLine then
           local abilities = {}
           local numAbilities = GetNumSkillAbilities(skillType, lineIndex)
           for a = 1, numAbilities do
             -- Per-ability pcall: one bad skill must not drop the rest of the line.
             local ability = safe(function()
-              return gatherOneAbility(skillType, lineIndex, a)
+              return gatherOneAbility(skillType, lineIndex, a, classMasteryLine)
             end, nil)
             if ability then abilities[#abilities + 1] = ability end
           end
           local traits = skillLineTraits(skillType, lineIndex)
-          local lineName = zo_strformat("<<1>>", name)
           if masteriesOut and traits and traits.mastered then
             local mName = traits.name or lineName
             if not seenMastery[mName] then
@@ -643,11 +682,15 @@ local function gatherSkills(masteriesOut)
               masteriesOut[#masteriesOut + 1] = mName
             end
           end
+          if classMasteryLine and classMasteryOut and discovered then
+            classMasteryOut.unlocked = true
+          end
           lines[#lines + 1] = {
             name = lineName,
             category = safe(function() return GetString("SI_SKILLTYPE", skillType) end, "Skill"),
             rank = rank or 0,
             subclassed = (traits and traits.subclassed) or false,
+            classMastery = classMasteryLine,
             abilities = abilities,
           }
         end
@@ -901,7 +944,8 @@ local function gatherCharacter()
   local level = safe(function() return GetUnitLevel("player") end, 1)
   local charId = safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, name)
   local classMasteries = {}
-  local skillLines = gatherSkills(classMasteries)
+  local classMasteryState = { unlocked = false }
+  local skillLines = gatherSkills(classMasteries, classMasteryState)
   return {
     id = charId,
     name = name,
@@ -919,7 +963,7 @@ local function gatherCharacter()
     },
     vampire = vampire,
     werewolf = werewolf,
-    classMastery = false,
+    classMastery = classMasteryState.unlocked == true,
     classMasteries = classMasteries,
     skillLines = skillLines,
     champion = gatherChampion(),

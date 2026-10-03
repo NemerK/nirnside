@@ -169,6 +169,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
             category?: string;
             rank?: number;
             subclassed?: number | boolean;
+            classMastery?: number | boolean;
           }[];
           lines = parsed
             .filter((l) => l && l.name)
@@ -177,6 +178,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
               category: l.category || "Skill",
               rank: intOr(l.rank),
               subclassed: flag(l.subclassed),
+              classMastery: flag(l.classMastery) || (l.name ?? "").toLowerCase() === "class mastery",
               abilities: [],
             }));
         } catch {

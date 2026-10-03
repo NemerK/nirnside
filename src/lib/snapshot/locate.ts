@@ -115,12 +115,32 @@ function collectWindowsUserDocs(usersDir: string): string[] {
   return out;
 }
 
-/** Windows drive Users folders (C:..Z:). No-op on macOS/Linux. */
+/**
+ * Drive letters implied by real user paths. Never walk A–Z: a disconnected
+ * network letter blocks `stat` and freezes the Windows exe at 98%.
+ */
+export function driveLettersFromPaths(paths: Array<string | null | undefined>): string[] {
+  const drives = new Set<string>();
+  for (const raw of paths) {
+    if (!raw) continue;
+    const m = raw.replace(/\//g, "\\").match(/^([a-zA-Z]:)/);
+    if (m) drives.add(`${m[1].toUpperCase()}\\`);
+  }
+  return [...drives];
+}
+
+/** Windows Users folders on the profile / system drive only. No-op elsewhere. */
 function windowsUserRoots(): string[] {
   if (process.platform !== "win32") return [];
+  const drives = driveLettersFromPaths([
+    process.env.SystemDrive ? `${process.env.SystemDrive}\\` : "C:\\",
+    process.env.USERPROFILE,
+    process.env.HOMEDRIVE ? `${process.env.HOMEDRIVE}\\` : null,
+    homedir(),
+  ]);
+  if (drives.length === 0) drives.push("C:\\");
   const out: string[] = [];
-  for (let c = 67; c <= 90; c++) {
-    const drive = String.fromCharCode(c) + ":\\";
+  for (const drive of drives) {
     out.push(...collectWindowsUserDocs(join(drive, "Users")));
   }
   return out;

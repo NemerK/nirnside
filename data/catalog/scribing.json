@@ -16,7 +16,7 @@
     { "id": "scr-f-restore-stam", "name": "Restore Stamina", "slot": "focus", "effect": "The ability restores Stamina." },
 
     { "id": "scr-s-anchorite", "name": "Anchorite's Cruelty", "slot": "signature", "effect": "Adds a damage-over-time component to the ability." },
-    { "id": "scr-s-classmastery", "name": "Class Mastery", "slot": "signature", "effect": "Adds a bonus effect themed to your class." },
+    { "id": "scr-s-classmastery", "name": "Class Flourish", "slot": "signature", "effect": "Adds a bonus effect themed to your class." },
     { "id": "scr-s-ranged", "name": "Ranged", "slot": "signature", "effect": "Increases the ability's range." },
     { "id": "scr-s-multitarget", "name": "Multi-Target", "slot": "signature", "effect": "The ability hits additional nearby enemies." },
     { "id": "scr-s-offbalance", "name": "Off Balance", "slot": "signature", "effect": "Sets enemies Off Balance." },

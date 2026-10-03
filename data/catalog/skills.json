@@ -50,7 +50,14 @@
     { "id": "line-woodworking", "name": "Woodworking", "category": "Craft", "className": null },
     { "id": "line-jewelry-crafting", "name": "Jewelry Crafting", "category": "Craft", "className": null },
     { "id": "line-enchanting", "name": "Enchanting", "category": "Craft", "className": null },
-    { "id": "line-provisioning", "name": "Provisioning", "category": "Craft", "className": null }
+    { "id": "line-provisioning", "name": "Provisioning", "category": "Craft", "className": null },
+    { "id": "line-class-mastery-dragonknight", "name": "Class Mastery", "category": "Class", "className": "Dragonknight" },
+    { "id": "line-class-mastery-sorcerer", "name": "Class Mastery", "category": "Class", "className": "Sorcerer" },
+    { "id": "line-class-mastery-nightblade", "name": "Class Mastery", "category": "Class", "className": "Nightblade" },
+    { "id": "line-class-mastery-templar", "name": "Class Mastery", "category": "Class", "className": "Templar" },
+    { "id": "line-class-mastery-warden", "name": "Class Mastery", "category": "Class", "className": "Warden" },
+    { "id": "line-class-mastery-necromancer", "name": "Class Mastery", "category": "Class", "className": "Necromancer" },
+    { "id": "line-class-mastery-arcanist", "name": "Class Mastery", "category": "Class", "className": "Arcanist" }
   ],
   "skills": [
     { "id": "sk-death-stroke", "name": "Death Stroke", "lineId": "line-assassination", "type": "ultimate", "description": "Assassinate an enemy, dealing heavy damage and increasing their damage taken from you.", "morphs": [
@@ -216,6 +223,48 @@
     { "id": "sk-roar", "name": "Roar", "lineId": "line-werewolf", "type": "active", "description": "Fear and stun nearby enemies, applying Major Breach.", "morphs": [
       { "name": "Ferocious Roar", "isMorph": true, "description": "Grants Empower and reduces block mitigation of enemies." },
       { "name": "Deafening Roar", "isMorph": true, "description": "Applies Major Breach over a longer area and duration." }
-    ]}
+    ]},
+
+    { "id": "sk-cm-dk-inexorable-descent", "name": "Inexorable Descent", "lineId": "line-class-mastery-dragonknight", "type": "passive", "description": "" },
+    { "id": "sk-cm-dk-booming-voice", "name": "Booming Voice", "lineId": "line-class-mastery-dragonknight", "type": "passive", "description": "" },
+    { "id": "sk-cm-dk-wildfire-embers", "name": "Wildfire Embers", "lineId": "line-class-mastery-dragonknight", "type": "passive", "description": "" },
+    { "id": "sk-cm-dk-resolute-defense", "name": "Resolute Defense", "lineId": "line-class-mastery-dragonknight", "type": "passive", "description": "" },
+    { "id": "sk-cm-dk-lead-from-the-front", "name": "Lead from the Front", "lineId": "line-class-mastery-dragonknight", "type": "passive", "description": "" },
+
+    { "id": "sk-cm-nb-nocturnal-inspiration", "name": "Nocturnal Inspiration", "lineId": "line-class-mastery-nightblade", "type": "passive", "description": "" },
+    { "id": "sk-cm-nb-eye-for-exploitation", "name": "An Eye for Exploitation", "lineId": "line-class-mastery-nightblade", "type": "passive", "description": "" },
+    { "id": "sk-cm-nb-above-and-beyond", "name": "Above and Beyond", "lineId": "line-class-mastery-nightblade", "type": "passive", "description": "" },
+    { "id": "sk-cm-nb-cutthroats-focus", "name": "Cutthroat's Focus", "lineId": "line-class-mastery-nightblade", "type": "passive", "description": "" },
+    { "id": "sk-cm-nb-share-the-spoils", "name": "Share the Spoils", "lineId": "line-class-mastery-nightblade", "type": "passive", "description": "" },
+
+    { "id": "sk-cm-sorc-conservation-of-energy", "name": "Conservation of Energy", "lineId": "line-class-mastery-sorcerer", "type": "passive", "description": "" },
+    { "id": "sk-cm-sorc-font-of-power", "name": "Font of Power", "lineId": "line-class-mastery-sorcerer", "type": "passive", "description": "" },
+    { "id": "sk-cm-sorc-static-reverberation", "name": "Static Reverberation", "lineId": "line-class-mastery-sorcerer", "type": "passive", "description": "" },
+    { "id": "sk-cm-sorc-calculated-defense", "name": "Calculated Defense", "lineId": "line-class-mastery-sorcerer", "type": "passive", "description": "" },
+    { "id": "sk-cm-sorc-sphere-of-influence", "name": "Sphere of Influence", "lineId": "line-class-mastery-sorcerer", "type": "passive", "description": "" },
+
+    { "id": "sk-cm-templar-bastion-of-light", "name": "Bastion of Light", "lineId": "line-class-mastery-templar", "type": "passive", "description": "" },
+    { "id": "sk-cm-templar-devout-guardian", "name": "Devout Guardian", "lineId": "line-class-mastery-templar", "type": "passive", "description": "" },
+    { "id": "sk-cm-templar-bright-harbinger", "name": "Bright Harbinger", "lineId": "line-class-mastery-templar", "type": "passive", "description": "" },
+    { "id": "sk-cm-templar-judgments-brand", "name": "Judgment's Brand", "lineId": "line-class-mastery-templar", "type": "passive", "description": "" },
+    { "id": "sk-cm-templar-steadfast-candescence", "name": "Steadfast Candescence", "lineId": "line-class-mastery-templar", "type": "passive", "description": "" },
+
+    { "id": "sk-cm-warden-tundras-maw", "name": "Tundra's Maw", "lineId": "line-class-mastery-warden", "type": "passive", "description": "" },
+    { "id": "sk-cm-warden-wild-adaptation", "name": "Wild Adaptation", "lineId": "line-class-mastery-warden", "type": "passive", "description": "" },
+    { "id": "sk-cm-warden-glacial-obstinance", "name": "Glacial Obstinance", "lineId": "line-class-mastery-warden", "type": "passive", "description": "" },
+    { "id": "sk-cm-warden-green-keepers-hide", "name": "Green-Keeper's Hide", "lineId": "line-class-mastery-warden", "type": "passive", "description": "" },
+    { "id": "sk-cm-warden-bountiful-harvest", "name": "Bountiful Harvest", "lineId": "line-class-mastery-warden", "type": "passive", "description": "" },
+
+    { "id": "sk-cm-necro-nothing-wasted", "name": "Nothing Wasted", "lineId": "line-class-mastery-necromancer", "type": "passive", "description": "" },
+    { "id": "sk-cm-necro-malevolent-promise", "name": "Malevolent Promise", "lineId": "line-class-mastery-necromancer", "type": "passive", "description": "" },
+    { "id": "sk-cm-necro-cycle-unending", "name": "Cycle Unending", "lineId": "line-class-mastery-necromancer", "type": "passive", "description": "" },
+    { "id": "sk-cm-necro-pound-of-flesh", "name": "Pound of Flesh", "lineId": "line-class-mastery-necromancer", "type": "passive", "description": "" },
+    { "id": "sk-cm-necro-veils-forfeit", "name": "Veil's Forfeit", "lineId": "line-class-mastery-necromancer", "type": "passive", "description": "" },
+
+    { "id": "sk-cm-arc-abyssal-emergence", "name": "Abyssal Emergence", "lineId": "line-class-mastery-arcanist", "type": "passive", "description": "" },
+    { "id": "sk-cm-arc-fate-realigned", "name": "Fate Realigned", "lineId": "line-class-mastery-arcanist", "type": "passive", "description": "" },
+    { "id": "sk-cm-arc-unbound-potential", "name": "Unbound Potential", "lineId": "line-class-mastery-arcanist", "type": "passive", "description": "" },
+    { "id": "sk-cm-arc-erudites-rigor", "name": "Erudite's Rigor", "lineId": "line-class-mastery-arcanist", "type": "passive", "description": "" },
+    { "id": "sk-cm-arc-ink-scribes-verve", "name": "Ink-Scribe's Verve", "lineId": "line-class-mastery-arcanist", "type": "passive", "description": "" }
   ]
 }

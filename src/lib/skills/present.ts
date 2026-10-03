@@ -9,6 +9,7 @@ import {
   xpProgress,
 } from "./ability";
 import { resolveSkillIcon, skillIconByName } from "../icons/skill-icons";
+import { isClassMasteryLineName } from "./class-mastery";
 
 export type LoreHit = {
   icon: string | null;
@@ -54,6 +55,7 @@ export type SkillLineView = {
   category: string;
   rank: number;
   subclassed: boolean;
+  classMastery: boolean;
   href: string | null;
   abilities: AbilityView[];
 };
@@ -179,6 +181,7 @@ export function presentSkillBook(
       category: cat,
       rank: line.rank,
       subclassed: line.subclassed,
+      classMastery: line.classMastery === true || isClassMasteryLineName(line.name),
       href: hrefFor(line.name),
       abilities: line.abilities.map((a) => presentAbility(a, lore)),
     });

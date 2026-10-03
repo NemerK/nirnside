@@ -90,7 +90,19 @@ export function setHref(opts: { name?: string | null; setId?: number | null }): 
 export const getSkills = (f?: Filters) => query<CatalogSkill>("skill", f);
 export const getSkillLines = (f?: Filters) => query<CatalogSkillLine>("skillline", f);
 export const getSkillLine = (id: string) => one<CatalogSkillLine>("skillline", id);
-export const getSkillLineByName = (name: string) => byName<CatalogSkillLine>("skillline", name);
+export function getSkillLineByName(name: string, className?: string | null): CatalogRow<CatalogSkillLine> | null {
+  if (className) {
+    const rows = getDb()
+      .prepare(
+        "SELECT json, source FROM catalog WHERE domain = ? AND name = ? COLLATE NOCASE ORDER BY name ASC",
+      )
+      .all("skillline", name) as { json: string; source: CatalogSource }[];
+    const parsed = rows.map((r) => ({ entry: JSON.parse(r.json) as CatalogSkillLine, source: r.source }));
+    const match = parsed.find((r) => (r.entry.className ?? "").toLowerCase() === className.toLowerCase());
+    if (match) return match;
+  }
+  return byName<CatalogSkillLine>("skillline", name);
+}
 export const skillLineCategories = () => categories("skillline");
 export const getSkillsForLine = (lineId: string) => query<CatalogSkill>("skill", { category: lineId });
 export const getSkillByName = (name: string) => byName<CatalogSkill>("skill", name);

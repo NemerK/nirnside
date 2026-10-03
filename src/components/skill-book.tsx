@@ -9,6 +9,7 @@ import { SourceBadge } from "@/components/source-badge";
 import { EsoText } from "@/components/eso-text";
 import type { AbilitySlotView, AbilityView, SkillCategoryView, SkillLineView } from "@/lib/skills/present";
 import { romanRank } from "@/lib/skills/ability";
+import { CLASS_MASTERY_POINTS } from "@/lib/skills/class-mastery";
 import type { CatalogSource } from "@/lib/catalog/schema";
 
 function RankPips({ rank, max = 4 }: { rank: number | null; max?: number }) {
@@ -39,11 +40,13 @@ function AbilityDetail({
   lastSeen,
   slot,
   onPick,
+  classMastery,
 }: {
   ability: AbilityView;
   lastSeen: number | null;
   slot: number | null;
   onPick: (slot: number) => void;
+  classMastery?: boolean;
 }) {
   const shown = slotToShow(ability, slot);
   const name = shown?.name ?? ability.name;
@@ -86,7 +89,11 @@ function AbilityDetail({
             ) : (
               <RankPips rank={rank} />
             )}
-            {!purchased && !ability.crafted && <span className="text-xs text-fg-subtle">No skill point spent</span>}
+            {!purchased && !ability.crafted && (
+              <span className="text-xs text-fg-subtle">
+                {classMastery ? "No Class Mastery Point spent" : "No skill point spent"}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -255,7 +262,9 @@ export function SkillBook({
                   </button>
                   {active && l.abilities.length > 0 && (
                     <p className="px-2.5 pb-1 text-[11px] text-fg-subtle">
-                      {known}/{l.abilities.length} purchased
+                      {l.classMastery
+                        ? `${known}/${CLASS_MASTERY_POINTS} Class Mastery Points · ${known}/${l.abilities.length} purchased`
+                        : `${known}/${l.abilities.length} purchased`}
                     </p>
                   )}
                 </li>
@@ -340,8 +349,13 @@ export function SkillBook({
                     <span className="font-medium text-fg">{line.name}</span>
                   )}
                   {line.subclassed && <Badge tone="accent">Subclassed</Badge>}
+                  {line.classMastery && <Badge tone="accent">Class Mastery</Badge>}
                 </div>
-                <span className="text-xs text-fg-subtle">Line rank {line.rank}</span>
+                <span className="text-xs text-fg-subtle">
+                  {line.classMastery
+                    ? `${line.abilities.filter((a) => a.purchased).length}/${CLASS_MASTERY_POINTS} Class Mastery Points spent`
+                    : `Line rank ${line.rank}`}
+                </span>
               </div>
             )}
 
@@ -351,6 +365,7 @@ export function SkillBook({
                 lastSeen={lastSeen}
                 slot={morphSlot}
                 onPick={setMorphSlot}
+                classMastery={line.classMastery}
               />
             )}
           </div>

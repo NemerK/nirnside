@@ -3,9 +3,14 @@ package main
 import (
 	"archive/zip"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestSkipExtract(t *testing.T) {
@@ -164,6 +169,32 @@ func TestNeedBuild(t *testing.T) {
 	}
 	if !needBuild(dir) {
 		t.Fatal("need-build flag should force a rebuild")
+	}
+}
+
+func TestProbeAppHealth(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/health" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"ok":true,"app":"nirnside"}`))
+			return
+		}
+		http.Error(w, "slow", http.StatusGatewayTimeout)
+	}))
+	defer srv.Close()
+	if !probeApp(srv.URL) {
+		t.Fatal("health probe should treat /api/health as ready")
+	}
+}
+
+func TestWaitReadyFailsWhenProcessExits(t *testing.T) {
+	cmd := exec.Command("false")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	err := waitReady("http://127.0.0.1:1/", cmd, 5*time.Second, nil)
+	if err == nil || !strings.Contains(err.Error(), "exited") {
+		t.Fatalf("expected process-exit error, got %v", err)
 	}
 }
 

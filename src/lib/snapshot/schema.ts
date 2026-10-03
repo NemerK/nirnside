@@ -153,6 +153,11 @@ export const SkillLine = z.object({
   rank: z.number().int().default(0),
   /** True if this line comes from subclassing (borrowed from another class). */
   subclassed: z.boolean().default(false),
+  /**
+   * U50 Class Mastery skill line (five passives, two Class Mastery Points).
+   * Distinct from subclassing "mastered" class lines.
+   */
+  classMastery: z.boolean().default(false),
   abilities: lenientArray(SkillMorph).default([]),
 });
 export type SkillLine = z.infer<typeof SkillLine>;
@@ -267,7 +272,10 @@ export const Character = z.object({
     .object({ isVampire: z.boolean().default(false), stage: z.number().int().default(0) })
     .default({ isVampire: false, stage: 0 }),
   werewolf: z.object({ isWerewolf: z.boolean().default(false) }).default({ isWerewolf: false }),
-  /** True if this char uses Class Mastery (pure class, no subclassing). */
+  /**
+   * True when this character's U50 Class Mastery skill line is unlocked
+   * (all three native class lines at 50, not subclassing).
+   */
   classMastery: z.boolean().default(false),
   /**
    * Class skill lines the account has mastered (leveled to 50), which unlocks

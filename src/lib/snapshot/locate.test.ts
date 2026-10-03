@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { isBundledSamplePath, isIncomingPath } from "./locate";
+import { driveLettersFromPaths, isBundledSamplePath, isIncomingPath } from "./locate";
 
 describe("bundled sample path", () => {
   it("recognizes the tour fixture on Windows and POSIX paths", () => {
@@ -12,6 +12,17 @@ describe("bundled sample path", () => {
       ),
       false,
     );
+  });
+});
+
+describe("windows drive letters", () => {
+  it("only keeps the drives from the paths it is given, never A–Z by itself", () => {
+    assert.deepEqual(
+      driveLettersFromPaths(["C:\\Users\\Nemer\\OneDrive\\Documents", "C:\\Users\\Nemer", "/home/ubuntu", null]),
+      ["C:\\"],
+    );
+    assert.deepEqual(driveLettersFromPaths(["D:\\Users\\Nemer", undefined, ""]), ["D:\\"]);
+    assert.deepEqual(driveLettersFromPaths([undefined, ""]), []);
   });
 });
 

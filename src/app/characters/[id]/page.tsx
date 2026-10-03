@@ -28,9 +28,9 @@ import { CharacterGoals } from "@/components/goals-board";
 import { toGoalSubject } from "@/lib/goals/progress";
 import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 
-function skillLineHref(name: string): string | null {
+function skillLineHref(name: string, className?: string | null): string | null {
   try {
-    const row = getSkillLineByName(name);
+    const row = getSkillLineByName(name, className);
     return row ? `/encyclopedia/skills/${encodeURIComponent(row.entry.id)}` : null;
   } catch {
     return null;
@@ -85,14 +85,14 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   } catch {
     lore = new Map();
   }
-  const skillBook = presentSkillBook(c.skillLines, lore, skillLineHref);
+  const skillBook = presentSkillBook(c.skillLines, lore, (name) => skillLineHref(name, c.class));
   const goals = safeList(() => listGoals());
   const lines = safeList(() => skillLineChoices());
   const hrefForLine: Record<string, string> = {};
   for (const g of goals) {
     const key = g.lineName.toLowerCase();
     if (hrefForLine[key]) continue;
-    const dest = skillLineHref(g.lineName);
+    const dest = skillLineHref(g.lineName, c.class);
     if (dest) hrefForLine[key] = dest;
   }
 

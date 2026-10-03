@@ -554,6 +554,21 @@ NirnsideData =
                                 },
                             },
                             {
+                                ["name"] = "Class Mastery",
+                                ["category"] = "Class",
+                                ["rank"] = 1,
+                                ["subclassed"] = false,
+                                ["classMastery"] = true,
+                                ["abilities"] =
+                                {
+                                    { ["name"] = "Inexorable Descent", ["rank"] = 1, ["purchased"] = true, ["passive"] = true },
+                                    { ["name"] = "Booming Voice", ["rank"] = 1, ["purchased"] = true, ["passive"] = true },
+                                    { ["name"] = "Wildfire Embers", ["rank"] = 0, ["purchased"] = false, ["passive"] = true },
+                                    { ["name"] = "Resolute Defense", ["rank"] = 0, ["purchased"] = false, ["passive"] = true },
+                                    { ["name"] = "Lead from the Front", ["rank"] = 0, ["purchased"] = false, ["passive"] = true },
+                                },
+                            },
+                            {
                                 ["name"] = "Werewolf",
                                 ["category"] = "World",
                                 ["rank"] = 10,

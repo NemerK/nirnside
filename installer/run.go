@@ -152,19 +152,71 @@ func installAddonsBestEffort(log *os.File, root string) {
 }
 
 func waitHTTP(url string, timeout time.Duration) error {
+	return waitReady(url, nil, timeout, nil)
+}
+
+func waitReady(url string, cmd *exec.Cmd, timeout time.Duration, onTick func(waited time.Duration)) error {
 	deadline := time.Now().Add(timeout)
-	client := &http.Client{Timeout: 2 * time.Second}
+	started := time.Now()
+	exited := make(chan error, 1)
+	if cmd != nil && cmd.Process != nil {
+		go func() { exited <- cmd.Wait() }()
+	}
 	for time.Now().Before(deadline) {
-		res, err := client.Get(url)
-		if err == nil {
-			res.Body.Close()
-			if res.StatusCode < 500 {
-				return nil
+		select {
+		case err := <-exited:
+			if err != nil {
+				return fmt.Errorf("Nirnside exited before it was ready: %w", err)
 			}
+			return fmt.Errorf("Nirnside exited before it was ready")
+		default:
+		}
+		if probeApp(url) {
+			return nil
+		}
+		if onTick != nil {
+			onTick(time.Since(started))
 		}
 		time.Sleep(400 * time.Millisecond)
 	}
 	return fmt.Errorf("Nirnside did not start at %s", url)
+}
+
+func probeURLs(base string) []string {
+	base = strings.TrimRight(base, "/")
+	return []string{base + "/api/health", base + "/"}
+}
+
+func probeApp(base string) bool {
+	return probeLocal(base, false)
+}
+
+func probeLocal(base string, requireName bool) bool {
+	client := &http.Client{Timeout: 8 * time.Second}
+	for _, u := range probeURLs(base) {
+		res, err := client.Get(u)
+		if err != nil {
+			continue
+		}
+		buf := make([]byte, 2048)
+		n, _ := res.Body.Read(buf)
+		res.Body.Close()
+		if res.StatusCode >= 500 {
+			continue
+		}
+		body := strings.ToLower(string(buf[:n]))
+		if strings.Contains(u, "/api/health") {
+			if strings.Contains(body, "nirnside") || strings.Contains(body, `"ok"`) {
+				return true
+			}
+			continue
+		}
+		if requireName {
+			return strings.Contains(body, "nirnside")
+		}
+		return true
+	}
+	return false
 }
 
 func appURL() string {
@@ -184,11 +236,7 @@ func readLocalApp() (int, string, error) {
 }
 
 func looksLikeNirnside() bool {
-	code, body, err := readLocalApp()
-	if err != nil || code >= 500 {
-		return false
-	}
-	return strings.Contains(strings.ToLower(body), "nirnside")
+	return probeLocal(appURL(), true)
 }
 
 func appAlreadyUp() bool {

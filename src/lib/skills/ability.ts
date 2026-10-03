@@ -108,9 +108,12 @@ export function knownAbilityNames(ability: SkillMorph): string[] {
 export function abilityIsKnown(ability: SkillMorph): boolean {
   // Scribing grimoires have no morph ranks. Unlocked = known, even at rank 0.
   if (ability.crafted) return ability.purchased === true;
+  // Class Mastery (and other single-rank passives) spend a point without a
+  // morph rank. The game's purchased flag is the truth; do not require I+.
+  if (ability.passive) return ability.purchased === true;
   const slots = ability.morphs ?? [];
   if (slots.length > 0) return slots.some(morphSlotPurchased);
-  // Passives and older snapshots: a bought skill always has rank I or higher.
+  // Older snapshots of actives: a bought skill always has rank I or higher.
   return ability.purchased === true && (ability.rank ?? 0) >= 1;
 }
 
