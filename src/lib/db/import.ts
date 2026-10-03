@@ -2,6 +2,8 @@ import { getDb, getMeta } from "./index";
 import type { AccountSnapshot } from "../snapshot/schema";
 import { accountAlliancePoints, accountGold, accountTelVar } from "../snapshot/roster";
 import { canonicalizeCurrencies } from "../currencies";
+import { collectedPieceKeys } from "../stickerbook/seen";
+import { seedStickerbookSeenIfNeeded } from "../stickerbook/seen-store";
 import {
   collectCompletedAchievementIdsFromSnapshot,
   unionCompletedAchievementIds,
@@ -188,6 +190,8 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         json: JSON.stringify({ ...a, completed }),
       });
     }
+
+    seedStickerbookSeenIfNeeded(snap.displayName, collectedPieceKeys(snap.stickerbook));
   });
 
   tx();
