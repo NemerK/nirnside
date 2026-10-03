@@ -22,7 +22,7 @@ export default function DailiesPage() {
     <PageFrame>
       <PageHeader
         title="Dailies"
-        subtitle="Random normals and veterans, crafting writs, and Undaunted pledges — one board, every character."
+        subtitle="Randoms, writs, and pledges. Check = done today. Clears at the 10:00 UTC ESO reset."
         action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
       />
 

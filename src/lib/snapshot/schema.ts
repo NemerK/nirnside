@@ -196,9 +196,9 @@ export const Companion = z.object({
 
 /**
  * Daily board cell. `available` / `accepted` / `done` come from the game
- * (LFG reward eligibility or the journal). `cooldown` is the random-dungeon
- * reward timer. After the 10:00 UTC reset we never reuse yesterday's leftovers
- * — the hub shows `unknown` until the next logout scan.
+ * (LFG reward eligibility or the journal). `cooldown` means the random-dungeon
+ * daily reward is already claimed — the hub shows a check, not a timer.
+ * After the 10:00 UTC reset, yesterday's checks clear.
  */
 export const DailyStatus = z.enum(["available", "accepted", "ready", "done", "cooldown", "unknown"]);
 export type DailyStatus = z.infer<typeof DailyStatus>;

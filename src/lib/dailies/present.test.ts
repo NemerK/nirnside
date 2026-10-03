@@ -64,15 +64,40 @@ describe("dailies presentation", () => {
     assert.equal(row.stale, false);
   });
 
-  it("does not fake available after reset — unknown with timestamp", () => {
+  it("clears yesterday's checks at the 10:00 UTC reset", () => {
     const after = Date.UTC(2026, 9, 4, 10, 0, 1) / 1000;
     assert.equal(isDailyScanStale(fresh, after), true);
     const row = presentCharacterDailies(char(fresh), after);
     assert.equal(row.stale, true);
+    assert.equal(row.scanned, false);
+    assert.equal(row.randomNormal.status, "available");
+    assert.equal(row.randomNormal.label, "");
+    assert.equal(row.writs.blacksmithing.status, "available");
+    assert.equal(row.pledges.maj.status, "available");
+    assert.match(row.randomNormal.title, /10:00 UTC reset/);
+  });
+
+  it("shows a random-dungeon cooldown as a check, not a timer", () => {
+    const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
+    const row = presentCharacterDailies(
+      char({
+        ...fresh,
+        randomNormal: { status: "cooldown", remainingSeconds: 7 * 3600 + 53 * 60 },
+      }),
+      now,
+    );
+    assert.equal(row.randomNormal.status, "done");
+    assert.equal(row.randomNormal.label, "✓");
+    assert.equal(row.randomNormal.remainingSeconds, undefined);
+    assert.match(row.randomNormal.title, /done/);
+  });
+
+  it("keeps a missing dailies scan as unknown, not a cleared empty board", () => {
+    const after = Date.UTC(2026, 9, 4, 10, 0, 1) / 1000;
+    const row = presentCharacterDailies(char(null, 1), after);
     assert.equal(row.randomNormal.status, "unknown");
     assert.equal(row.writs.blacksmithing.status, "unknown");
-    assert.equal(row.pledges.maj.status, "unknown");
-    assert.match(row.randomNormal.title, /not scanned since reset/);
+    assert.match(row.randomNormal.title, /not scanned/);
   });
 
   it("marks a never-logged character unknown instead of available", () => {
