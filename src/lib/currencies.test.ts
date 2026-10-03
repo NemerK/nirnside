@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { canonicalizeCurrencies, dashboardWallet, walletEntries } from "./currencies";
@@ -120,5 +122,40 @@ describe("walletEntries", () => {
     assert.equal("crown" in folded, false);
     assert.equal("seal" in folded, false);
     assert.equal("archivalFortune" in folded, false);
+  });
+
+  it("drops Event Tickets leftover from pre-U49 snapshots", () => {
+    const folded = canonicalizeCurrencies({
+      eventTickets: 12,
+      eventTicket: 12,
+      writVouchers: 6640,
+      tradeBars: 11156,
+    });
+    assert.equal("eventTickets" in folded, false);
+    assert.equal("eventTicket" in folded, false);
+    assert.equal(folded.writVouchers, 6640);
+    assert.equal(folded.tradeBars, 11156);
+
+    const rows = dashboardWallet({
+      gold: 1,
+      telVar: 2,
+      currencies: { eventTickets: 12, eventTicket: 3, writVouchers: 6640 },
+    });
+    assert.equal(
+      rows.some((r) => r.key === "eventTickets" || r.key === "eventTicket" || /event ticket/i.test(r.label)),
+      false,
+    );
+    assert.ok(rows.some((r) => r.key === "writVouchers" && r.amount === 6640));
+  });
+});
+
+describe("snapshot addon currency dump", () => {
+  const lua = readFileSync(resolve("addon/NirnsideSnapshot/NirnsideSnapshot.lua"), "utf8");
+
+  it("reads the player-stored location so Writ Vouchers are not skipped", () => {
+    assert.match(lua, /GetCurrencyPlayerStoredLocation/);
+    assert.match(lua, /CURRENCY_LOCATION_CHARACTER/);
+    assert.match(lua, /writVouchers/);
+    assert.doesNotMatch(lua, /function\(\) return CURT_EVENT_TICKETS end/);
   });
 });

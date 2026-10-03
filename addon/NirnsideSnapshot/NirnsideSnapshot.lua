@@ -1476,13 +1476,13 @@ local function currencyKeyFromName(name)
     ["undaunted key"] = "undauntedKeys",
     ["writ vouchers"] = "writVouchers",
     ["writ voucher"] = "writVouchers",
-    ["event tickets"] = "eventTickets",
-    ["event ticket"] = "eventTickets",
   }
   if known[lower] then return known[lower] end
   -- Skip character-bound / gold — those live on the character and gold table.
+  -- Event Tickets left the live game in Update 49 (converted to Trade Bars).
   if lower == "gold" or lower == "money" or lower == "tel var stones" or lower == "tel var"
-    or lower == "alliance points" or lower == "alliance point" then
+    or lower == "alliance points" or lower == "alliance point"
+    or lower == "event tickets" or lower == "event ticket" then
     return nil
   end
   local parts = {}
@@ -1500,7 +1500,9 @@ local function currencyKeyFromName(name)
 end
 
 -- AP (and gold / Tel Var) are character-bound. Never store them on the account
--- wallet as "whoever logged out last".
+-- wallet as "whoever logged out last". Writ Vouchers use the character
+-- currency *location* in the API but the balance is account-wide — read them.
+-- Event Tickets were removed from live ESO in Update 49.
 local CHARACTER_ONLY_CURRENCY_KEYS = {
   alliancePoints = true,
   alliancePoint = true,
@@ -1508,19 +1510,50 @@ local CHARACTER_ONLY_CURRENCY_KEYS = {
   telVar = true,
 }
 
-local function accountCurrencyAmount(curt)
-  if not curt then return 0 end
-  if CURRENCY_LOCATION_ACCOUNT and DoesCurrencyLocationHaveCurrencyType
-    and DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_ACCOUNT, curt) then
-    return GetCurrencyAmount(curt, CURRENCY_LOCATION_ACCOUNT) or 0
-  end
-  -- Character-only types are gathered on the toon, not here.
-  if CURRENCY_LOCATION_CHARACTER and DoesCurrencyLocationHaveCurrencyType
-    and DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_CHARACTER, curt)
-    and not DoesCurrencyLocationHaveCurrencyType(CURRENCY_LOCATION_ACCOUNT, curt) then
+local REMOVED_CURRENCY_KEYS = {
+  eventTickets = true,
+  eventTicket = true,
+}
+
+local function skipAccountWalletType(curt)
+  return curt == CURT_MONEY or curt == CURT_TELVAR_STONES or curt == CURT_ALLIANCE_POINTS
+    or (CURT_EVENT_TICKETS and curt == CURT_EVENT_TICKETS)
+end
+
+local function currencyAmountAt(curt, loc)
+  if not curt or not loc then return nil end
+  if DoesCurrencyLocationHaveCurrencyType and not DoesCurrencyLocationHaveCurrencyType(loc, curt) then
     return nil
   end
-  return GetCurrencyAmount(curt, CURRENCY_LOCATION_ACCOUNT) or 0
+  local n = GetCurrencyAmount(curt, loc)
+  if type(n) == "number" then return n end
+  return nil
+end
+
+-- Account-wide wallet amount. Writ Vouchers are stored at
+-- CURRENCY_LOCATION_CHARACTER (GetCurrencyAmount(CURT_WRIT_VOUCHERS, CHARACTER))
+-- even though every toon shares one balance. Skipping "character location"
+-- types used to leave writVouchers missing, so the hub always-showed 0.
+local function accountCurrencyAmount(curt)
+  if not curt or skipAccountWalletType(curt) then return nil end
+
+  local best = nil
+  local function consider(n)
+    if type(n) ~= "number" then return end
+    if best == nil or n > best then best = n end
+  end
+
+  if GetCurrencyPlayerStoredLocation then
+    consider(currencyAmountAt(curt, GetCurrencyPlayerStoredLocation(curt)))
+  end
+  consider(currencyAmountAt(curt, CURRENCY_LOCATION_ACCOUNT))
+  consider(currencyAmountAt(curt, CURRENCY_LOCATION_CHARACTER))
+  if best ~= nil then return best end
+  if GetCarriedCurrencyAmount then
+    local n = GetCarriedCurrencyAmount(curt)
+    if type(n) == "number" then return n end
+  end
+  return 0
 end
 
 local function gatherCurrencies()
@@ -1530,7 +1563,7 @@ local function gatherCurrencies()
   local seenTypes = {}
 
   local function put(key, amount)
-    if not key or CHARACTER_ONLY_CURRENCY_KEYS[key] then return end
+    if not key or CHARACTER_ONLY_CURRENCY_KEYS[key] or REMOVED_CURRENCY_KEYS[key] then return end
     amount = type(amount) == "number" and amount or 0
     -- Upgrade a named-constant 0 when the live iterator finds the real amount.
     if out[key] == nil or (out[key] == 0 and amount > 0) then
@@ -1542,7 +1575,6 @@ local function gatherCurrencies()
   local named = {
     { "transmuteCrystals",  function() return CURT_CHAOTIC_CREATIA end },
     { "writVouchers",       function() return CURT_WRIT_VOUCHERS end },
-    { "eventTickets",       function() return CURT_EVENT_TICKETS end },
     { "tradeBars",          function() return CURT_TRADE_BARS end },
     { "undauntedKeys",      function() return CURT_UNDAUNTED_KEYS end },
     { "crowns",             function() return CURT_CROWNS end },
@@ -1570,7 +1602,7 @@ local function gatherCurrencies()
     local beginT = CURRENCY_TYPE_ITERATION_BEGIN or 1
     local endT = CURRENCY_TYPE_ITERATION_END or 40
     for t = beginT, endT do
-      if t ~= (CURT_NONE or 0) and t ~= CURT_MONEY and t ~= CURT_TELVAR_STONES and t ~= CURT_ALLIANCE_POINTS then
+      if t ~= (CURT_NONE or 0) and not skipAccountWalletType(t) then
         if not seenTypes[t] then
           local raw = safe(function()
             return GetCurrencyName and (GetCurrencyName(t, true) or GetCurrencyName(t, false)) or nil
