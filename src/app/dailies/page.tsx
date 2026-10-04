@@ -26,7 +26,7 @@ export default function DailiesPage() {
     <PageFrame>
       <PageHeader
         title="Dailies"
-        subtitle="Randoms, writs, and pledges. Pledge marks are HM or nHM when we know the mode."
+        subtitle="Randoms, writs, and pledges. Pledge marks are N, Vet, or HM when we know the mode."
         action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
       />
 

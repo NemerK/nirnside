@@ -66,17 +66,46 @@ describe("dailies presentation", () => {
     assert.equal(row.stale, false);
   });
 
-  it("marks a finished pledge as not hard mode when the snapshot says so", () => {
+  it("marks a finished pledge as normal, veteran, or hard mode", () => {
     const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
-    const row = presentCharacterDailies(
+    const normal = presentCharacterDailies(
       char({
         ...fresh,
-        pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done", hardMode: false }],
+        pledges: [
+          {
+            giver: "maj",
+            giverName: "Maj al-Ragath",
+            dungeon: "Fungal Grotto I",
+            status: "done",
+            hardMode: false,
+            difficulty: "normal",
+          },
+        ],
       }),
       now,
     );
-    assert.equal(row.pledges.maj.hardMode, false);
-    assert.match(row.pledges.maj.title, /not hard mode/);
+    assert.equal(normal.pledges.maj.hardMode, false);
+    assert.equal(normal.pledges.maj.difficulty, "normal");
+    assert.match(normal.pledges.maj.title, /normal/);
+
+    const vet = presentCharacterDailies(
+      char({
+        ...fresh,
+        pledges: [
+          {
+            giver: "maj",
+            giverName: "Maj al-Ragath",
+            dungeon: "Fungal Grotto I",
+            status: "done",
+            hardMode: false,
+            difficulty: "veteran",
+          },
+        ],
+      }),
+      now,
+    );
+    assert.equal(vet.pledges.maj.difficulty, "veteran");
+    assert.match(vet.pledges.maj.title, /veteran/);
   });
 
   it("does not fake available after reset — unknown with timestamp", () => {

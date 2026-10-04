@@ -101,9 +101,8 @@ function writCell(writs: DailyWrit[] | undefined, craft: WritCraft): DailyCell {
 
 function pledgeModeNote(row: DailyPledge): string {
   if (row.hardMode === true) return " — hard mode";
-  if (row.hardMode === false) return " — not hard mode";
-  if (row.difficulty === "normal") return " — not hard mode";
-  if (row.difficulty === "veteran") return " — veteran (hard mode not scanned)";
+  if (row.difficulty === "veteran") return " — veteran";
+  if (row.difficulty === "normal" || row.hardMode === false) return " — normal";
   return "";
 }
 

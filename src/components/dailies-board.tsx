@@ -27,11 +27,13 @@ function rowOpen(row: PresentedCharacterDailies): boolean {
   return cells.some((c) => c.status === "available" || c.status === "accepted" || c.status === "ready");
 }
 
-function ModeMark({ label, title, tone }: { label: string; title: string; tone: "hm" | "nhm" }) {
+function ModeMark({ label, title, tone }: { label: string; title: string; tone: "hm" | "vet" | "norm" }) {
   const cls =
     tone === "hm"
       ? "border-amber-400/50 bg-amber-400/15 text-amber-600 dark:text-amber-400"
-      : "border-sky-400/50 bg-sky-400/15 text-sky-700 dark:text-sky-300";
+      : tone === "vet"
+        ? "border-rose-400/50 bg-rose-400/15 text-rose-600 dark:text-rose-300"
+        : "border-sky-400/50 bg-sky-400/15 text-sky-700 dark:text-sky-300";
   return (
     <span
       title={title}
@@ -46,8 +48,11 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
   if (cell.status === "done" && cell.hardMode === true) {
     return <ModeMark label="HM" title={cell.title} tone="hm" />;
   }
-  if (cell.status === "done" && cell.hardMode === false) {
-    return <ModeMark label="nHM" title={cell.title} tone="nhm" />;
+  if (cell.status === "done" && cell.difficulty === "veteran") {
+    return <ModeMark label="Vet" title={cell.title} tone="vet" />;
+  }
+  if (cell.status === "done" && (cell.difficulty === "normal" || cell.hardMode === false)) {
+    return <ModeMark label="N" title={cell.title} tone="norm" />;
   }
   if (cell.status === "done" || cell.status === "cooldown") {
     return (
@@ -237,9 +242,11 @@ export function DailiesBoard({
         )}
 
         <p className="mt-3 text-xs text-fg-subtle">
-          Check = done today. Pledge <span className="font-semibold text-fg-muted">HM</span> /{" "}
-          <span className="font-semibold text-fg-muted">nHM</span> = hard mode or not. ACCEPT only
-          when the journal dungeon is today&apos;s daily — a leftover from another day stays unmarked.
+          Check = done today. Pledge <span className="font-semibold text-fg-muted">N</span> /{" "}
+          <span className="font-semibold text-fg-muted">Vet</span> /{" "}
+          <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode.
+          ACCEPT only when the journal dungeon is today&apos;s daily — a leftover from another day
+          stays unmarked.
           Today&apos;s three names are the community rotation, not an in-game scan. A dash on randoms
           means the daily reward is still available. A question mark on a writ or pledge means it is
           not in the journal (or is yesterday&apos;s leftover) and we did not see the turn-in.
