@@ -6,6 +6,7 @@ import { clearLoadingRetry } from "./loading-recovery";
 import {
   Backpack,
   BookMarked,
+  BookOpen,
   CalendarDays,
   FolderCog,
   Home,
@@ -14,6 +15,7 @@ import {
   Menu,
   ScrollText,
   Search,
+  Shirt,
   Trophy,
   Users,
   X,
@@ -33,6 +35,8 @@ const NAV = [
   { href: "/characters", label: "Characters", icon: Users },
   { href: "/inventory", label: "Inventory", icon: Backpack },
   { href: "/stickerbook", label: "Stickerbook", icon: BookMarked },
+  { href: "/knowledge", label: "Knowledge", icon: BookOpen },
+  { href: "/styles", label: "Styles", icon: Shirt },
   { href: "/dailies", label: "Dailies", icon: CalendarDays },
   { href: "/houses", label: "Houses", icon: Landmark },
   { href: "/achievements", label: "Achievements", icon: Trophy },
@@ -94,7 +98,7 @@ function SearchBox({ onSubmit }: { onSubmit?: () => void }) {
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-            placeholder="Search characters, roles, sets, skills…"
+            placeholder="Search characters, motifs, styles, sets…"
         className="w-full rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
       />
     </form>

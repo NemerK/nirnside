@@ -24,7 +24,9 @@ function char(partial: Partial<Character> & { id: string; name: string }): Chara
     equipped: [],
     companions: [],
     scribingScripts: [],
-    research: [],
+    research: { crafts: [] },
+    motifs: [],
+    recipeLists: [],
     lastSeen: 1,
     gold: 0,
     telVar: 0,
@@ -127,6 +129,10 @@ describe("roster gold and archive", () => {
     assert.equal(sings?.dailies?.pledges.find((p) => p.giver === "maj")?.dungeon, "Fungal Grotto I");
     const baker = snap.characters.find((c) => c.name === "Bakes-Sweet-Rolls");
     assert.equal(baker?.dailies ?? null, null);
+    assert.ok((sings?.research.crafts.length ?? 0) > 0);
+    assert.ok((sings?.motifs.length ?? 0) > 0);
+    assert.ok((sings?.recipeLists.length ?? 0) > 0);
+    assert.ok(snap.outfitStyles.some((c) => c.groups.some((g) => g.styles.length > 0)));
   });
 
   it("sums live Tel Var instead of last-logout Tel Var", () => {

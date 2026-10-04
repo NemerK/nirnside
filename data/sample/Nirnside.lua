@@ -64,6 +64,35 @@ NirnsideData =
                     { ["collectibleId"] = 2312, ["houseId"] = 55, ["name"] = "The Fair Winds", ["location"] = "High Isle", ["primary"] = false },
                     { ["collectibleId"] = 2550, ["houseId"] = 68, ["name"] = "Frostvault Chasm", ["location"] = "Eastmarch", ["primary"] = false },
                 },
+                ["outfitStyles"] =
+                {
+                    {
+                        ["name"] = "Hats",
+                        ["groups"] =
+                        {
+                            { ["name"] = "High Elf", ["styles"] = { { ["collectibleId"] = 5011, ["name"] = "High Elf Hat", ["unlocked"] = true, ["itemStyleId"] = 7, ["icon"] = "/esoui/art/icons/gear_altmer_head_d.dds" }, { ["collectibleId"] = 5012, ["name"] = "High Elf Hood", ["unlocked"] = true, ["itemStyleId"] = 7 } } },
+                            { ["name"] = "Dark Elf", ["styles"] = { { ["collectibleId"] = 5021, ["name"] = "Dark Elf Hat", ["unlocked"] = true, ["itemStyleId"] = 4 }, { ["collectibleId"] = 5022, ["name"] = "Dark Elf Hood", ["unlocked"] = false, ["itemStyleId"] = 4 } } },
+                            { ["name"] = "Dwemer", ["styles"] = { { ["collectibleId"] = 5031, ["name"] = "Dwemer Hat", ["unlocked"] = false, ["itemStyleId"] = 14 } } },
+                        },
+                    },
+                    {
+                        ["name"] = "Light Armor",
+                        ["groups"] =
+                        {
+                            { ["name"] = "High Elf", ["styles"] = { { ["collectibleId"] = 5111, ["name"] = "High Elf Robe", ["unlocked"] = true, ["itemStyleId"] = 7 }, { ["collectibleId"] = 5112, ["name"] = "High Elf Jerkin", ["unlocked"] = true, ["itemStyleId"] = 7 }, { ["collectibleId"] = 5113, ["name"] = "High Elf Epaulets", ["unlocked"] = true, ["itemStyleId"] = 7 } } },
+                            { ["name"] = "Ancient Elf", ["styles"] = { { ["collectibleId"] = 5121, ["name"] = "Ancient Elf Robe", ["unlocked"] = true, ["itemStyleId"] = 11 }, { ["collectibleId"] = 5122, ["name"] = "Ancient Elf Jerkin", ["unlocked"] = false, ["itemStyleId"] = 11 } } },
+                        },
+                    },
+                    {
+                        ["name"] = "Weapons",
+                        ["groups"] =
+                        {
+                            { ["name"] = "High Elf", ["styles"] = { { ["collectibleId"] = 5211, ["name"] = "High Elf Sword", ["unlocked"] = true, ["itemStyleId"] = 7 }, { ["collectibleId"] = 5212, ["name"] = "High Elf Bow", ["unlocked"] = true, ["itemStyleId"] = 7 } } },
+                            { ["name"] = "Dwemer", ["styles"] = { { ["collectibleId"] = 5221, ["name"] = "Dwemer Sword", ["unlocked"] = false, ["itemStyleId"] = 14 }, { ["collectibleId"] = 5222, ["name"] = "Dwemer Shield", ["unlocked"] = true, ["itemStyleId"] = 14 } } },
+                            { ["name"] = "Soul-Shriven", ["styles"] = { { ["collectibleId"] = 5231, ["name"] = "Soul-Shriven Sword", ["unlocked"] = true, ["itemStyleId"] = 29 } } },
+                        },
+                    },
+                },
                 ["characters"] =
                 {
                     {
@@ -417,8 +446,66 @@ NirnsideData =
                         },
                         ["research"] =
                         {
-                            { ["craft"] = "Blacksmithing", ["trait"] = "Nirnhoned", ["remaining"] = "12d 4h" },
-                            { ["craft"] = "Clothing", ["trait"] = "Infused", ["remaining"] = "6d 1h" },
+                            ["crafts"] =
+                            {
+                                {
+                                    ["craft"] = "blacksmithing",
+                                    ["name"] = "Blacksmithing",
+                                    ["maxSlots"] = 3,
+                                    ["lines"] =
+                                    {
+                                        { ["name"] = "Axe", ["traits"] = { { ["name"] = "Powered", ["known"] = true }, { ["name"] = "Charged", ["known"] = true }, { ["name"] = "Precise", ["known"] = true }, { ["name"] = "Infused", ["known"] = true }, { ["name"] = "Defending", ["known"] = true }, { ["name"] = "Training", ["known"] = true }, { ["name"] = "Sharpened", ["known"] = true }, { ["name"] = "Decisive", ["known"] = true }, { ["name"] = "Nirnhoned", ["known"] = true } } },
+                                        { ["name"] = "Mace", ["traits"] = { { ["name"] = "Powered", ["known"] = true }, { ["name"] = "Charged", ["known"] = true }, { ["name"] = "Precise", ["known"] = true }, { ["name"] = "Infused", ["known"] = true }, { ["name"] = "Defending", ["known"] = true }, { ["name"] = "Training", ["known"] = true }, { ["name"] = "Sharpened", ["known"] = true }, { ["name"] = "Decisive", ["known"] = false }, { ["name"] = "Nirnhoned", ["known"] = false, ["researching"] = true, ["remainingSeconds"] = 1051200 } } },
+                                        { ["name"] = "Helm", ["traits"] = { { ["name"] = "Sturdy", ["known"] = true }, { ["name"] = "Impenetrable", ["known"] = true }, { ["name"] = "Reinforced", ["known"] = true }, { ["name"] = "Well-fitted", ["known"] = false }, { ["name"] = "Training", ["known"] = true }, { ["name"] = "Infused", ["known"] = true }, { ["name"] = "Invigorating", ["known"] = false }, { ["name"] = "Divines", ["known"] = true }, { ["name"] = "Nirnhoned", ["known"] = false } } },
+                                    },
+                                },
+                                {
+                                    ["craft"] = "clothing",
+                                    ["name"] = "Clothing",
+                                    ["maxSlots"] = 3,
+                                    ["lines"] =
+                                    {
+                                        { ["name"] = "Robe", ["traits"] = { { ["name"] = "Sturdy", ["known"] = true }, { ["name"] = "Impenetrable", ["known"] = true }, { ["name"] = "Reinforced", ["known"] = true }, { ["name"] = "Well-fitted", ["known"] = true }, { ["name"] = "Training", ["known"] = true }, { ["name"] = "Infused", ["known"] = false, ["researching"] = true, ["remainingSeconds"] = 522000 }, { ["name"] = "Invigorating", ["known"] = false }, { ["name"] = "Divines", ["known"] = true }, { ["name"] = "Nirnhoned", ["known"] = false } } },
+                                        { ["name"] = "Jack", ["traits"] = { { ["name"] = "Sturdy", ["known"] = true }, { ["name"] = "Impenetrable", ["known"] = false }, { ["name"] = "Reinforced", ["known"] = true }, { ["name"] = "Well-fitted", ["known"] = false }, { ["name"] = "Training", ["known"] = true }, { ["name"] = "Infused", ["known"] = false }, { ["name"] = "Invigorating", ["known"] = false }, { ["name"] = "Divines", ["known"] = true }, { ["name"] = "Nirnhoned", ["known"] = false } } },
+                                    },
+                                },
+                                {
+                                    ["craft"] = "woodworking",
+                                    ["name"] = "Woodworking",
+                                    ["maxSlots"] = 3,
+                                    ["lines"] =
+                                    {
+                                        { ["name"] = "Bow", ["traits"] = { { ["name"] = "Powered", ["known"] = true }, { ["name"] = "Charged", ["known"] = true }, { ["name"] = "Precise", ["known"] = true }, { ["name"] = "Infused", ["known"] = true }, { ["name"] = "Defending", ["known"] = true }, { ["name"] = "Training", ["known"] = true }, { ["name"] = "Sharpened", ["known"] = true }, { ["name"] = "Decisive", ["known"] = true }, { ["name"] = "Nirnhoned", ["known"] = true } } },
+                                        { ["name"] = "Shield", ["traits"] = { { ["name"] = "Sturdy", ["known"] = true }, { ["name"] = "Impenetrable", ["known"] = true }, { ["name"] = "Reinforced", ["known"] = false }, { ["name"] = "Well-fitted", ["known"] = false }, { ["name"] = "Training", ["known"] = true }, { ["name"] = "Infused", ["known"] = false }, { ["name"] = "Invigorating", ["known"] = false }, { ["name"] = "Divines", ["known"] = false }, { ["name"] = "Nirnhoned", ["known"] = false } } },
+                                    },
+                                },
+                                {
+                                    ["craft"] = "jewelry",
+                                    ["name"] = "Jewelry Crafting",
+                                    ["maxSlots"] = 1,
+                                    ["lines"] =
+                                    {
+                                        { ["name"] = "Necklace", ["traits"] = { { ["name"] = "Arcane", ["known"] = true }, { ["name"] = "Healthy", ["known"] = false }, { ["name"] = "Robust", ["known"] = true }, { ["name"] = "Infused", ["known"] = false }, { ["name"] = "Swift", ["known"] = true }, { ["name"] = "Harmony", ["known"] = false }, { ["name"] = "Triune", ["known"] = false }, { ["name"] = "Bloodthirsty", ["known"] = false }, { ["name"] = "Protective", ["known"] = false } } },
+                                        { ["name"] = "Ring", ["traits"] = { { ["name"] = "Arcane", ["known"] = true }, { ["name"] = "Healthy", ["known"] = false }, { ["name"] = "Robust", ["known"] = false }, { ["name"] = "Infused", ["known"] = false }, { ["name"] = "Swift", ["known"] = true }, { ["name"] = "Harmony", ["known"] = false }, { ["name"] = "Triune", ["known"] = false }, { ["name"] = "Bloodthirsty", ["known"] = false }, { ["name"] = "Protective", ["known"] = false } } },
+                                    },
+                                },
+                            },
+                        },
+                        ["motifs"] =
+                        {
+                            { ["name"] = "Crafting Motif 1: High Elf", ["known"] = 14, ["total"] = 14, ["chapters"] = { { ["name"] = "Axes", ["known"] = true }, { ["name"] = "Belts", ["known"] = true }, { ["name"] = "Boots", ["known"] = true }, { ["name"] = "Bows", ["known"] = true }, { ["name"] = "Chests", ["known"] = true }, { ["name"] = "Daggers", ["known"] = true }, { ["name"] = "Gloves", ["known"] = true }, { ["name"] = "Helmets", ["known"] = true }, { ["name"] = "Legs", ["known"] = true }, { ["name"] = "Maces", ["known"] = true }, { ["name"] = "Shields", ["known"] = true }, { ["name"] = "Shoulders", ["known"] = true }, { ["name"] = "Staves", ["known"] = true }, { ["name"] = "Swords", ["known"] = true } } },
+                            { ["name"] = "Crafting Motif 2: Dark Elf", ["known"] = 14, ["total"] = 14, ["chapters"] = { { ["name"] = "Axes", ["known"] = true }, { ["name"] = "Belts", ["known"] = true }, { ["name"] = "Boots", ["known"] = true }, { ["name"] = "Bows", ["known"] = true }, { ["name"] = "Chests", ["known"] = true }, { ["name"] = "Daggers", ["known"] = true }, { ["name"] = "Gloves", ["known"] = true }, { ["name"] = "Helmets", ["known"] = true }, { ["name"] = "Legs", ["known"] = true }, { ["name"] = "Maces", ["known"] = true }, { ["name"] = "Shields", ["known"] = true }, { ["name"] = "Shoulders", ["known"] = true }, { ["name"] = "Staves", ["known"] = true }, { ["name"] = "Swords", ["known"] = true } } },
+                            { ["name"] = "Crafting Motif 15: Dwemer", ["known"] = 3, ["total"] = 14, ["chapters"] = { { ["name"] = "Axes", ["known"] = true }, { ["name"] = "Belts", ["known"] = false }, { ["name"] = "Boots", ["known"] = false }, { ["name"] = "Bows", ["known"] = true }, { ["name"] = "Chests", ["known"] = false }, { ["name"] = "Daggers", ["known"] = false }, { ["name"] = "Gloves", ["known"] = false }, { ["name"] = "Helmets", ["known"] = false }, { ["name"] = "Legs", ["known"] = false }, { ["name"] = "Maces", ["known"] = false }, { ["name"] = "Shields", ["known"] = true }, { ["name"] = "Shoulders", ["known"] = false }, { ["name"] = "Staves", ["known"] = false }, { ["name"] = "Swords", ["known"] = false } } },
+                            { ["name"] = "Crafting Motif 11: Ancient Elf", ["known"] = 8, ["total"] = 14, ["chapters"] = { { ["name"] = "Axes", ["known"] = true }, { ["name"] = "Belts", ["known"] = true }, { ["name"] = "Boots", ["known"] = true }, { ["name"] = "Bows", ["known"] = false }, { ["name"] = "Chests", ["known"] = true }, { ["name"] = "Daggers", ["known"] = false }, { ["name"] = "Gloves", ["known"] = true }, { ["name"] = "Helmets", ["known"] = true }, { ["name"] = "Legs", ["known"] = true }, { ["name"] = "Maces", ["known"] = false }, { ["name"] = "Shields", ["known"] = false }, { ["name"] = "Shoulders", ["known"] = true }, { ["name"] = "Staves", ["known"] = false }, { ["name"] = "Swords", ["known"] = false } } },
+                            { ["name"] = "Crafting Motif 14: Daedric", ["known"] = 0, ["total"] = 14, ["chapters"] = { { ["name"] = "Axes", ["known"] = false }, { ["name"] = "Belts", ["known"] = false }, { ["name"] = "Boots", ["known"] = false }, { ["name"] = "Bows", ["known"] = false }, { ["name"] = "Chests", ["known"] = false }, { ["name"] = "Daggers", ["known"] = false }, { ["name"] = "Gloves", ["known"] = false }, { ["name"] = "Helmets", ["known"] = false }, { ["name"] = "Legs", ["known"] = false }, { ["name"] = "Maces", ["known"] = false }, { ["name"] = "Shields", ["known"] = false }, { ["name"] = "Shoulders", ["known"] = false }, { ["name"] = "Staves", ["known"] = false }, { ["name"] = "Swords", ["known"] = false } } },
+                            { ["name"] = "Crafting Motif 29: Soul-Shriven", ["known"] = 1, ["total"] = 1, ["chapters"] = { { ["name"] = "Crafting Motif 29: Soul-Shriven Style", ["known"] = true } } },
+                        },
+                        ["recipeLists"] =
+                        {
+                            { ["name"] = "Meat Dishes", ["kind"] = "provisioning", ["known"] = 3, ["total"] = 4, ["recipes"] = { { ["name"] = "Chicken Breast", ["known"] = true, ["quality"] = 1 }, { ["name"] = "Beef Stew", ["known"] = true, ["quality"] = 2 }, { ["name"] = "Solitude Salmon Millet Soup", ["known"] = true, ["quality"] = 4 }, { ["name"] = "Orzorga's Red Frothgar", ["known"] = false, ["quality"] = 4 } } },
+                            { ["name"] = "Fruit Dishes", ["kind"] = "provisioning", ["known"] = 2, ["total"] = 3, ["recipes"] = { { ["name"] = "Baked Apples", ["known"] = true, ["quality"] = 1 }, { ["name"] = "Cinnamon Grape Jelly", ["known"] = true, ["quality"] = 2 }, { ["name"] = "Fresh Apples and Eidar Cheese", ["known"] = false, ["quality"] = 3 } } },
+                            { ["name"] = "Blueprints", ["kind"] = "furnishing", ["known"] = 2, ["total"] = 4, ["recipes"] = { { ["name"] = "Common Table, Square", ["known"] = true, ["quality"] = 1 }, { ["name"] = "High Elf Desk, Regal", ["known"] = true, ["quality"] = 3 }, { ["name"] = "Alinor Bookshelf, Grand", ["known"] = false, ["quality"] = 4 }, { ["name"] = "Psijic Table, Scryer's", ["known"] = false, ["quality"] = 5 } } },
+                            { ["name"] = "Praxis", ["kind"] = "furnishing", ["known"] = 1, ["total"] = 3, ["recipes"] = { { ["name"] = "Rough Block, Stone", ["known"] = true, ["quality"] = 1 }, { ["name"] = "Ayleid Floor, Ancient", ["known"] = false, ["quality"] = 4 }, { ["name"] = "Deadlands Slab, Molten", ["known"] = false, ["quality"] = 4 } } },
                         },
                         ["wardrobe"] =
                         {
@@ -681,7 +768,40 @@ NirnsideData =
                         },
                         ["companions"] = {},
                         ["scribingScripts"] = { "Class Mastery: Draconic", "Vault" },
-                        ["research"] = {},
+                        ["research"] =
+                        {
+                            ["crafts"] =
+                            {
+                                {
+                                    ["craft"] = "blacksmithing",
+                                    ["name"] = "Blacksmithing",
+                                    ["maxSlots"] = 3,
+                                    ["lines"] =
+                                    {
+                                        { ["name"] = "Helm", ["traits"] = { { ["name"] = "Sturdy", ["known"] = true }, { ["name"] = "Impenetrable", ["known"] = true }, { ["name"] = "Reinforced", ["known"] = true }, { ["name"] = "Well-fitted", ["known"] = true }, { ["name"] = "Training", ["known"] = true }, { ["name"] = "Infused", ["known"] = true }, { ["name"] = "Invigorating", ["known"] = true }, { ["name"] = "Divines", ["known"] = true }, { ["name"] = "Nirnhoned", ["known"] = true } } },
+                                        { ["name"] = "Sword", ["traits"] = { { ["name"] = "Powered", ["known"] = true }, { ["name"] = "Charged", ["known"] = false }, { ["name"] = "Precise", ["known"] = true }, { ["name"] = "Infused", ["known"] = true }, { ["name"] = "Defending", ["known"] = true }, { ["name"] = "Training", ["known"] = false }, { ["name"] = "Sharpened", ["known"] = false }, { ["name"] = "Decisive", ["known"] = false }, { ["name"] = "Nirnhoned", ["known"] = false } } },
+                                    },
+                                },
+                                {
+                                    ["craft"] = "jewelry",
+                                    ["name"] = "Jewelry Crafting",
+                                    ["maxSlots"] = 1,
+                                    ["lines"] =
+                                    {
+                                        { ["name"] = "Necklace", ["traits"] = { { ["name"] = "Arcane", ["known"] = false }, { ["name"] = "Healthy", ["known"] = true }, { ["name"] = "Robust", ["known"] = true }, { ["name"] = "Infused", ["known"] = false }, { ["name"] = "Swift", ["known"] = false }, { ["name"] = "Harmony", ["known"] = false }, { ["name"] = "Triune", ["known"] = true }, { ["name"] = "Bloodthirsty", ["known"] = false }, { ["name"] = "Protective", ["known"] = true } } },
+                                    },
+                                },
+                            },
+                        },
+                        ["motifs"] =
+                        {
+                            { ["name"] = "Crafting Motif 4: Nord", ["known"] = 14, ["total"] = 14, ["chapters"] = { { ["name"] = "Axes", ["known"] = true }, { ["name"] = "Belts", ["known"] = true }, { ["name"] = "Boots", ["known"] = true }, { ["name"] = "Bows", ["known"] = true }, { ["name"] = "Chests", ["known"] = true }, { ["name"] = "Daggers", ["known"] = true }, { ["name"] = "Gloves", ["known"] = true }, { ["name"] = "Helmets", ["known"] = true }, { ["name"] = "Legs", ["known"] = true }, { ["name"] = "Maces", ["known"] = true }, { ["name"] = "Shields", ["known"] = true }, { ["name"] = "Shoulders", ["known"] = true }, { ["name"] = "Staves", ["known"] = true }, { ["name"] = "Swords", ["known"] = true } } },
+                            { ["name"] = "Crafting Motif 15: Dwemer", ["known"] = 14, ["total"] = 14, ["chapters"] = { { ["name"] = "Axes", ["known"] = true }, { ["name"] = "Belts", ["known"] = true }, { ["name"] = "Boots", ["known"] = true }, { ["name"] = "Bows", ["known"] = true }, { ["name"] = "Chests", ["known"] = true }, { ["name"] = "Daggers", ["known"] = true }, { ["name"] = "Gloves", ["known"] = true }, { ["name"] = "Helmets", ["known"] = true }, { ["name"] = "Legs", ["known"] = true }, { ["name"] = "Maces", ["known"] = true }, { ["name"] = "Shields", ["known"] = true }, { ["name"] = "Shoulders", ["known"] = true }, { ["name"] = "Staves", ["known"] = true }, { ["name"] = "Swords", ["known"] = true } } },
+                        },
+                        ["recipeLists"] =
+                        {
+                            { ["name"] = "Meat Dishes", ["kind"] = "provisioning", ["known"] = 1, ["total"] = 4, ["recipes"] = { { ["name"] = "Chicken Breast", ["known"] = true, ["quality"] = 1 }, { ["name"] = "Beef Stew", ["known"] = false, ["quality"] = 2 }, { ["name"] = "Solitude Salmon Millet Soup", ["known"] = false, ["quality"] = 4 }, { ["name"] = "Orzorga's Red Frothgar", ["known"] = false, ["quality"] = 4 } } },
+                        },
                         ["dailies"] =
                         {
                             ["dayKey"] = "2025-09-12",

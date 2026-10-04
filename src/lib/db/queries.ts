@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { getDb, getMeta } from "./index";
-import type { AccountSnapshot, AchievementRecord, Character, House, Item, SkillLine, StickerbookSet } from "../snapshot/schema";
+import type { AccountSnapshot, AchievementRecord, Character, House, Item, OutfitStyleCategory, SkillLine, StickerbookSet } from "../snapshot/schema";
 import { annotateStickerbookSets, collectedPieceKeys, type StickerbookSetView } from "../stickerbook/seen";
 import { stickerbookSeenIds } from "../stickerbook/seen-store";
 import { archivedCharacters, archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
@@ -20,6 +20,7 @@ export type AccountMeta = Pick<
   | "achievements"
   | "completedAchievementIds"
   | "houses"
+  | "outfitStyles"
 >;
 
 export function getAccount(): AccountMeta | null {
@@ -209,7 +210,9 @@ const loadRoster = cache(function loadRoster(): Character[] {
         equipped: [],
         companions: [],
         scribingScripts: [],
-        research: [],
+        research: { crafts: [] },
+        motifs: [],
+        recipeLists: [],
         wardrobe: null,
         lastSeen: row.lastSeen,
         gold: intOr(row.gold),
@@ -231,7 +234,9 @@ const loadRoster = cache(function loadRoster(): Character[] {
         champion: [],
         equipped: [],
         companions: [],
-        research: [],
+        research: { crafts: [] },
+        motifs: [],
+        recipeLists: [],
         wardrobe: null,
         scribingScripts: [],
         classMasteries: [],
@@ -395,4 +400,9 @@ export function getItemCount(): number {
 /** Unlocked houses on this account. Empty means none owned, or an older addon. */
 export function getHouses(): House[] {
   return getAccount()?.houses ?? [];
+}
+
+/** Collections → Outfit Styles. Empty means none listed, or an older addon. */
+export function getOutfitStyles(): OutfitStyleCategory[] {
+  return getAccount()?.outfitStyles ?? [];
 }

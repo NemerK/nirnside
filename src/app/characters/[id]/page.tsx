@@ -27,6 +27,7 @@ import { RolePicker } from "@/components/role-picker";
 import { CharacterGoals } from "@/components/goals-board";
 import { toGoalSubject } from "@/lib/goals/progress";
 import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
+import { formatResearchRemaining, presentMotifs, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
 
 function skillLineHref(name: string, className?: string | null): string | null {
   try {
@@ -110,6 +111,13 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
       }
     }
   }
+
+  const researchView = presentResearch(c.research);
+  const motifView = presentMotifs(c.motifs);
+  const recipeView = presentRecipeLists(c.recipeLists, "provisioning");
+  const planView = presentRecipeLists(c.recipeLists, "furnishing");
+  const hasKnowledge =
+    researchView.total > 0 || motifView.total > 0 || recipeView.total > 0 || planView.total > 0;
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
@@ -362,17 +370,51 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             </section>
           )}
 
-          {/* Research */}
-          {c.research.length > 0 && (
+          {/* Knowledge — in-progress only here; the full grid lives on /knowledge */}
+          {hasKnowledge && (
             <section>
-              <SectionTitle>Research</SectionTitle>
+              <div className="mb-3 flex items-center justify-between">
+                <SectionTitle className="mb-0">Knowledge</SectionTitle>
+                <Link href={`/knowledge?char=${encodeURIComponent(c.id)}`} className="text-xs text-accent hover:underline">
+                  Full grid →
+                </Link>
+              </div>
               <div className="space-y-2">
-                {c.research.map((r, i) => (
-                  <Card key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                    <span className="text-fg">
-                      {r.craft} · {r.trait}
+                <Card className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2.5 text-sm text-fg-muted">
+                  {researchView.total > 0 && (
+                    <span>
+                      Research {researchView.known}/{researchView.total}
                     </span>
-                    <span className="text-fg-subtle">{r.remaining}</span>
+                  )}
+                  {motifView.total > 0 && (
+                    <span>
+                      Motifs {motifView.known}/{motifView.total}
+                    </span>
+                  )}
+                  {recipeView.total > 0 && (
+                    <span>
+                      Recipes {recipeView.known}/{recipeView.total}
+                    </span>
+                  )}
+                  {planView.total > 0 && (
+                    <span>
+                      Plans {planView.known}/{planView.total}
+                    </span>
+                  )}
+                  <Link href="/styles" className="text-accent hover:underline">
+                    Outfit Styles
+                  </Link>
+                </Card>
+                {researchView.inProgress.map((r) => (
+                  <Card key={`${r.craft}-${r.line}-${r.trait}`} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                    <span className="text-fg">
+                      {r.craftName} · {r.line} · {r.trait}
+                    </span>
+                    <span className="text-fg-subtle">
+                      {r.remainingSeconds != null
+                        ? `${formatResearchRemaining(r.remainingSeconds)} left at last logout`
+                        : "researching"}
+                    </span>
                   </Card>
                 ))}
               </div>

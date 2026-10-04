@@ -156,5 +156,61 @@ export function globalSearch(q: string, limit = 40): SearchResults {
     }
   }
 
+  for (const row of allCharRows) {
+    if (account.length >= limit) break;
+    const full = safeParse(row.json) as Character | null;
+    if (!full || isArchived(full)) continue;
+    for (const style of full.motifs ?? []) {
+      if (account.length >= limit) break;
+      if (style.name.toLowerCase().includes(qLower)) {
+        account.push({
+          kind: "Motif",
+          name: style.name,
+          detail: `${full.name} · ${style.known}/${style.total}`,
+          href: `/knowledge?char=${encodeURIComponent(full.id)}&tab=motifs&q=${encodeURIComponent(style.name)}`,
+        });
+      }
+    }
+    for (const list of full.recipeLists ?? []) {
+      if (account.length >= limit) break;
+      if (list.name.toLowerCase().includes(qLower)) {
+        account.push({
+          kind: list.kind === "furnishing" ? "Plan" : "Recipe",
+          name: list.name,
+          detail: `${full.name} · ${list.known}/${list.total}`,
+          href: `/knowledge?char=${encodeURIComponent(full.id)}&tab=${list.kind === "furnishing" ? "plans" : "recipes"}&q=${encodeURIComponent(list.name)}`,
+        });
+      }
+    }
+  }
+
+  const outfitStyles = getAccount()?.outfitStyles ?? [];
+  for (const category of outfitStyles) {
+    if (account.length >= limit) break;
+    for (const group of category.groups) {
+      if (account.length >= limit) break;
+      if (group.name.toLowerCase().includes(qLower) || category.name.toLowerCase().includes(qLower)) {
+        account.push({
+          kind: "Outfit style",
+          name: group.name,
+          detail: category.name,
+          href: `/styles?q=${encodeURIComponent(group.name)}`,
+        });
+        continue;
+      }
+      for (const style of group.styles) {
+        if (style.name.toLowerCase().includes(qLower)) {
+          account.push({
+            kind: "Outfit style",
+            name: style.name,
+            detail: `${category.name} · ${group.name}`,
+            href: `/styles?q=${encodeURIComponent(style.name)}`,
+          });
+          break;
+        }
+      }
+    }
+  }
+
   return { catalog, account, total: catalog.length + account.length };
 }

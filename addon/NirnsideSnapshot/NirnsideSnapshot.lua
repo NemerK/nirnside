@@ -1966,6 +1966,365 @@ local function gatherHouses()
   return out
 end
 
+----------------------------------------------------------------------
+-- Character knowledge: 324-trait research, lore motifs, recipes / plans
+-- Scribing is already gathered elsewhere — do not duplicate it here.
+----------------------------------------------------------------------
+
+local RESEARCH_CRAFTS = {}
+do
+  local pairs_ = {
+    { CRAFTING_TYPE_BLACKSMITHING, "blacksmithing" },
+    { CRAFTING_TYPE_CLOTHIER, "clothing" },
+    { CRAFTING_TYPE_WOODWORKING, "woodworking" },
+    { CRAFTING_TYPE_JEWELRYCRAFTING, "jewelry" },
+  }
+  for _, pair in ipairs(pairs_) do
+    if pair[1] ~= nil then RESEARCH_CRAFTS[#RESEARCH_CRAFTS + 1] = { type = pair[1], key = pair[2] } end
+  end
+end
+
+local function craftDisplayName(craftingType, fallback)
+  local name = safe(function()
+    if GetString then
+      local n = GetString("SI_TRADESKILLTYPE", craftingType)
+      if n and n ~= "" then return zo_strformat("<<1>>", n) end
+    end
+    return nil
+  end, nil)
+  return name or fallback
+end
+
+local function traitDisplayName(traitType)
+  return safe(function()
+    if not traitType or traitType == 0 then return nil end
+    if ITEM_TRAIT_TYPE_NONE and traitType == ITEM_TRAIT_TYPE_NONE then return nil end
+    local n
+    if GetTraitName then n = GetTraitName(traitType) end
+    if (not n or n == "") and GetString then n = GetString("SI_ITEMTRAITTYPE", traitType) end
+    if n and n ~= "" then return zo_strformat("<<1>>", n) end
+    return nil
+  end, nil)
+end
+
+-- Research timers can be seconds or milliseconds depending on the API build.
+local function normalizeSeconds(value)
+  if type(value) ~= "number" or value <= 0 then return nil end
+  if value > 365 * 24 * 3600 * 4 then
+    value = math.floor(value / 1000)
+  else
+    value = math.floor(value)
+  end
+  if value <= 0 then return nil end
+  return value
+end
+
+local function gatherResearch()
+  local crafts = {}
+  if not GetNumSmithingResearchLines or not GetSmithingResearchLineInfo then
+    return { crafts = crafts }
+  end
+  for _, spec in ipairs(RESEARCH_CRAFTS) do
+    local packedLines = { pcall(GetNumSmithingResearchLines, spec.type) }
+    local nLines = packedLines[1] and packedLines[2] or 0
+    if type(nLines) == "number" and nLines > 0 then
+      local maxSlots = 0
+      if GetMaxSimultaneousSmithingResearch then
+        local packedSlots = { pcall(GetMaxSimultaneousSmithingResearch, spec.type) }
+        if packedSlots[1] and type(packedSlots[2]) == "number" then maxSlots = packedSlots[2] end
+      end
+      local lines = {}
+      for lineIndex = 1, nLines do
+        local packed = { pcall(GetSmithingResearchLineInfo, spec.type, lineIndex) }
+        if packed[1] then
+          local lineName = packed[2] and zo_strformat("<<1>>", packed[2]) or nil
+          local numTraits = packed[4]
+          if lineName and lineName ~= "" then
+            if type(numTraits) ~= "number" or numTraits < 1 then numTraits = 9 end
+            local traits = {}
+            for traitIndex = 1, numTraits do
+              local tPacked = { pcall(GetSmithingResearchLineTraitInfo, spec.type, lineIndex, traitIndex) }
+              if tPacked[1] then
+                local tName = traitDisplayName(tPacked[2])
+                if tName then
+                  local remaining
+                  if GetSmithingResearchLineTraitTimes then
+                    local timePacked = { pcall(GetSmithingResearchLineTraitTimes, spec.type, lineIndex, traitIndex) }
+                    if timePacked[1] then remaining = normalizeSeconds(timePacked[2]) end
+                  end
+                  traits[#traits + 1] = {
+                    name = tName,
+                    known = tPacked[4] == true,
+                    researching = remaining ~= nil,
+                    remainingSeconds = remaining,
+                  }
+                end
+              end
+            end
+            if #traits > 0 then
+              lines[#lines + 1] = { name = lineName, traits = traits }
+            end
+          end
+        end
+      end
+      if #lines > 0 then
+        crafts[#crafts + 1] = {
+          craft = spec.key,
+          name = craftDisplayName(spec.type, spec.key),
+          maxSlots = maxSlots,
+          lines = lines,
+        }
+      end
+    end
+  end
+  return { crafts = crafts }
+end
+
+local function isMotifLoreCategory(name)
+  if not name or name == "" then return false end
+  local n = name:lower()
+  return n:find("crafting motif", 1, true) ~= nil or n:find("craft motif", 1, true) ~= nil
+end
+
+-- Lore Library → Crafting Motifs. Per character. Not outfit styles.
+local function gatherMotifs()
+  local out = {}
+  if not GetNumLoreCategories or not GetLoreCategoryInfo or not GetLoreCollectionInfo or not GetLoreBookInfo then
+    return out
+  end
+  local nPacked = { pcall(GetNumLoreCategories) }
+  local nCat = nPacked[1] and nPacked[2] or 0
+  if type(nCat) ~= "number" then return out end
+  for cat = 1, nCat do
+    local catPacked = { pcall(GetLoreCategoryInfo, cat) }
+    if catPacked[1] then
+      local catName = catPacked[2] and zo_strformat("<<1>>", catPacked[2]) or nil
+      local numCollections = catPacked[3]
+      if isMotifLoreCategory(catName) and type(numCollections) == "number" then
+        for col = 1, numCollections do
+          local colPacked = { pcall(GetLoreCollectionInfo, cat, col) }
+          if colPacked[1] then
+            local name = colPacked[2] and zo_strformat("<<1>>", colPacked[2]) or nil
+            local totalBooks = colPacked[5]
+            if name and name ~= "" and type(totalBooks) == "number" and totalBooks > 0 then
+              local chapters, knownCount = {}, 0
+              for book = 1, totalBooks do
+                local bookPacked = { pcall(GetLoreBookInfo, cat, col, book) }
+                if bookPacked[1] then
+                  local title = bookPacked[2] and zo_strformat("<<1>>", bookPacked[2]) or nil
+                  if title and title ~= "" then
+                    local known = bookPacked[4] == true
+                    if known then knownCount = knownCount + 1 end
+                    local bookId = bookPacked[5]
+                    chapters[#chapters + 1] = {
+                      name = title,
+                      known = known,
+                      bookId = (type(bookId) == "number" and bookId > 0) and bookId or nil,
+                    }
+                  end
+                end
+              end
+              if #chapters > 0 then
+                out[#out + 1] = {
+                  name = name,
+                  known = knownCount,
+                  total = #chapters,
+                  chapters = chapters,
+                }
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  return out
+end
+
+local function recipeKind(specialType)
+  if PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING
+    and specialType == PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING then
+    return "furnishing"
+  end
+  return "provisioning"
+end
+
+local function gatherRecipeLists()
+  local out = {}
+  if not GetNumRecipeLists or not GetRecipeListInfo or not GetRecipeInfo then return out end
+  local nPacked = { pcall(GetNumRecipeLists) }
+  local n = nPacked[1] and nPacked[2] or 0
+  if type(n) ~= "number" or n < 1 then return out end
+  for listIndex = 1, n do
+    local listPacked = { pcall(GetRecipeListInfo, listIndex) }
+    if listPacked[1] then
+      local listName = listPacked[2] and zo_strformat("<<1>>", listPacked[2]) or nil
+      local numRecipes = listPacked[3]
+      if listName and listName ~= "" and type(numRecipes) == "number" and numRecipes > 0 then
+        local recipes, knownCount, kind = {}, 0, "provisioning"
+        for recipeIndex = 1, numRecipes do
+          local rPacked = { pcall(GetRecipeInfo, listIndex, recipeIndex) }
+          if rPacked[1] then
+            local recipeName = rPacked[3] and zo_strformat("<<1>>", rPacked[3]) or nil
+            if recipeName and recipeName ~= "" then
+              if recipeKind(rPacked[7]) == "furnishing" then kind = "furnishing" end
+              local known = rPacked[2] == true
+              if known then knownCount = knownCount + 1 end
+              local quality = rPacked[6]
+              recipes[#recipes + 1] = {
+                name = recipeName,
+                known = known,
+                quality = (type(quality) == "number" and quality >= 0) and quality or nil,
+              }
+            end
+          end
+        end
+        if #recipes > 0 then
+          out[#out + 1] = {
+            name = listName,
+            kind = kind,
+            known = knownCount,
+            total = #recipes,
+            recipes = recipes,
+          }
+        end
+      end
+    end
+  end
+  return out
+end
+
+----------------------------------------------------------------------
+-- Account-wide Collections → Outfit Styles (cosmetics, not motifs)
+----------------------------------------------------------------------
+
+local function collectibleCategoryName(categoryIndex, subIndex)
+  local packed
+  if subIndex and subIndex > 0 then
+    packed = { pcall(GetCollectibleSubCategoryInfo, categoryIndex, subIndex) }
+  else
+    packed = { pcall(GetCollectibleCategoryInfo, categoryIndex) }
+  end
+  if not packed[1] or not packed[2] or packed[2] == "" then return nil end
+  return zo_strformat("<<1>>", packed[2])
+end
+
+local function collectibleCounts(categoryIndex, subIndex)
+  local packed
+  if subIndex and subIndex > 0 then
+    packed = { pcall(GetCollectibleSubCategoryInfo, categoryIndex, subIndex) }
+  else
+    packed = { pcall(GetCollectibleCategoryInfo, categoryIndex) }
+  end
+  if not packed[1] then return 0, 0 end
+  return packed[3] or 0, packed[4] or 0
+end
+
+local function outfitStyleItemStyleId(id)
+  if not GetCollectibleReferenceId then return nil end
+  local packed = { pcall(GetCollectibleReferenceId, id) }
+  if packed[1] and type(packed[2]) == "number" and packed[2] > 0 then return packed[2] end
+  return nil
+end
+
+local function itemStyleDisplayName(styleId)
+  if not styleId or not GetItemStyleName then return nil end
+  local packed = { pcall(GetItemStyleName, styleId) }
+  if packed[1] and packed[2] and packed[2] ~= "" then return zo_strformat("<<1>>", packed[2]) end
+  return nil
+end
+
+local function readOutfitCollectible(id)
+  if not id or id == 0 then return nil end
+  local namePacked = { pcall(GetCollectibleName, id) }
+  if not namePacked[1] or not namePacked[2] or namePacked[2] == "" then return nil end
+  return {
+    collectibleId = id,
+    name = zo_strformat("<<1>>", namePacked[2]),
+    icon = safe(function() return normIcon(GetCollectibleIcon(id)) end, nil),
+    unlocked = safe(function() return IsCollectibleUnlocked(id) == true end, false),
+    itemStyleId = outfitStyleItemStyleId(id),
+  }
+end
+
+local function groupOutfitStyles(styles)
+  local groups, order, seen = {}, {}, {}
+  for _, style in ipairs(styles) do
+    local gName = itemStyleDisplayName(style.itemStyleId) or "Other"
+    if not seen[gName] then
+      seen[gName] = { name = gName, styles = {} }
+      order[#order + 1] = gName
+    end
+    seen[gName].styles[#seen[gName].styles + 1] = style
+  end
+  for _, name in ipairs(order) do
+    groups[#groups + 1] = seen[name]
+  end
+  return groups
+end
+
+local function collectOutfitCollectibles(categoryIndex, subIndex)
+  local styles = {}
+  local _nSub, numCol = collectibleCounts(categoryIndex, subIndex)
+  if type(numCol) ~= "number" or numCol < 1 then return styles end
+  local sub = subIndex or 0
+  for i = 1, numCol do
+    local idPacked = { pcall(GetCollectibleId, categoryIndex, sub, i) }
+    local style = idPacked[1] and readOutfitCollectible(idPacked[2]) or nil
+    if style then styles[#styles + 1] = style end
+  end
+  return styles
+end
+
+local function categoryIsOutfitStyles(categoryIndex)
+  local packed = { pcall(GetCollectibleCategoryInfo, categoryIndex) }
+  if not packed[1] then return false end
+  local specialization = packed[8]
+  if COLLECTIBLE_CATEGORY_SPECIALIZATION_OUTFIT_STYLES
+    and specialization == COLLECTIBLE_CATEGORY_SPECIALIZATION_OUTFIT_STYLES then
+    return true
+  end
+  if COLLECTIBLE_CATEGORY_TYPE_OUTFIT_STYLE and GetCollectibleCategoryType then
+    local typePacked = { pcall(GetCollectibleCategoryType, categoryIndex) }
+    if typePacked[1] and typePacked[2] == COLLECTIBLE_CATEGORY_TYPE_OUTFIT_STYLE then return true end
+  end
+  local name = packed[2] and zo_strformat("<<1>>", packed[2]) or ""
+  local lower = name:lower()
+  return lower == "outfit styles" or lower:find("outfit style", 1, true) ~= nil
+end
+
+local function gatherOutfitStyles()
+  local categories = {}
+  if not GetNumCollectibleCategories or not GetCollectibleCategoryInfo or not GetCollectibleId then
+    return categories
+  end
+  local nPacked = { pcall(GetNumCollectibleCategories) }
+  local n = nPacked[1] and nPacked[2] or 0
+  if type(n) ~= "number" then return categories end
+  for cat = 1, n do
+    if categoryIsOutfitStyles(cat) then
+      local numSub, numCol = collectibleCounts(cat, 0)
+      local parentName = collectibleCategoryName(cat, 0) or "Outfit Styles"
+      if type(numSub) == "number" and numSub > 0 then
+        for sub = 1, numSub do
+          local subName = collectibleCategoryName(cat, sub) or parentName
+          local styles = collectOutfitCollectibles(cat, sub)
+          if #styles > 0 then
+            categories[#categories + 1] = { name = subName, groups = groupOutfitStyles(styles) }
+          end
+        end
+      end
+      if type(numCol) == "number" and numCol > 0 then
+        local styles = collectOutfitCollectibles(cat, 0)
+        if #styles > 0 then
+          categories[#categories + 1] = { name = parentName, groups = groupOutfitStyles(styles) }
+        end
+      end
+    end
+  end
+  return categories
+end
+
 local function gatherCharacter()
   local name = safe(function() return zo_strformat("<<1>>", GetUnitName("player")) end, "Unknown")
   local vampire, werewolf = gatherCurse()
@@ -1998,7 +2357,9 @@ local function gatherCharacter()
     equipped = gatherEquipped(),
     companions = {},
     scribingScripts = gatherScribingScripts(),
-    research = {},
+    research = safe(function() return gatherResearch() end, { crafts = {} }),
+    motifs = safe(function() return gatherMotifs() end, {}),
+    recipeLists = safe(function() return gatherRecipeLists() end, {}),
     lastSeen = GetTimeStamp(),
     gold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0),
     telVar = safe(function() return GetCurrencyAmount(CURT_TELVAR_STONES, CURRENCY_LOCATION_CHARACTER) end, 0),
@@ -2658,7 +3019,9 @@ local function stubFromLive(row)
     equipped = {},
     companions = {},
     scribingScripts = {},
-    research = {},
+    research = { crafts = {} },
+    motifs = {},
+    recipeLists = {},
     lastSeen = nil,
     gold = 0,
     telVar = 0,
@@ -2776,6 +3139,7 @@ local function takeSnapshot(reason)
   sv.achievements = achNames
   sv.completedAchievementIds = gatherCompletedAchievementIds(charId, achRecords)
   sv.houses = gatherHouses()
+  sv.outfitStyles = safe(function() return gatherOutfitStyles() end, {})
 
   upsertCharacter(gatherCharacter())
   syncRosterWithGame()
@@ -2831,6 +3195,7 @@ local function onAddOnLoaded(_, name)
     completedAchievementIds = {},
     characterCompletedIds = {},
     houses = {},
+    outfitStyles = {},
     dailyFlags = {},
   })
 

@@ -126,6 +126,79 @@ SLASH_COMMANDS["/nirnside"] = takeSnapshot`;
     assert.equal(parsed.data.characters[0].dailies?.pledges[0].hardMode, true);
   });
 
+  it("keeps the research grid, motifs, recipes, and outfit styles", () => {
+    const parsed = AccountSnapshot.safeParse({
+      displayName: "@Nemer",
+      outfitStyles: [
+        {
+          name: "Hats",
+          groups: [
+            {
+              name: "Breton",
+              styles: [{ collectibleId: 11, name: "Breton Hat", unlocked: true, itemStyleId: 1 }],
+            },
+          ],
+        },
+        { groups: [{ name: "no-id", styles: [{ name: "Nope" }] }] },
+      ],
+      characters: [
+        {
+          id: "c1",
+          name: "Ardent",
+          class: "Dragonknight",
+          race: "Nord",
+          alliance: "Ebonheart Pact",
+          research: {
+            crafts: [
+              {
+                craft: "blacksmithing",
+                name: "Blacksmithing",
+                maxSlots: 3,
+                lines: [
+                  {
+                    name: "Axe",
+                    traits: [{ name: "Nirnhoned", known: false, researching: true, remainingSeconds: 100 }],
+                  },
+                ],
+              },
+            ],
+          },
+          motifs: [{ name: "Breton", known: 14, total: 14, chapters: [{ name: "Axes", known: true }] }],
+          recipeLists: [
+            { name: "Meat Dishes", kind: "provisioning", known: 1, total: 1, recipes: [{ name: "Chicken Breast", known: true }] },
+            { name: "skip-me", kind: "nope" },
+          ],
+        },
+      ],
+    });
+    assert.equal(parsed.success, true, parsed.success ? "" : JSON.stringify(parsed.error?.format()));
+    if (!parsed.success) return;
+    assert.equal(parsed.data.outfitStyles.length, 1);
+    assert.equal(parsed.data.outfitStyles[0].groups[0].styles[0].name, "Breton Hat");
+    assert.equal(parsed.data.characters[0].research.crafts[0].lines[0].traits[0].researching, true);
+    assert.equal(parsed.data.characters[0].motifs[0].known, 14);
+    assert.equal(parsed.data.characters[0].recipeLists.length, 1);
+  });
+
+  it("drops the old research stub array instead of rejecting the character", () => {
+    const parsed = AccountSnapshot.safeParse({
+      displayName: "@Nemer",
+      characters: [
+        {
+          id: "c1",
+          name: "Ardent",
+          class: "Dragonknight",
+          race: "Nord",
+          alliance: "Ebonheart Pact",
+          research: [{ craft: "Blacksmithing", trait: "Nirnhoned", remaining: "12d" }],
+        },
+      ],
+    });
+    assert.equal(parsed.success, true);
+    if (!parsed.success) return;
+    assert.deepEqual(parsed.data.characters[0].research, { crafts: [] });
+  });
+
   it("drops a broken dailies block instead of the character", () => {
     const parsed = AccountSnapshot.safeParse({
       displayName: "@Nemer",

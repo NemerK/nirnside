@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Download, MonitorSmartphone, Users } from "lucide-react";
-import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getHouses, getItemCount, getStickerbookStats } from "@/lib/db/queries";
+import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getCharactersFull, getHouses, getItemCount, getOutfitStyles, getStickerbookStats } from "@/lib/db/queries";
 import { listGoals, skillLineChoices } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
@@ -12,6 +12,8 @@ import { GoalsBoard } from "@/components/goals-board";
 import { AccountWallet } from "@/components/account-wallet";
 import { toGoalSubject } from "@/lib/goals/progress";
 import type { Goal } from "@/lib/goals/types";
+import { presentOutfitStyles, summarizeAccountKnowledge } from "@/lib/knowledge/present";
+import { liveCharacters } from "@/lib/snapshot/roster";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +53,8 @@ export default function HomePage() {
   });
 
   const houses = safe(() => getHouses()) ?? [];
+  const knowledge = summarizeAccountKnowledge(liveCharacters(safe(() => getCharactersFull()) ?? []));
+  const styles = presentOutfitStyles(safe(() => getOutfitStyles()) ?? []);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -74,6 +78,20 @@ export default function HomePage() {
         </Link>
         <Link href="/houses" className="block h-full rounded-xl transition-colors hover:brightness-110">
           <Stat label="Houses" value={houses.length} hint="owned on this account" />
+        </Link>
+        <Link href="/knowledge" className="block h-full rounded-xl transition-colors hover:brightness-110">
+          <Stat
+            label="Knowledge"
+            value={knowledge.motifTotal ? `${Math.round((knowledge.motifKnown / knowledge.motifTotal) * 100)}%` : "Board"}
+            hint={knowledge.motifTotal ? `${knowledge.motifKnown}/${knowledge.motifTotal} motif chapters` : "research, motifs, recipes"}
+          />
+        </Link>
+        <Link href="/styles" className="block h-full rounded-xl transition-colors hover:brightness-110">
+          <Stat
+            label="Outfit Styles"
+            value={styles.total ? `${Math.round((styles.unlocked / styles.total) * 100)}%` : "—"}
+            hint={styles.total ? `${styles.unlocked}/${styles.total} unlocked` : "collections"}
+          />
         </Link>
       </div>
 

@@ -266,6 +266,100 @@ export const CharacterDailies = z.object({
 });
 export type CharacterDailies = z.infer<typeof CharacterDailies>;
 
+/** One trait cell on a smithing research line (9 traits × line). */
+export const ResearchTrait = z.object({
+  name: z.string(),
+  known: z.boolean().default(false),
+  researching: z.boolean().default(false),
+  remainingSeconds: z.number().int().nonnegative().optional(),
+});
+export type ResearchTrait = z.infer<typeof ResearchTrait>;
+
+export const ResearchLine = z.object({
+  name: z.string(),
+  traits: lenientArray(ResearchTrait).default([]),
+});
+export type ResearchLine = z.infer<typeof ResearchLine>;
+
+export const ResearchCraft = z.object({
+  craft: z.string(),
+  name: z.string().default(""),
+  maxSlots: z.number().int().nonnegative().default(0),
+  lines: lenientArray(ResearchLine).default([]),
+});
+export type ResearchCraft = z.infer<typeof ResearchCraft>;
+
+export const CharacterResearch = z.object({
+  crafts: lenientArray(ResearchCraft).default([]),
+});
+export type CharacterResearch = z.infer<typeof CharacterResearch>;
+
+/** One Lore Library crafting-motif book (a chapter, or the whole book). */
+export const MotifChapter = z.object({
+  name: z.string(),
+  known: z.boolean().default(false),
+  bookId: z.number().int().nonnegative().optional(),
+});
+export type MotifChapter = z.infer<typeof MotifChapter>;
+
+/** One crafting motif collection (Lore Library → Crafting Motifs). Per character. */
+export const MotifStyle = z.object({
+  name: z.string(),
+  known: z.number().int().nonnegative().default(0),
+  total: z.number().int().nonnegative().default(0),
+  chapters: lenientArray(MotifChapter).default([]),
+});
+export type MotifStyle = z.infer<typeof MotifStyle>;
+
+export const RecipeEntry = z.object({
+  name: z.string(),
+  known: z.boolean().default(false),
+  quality: z.number().int().nonnegative().optional(),
+});
+export type RecipeEntry = z.infer<typeof RecipeEntry>;
+
+/** Provisioning recipe list or furnishing-plan list. Per character. */
+export const RecipeList = z.object({
+  name: z.string(),
+  kind: z.enum(["provisioning", "furnishing"]).default("provisioning"),
+  known: z.number().int().nonnegative().default(0),
+  total: z.number().int().nonnegative().default(0),
+  recipes: lenientArray(RecipeEntry).default([]),
+});
+export type RecipeList = z.infer<typeof RecipeList>;
+
+/** One Collections → Outfit Styles collectible. Account-wide. */
+export const OutfitStyle = z.object({
+  collectibleId: z.number().int().nonnegative(),
+  name: z.string(),
+  icon: z.string().nullable().optional(),
+  unlocked: z.boolean().default(false),
+  /** Crafting itemStyleId when the game exposes it — links to motif knowledge. */
+  itemStyleId: z.number().int().nonnegative().nullable().optional(),
+});
+export type OutfitStyle = z.infer<typeof OutfitStyle>;
+
+export const OutfitStyleGroup = z.object({
+  name: z.string(),
+  styles: lenientArray(OutfitStyle).default([]),
+});
+export type OutfitStyleGroup = z.infer<typeof OutfitStyleGroup>;
+
+/** One top-level Outfit Styles category (Hats, Light Armor, …) as the game lists it. */
+export const OutfitStyleCategory = z.object({
+  name: z.string(),
+  groups: lenientArray(OutfitStyleGroup).default([]),
+});
+export type OutfitStyleCategory = z.infer<typeof OutfitStyleCategory>;
+
+function coerceResearch(value: unknown): { crafts: unknown[] } {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const crafts = (value as { crafts?: unknown }).crafts;
+    if (Array.isArray(crafts)) return { crafts };
+  }
+  return { crafts: [] };
+}
+
 /** One unlocked house collectible. Account-wide — not a house bank. */
 export const House = z.object({
   collectibleId: z.number().int().nonnegative(),
@@ -371,7 +465,12 @@ export const Character = z.object({
   companions: lenientArray(Companion).default([]),
   /** Known scribing scripts (names) for this character. */
   scribingScripts: z.array(z.string()).default([]),
-  research: lenientArray(z.object({ craft: z.string(), trait: z.string(), remaining: z.string() })).default([]),
+  /** Full smithing research grid (324 traits). Old `{craft,trait,remaining}[]` stubs are dropped. */
+  research: z.preprocess(coerceResearch, CharacterResearch).catch({ crafts: [] }),
+  /** Lore Library → Crafting Motifs, this character. Not outfit styles. */
+  motifs: lenientArray(MotifStyle).default([]),
+  /** Provisioning recipes + furnishing plans this character knows or is missing. */
+  recipeLists: lenientArray(RecipeList).default([]),
   /** Wizard's Wardrobe setups for this character, if that addon is installed. */
   wardrobe: Wardrobe.nullable().default(null),
   /** Unix seconds of this character's last logout snapshot. null = never logged since install. */
@@ -554,5 +653,10 @@ export const AccountSnapshot = z.object({
    * only ownership, location, and which one is the primary residence.
    */
   houses: lenientArray(House).default([]),
+  /**
+   * Collections → Outfit Styles, as the game trees it. Account-wide cosmetics.
+   * Not motif craft knowledge, not stickerbook set pieces, not an outfit editor.
+   */
+  outfitStyles: lenientArray(OutfitStyleCategory).default([]),
 });
 export type AccountSnapshot = z.infer<typeof AccountSnapshot>;
