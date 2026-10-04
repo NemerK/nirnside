@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, HelpCircle, Minus, Search } from "lucide-react";
 import { PageScroll, StickyMenu } from "@/components/ui";
+import { formatRemainingSeconds } from "@/lib/dailies/day";
 import {
   WRIT_ABBR,
   WRIT_CRAFTS,
@@ -10,13 +11,9 @@ import {
   type DailyCell,
   type PresentedCharacterDailies,
 } from "@/lib/dailies/present";
-import { PLEDGE_GIVER_NAMES } from "@/lib/dailies/pledges";
+import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "@/lib/dailies/pledges";
 
 type Filter = "all" | "open" | "done";
-
-function cellDone(c: DailyCell): boolean {
-  return c.status === "done" || c.status === "cooldown";
-}
 
 function rowOpen(row: PresentedCharacterDailies): boolean {
   const cells = [
@@ -30,18 +27,29 @@ function rowOpen(row: PresentedCharacterDailies): boolean {
   return cells.some((c) => c.status === "available" || c.status === "accepted" || c.status === "ready");
 }
 
+function ModeMark({ label, title, tone }: { label: string; title: string; tone: "hm" | "nhm" }) {
+  const cls =
+    tone === "hm"
+      ? "border-amber-400/50 bg-amber-400/15 text-amber-600 dark:text-amber-400"
+      : "border-sky-400/50 bg-sky-400/15 text-sky-700 dark:text-sky-300";
+  return (
+    <span
+      title={title}
+      className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-0.5 text-[9px] font-bold leading-none ${cls}`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function DailyCellView({ cell }: { cell: DailyCell }) {
   if (cell.status === "done" && cell.hardMode === true) {
-    return (
-      <span
-        title={cell.title}
-        className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-amber-400/50 bg-amber-400/15 px-0.5 text-[9px] font-bold leading-none text-amber-600 dark:text-amber-400"
-      >
-        HM
-      </span>
-    );
+    return <ModeMark label="HM" title={cell.title} tone="hm" />;
   }
-  if (cell.status === "done") {
+  if (cell.status === "done" && cell.hardMode === false) {
+    return <ModeMark label="nHM" title={cell.title} tone="nhm" />;
+  }
+  if (cell.status === "done" || cell.status === "cooldown") {
     return (
       <span
         title={cell.title}
@@ -65,13 +73,6 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
       </span>
     );
   }
-  if (cell.status === "cooldown") {
-    return (
-      <span title={cell.title} className="font-mono text-xs tabular-nums text-fg-muted">
-        {cell.label}
-      </span>
-    );
-  }
   if (cell.status === "unknown") {
     return (
       <span title={cell.title} className="inline-flex text-fg-subtle/70">
@@ -86,7 +87,43 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
   );
 }
 
-export function DailiesBoard({ rows }: { rows: PresentedCharacterDailies[] }) {
+function ResetCountdown({ resetAt }: { resetAt: number }) {
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const remaining = Math.max(0, resetAt - now);
+  return (
+    <div className="text-sm text-fg-muted">
+      Time until reset{" "}
+      <span className="font-mono tabular-nums text-fg">{formatRemainingSeconds(remaining)}</span>
+    </div>
+  );
+}
+
+function PledgeHead({ giver, today }: { giver: PledgeGiver; today?: string }) {
+  return (
+    <th className="px-2 py-2 text-center font-medium" title={PLEDGE_GIVER_NAMES[giver]}>
+      {giver === "maj" ? "Maj" : giver === "glirion" ? "Gli" : "Urg"}
+      {today ? (
+        <div className="mt-0.5 max-w-[7.5rem] truncate text-[10px] font-normal normal-case tracking-normal text-fg-muted">
+          {today}
+        </div>
+      ) : null}
+    </th>
+  );
+}
+
+export function DailiesBoard({
+  rows,
+  resetAt,
+  todayPledges,
+}: {
+  rows: PresentedCharacterDailies[];
+  resetAt: number;
+  todayPledges: Record<PledgeGiver, string>;
+}) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -132,6 +169,7 @@ export function DailiesBoard({ rows }: { rows: PresentedCharacterDailies[] }) {
               </button>
             ))}
           </div>
+          <ResetCountdown resetAt={resetAt} />
         </div>
       </StickyMenu>
 
@@ -152,15 +190,9 @@ export function DailiesBoard({ rows }: { rows: PresentedCharacterDailies[] }) {
                     {WRIT_ABBR[c]}
                   </th>
                 ))}
-                <th className="px-2 py-2 text-center font-medium" title={PLEDGE_GIVER_NAMES.maj}>
-                  Maj
-                </th>
-                <th className="px-2 py-2 text-center font-medium" title={PLEDGE_GIVER_NAMES.glirion}>
-                  Gli
-                </th>
-                <th className="px-2 py-2 text-center font-medium" title={PLEDGE_GIVER_NAMES.urgarlag}>
-                  Urg
-                </th>
+                <PledgeHead giver="maj" today={todayPledges.maj} />
+                <PledgeHead giver="glirion" today={todayPledges.glirion} />
+                <PledgeHead giver="urgarlag" today={todayPledges.urgarlag} />
               </tr>
             </thead>
             <tbody>
@@ -205,11 +237,12 @@ export function DailiesBoard({ rows }: { rows: PresentedCharacterDailies[] }) {
         )}
 
         <p className="mt-3 text-xs text-fg-subtle">
-          Check = done. HM on a pledge = that run was hard mode; a plain check is not hard mode. ACCEPT = in
-          the journal. A timer is the random-dungeon reward cooldown as of last logout. A dash on randoms
-          means the daily reward is still available. A question mark on a writ or pledge means it is not in
-          the journal and we did not see the turn-in — we never invent &quot;available&quot; after it leaves
-          the book.
+          Check = done today. Pledge <span className="font-semibold text-fg-muted">HM</span> /{" "}
+          <span className="font-semibold text-fg-muted">nHM</span> = hard mode or not. ACCEPT only
+          when the journal dungeon is today&apos;s daily — a leftover from another day stays unmarked.
+          Today&apos;s three names are the community rotation, not an in-game scan. A dash on randoms
+          means the daily reward is still available. A question mark on a writ or pledge means it is
+          not in the journal (or is yesterday&apos;s leftover) and we did not see the turn-in.
         </p>
       </PageScroll>
     </div>

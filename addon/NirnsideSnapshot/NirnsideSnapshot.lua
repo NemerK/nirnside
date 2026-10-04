@@ -961,7 +961,9 @@ local WRIT_DEFS = {
   { craft = "jewelry", name = "Jewelry Crafting Writ", match = "jewelry" },
 }
 
--- Same giver split the hub uses. English names only.
+-- Same live NPC split the hub uses. English names only.
+-- Maj = 12 original easier I/II. Glirion = 12 original harder (CoA + CoH).
+-- Urgarlag = every DLC dungeon from Imperial City Prison onward.
 local PLEDGE_GIVERS = {
   maj = {
     "Fungal Grotto I", "Fungal Grotto II",
@@ -970,25 +972,25 @@ local PLEDGE_GIVERS = {
     "Darkshade Caverns I", "Darkshade Caverns II",
     "Elden Hollow I", "Elden Hollow II",
     "Wayrest Sewers I", "Wayrest Sewers II",
-    "Crypt of Hearts I", "Crypt of Hearts II",
-    "City of Ash I", "City of Ash II",
   },
   glirion = {
     "Arx Corinium", "Blackheart Haven", "Blessed Crucible", "Direfrost Keep",
     "Selene's Web", "Tempest Island", "Vaults of Madness", "Volenfell",
+    "Crypt of Hearts I", "Crypt of Hearts II",
+    "City of Ash I", "City of Ash II",
+  },
+  urgarlag = {
     "Imperial City Prison", "White-Gold Tower", "White Gold Tower",
-    "Ruins of Mazzatun", "Cradle of Shadows",
+    "Cradle of Shadows", "Ruins of Mazzatun",
     "Bloodroot Forge", "Falkreath Hold",
     "Fang Lair", "Scalecaller Peak",
     "Moon Hunter Keep", "March of Sacrifices",
     "Frostvault", "Depths of Malatar",
     "Lair of Maarselok", "Moongrave Fane",
     "Icereach", "Unhallowed Grave",
-  },
-  urgarlag = {
-    "Stone Garden", "Castle Thorn",
+    "Castle Thorn", "Stone Garden",
     "Black Drake Villa", "The Cauldron", "Cauldron",
-    "Red Petal Bastion", "Dread Cellar",
+    "Red Petal Bastion", "Dread Cellar", "The Dread Cellar",
     "Coral Aerie", "Shipwright's Regret",
     "Earthen Root Enclave", "Graven Deep",
     "Bal Sunnar", "Scrivener's Hall",
@@ -1389,10 +1391,15 @@ local function gatherDailies(charId)
             difficulty, hardMode = nil, nil
           end
           local prev = pledgeStatus[giver]
-          if not prev or prev.status ~= "done" then
-            pledgeStatus[giver] = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
-          else
-            pledgeStatus[giver] = mergePledgeMode(prev, prev.dungeon or dungeon, prev.status, difficulty, hardMode)
+          -- Leftover journal pledges from another day must not become today's
+          -- accept. Only keep journal state when this giver was already flagged
+          -- today (QUEST_ADDED / condition / turn-in).
+          if prev then
+            if prev.status ~= "done" then
+              pledgeStatus[giver] = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
+            else
+              pledgeStatus[giver] = mergePledgeMode(prev, prev.dungeon or dungeon, prev.status, difficulty, hardMode)
+            end
           end
         end
       end

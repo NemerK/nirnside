@@ -1,23 +1,33 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { dungeonFromPledgeQuestName, pledgeGiverForDungeon } from "./pledges";
+import {
+  communityPledgesForDayKey,
+  dungeonFromPledgeQuestName,
+  pledgeGiverForDungeon,
+  sameDungeon,
+} from "./pledges";
 
 describe("pledge giver map", () => {
-  it("puts the original 16 on Maj", () => {
+  it("puts the original 12 easier dungeons on Maj", () => {
     assert.equal(pledgeGiverForDungeon("Fungal Grotto I"), "maj");
-    assert.equal(pledgeGiverForDungeon("City of Ash II"), "maj");
     assert.equal(pledgeGiverForDungeon("Pledge: Banished Cells I"), "maj");
+    assert.equal(pledgeGiverForDungeon("Spindleclutch II"), "maj");
+    assert.equal(pledgeGiverForDungeon("Wayrest Sewers II"), "maj");
   });
 
-  it("puts ICP through Unhallowed Grave on Glirion", () => {
-    assert.equal(pledgeGiverForDungeon("Imperial City Prison"), "glirion");
-    assert.equal(pledgeGiverForDungeon("White-Gold Tower"), "glirion");
-    assert.equal(pledgeGiverForDungeon("White Gold Tower"), "glirion");
-    assert.equal(pledgeGiverForDungeon("Icereach"), "glirion");
-    assert.equal(pledgeGiverForDungeon("Unhallowed Grave"), "glirion");
+  it("puts City of Ash and Crypt of Hearts on Glirion", () => {
+    assert.equal(pledgeGiverForDungeon("City of Ash II"), "glirion");
+    assert.equal(pledgeGiverForDungeon("Crypt of Hearts I"), "glirion");
+    assert.equal(pledgeGiverForDungeon("Direfrost Keep"), "glirion");
+    assert.equal(pledgeGiverForDungeon("Arx Corinium"), "glirion");
   });
 
-  it("puts Stone Garden onward on Urgarlag", () => {
+  it("puts Imperial City Prison onward on Urgarlag", () => {
+    assert.equal(pledgeGiverForDungeon("Imperial City Prison"), "urgarlag");
+    assert.equal(pledgeGiverForDungeon("White-Gold Tower"), "urgarlag");
+    assert.equal(pledgeGiverForDungeon("White Gold Tower"), "urgarlag");
+    assert.equal(pledgeGiverForDungeon("Icereach"), "urgarlag");
+    assert.equal(pledgeGiverForDungeon("Unhallowed Grave"), "urgarlag");
     assert.equal(pledgeGiverForDungeon("Stone Garden"), "urgarlag");
     assert.equal(pledgeGiverForDungeon("The Cauldron"), "urgarlag");
     assert.equal(pledgeGiverForDungeon("Black Gem Foundry"), "urgarlag");
@@ -29,5 +39,26 @@ describe("pledge giver map", () => {
 
   it("does not invent a giver for an unknown dungeon", () => {
     assert.equal(pledgeGiverForDungeon("Hel Ra Citadel"), null);
+  });
+});
+
+describe("community pledge rotation", () => {
+  it("matches the 2026-10-03 ESO-Hub / UESP check", () => {
+    const today = communityPledgesForDayKey("2026-10-03");
+    assert.equal(today.maj, "Banished Cells II");
+    assert.equal(today.glirion, "City of Ash II");
+    assert.equal(today.urgarlag, "Shipwright's Regret");
+  });
+
+  it("advances one dungeon per ESO day", () => {
+    const next = communityPledgesForDayKey("2026-10-04");
+    assert.equal(next.maj, "Darkshade Caverns I");
+    assert.equal(next.glirion, "Crypt of Hearts I");
+    assert.equal(next.urgarlag, "Earthen Root Enclave");
+  });
+
+  it("treats The Banished Cells II as today's Maj", () => {
+    assert.equal(sameDungeon("The Banished Cells II", "Banished Cells II"), true);
+    assert.equal(sameDungeon("Fungal Grotto I", "Banished Cells II"), false);
   });
 });

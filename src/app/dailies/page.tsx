@@ -2,6 +2,8 @@ import { CalendarDays, RefreshCw } from "lucide-react";
 import { getCharactersFull, getDataSource, hasData } from "@/lib/db/queries";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { dailiesHaveAnyScan, presentAccountDailies, summarizeDailies } from "@/lib/dailies/present";
+import { nextEsoResetAt } from "@/lib/dailies/day";
+import { communityPledgesForUnix } from "@/lib/dailies/pledges";
 import { PageFrame, PageHeader, Stat, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { DailiesBoard } from "@/components/dailies-board";
@@ -16,13 +18,15 @@ export default function DailiesPage() {
   const now = Math.floor(Date.now() / 1000);
   const rows = presentAccountDailies(characters, now, { treatAsFresh: isSample });
   const summary = summarizeDailies(rows);
+  const resetAt = nextEsoResetAt(now);
+  const todayPledges = communityPledgesForUnix(now);
   const staleAddon = populated && !isSample && characters.some((c) => c.lastSeen != null) && !dailiesHaveAnyScan(characters);
 
   return (
     <PageFrame>
       <PageHeader
         title="Dailies"
-        subtitle="Randoms, writs, and pledges. A pledge check is HM when that run was hard mode."
+        subtitle="Randoms, writs, and pledges. Pledge marks are HM or nHM when we know the mode."
         action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
       />
 
@@ -41,7 +45,7 @@ export default function DailiesPage() {
             <p className="font-medium text-fg">One logout needed to fill this board.</p>
             <p className="mt-1 max-w-3xl">
               Your account is loaded, but this snapshot came from an older Snapshot addon that did not export
-              dailies. The current app already installed 0.9.21 for you — log each character out once (or{" "}
+              dailies. The current app already installed 0.9.22 for you — log each character out once (or{" "}
               <code className="rounded bg-surface-2 px-1 text-fg">/reloadui</code> on that toon) and the row
               fills with live journal and LFG state.
             </p>
@@ -61,7 +65,7 @@ export default function DailiesPage() {
               value={summary.pledgesTotal ? `${summary.pledgesDone}/${summary.pledgesTotal}` : "—"}
             />
           </div>
-          <DailiesBoard rows={rows} />
+          <DailiesBoard rows={rows} resetAt={resetAt} todayPledges={todayPledges} />
         </>
       )}
     </PageFrame>

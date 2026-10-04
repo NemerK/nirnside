@@ -124,4 +124,44 @@ describe("dailies presentation", () => {
     assert.equal(row.pledges.maj.status, "unknown");
     assert.equal(row.randomVeteran.status, "available");
   });
+
+  it("treats a random cooldown as done — no timer", () => {
+    const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
+    const row = presentCharacterDailies(
+      char({
+        ...fresh,
+        randomNormal: { status: "cooldown", remainingSeconds: 7 * 3600 + 53 * 60 },
+      }),
+      now,
+    );
+    assert.equal(row.randomNormal.status, "done");
+    assert.equal(row.randomNormal.label, "✓");
+    assert.equal(row.randomNormal.remainingSeconds, undefined);
+  });
+
+  it("shows ACCEPT only when the journal dungeon is today's pledge", () => {
+    const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
+    const today = presentCharacterDailies(
+      char({
+        ...fresh,
+        pledges: [
+          { giver: "maj", giverName: "Maj al-Ragath", dungeon: "The Banished Cells II", status: "accepted" },
+        ],
+      }),
+      now,
+    );
+    assert.equal(today.pledges.maj.status, "accepted");
+    assert.equal(today.pledges.maj.label, "ACCEPT");
+    assert.match(today.pledges.maj.title, /today's pledge/);
+
+    const leftover = presentCharacterDailies(
+      char({
+        ...fresh,
+        pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "accepted" }],
+      }),
+      now,
+    );
+    assert.equal(leftover.pledges.maj.status, "unknown");
+    assert.match(leftover.pledges.maj.title, /not today's pledge/);
+  });
 });
