@@ -1,4 +1,4 @@
-import type { Character, CharacterDailies, DailyPledge, DailyStatus, DailyWorldBoss } from "../snapshot/schema";
+import type { Character, CharacterDailies, DailyPledge, DailyStatus, DailyWorldBoss, DailyWrit } from "../snapshot/schema";
 import { esoDayKey } from "./day";
 import { PLEDGE_GIVER_NAMES, sameDungeon, type PledgeGiver } from "./pledges";
 import { WORLD_BOSS_ZONES, type WorldBossZoneId } from "./world-bosses";

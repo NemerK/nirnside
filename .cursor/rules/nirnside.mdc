@@ -97,3 +97,11 @@ the product owner. Do not relax them without explicit approval.
 - Steam/PC EU is often `...\Elder Scrolls Online\live\...`, not `liveeu`.
   Folder name is not the megaserver. First existing `NirnsideSnapshot.lua` wins.
 - `data/incoming` is only for machines without ESO. Never walk A–Z drives.
+
+## 9. Production typecheck (blocks the Windows exe)
+- `npm test` does **not** run `tsc`. The installer / `next build` does, over
+  every `**/*.ts` including tests. A missing type import or a new required
+  Zod field omitted from a fixture shows the "Could not start Nirnside"
+  install screen.
+- Before finishing any TypeScript, schema, or UI change: `npx tsc --noEmit`
+  (or `npm run typecheck`) must be clean. See `.cursor/rules/typecheck.mdc`.

@@ -47,6 +47,7 @@ const fresh: CharacterDailies = {
     { craft: "jewelry", name: "Jewelry Crafting Writ", status: "accepted" },
   ],
   pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done", hardMode: true, difficulty: "veteran" }],
+  worldBosses: [],
 };
 
 describe("dailies presentation", () => {

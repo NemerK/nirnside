@@ -1,0 +1,31 @@
+---
+description: Production TypeScript check. next build / the Windows exe fail without it.
+globs:
+alwaysApply: true
+---
+
+# Production typecheck — do this before you finish
+
+The Windows app runs `next build`. That typechecks **every** `**/*.ts` /
+`**/*.tsx` file, including `*.test.ts`. `npm test` does **not**. Shipping a
+green unit-test run with a red `tsc` puts the user on the
+"Could not start Nirnside" install screen (this has happened more than once).
+
+## Required before you call TypeScript / schema / UI work done
+
+1. Run `npx tsc --noEmit` or `npm run typecheck`.
+2. Fix **every** error. Do not leave fixtures or tests failing `tsc`.
+3. Do not set `typescript.ignoreBuildErrors` or skip the Next.js typecheck
+   to "get the exe out."
+
+## Mistakes that keep breaking the exe
+
+- Using a type (`DailyWrit`, a new schema field, …) without importing it.
+- Adding a required field to a Zod object (`z.infer` is the output type;
+  `.default([])` is still required on constructed objects) and forgetting
+  the field on `*.test.ts` fixtures typed as that schema.
+- Changing `CharacterDailies` / snapshot shapes without updating every
+  object literal that claims that type.
+
+When you add a required schema field, grep for the type name and update
+every fixture in the same change. Then run the typecheck.
