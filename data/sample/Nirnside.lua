@@ -539,8 +539,13 @@ NirnsideData =
                             ["pledges"] =
                             {
                                 { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Fungal Grotto I", ["status"] = "done", ["hardMode"] = false, ["difficulty"] = "normal" },
-                                { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Icereach", ["status"] = "accepted" },
+                                { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "City of Ash II", ["status"] = "ready", ["hardMode"] = true, ["difficulty"] = "veteran", ["inJournal"] = true },
                                 { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["status"] = "unknown" },
+                            },
+                            ["worldBosses"] =
+                            {
+                                { ["zone"] = "wrothgar", ["questId"] = 5522, ["name"] = "", ["status"] = "accepted" },
+                                { ["zone"] = "gold-coast", ["questId"] = 5605, ["name"] = "", ["status"] = "done" },
                             },
                         },
                     },
@@ -697,8 +702,14 @@ NirnsideData =
                             ["pledges"] =
                             {
                                 { ["giver"] = "maj", ["giverName"] = "Maj al-Ragath", ["dungeon"] = "Spindleclutch II", ["status"] = "done", ["hardMode"] = true, ["difficulty"] = "veteran" },
-                                { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Unhallowed Grave", ["status"] = "done", ["hardMode"] = true, ["difficulty"] = "veteran" },
+                                { ["giver"] = "glirion", ["giverName"] = "Glirion the Redbeard", ["dungeon"] = "Direfrost Keep", ["status"] = "done", ["hardMode"] = true, ["difficulty"] = "veteran" },
                                 { ["giver"] = "urgarlag", ["giverName"] = "Urgarlag Chief-bane", ["dungeon"] = "Stone Garden", ["status"] = "done", ["hardMode"] = false, ["difficulty"] = "veteran" },
+                            },
+                            ["worldBosses"] =
+                            {
+                                { ["zone"] = "wrothgar", ["questId"] = 5518, ["name"] = "", ["status"] = "done" },
+                                { ["zone"] = "vvardenfell", ["questId"] = 5865, ["name"] = "", ["status"] = "done" },
+                                { ["zone"] = "summerset", ["questId"] = 6085, ["name"] = "", ["status"] = "accepted" },
                             },
                         },
                     },
