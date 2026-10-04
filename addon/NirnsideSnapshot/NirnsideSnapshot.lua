@@ -1458,7 +1458,18 @@ local function gatherDailies(charId)
       writStatus[craft] = status
     end
     for giver, info in pairs(bucket.pledges or {}) do
-      pledgeStatus[giver] = info
+      -- "accepted" is never kept from yesterday's flag. Only a live journal
+      -- hit this gather may export ACCEPT.
+      if type(info) == "table" and info.status == "accepted" then
+        pledgeStatus[giver] = {
+          status = "unknown",
+          dungeon = info.dungeon,
+          difficulty = info.difficulty,
+          hardMode = info.hardMode,
+        }
+      else
+        pledgeStatus[giver] = info
+      end
     end
   end
 
@@ -1558,13 +1569,23 @@ local function gatherDailies(charId)
   local pledges = {}
   for _, giver in ipairs(PLEDGE_ORDER) do
     local info = pledgeStatus[giver]
+    local inJournal = pledgesInJournal[giver] == true
+    local status = (info and info.status) or "unknown"
+    if status == "accepted" and not inJournal then
+      if info and (info.difficulty or info.hardMode ~= nil) then
+        status = "done"
+      else
+        status = "unknown"
+      end
+    end
     pledges[#pledges + 1] = {
       giver = giver,
       giverName = PLEDGE_GIVER_NAMES[giver],
       dungeon = info and info.dungeon or nil,
-      status = (info and info.status) or "unknown",
+      status = status,
       difficulty = info and info.difficulty or nil,
       hardMode = info and info.hardMode,
+      inJournal = inJournal,
     }
   end
 

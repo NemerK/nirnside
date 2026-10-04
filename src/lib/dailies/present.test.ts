@@ -168,19 +168,37 @@ describe("dailies presentation", () => {
     assert.equal(row.randomNormal.remainingSeconds, undefined);
   });
 
-  it("keeps journal ACCEPT and carries mode so the board can show N/Vet/HM", () => {
+  it("shows ACCEPT only when this scan found the pledge in the journal", () => {
     const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
     const accepted = presentCharacterDailies(
       char({
         ...fresh,
         pledges: [
-          { giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "accepted" },
+          {
+            giver: "maj",
+            giverName: "Maj al-Ragath",
+            dungeon: "Fungal Grotto I",
+            status: "accepted",
+            inJournal: true,
+          },
         ],
       }),
       now,
     );
     assert.equal(accepted.pledges.maj.status, "accepted");
     assert.equal(accepted.pledges.maj.label, "ACCEPT");
+
+    const leftoverFlag = presentCharacterDailies(
+      char({
+        ...fresh,
+        pledges: [
+          { giver: "urgarlag", giverName: "Urgarlag Chief-bane", dungeon: "Icereach", status: "accepted" },
+        ],
+      }),
+      now,
+    );
+    assert.equal(leftoverFlag.pledges.urgarlag.status, "unknown");
+    assert.match(leftoverFlag.pledges.urgarlag.title, /not in journal/);
 
     const readyHm = presentCharacterDailies(
       char({

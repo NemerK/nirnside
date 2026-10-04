@@ -124,7 +124,11 @@ function pledgeCell(pledges: DailyPledge[] | undefined, giver: PledgeGiver): Dai
   if (row.status === "done") return cell("done", `${where} — done${note}`, extra);
   if (row.status === "ready") return cell("ready", `${where} — ready to turn in${note}`, extra);
   if (row.status === "accepted") {
-    return cell("accepted", `${where} — in journal`, extra);
+    // ACCEPT is journal-only. A leftover QUEST_ADDED flag after turn-in is not
+    // "in the book" — old scans left that lie on the wrong giver.
+    if (row.inJournal === true) return cell("accepted", `${where} — in journal`, extra);
+    if (row.hardMode != null || row.difficulty) return cell("done", `${where} — done${note}`, extra);
+    return cell("unknown", `${where} — not in journal`);
   }
   if (row.status === "available") {
     return cell("unknown", `${who} — not in journal (turn-in not seen)`);

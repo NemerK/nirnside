@@ -237,6 +237,8 @@ export const DailyPledge = z.object({
   difficulty: z.enum(["normal", "veteran"]).optional(),
   /** True when the game showed a hard-mode signal on that run. */
   hardMode: z.boolean().optional(),
+  /** True only when this gather found the pledge in the journal. */
+  inJournal: z.boolean().optional(),
 });
 export type DailyPledge = z.infer<typeof DailyPledge>;
 

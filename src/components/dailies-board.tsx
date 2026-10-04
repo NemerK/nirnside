@@ -246,8 +246,9 @@ export function DailiesBoard({
           Check = done today. Pledge <span className="font-semibold text-fg-muted">N</span> /{" "}
           <span className="font-semibold text-fg-muted">Vet</span> /{" "}
           <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode
-          (from the journal optional objectives, not a guess). ACCEPT = still in the journal
-          and we have not seen the run finish. The giver is the NPC you talked to.
+          (from the journal optional objectives, not a guess). ACCEPT = the pledge is in the
+          journal on this scan. A leftover accept flag after turn-in is not ACCEPT. The giver
+          is the NPC you talked to.
           Today&apos;s three names are the community rotation, not an in-game scan. A dash on randoms
           means the daily reward is still available. A question mark on a writ or pledge means it is
           not in the journal (or is yesterday&apos;s leftover) and we did not see the turn-in.
