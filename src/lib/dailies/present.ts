@@ -1,6 +1,7 @@
-import type { Character, CharacterDailies, DailyPledge, DailyStatus, DailyWrit } from "../snapshot/schema";
+import type { Character, CharacterDailies, DailyPledge, DailyStatus, DailyWorldBoss } from "../snapshot/schema";
 import { esoDayKey } from "./day";
-import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "./pledges";
+import { PLEDGE_GIVER_NAMES, sameDungeon, type PledgeGiver } from "./pledges";
+import { WORLD_BOSS_ZONES, type WorldBossZoneId } from "./world-bosses";
 
 export const WRIT_CRAFTS = [
   "blacksmithing",
@@ -54,6 +55,7 @@ export interface PresentedCharacterDailies {
   randomVeteran: DailyCell;
   writs: Record<WritCraft, DailyCell>;
   pledges: Record<PledgeGiver, DailyCell>;
+  worldBosses: Record<WorldBossZoneId, DailyCell>;
 }
 
 const UNKNOWN: DailyCell = {
@@ -114,7 +116,11 @@ function pledgeModeExtra(row: DailyPledge): Partial<DailyCell> {
   };
 }
 
-function pledgeCell(pledges: DailyPledge[] | undefined, giver: PledgeGiver): DailyCell {
+function pledgeCell(
+  pledges: DailyPledge[] | undefined,
+  giver: PledgeGiver,
+  todayDungeon?: string,
+): DailyCell {
   const row = pledges?.find((p) => p.giver === giver);
   const who = PLEDGE_GIVER_NAMES[giver];
   if (!row) return { ...UNKNOWN, title: `${who} — not scanned since reset` };
@@ -126,14 +132,39 @@ function pledgeCell(pledges: DailyPledge[] | undefined, giver: PledgeGiver): Dai
   if (row.status === "accepted") {
     // ACCEPT is journal-only. A leftover QUEST_ADDED flag after turn-in is not
     // "in the book" — old scans left that lie on the wrong giver.
-    if (row.inJournal === true) return cell("accepted", `${where} — in journal`, extra);
-    if (row.hardMode != null || row.difficulty) return cell("done", `${where} — done${note}`, extra);
-    return cell("unknown", `${where} — not in journal`);
+    if (row.inJournal !== true) {
+      if (row.hardMode != null || row.difficulty) return cell("done", `${where} — done${note}`, extra);
+      return cell("unknown", `${where} — not in journal`);
+    }
+    if (todayDungeon && row.dungeon && !sameDungeon(row.dungeon, todayDungeon)) {
+      return cell("unknown", `${where} — leftover (today is ${todayDungeon})`, extra);
+    }
+    return cell("accepted", `${where} — in journal`, extra);
   }
   if (row.status === "available") {
     return cell("unknown", `${who} — not in journal (turn-in not seen)`);
   }
   return cell("unknown", `${who} — not scanned since reset`);
+}
+
+function worldBossCell(rows: DailyWorldBoss[] | undefined, zone: WorldBossZoneId): DailyCell {
+  const meta = WORLD_BOSS_ZONES.find((z) => z.id === zone);
+  const label = meta?.name ?? zone;
+  const hits = (rows ?? []).filter((r) => r.zone === zone);
+  if (hits.length === 0) return { ...UNKNOWN, title: `${label} — not scanned since reset` };
+  const done = hits.find((r) => r.status === "done");
+  if (done) return cell("done", `${label} — ${done.name || "world boss"} — done`);
+  const ready = hits.find((r) => r.status === "ready");
+  if (ready) return cell("ready", `${label} — ${ready.name || "world boss"} — ready to turn in`);
+  const accepted = hits.find((r) => r.status === "accepted");
+  if (accepted) return cell("accepted", `${label} — ${accepted.name || "world boss"} — in journal`);
+  return cell("unknown", `${label} — not in journal`);
+}
+
+function emptyWorldBosses(reason: string): Record<WorldBossZoneId, DailyCell> {
+  return Object.fromEntries(
+    WORLD_BOSS_ZONES.map((z) => [z.id, { ...UNKNOWN, title: `${z.name} — ${reason}` }]),
+  ) as Record<WorldBossZoneId, DailyCell>;
 }
 
 function randomCell(
@@ -171,6 +202,7 @@ export function unknownCharacterDailies(
       glirion: { ...u, title: `${PLEDGE_GIVER_NAMES.glirion} — ${reason}` },
       urgarlag: { ...u, title: `${PLEDGE_GIVER_NAMES.urgarlag} — ${reason}` },
     },
+    worldBosses: emptyWorldBosses(reason),
   };
 }
 
@@ -181,7 +213,7 @@ export function unknownCharacterDailies(
 export function presentCharacterDailies(
   character: Character,
   nowUnix: number,
-  options?: { treatAsFresh?: boolean },
+  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string> },
 ): PresentedCharacterDailies {
   const dailies = character.dailies;
   const neverLogged = character.lastSeen == null;
@@ -206,17 +238,20 @@ export function presentCharacterDailies(
     randomVeteran: randomCell("Random Veteran", dailies.randomVeteran),
     writs: Object.fromEntries(WRIT_CRAFTS.map((c) => [c, writCell(dailies.writs, c)])) as Record<WritCraft, DailyCell>,
     pledges: {
-      maj: pledgeCell(dailies.pledges, "maj"),
-      glirion: pledgeCell(dailies.pledges, "glirion"),
-      urgarlag: pledgeCell(dailies.pledges, "urgarlag"),
+      maj: pledgeCell(dailies.pledges, "maj", options?.todayPledges?.maj),
+      glirion: pledgeCell(dailies.pledges, "glirion", options?.todayPledges?.glirion),
+      urgarlag: pledgeCell(dailies.pledges, "urgarlag", options?.todayPledges?.urgarlag),
     },
+    worldBosses: Object.fromEntries(
+      WORLD_BOSS_ZONES.map((z) => [z.id, worldBossCell(dailies.worldBosses, z.id)]),
+    ) as Record<WorldBossZoneId, DailyCell>,
   };
 }
 
 export function presentAccountDailies(
   characters: Character[],
   nowUnix: number,
-  options?: { treatAsFresh?: boolean },
+  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string> },
 ): PresentedCharacterDailies[] {
   return characters.map((c) => presentCharacterDailies(c, nowUnix, options));
 }
@@ -234,6 +269,8 @@ export function summarizeDailies(rows: PresentedCharacterDailies[]): {
   writsTotal: number;
   pledgesDone: number;
   pledgesTotal: number;
+  worldBossesDone: number;
+  worldBossesTotal: number;
 } {
   const scanned = rows.filter((r) => r.scanned);
   const count = (cells: DailyCell[]) => ({
@@ -243,6 +280,7 @@ export function summarizeDailies(rows: PresentedCharacterDailies[]): {
   const randoms = count(scanned.flatMap((r) => [r.randomNormal, r.randomVeteran]));
   const writs = count(scanned.flatMap((r) => WRIT_CRAFTS.map((c) => r.writs[c])));
   const pledges = count(scanned.flatMap((r) => [r.pledges.maj, r.pledges.glirion, r.pledges.urgarlag]));
+  const bosses = count(scanned.flatMap((r) => WORLD_BOSS_ZONES.map((z) => r.worldBosses[z.id])));
   return {
     scanned: scanned.length,
     total: rows.length,
@@ -252,5 +290,7 @@ export function summarizeDailies(rows: PresentedCharacterDailies[]): {
     writsTotal: writs.total,
     pledgesDone: pledges.done,
     pledgesTotal: pledges.total,
+    worldBossesDone: bosses.done,
+    worldBossesTotal: bosses.total,
   };
 }

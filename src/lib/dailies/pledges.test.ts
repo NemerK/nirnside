@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   communityPledgesForDayKey,
   dungeonFromPledgeQuestName,
+  pledgeByQuestId,
+  PLEDGE_QUESTS,
   pledgeGiverForDungeon,
   sameDungeon,
 } from "./pledges";
@@ -39,6 +41,16 @@ describe("pledge giver map", () => {
 
   it("does not invent a giver for an unknown dungeon", () => {
     assert.equal(pledgeGiverForDungeon("Hel Ra Citadel"), null);
+  });
+
+  it("maps WPamA pledge quest ids to the live NPC split", () => {
+    assert.equal(pledgeByQuestId(5247)?.giver, "maj");
+    assert.equal(pledgeByQuestId(5381)?.giver, "glirion");
+    assert.equal(pledgeByQuestId(5381)?.dungeon, "City of Ash II");
+    assert.equal(pledgeByQuestId(6415)?.giver, "urgarlag");
+    assert.equal(pledgeByQuestId(6415)?.dungeon, "Icereach");
+    assert.equal(PLEDGE_QUESTS.filter((row) => row.giver === "maj").length, 12);
+    assert.equal(PLEDGE_QUESTS.filter((row) => row.giver === "glirion").length, 12);
   });
 });
 

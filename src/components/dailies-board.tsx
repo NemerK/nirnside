@@ -12,6 +12,7 @@ import {
   type PresentedCharacterDailies,
 } from "@/lib/dailies/present";
 import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "@/lib/dailies/pledges";
+import { WORLD_BOSS_ZONES } from "@/lib/dailies/world-bosses";
 
 type Filter = "all" | "open" | "done";
 
@@ -23,6 +24,7 @@ function rowOpen(row: PresentedCharacterDailies): boolean {
     row.pledges.maj,
     row.pledges.glirion,
     row.pledges.urgarlag,
+    ...WORLD_BOSS_ZONES.map((z) => row.worldBosses[z.id]),
   ];
   return cells.some((c) => c.status === "available" || c.status === "accepted" || c.status === "ready");
 }
@@ -242,16 +244,51 @@ export function DailiesBoard({
           </div>
         )}
 
+        <h2 className="mt-6 text-sm font-medium text-fg">World boss dailies</h2>
+        <p className="mb-2 text-xs text-fg-subtle">
+          DLC / chapter world-boss repeatables. One pick per zone per day. Check = turned in today.
+          ACCEPT = that zone&apos;s daily is in the journal.
+        </p>
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full min-w-[48rem] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wider text-fg-subtle">
+                <th className="sticky left-0 z-10 bg-surface-2/40 px-3 py-2 font-medium">Character</th>
+                {WORLD_BOSS_ZONES.map((z) => (
+                  <th key={z.id} className="px-2 py-2 text-center font-medium" title={z.name}>
+                    {z.abbr}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => (
+                <tr key={`wb-${r.characterId}`} className="border-b border-border/50 align-middle last:border-0 hover:bg-surface-2/30">
+                  <td className="sticky left-0 z-10 bg-surface px-3 py-1.5">
+                    <span className="font-medium text-fg">{r.name}</span>
+                  </td>
+                  {WORLD_BOSS_ZONES.map((z) => (
+                    <td key={z.id} className="px-2 py-1.5 text-center">
+                      <DailyCellView cell={r.worldBosses[z.id]} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         <p className="mt-3 text-xs text-fg-subtle">
           Check = done today. Pledge <span className="font-semibold text-fg-muted">N</span> /{" "}
           <span className="font-semibold text-fg-muted">Vet</span> /{" "}
           <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode
-          (from the journal optional objectives, not a guess). ACCEPT = the pledge is in the
-          journal on this scan. A leftover accept flag after turn-in is not ACCEPT. The giver
-          is the NPC you talked to.
-          Today&apos;s three names are the community rotation, not an in-game scan. A dash on randoms
-          means the daily reward is still available. A question mark on a writ or pledge means it is
-          not in the journal (or is yesterday&apos;s leftover) and we did not see the turn-in.
+          (from the journal optional objectives, not a guess). ACCEPT = that giver&apos;s
+          today pledge is in the journal on this scan. A leftover other-day pledge stays unmarked.
+          Giver comes from the in-game pledge quest id, not the NPC you are standing next to.
+          Today&apos;s three names are the community rotation, not an in-game scan. World-boss
+          columns are the DLC / chapter daily pick WPamA tracks — one per zone. A dash on randoms
+          means the daily reward is still available. A question mark means it is not in the journal
+          and we did not see the turn-in.
         </p>
       </PageScroll>
     </div>

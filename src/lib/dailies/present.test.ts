@@ -200,6 +200,25 @@ describe("dailies presentation", () => {
     assert.equal(leftoverFlag.pledges.urgarlag.status, "unknown");
     assert.match(leftoverFlag.pledges.urgarlag.title, /not in journal/);
 
+    const leftoverOtherDay = presentCharacterDailies(
+      char({
+        ...fresh,
+        pledges: [
+          {
+            giver: "urgarlag",
+            giverName: "Urgarlag Chief-bane",
+            dungeon: "Icereach",
+            status: "accepted",
+            inJournal: true,
+          },
+        ],
+      }),
+      now,
+      { todayPledges: { maj: "Banished Cells II", glirion: "City of Ash II", urgarlag: "Shipwright's Regret" } },
+    );
+    assert.equal(leftoverOtherDay.pledges.urgarlag.status, "unknown");
+    assert.match(leftoverOtherDay.pledges.urgarlag.title, /leftover/);
+
     const readyHm = presentCharacterDailies(
       char({
         ...fresh,
@@ -219,5 +238,23 @@ describe("dailies presentation", () => {
     assert.equal(readyHm.pledges.glirion.status, "ready");
     assert.equal(readyHm.pledges.glirion.hardMode, true);
     assert.equal(readyHm.pledges.glirion.dungeon, "Icereach");
+  });
+
+  it("shows a world-boss daily as ACCEPT or done per zone", () => {
+    const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
+    const row = presentCharacterDailies(
+      char({
+        ...fresh,
+        worldBosses: [
+          { zone: "wrothgar", questId: 5522, name: "Heresy of Ignorance", status: "accepted" },
+          { zone: "gold-coast", questId: 5605, name: "Looming Shadows", status: "done" },
+        ],
+      }),
+      now,
+    );
+    assert.equal(row.worldBosses.wrothgar.status, "accepted");
+    assert.equal(row.worldBosses.wrothgar.label, "ACCEPT");
+    assert.equal(row.worldBosses["gold-coast"].status, "done");
+    assert.equal(row.worldBosses.summerset.status, "unknown");
   });
 });

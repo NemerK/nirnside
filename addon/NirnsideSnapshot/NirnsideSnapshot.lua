@@ -1008,6 +1008,106 @@ local PLEDGE_GIVER_NAMES = {
 
 local PLEDGE_ORDER = { "maj", "glirion", "urgarlag" }
 
+-- In-game pledge quest IDs (WPamA PID). Giver is this table, never the NPC
+-- you happen to be standing next to at logout.
+local PLEDGE_BY_ID = {
+  [5244] = { giver = "maj", dungeon = "Banished Cells I" },
+  [5246] = { giver = "maj", dungeon = "Banished Cells II" },
+  [5247] = { giver = "maj", dungeon = "Fungal Grotto I" },
+  [5248] = { giver = "maj", dungeon = "Fungal Grotto II" },
+  [5260] = { giver = "maj", dungeon = "Spindleclutch I" },
+  [5273] = { giver = "maj", dungeon = "Spindleclutch II" },
+  [5274] = { giver = "maj", dungeon = "Darkshade Caverns I" },
+  [5275] = { giver = "maj", dungeon = "Darkshade Caverns II" },
+  [5276] = { giver = "maj", dungeon = "Elden Hollow I" },
+  [5277] = { giver = "maj", dungeon = "Elden Hollow II" },
+  [5278] = { giver = "maj", dungeon = "Wayrest Sewers I" },
+  [5282] = { giver = "maj", dungeon = "Wayrest Sewers II" },
+  [5283] = { giver = "glirion", dungeon = "Crypt of Hearts I" },
+  [5284] = { giver = "glirion", dungeon = "Crypt of Hearts II" },
+  [5288] = { giver = "glirion", dungeon = "Arx Corinium" },
+  [5290] = { giver = "glirion", dungeon = "City of Ash I" },
+  [5291] = { giver = "glirion", dungeon = "Direfrost Keep" },
+  [5301] = { giver = "glirion", dungeon = "Tempest Island" },
+  [5303] = { giver = "glirion", dungeon = "Volenfell" },
+  [5305] = { giver = "glirion", dungeon = "Blackheart Haven" },
+  [5306] = { giver = "glirion", dungeon = "Blessed Crucible" },
+  [5307] = { giver = "glirion", dungeon = "Selene's Web" },
+  [5309] = { giver = "glirion", dungeon = "Vaults of Madness" },
+  [5381] = { giver = "glirion", dungeon = "City of Ash II" },
+  [5382] = { giver = "urgarlag", dungeon = "Imperial City Prison" },
+  [5431] = { giver = "urgarlag", dungeon = "White-Gold Tower" },
+  [5636] = { giver = "urgarlag", dungeon = "Ruins of Mazzatun" },
+  [5780] = { giver = "urgarlag", dungeon = "Cradle of Shadows" },
+  [6053] = { giver = "urgarlag", dungeon = "Bloodroot Forge" },
+  [6054] = { giver = "urgarlag", dungeon = "Falkreath Hold" },
+  [6154] = { giver = "urgarlag", dungeon = "Scalecaller Peak" },
+  [6155] = { giver = "urgarlag", dungeon = "Fang Lair" },
+  [6187] = { giver = "urgarlag", dungeon = "Moon Hunter Keep" },
+  [6189] = { giver = "urgarlag", dungeon = "March of Sacrifices" },
+  [6250] = { giver = "urgarlag", dungeon = "Frostvault" },
+  [6252] = { giver = "urgarlag", dungeon = "Depths of Malatar" },
+  [6350] = { giver = "urgarlag", dungeon = "Moongrave Fane" },
+  [6352] = { giver = "urgarlag", dungeon = "Lair of Maarselok" },
+  [6415] = { giver = "urgarlag", dungeon = "Icereach" },
+  [6417] = { giver = "urgarlag", dungeon = "Unhallowed Grave" },
+  [6506] = { giver = "urgarlag", dungeon = "Stone Garden" },
+  [6508] = { giver = "urgarlag", dungeon = "Castle Thorn" },
+  [6577] = { giver = "urgarlag", dungeon = "Black Drake Villa" },
+  [6579] = { giver = "urgarlag", dungeon = "The Cauldron" },
+  [6684] = { giver = "urgarlag", dungeon = "Red Petal Bastion" },
+  [6686] = { giver = "urgarlag", dungeon = "The Dread Cellar" },
+  [6741] = { giver = "urgarlag", dungeon = "Coral Aerie" },
+  [6743] = { giver = "urgarlag", dungeon = "Shipwright's Regret" },
+  [6836] = { giver = "urgarlag", dungeon = "Earthen Root Enclave" },
+  [6838] = { giver = "urgarlag", dungeon = "Graven Deep" },
+  [6897] = { giver = "urgarlag", dungeon = "Bal Sunnar" },
+  [7028] = { giver = "urgarlag", dungeon = "Scrivener's Hall" },
+  [7106] = { giver = "urgarlag", dungeon = "Oathsworn Pit" },
+  [7156] = { giver = "urgarlag", dungeon = "Bedlam Veil" },
+  [7236] = { giver = "urgarlag", dungeon = "Exiled Redoubt" },
+  [7238] = { giver = "urgarlag", dungeon = "Lep Seclusa" },
+  [7321] = { giver = "urgarlag", dungeon = "Naj-Caldeesh" },
+  [7324] = { giver = "urgarlag", dungeon = "Black Gem Foundry" },
+}
+
+local WRIT_BY_ID = {
+  [5368] = "blacksmithing", [5377] = "blacksmithing", [5392] = "blacksmithing",
+  [5374] = "clothing", [5388] = "clothing", [5389] = "clothing",
+  [5394] = "woodworking", [5395] = "woodworking", [5396] = "woodworking",
+  [5415] = "alchemy", [5416] = "alchemy", [5417] = "alchemy", [5418] = "alchemy",
+  [6098] = "alchemy", [6099] = "alchemy", [6100] = "alchemy", [6101] = "alchemy",
+  [6102] = "alchemy", [6103] = "alchemy", [6104] = "alchemy", [6105] = "alchemy",
+  [5400] = "enchanting", [5406] = "enchanting", [5407] = "enchanting",
+  [5409] = "provisioning", [5412] = "provisioning", [5413] = "provisioning", [5414] = "provisioning",
+  [6218] = "jewelry", [6227] = "jewelry", [6228] = "jewelry",
+}
+
+-- WPamA world-boss daily quest IDs. One pick per zone per day.
+local WORLD_BOSS_BY_ID = {
+  [5522] = "wrothgar", [5523] = "wrothgar", [5524] = "wrothgar",
+  [5519] = "wrothgar", [5518] = "wrothgar", [5521] = "wrothgar",
+  [5865] = "vvardenfell", [5904] = "vvardenfell", [5866] = "vvardenfell",
+  [5918] = "vvardenfell", [5916] = "vvardenfell", [5906] = "vvardenfell",
+  [5606] = "gold-coast", [5605] = "gold-coast",
+  [6082] = "summerset", [6087] = "summerset", [6083] = "summerset",
+  [6084] = "summerset", [6086] = "summerset", [6085] = "summerset",
+  [6380] = "northern-elsweyr", [6382] = "northern-elsweyr", [6381] = "northern-elsweyr",
+  [6377] = "northern-elsweyr", [6378] = "northern-elsweyr", [6379] = "northern-elsweyr",
+  [6509] = "western-skyrim", [6517] = "western-skyrim", [6518] = "western-skyrim", [6519] = "western-skyrim",
+  [6526] = "blackreach", [6527] = "blackreach",
+  [6651] = "blackwood", [6652] = "blackwood", [6650] = "blackwood",
+  [6653] = "blackwood", [6645] = "blackwood", [6649] = "blackwood",
+  [6816] = "high-isle", [6807] = "high-isle", [6821] = "high-isle",
+  [6808] = "high-isle", [6803] = "high-isle", [6822] = "high-isle",
+  [7040] = "telvanni", [7044] = "telvanni",
+  [7039] = "apocrypha", [7041] = "apocrypha", [7042] = "apocrypha", [7043] = "apocrypha",
+  [7109] = "gold-road", [7116] = "gold-road", [7117] = "gold-road",
+  [7118] = "gold-road", [7119] = "gold-road", [7120] = "gold-road",
+  [7266] = "solstice", [7264] = "solstice", [7265] = "solstice",
+  [7271] = "solstice", [7272] = "solstice", [7270] = "solstice",
+}
+
 local function normDungeon(name)
   if not name then return "" end
   local s = tostring(name):lower()
@@ -1082,10 +1182,11 @@ local function ensureDailyBucket(charId)
     if type(bucket) == "table" and bucket.dayKey == today then
       bucket.writs = bucket.writs or {}
       bucket.pledges = bucket.pledges or {}
+      bucket.worldBosses = bucket.worldBosses or {}
       return bucket
     end
   end
-  local bucket = { dayKey = today, writs = {}, pledges = {} }
+  local bucket = { dayKey = today, writs = {}, pledges = {}, worldBosses = {} }
   sv.dailyFlags[tostring(charId)] = bucket
   return bucket
 end
@@ -1099,7 +1200,26 @@ if CRAFTING_TYPE_ALCHEMY then CRAFT_BY_TYPE[CRAFTING_TYPE_ALCHEMY] = "alchemy" e
 if CRAFTING_TYPE_PROVISIONING then CRAFT_BY_TYPE[CRAFTING_TYPE_PROVISIONING] = "provisioning" end
 if CRAFTING_TYPE_JEWELRYCRAFTING then CRAFT_BY_TYPE[CRAFTING_TYPE_JEWELRYCRAFTING] = "jewelry" end
 
-local function matchWrit(questName)
+local function journalQuestId(journalIndex, fallbackId)
+  if type(fallbackId) == "number" and fallbackId > 0 then return fallbackId end
+  if not journalIndex or not GetJournalQuestId then return nil end
+  local id = safe(function() return GetJournalQuestId(journalIndex) end, nil)
+  if type(id) == "number" and id > 0 then return id end
+  return nil
+end
+
+local function questNameFromId(id)
+  if not id or not GetQuestName then return "" end
+  return cleanQuestName(safe(function() return GetQuestName(id) end, ""))
+end
+
+local function matchWrit(questName, questId)
+  if type(questId) == "number" and WRIT_BY_ID[questId] then
+    local craft = WRIT_BY_ID[questId]
+    for _, def in ipairs(WRIT_DEFS) do
+      if def.craft == craft then return def end
+    end
+  end
   if not questName then return nil end
   local lower = tostring(questName):lower()
   if lower:find("masterful", 1, true) or lower:find("master writ", 1, true) then
@@ -1167,13 +1287,51 @@ local function giverFromJournal(journalIndex)
   return nil
 end
 
-local function matchPledge(questName, journalIndex)
-  if not questName then return nil, nil end
-  local dungeon = tostring(questName):gsub("^Pledge:%s*", ""):gsub("^pledge:%s*", "")
+local PLEDGE_BY_NAME = nil
+local function ensurePledgeNameMap()
+  if PLEDGE_BY_NAME then return end
+  PLEDGE_BY_NAME = {}
+  for id, row in pairs(PLEDGE_BY_ID) do
+    local n = questNameFromId(id)
+    if n ~= "" then PLEDGE_BY_NAME[n:lower()] = row end
+  end
+end
+
+-- WPamA: giver is dungeon → NPC from the pledge quest id, never the interact unit.
+local function matchPledge(questName, journalIndex, questId)
+  questId = journalQuestId(journalIndex, questId)
+  if questId and PLEDGE_BY_ID[questId] then
+    local row = PLEDGE_BY_ID[questId]
+    return row.giver, row.dungeon, questId
+  end
+  ensurePledgeNameMap()
+  local name = cleanQuestName(questName)
+  if name ~= "" and PLEDGE_BY_NAME[name:lower()] then
+    local row = PLEDGE_BY_NAME[name:lower()]
+    return row.giver, row.dungeon, questId
+  end
+  if not name or name == "" then return nil, nil, questId end
+  local dungeon = tostring(name):gsub("^Pledge:%s*", ""):gsub("^pledge:%s*", "")
   dungeon = dungeon:match("^%s*(.-)%s*$") or dungeon
-  local giver = interactGiver() or giverFromJournal(journalIndex) or PLEDGE_BY_DUNGEON[normDungeon(dungeon)]
-  if not giver then return nil, dungeon end
-  return giver, dungeon
+  local giver = PLEDGE_BY_DUNGEON[normDungeon(dungeon)]
+  if not giver then return nil, dungeon, questId end
+  return giver, dungeon, questId
+end
+
+local function pledgeStepReady(journalIndex)
+  if not journalIndex or not GetJournalQuestInfo then return false end
+  local packed = { pcall(GetJournalQuestInfo, journalIndex) }
+  if not packed[1] then return false end
+  for i = 2, #packed do
+    if type(packed[i]) == "string" and packed[i] ~= "" then
+      local text = packed[i]
+      if text:find("Return to", 1, true) or text:find("Talk to", 1, true)
+        or text:find("return to", 1, true) or text:find("talk to", 1, true) then
+        return true
+      end
+    end
+  end
+  return false
 end
 
 -- Pledge journal objectives are the in-game finish: optional Veteran / Hard Mode
@@ -1244,18 +1402,64 @@ local function journalWritCraft(journalIndex)
   return nil
 end
 
-local function flagWrit(questName, status, journalIndex)
+local function flagWrit(questName, status, journalIndex, questId)
+  questId = journalQuestId(journalIndex, questId)
   local craft = journalIndex and journalWritCraft(journalIndex) or nil
   if not craft then
-    local def = matchWrit(questName)
+    local def = matchWrit(questName, questId)
     craft = def and def.craft or nil
   end
   if not craft then return end
   local bucket = ensureDailyBucket(currentCharId())
   if not bucket then return end
+  if status == "cleared" then
+    if bucket.writs[craft] ~= "done" then bucket.writs[craft] = nil end
+    return
+  end
   if status == "done" or bucket.writs[craft] ~= "done" then
     bucket.writs[craft] = status
   end
+end
+
+local WORLD_BOSS_BY_NAME = nil
+local function ensureWorldBossNameMap()
+  if WORLD_BOSS_BY_NAME then return end
+  WORLD_BOSS_BY_NAME = {}
+  for id, zone in pairs(WORLD_BOSS_BY_ID) do
+    local n = questNameFromId(id)
+    if n ~= "" then WORLD_BOSS_BY_NAME[n:lower()] = { zone = zone, questId = id } end
+  end
+end
+
+local function flagWorldBoss(questName, status, journalIndex, questId)
+  questId = journalQuestId(journalIndex, questId)
+  local zone = questId and WORLD_BOSS_BY_ID[questId] or nil
+  if not zone then
+    ensureWorldBossNameMap()
+    local row = WORLD_BOSS_BY_NAME[tostring(cleanQuestName(questName) or ""):lower()]
+    if row then
+      zone = row.zone
+      questId = row.questId
+    end
+  end
+  if not zone or not questId then return end
+  local bucket = ensureDailyBucket(currentCharId())
+  if not bucket then return end
+  bucket.worldBosses = bucket.worldBosses or {}
+  local name = cleanQuestName(questName)
+  if name == "" then name = questNameFromId(questId) end
+  local prev = bucket.worldBosses[tostring(questId)]
+  if status == "cleared" then
+    if prev and prev.status ~= "done" then bucket.worldBosses[tostring(questId)] = nil end
+    return
+  end
+  if prev and prev.status == "done" and status ~= "done" then return end
+  bucket.worldBosses[tostring(questId)] = {
+    zone = zone,
+    questId = questId,
+    name = name,
+    status = status,
+  }
 end
 
 -- Instance APIs only while the player is in that dungeon. Journal optional
@@ -1341,13 +1545,20 @@ local function readPledgeMode(journalIndex, dungeon)
   return difficulty, hardMode, ready
 end
 
-local function flagPledge(questName, status, journalIndex)
-  local giver, dungeon = matchPledge(questName, journalIndex)
+local function flagPledge(questName, status, journalIndex, questId)
+  local giver, dungeon = matchPledge(questName, journalIndex, questId)
   if not giver then return end
   local bucket = ensureDailyBucket(currentCharId())
   if not bucket then return end
   local difficulty, hardMode, ready = readPledgeMode(journalIndex, dungeon)
-  if ready and (status == "accepted" or status == nil) then status = "ready" end
+  if (ready or pledgeStepReady(journalIndex)) and (status == "accepted" or status == nil) then
+    status = "ready"
+  end
+  if status == "cleared" then
+    local prev = bucket.pledges[giver]
+    if prev and prev.status ~= "done" then bucket.pledges[giver] = nil end
+    return
+  end
   local prev = bucket.pledges[giver]
   if prev and prev.status == "ready" and status == "accepted" then status = "ready" end
   local row = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
@@ -1374,28 +1585,37 @@ local function onQuestComplete(_, questName, _level, _prevXp, _xp, _cp, questTyp
       or name:lower():find("pledge", 1, true)
     if isWrit then flagWrit(name, "done") end
     if isPledge then flagPledge(name, "done") end
+    flagWorldBoss(name, "done")
   end)
 end
 
--- Turn-in removes the quest from the journal. COMPLETE sometimes misses writs;
--- REMOVED with isCompleted is the one WPamA-style boards actually catch.
-local function onQuestRemoved(_, isCompleted, journalIndex, questName)
+-- WPamA: REMOVED + isCompleted = Done; REMOVED without complete = wipe ACT.
+local function onQuestRemoved(_, isCompleted, journalIndex, questName, _zone, _poi, questId)
   safe(function()
-    if not isCompleted then return end
     local name = cleanQuestName(questName)
     if name == "" and journalIndex then
       name = cleanQuestName(safe(function() return GetJournalQuestName(journalIndex) end, ""))
     end
-    flagWrit(name, "done", journalIndex)
-    if name ~= "" then flagPledge(name, "done", journalIndex) end
+    questId = journalQuestId(journalIndex, questId)
+    if isCompleted then
+      flagWrit(name, "done", journalIndex, questId)
+      if name ~= "" then flagPledge(name, "done", journalIndex, questId) end
+      flagWorldBoss(name, "done", journalIndex, questId)
+    else
+      flagWrit(name, "cleared", journalIndex, questId)
+      if name ~= "" then flagPledge(name, "cleared", journalIndex, questId) end
+      flagWorldBoss(name, "cleared", journalIndex, questId)
+    end
   end)
 end
 
-local function onQuestAdded(_, journalIndex, questName)
+local function onQuestAdded(_, journalIndex, questName, _objective, questId)
   safe(function()
     local name = cleanQuestName(questName)
-    flagWrit(name, "accepted", journalIndex)
-    if name ~= "" then flagPledge(name, "accepted", journalIndex) end
+    questId = journalQuestId(journalIndex, questId)
+    flagWrit(name, "accepted", journalIndex, questId)
+    if name ~= "" then flagPledge(name, "accepted", journalIndex, questId) end
+    flagWorldBoss(name, "accepted", journalIndex, questId)
   end)
 end
 
@@ -1409,13 +1629,20 @@ local function onQuestCondition(_, journalIndex, questName)
       name = cleanQuestName(safe(function() return GetJournalQuestName(journalIndex) end, ""))
     end
     if name == "" then return end
+    local questId = journalQuestId(journalIndex)
     local qtype = safe(function() return GetJournalQuestType(journalIndex) end, nil)
     local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
+      or (questId and PLEDGE_BY_ID[questId])
       or name:lower():find("pledge", 1, true)
     if not isPledge then return end
     local _, _, ready = journalPledgeObjectives(journalIndex)
-    flagPledge(name, ready and "ready" or "accepted", journalIndex)
+    if pledgeStepReady(journalIndex) then ready = true end
+    flagPledge(name, ready and "ready" or "accepted", journalIndex, questId)
   end)
+end
+
+local function onQuestAdvanced(_, journalIndex, questName)
+  onQuestCondition(_, journalIndex, questName)
 end
 
 local function lfgRemaining()
@@ -1453,22 +1680,21 @@ local function gatherDailies(charId)
   local writStatus = {}
   local pledgeStatus = {}
   local pledgesInJournal = {}
+  local worldBosses = {}
+  local bossesInJournal = {}
   if bucket then
     for craft, status in pairs(bucket.writs or {}) do
-      writStatus[craft] = status
+      if status == "done" then writStatus[craft] = status end
     end
+    -- WPamA FindUpdateQuests: wipe ACT unless Completed today. Rebuild from journal.
     for giver, info in pairs(bucket.pledges or {}) do
-      -- "accepted" is never kept from yesterday's flag. Only a live journal
-      -- hit this gather may export ACCEPT.
-      if type(info) == "table" and info.status == "accepted" then
-        pledgeStatus[giver] = {
-          status = "unknown",
-          dungeon = info.dungeon,
-          difficulty = info.difficulty,
-          hardMode = info.hardMode,
-        }
-      else
+      if type(info) == "table" and info.status == "done" then
         pledgeStatus[giver] = info
+      end
+    end
+    for key, info in pairs(bucket.worldBosses or {}) do
+      if type(info) == "table" and info.status == "done" then
+        worldBosses[key] = info
       end
     end
   end
@@ -1478,15 +1704,16 @@ local function gatherDailies(charId)
     for i = 1, n do
       local name = cleanQuestName(safe(function() return GetJournalQuestName(i) end, ""))
       local qtype = safe(function() return GetJournalQuestType(i) end, nil)
+      local questId = journalQuestId(i)
       local repeatType = safe(function()
         return GetJournalQuestRepeatType and GetJournalQuestRepeatType(i)
       end, nil)
       local complete = safe(function()
         return GetJournalQuestIsComplete and GetJournalQuestIsComplete(i)
       end, false)
-      local status = complete and "ready" or "accepted"
+      local status = (complete or pledgeStepReady(i)) and "ready" or "accepted"
       local craft = journalWritCraft(i)
-      local def = matchWrit(name)
+      local def = matchWrit(name, questId)
       local daily = (QUEST_REPEAT_DAILY == nil) or (repeatType == QUEST_REPEAT_DAILY) or (repeatType == nil)
       if daily and (craft or def or (QUEST_TYPE_CRAFTING ~= nil and qtype == QUEST_TYPE_CRAFTING)) then
         local key = craft or (def and def.craft)
@@ -1494,62 +1721,53 @@ local function gatherDailies(charId)
           writStatus[key] = status
         end
       end
-      local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
+      local isPledge = (questId and PLEDGE_BY_ID[questId])
+        or (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
         or (name ~= "" and name:lower():find("pledge", 1, true))
       if isPledge then
-        local giver, dungeon = matchPledge(name, i)
+        local giver, dungeon = matchPledge(name, i, questId)
         if giver then
           local difficulty, hardMode, ready = readPledgeMode(i, dungeon)
-          if ready then status = "ready" end
-          -- Old dungeon-name tables filed a Glirion DLC run under Urgarlag.
-          -- Move today's flag onto the NPC/journal giver.
-          if dungeon and dungeon ~= "" then
-            for other, info in pairs(pledgeStatus) do
-              if other ~= giver and info and info.dungeon and normDungeon(info.dungeon) == normDungeon(dungeon) then
-                pledgeStatus[giver] = info
-                pledgeStatus[other] = nil
-                if bucket then
-                  bucket.pledges[giver] = info
-                  bucket.pledges[other] = nil
-                end
-              end
-            end
-          end
+          if ready or pledgeStepReady(i) then status = "ready" end
+          pledgesInJournal[giver] = true
           local prev = pledgeStatus[giver]
-          if prev and prev.status == "ready" and status == "accepted" then status = "ready" end
-          -- Leftover other-day journal pledges: only publish if this giver was
-          -- already flagged today. The NPC we talked to is the giver — not a
-          -- dungeon-name table that can file a Glirion run under Urgarlag.
-          if prev or interactGiver() then
-            pledgesInJournal[giver] = true
-            if not prev or prev.status ~= "done" then
-              pledgeStatus[giver] = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
-            else
-              pledgeStatus[giver] = mergePledgeMode(prev, prev.dungeon or dungeon, prev.status, difficulty, hardMode)
-            end
-            if bucket then bucket.pledges[giver] = pledgeStatus[giver] end
-            -- Same dungeon stamped on the wrong giver from the old list: drop it.
-            for other, info in pairs(pledgeStatus) do
-              if other ~= giver and info and info.dungeon and dungeon and normDungeon(info.dungeon) == normDungeon(dungeon) then
-                if info.status ~= "done" then pledgeStatus[other] = nil end
-              end
-            end
+          if not prev or prev.status ~= "done" then
+            pledgeStatus[giver] = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
+          else
+            pledgeStatus[giver] = mergePledgeMode(prev, prev.dungeon or dungeon, prev.status, difficulty, hardMode)
+          end
+          if bucket then bucket.pledges[giver] = pledgeStatus[giver] end
+        end
+      end
+      if questId and WORLD_BOSS_BY_ID[questId] then
+        local zone = WORLD_BOSS_BY_ID[questId]
+        local key = tostring(questId)
+        bossesInJournal[key] = true
+        if not worldBosses[key] or worldBosses[key].status ~= "done" then
+          worldBosses[key] = {
+            zone = zone,
+            questId = questId,
+            name = name ~= "" and name or questNameFromId(questId),
+            status = status,
+          }
+          if bucket then
+            bucket.worldBosses = bucket.worldBosses or {}
+            bucket.worldBosses[key] = worldBosses[key]
           end
         end
       end
     end
   end)
 
-  -- Quest left the journal: a run we already stamped is a turn-in, not ACCEPT.
-  for giver, info in pairs(pledgeStatus) do
-    if type(info) == "table" and info.status ~= "done" and not pledgesInJournal[giver] then
-      if info.status == "ready" or info.difficulty or info.hardMode ~= nil then
-        info.status = "done"
-        if bucket then bucket.pledges[giver] = info end
-      elseif info.status == "accepted" then
-        -- Taken today, gone from the book, no mode stamp: turn-in we missed.
-        info.status = "done"
-        if bucket then bucket.pledges[giver] = info end
+  if bucket then
+    for giver, info in pairs(bucket.pledges or {}) do
+      if type(info) == "table" and info.status ~= "done" and not pledgesInJournal[giver] then
+        bucket.pledges[giver] = nil
+      end
+    end
+    for key, info in pairs(bucket.worldBosses or {}) do
+      if type(info) == "table" and info.status ~= "done" and not bossesInJournal[key] then
+        bucket.worldBosses[key] = nil
       end
     end
   end
@@ -1571,13 +1789,7 @@ local function gatherDailies(charId)
     local info = pledgeStatus[giver]
     local inJournal = pledgesInJournal[giver] == true
     local status = (info and info.status) or "unknown"
-    if status == "accepted" and not inJournal then
-      if info and (info.difficulty or info.hardMode ~= nil) then
-        status = "done"
-      else
-        status = "unknown"
-      end
-    end
+    if status == "accepted" and not inJournal then status = "unknown" end
     pledges[#pledges + 1] = {
       giver = giver,
       giverName = PLEDGE_GIVER_NAMES[giver],
@@ -1589,6 +1801,16 @@ local function gatherDailies(charId)
     }
   end
 
+  local worldBossList = {}
+  for _, info in pairs(worldBosses) do
+    worldBossList[#worldBossList + 1] = {
+      zone = info.zone,
+      questId = info.questId,
+      name = info.name or "",
+      status = info.status or "unknown",
+    }
+  end
+
   return {
     dayKey = esoDayKey(now),
     resetAt = nextResetAt(now),
@@ -1597,6 +1819,7 @@ local function gatherDailies(charId)
     randomVeteran = randomStatus(LFG_ACTIVITY_MASTER_DUNGEON),
     writs = writs,
     pledges = pledges,
+    worldBosses = worldBossList,
   }
 end
 
@@ -2542,6 +2765,9 @@ local function onAddOnLoaded(_, name)
   EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_ADDED, onQuestAdded)
   if EVENT_QUEST_CONDITION_COUNTER_CHANGED then
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_CONDITION_COUNTER_CHANGED, onQuestCondition)
+  end
+  if EVENT_QUEST_ADVANCED then
+    EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_QUEST_ADVANCED, onQuestAdvanced)
   end
 
   SLASH_COMMANDS["/nirnside"] = function() safe(function() takeSnapshot("manual") end) end

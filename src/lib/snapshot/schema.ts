@@ -242,6 +242,14 @@ export const DailyPledge = z.object({
 });
 export type DailyPledge = z.infer<typeof DailyPledge>;
 
+export const DailyWorldBoss = z.object({
+  zone: z.string(),
+  questId: z.number().int().nonnegative(),
+  name: z.string().default(""),
+  status: DailyStatus.default("unknown").catch("unknown"),
+});
+export type DailyWorldBoss = z.infer<typeof DailyWorldBoss>;
+
 export const CharacterDailies = z.object({
   /** ESO day this scan belongs to (rolls at 10:00 UTC). */
   dayKey: z.string(),
@@ -252,6 +260,8 @@ export const CharacterDailies = z.object({
   randomVeteran: DailyRandom.default({ status: "unknown" }),
   writs: lenientArray(DailyWrit).default([]),
   pledges: lenientArray(DailyPledge).default([]),
+  /** DLC / chapter world-boss dailies (one pick per zone). Missing on older scans. */
+  worldBosses: lenientArray(DailyWorldBoss).default([]),
 });
 export type CharacterDailies = z.infer<typeof CharacterDailies>;
 
