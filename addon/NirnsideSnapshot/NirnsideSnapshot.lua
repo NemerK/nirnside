@@ -1334,52 +1334,99 @@ local function pledgeStepReady(journalIndex)
   return false
 end
 
--- Pledge journal objectives are the in-game finish: optional Veteran / Hard Mode
--- conditions stay on the quest after you leave the instance. Never guessed.
+-- Undaunted pledges do not write "Hard Mode" on the Death Challenge. Live
+-- journal shape (UESP / in-game): required "Kill <boss>", hidden "Enter
+-- <dungeon> in Veteran Mode", optional Death Challenge (Scroll / altar / …)
+-- which only appears after you enter Veteran. Incomplete optionals are not
+-- unfinished combat — treating them as such left every Normal clear as a
+-- blank check. Mirror of src/lib/dailies/pledge-objectives.ts.
 local function journalPledgeObjectives(journalIndex)
   local difficulty, hardMode = nil, nil
-  local combatDone, openCombat, onlyTurnIn = false, false, true
+  local requiredDone, requiredOpen = false, false
+  local sawVeteran, veteranDone = false, false
+  local sawHm, hmDone = false, false
   if not journalIndex or not GetJournalQuestConditionInfo then
     return difficulty, hardMode, false
   end
-  local steps = safe(function()
+  local numSteps = safe(function()
     return GetJournalQuestNumSteps and GetJournalQuestNumSteps(journalIndex)
-  end, 4) or 4
-  for step = 1, math.max(1, steps) do
-    for cond = 1, 8 do
+  end, 0) or 0
+  if type(numSteps) ~= "number" or numSteps < 1 then numSteps = 4 end
+
+  for step = 1, numSteps do
+    local stepText, visibility, numCond = "", nil, nil
+    if GetJournalQuestStepInfo then
+      local packed = { pcall(GetJournalQuestStepInfo, journalIndex, step) }
+      if packed[1] then
+        if type(packed[2]) == "string" then stepText = packed[2] end
+        visibility = packed[3]
+        if type(packed[6]) == "number" then numCond = packed[6] end
+      end
+    end
+    local stepLower = stepText:lower()
+    local optionalStep = stepLower:find("optional", 1, true)
+      or (QUEST_STEP_VISIBILITY_HINT ~= nil and visibility == QUEST_STEP_VISIBILITY_HINT)
+    local hiddenStep = stepLower:find("hidden", 1, true)
+      or stepLower:find("veteran mode", 1, true)
+      or (QUEST_STEP_VISIBILITY_HIDDEN ~= nil and visibility == QUEST_STEP_VISIBILITY_HIDDEN)
+
+    if type(numCond) ~= "number" or numCond < 1 then
+      numCond = safe(function()
+        return GetJournalQuestNumConditions and GetJournalQuestNumConditions(journalIndex, step)
+      end, 8) or 8
+    end
+    if type(numCond) ~= "number" or numCond < 1 then numCond = 8 end
+
+    for cond = 1, numCond do
       local packed = { pcall(GetJournalQuestConditionInfo, journalIndex, step, cond) }
       if packed[1] and type(packed[2]) == "string" and packed[2] ~= "" then
         local text = packed[2]:lower()
-        local current, maxv, isComplete = packed[3], packed[4], packed[6]
+        local current, maxv, isComplete, isVisible = packed[3], packed[4], packed[6], packed[8]
         local done = isComplete == true
           or (type(current) == "number" and type(maxv) == "number" and maxv > 0 and current >= maxv)
         local turnIn = text:find("return", 1, true) or text:find("talk to", 1, true)
-          or text:find("undaunted", 1, true)
-        if text:find("hard mode", 1, true) then
-          if done then hardMode = true end
-        elseif text:find("veteran", 1, true) then
-          if done then difficulty = "veteran" end
-        elseif not turnIn then
-          if done then
-            combatDone = true
-          else
-            openCombat = true
-            onlyTurnIn = false
-          end
+        local hidden = hiddenStep or isVisible == false
+        local isVet = text:find("veteran", 1, true) or stepLower:find("veteran", 1, true)
+        local isHm = (not isVet) and (
+          text:find("hard mode", 1, true) or text:find("hardmode", 1, true)
+          or text:find("glorious battle", 1, true)
+          or optionalStep
+        )
+        if turnIn then
+          -- Turn-in step. Not a mode signal.
+        elseif isVet then
+          sawVeteran = true
+          if done then veteranDone = true end
+        elseif isHm then
+          sawHm = true
+          if done then hmDone = true end
+        elseif hidden then
+          -- Other hidden rows are not required combat.
+        elseif done then
+          requiredDone = true
+        else
+          requiredOpen = true
         end
       end
     end
   end
-  if hardMode == true then
-    difficulty = "veteran"
-  elseif difficulty == nil and combatDone and not openCombat then
-    difficulty = "normal"
-    hardMode = false
-  end
+
   local questComplete = safe(function()
     return GetJournalQuestIsComplete and GetJournalQuestIsComplete(journalIndex)
   end, false)
-  local ready = questComplete == true or (combatDone and not openCombat) or (onlyTurnIn and combatDone)
+  local ready = questComplete == true or (requiredDone and not requiredOpen)
+
+  if hmDone then
+    difficulty = "veteran"
+    hardMode = true
+  elseif veteranDone or sawHm then
+    -- Death Challenge only appears after entering Veteran.
+    difficulty = "veteran"
+    hardMode = false
+  elseif ready and not veteranDone and not sawHm and (sawVeteran or requiredDone) then
+    difficulty = "normal"
+    hardMode = false
+  end
   return difficulty, hardMode, ready
 end
 
@@ -1462,8 +1509,8 @@ local function flagWorldBoss(questName, status, journalIndex, questId)
   }
 end
 
--- Instance APIs only while the player is in that dungeon. Journal optional
--- Veteran / Hard Mode conditions are read separately and kept in town.
+-- Instance APIs only while the player is in a dungeon. Journal hidden /
+-- optional steps are the source of truth in town; this is the in-dungeon backup.
 local function instancePledgeMode()
   local difficulty = nil
   local hardMode = nil
@@ -1476,12 +1523,15 @@ local function instancePledgeMode()
     difficulty = "normal"
   end
 
-  local starting = safe(function()
-    if GetCurrentRaidStartingReviveCounters then return GetCurrentRaidStartingReviveCounters() end
-  end, nil)
-  if type(starting) == "number" and starting > 0 then hardMode = true end
+  -- Raid revive counters are a trial signal; only treat them as HM on Veteran.
+  if difficulty == "veteran" then
+    local starting = safe(function()
+      if GetCurrentRaidStartingReviveCounters then return GetCurrentRaidStartingReviveCounters() end
+    end, nil)
+    if type(starting) == "number" and starting > 0 then hardMode = true end
+  end
 
-  if hardMode ~= true then
+  if hardMode ~= true and difficulty == "veteran" then
     for _, tag in ipairs({ "boss1", "reticleover" }) do
       local d = safe(function()
         if GetUnitDifficulty then return GetUnitDifficulty(tag) end
@@ -1494,9 +1544,12 @@ local function instancePledgeMode()
   end
 
   if hardMode == nil and difficulty == "normal" then hardMode = false end
+  if hardMode == true then difficulty = difficulty or "veteran" end
   return difficulty, hardMode
 end
 
+-- Never downgrade Veteran → Normal or HM → not-HM. A later town scan that
+-- only sees "Return to …" must not erase the mode we stamped in the dungeon.
 local function mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
   local row = { status = status, dungeon = dungeon }
   if prev then
@@ -1504,9 +1557,14 @@ local function mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
     row.difficulty = prev.difficulty
     row.hardMode = prev.hardMode
   end
-  if difficulty then row.difficulty = difficulty end
+  if difficulty == "veteran" then
+    row.difficulty = "veteran"
+  elseif difficulty == "normal" and row.difficulty ~= "veteran" then
+    row.difficulty = "normal"
+  end
   if hardMode == true then
     row.hardMode = true
+    row.difficulty = "veteran"
   elseif hardMode == false and row.hardMode ~= true then
     row.hardMode = false
   end
@@ -1525,13 +1583,20 @@ local function zoneMatchesPledge(dungeon)
   end
   if zone == "" then return false end
   local a, b = normDungeon(zone), normDungeon(dungeon)
-  return a == b or a:find(b, 1, true) or b:find(a, 1, true)
+  if a == "" or b == "" then return false end
+  if a == b or a:find(b, 1, true) or b:find(a, 1, true) then return true end
+  -- "The Banished Cells" map vs "Banished Cells II" pledge.
+  local function base(s)
+    return (s:gsub("%s+iii$", ""):gsub("%s+ii$", ""):gsub("%s+iv$", ""):gsub("%s+i$", ""))
+  end
+  local ab, bb = base(a), base(b)
+  return ab ~= "" and ab == bb
 end
 
 local function readPledgeMode(journalIndex, dungeon)
   local jDiff, jHM, ready = journalPledgeObjectives(journalIndex)
   local iDiff, iHM = nil, nil
-  if not dungeon or dungeon == "" or zoneMatchesPledge(dungeon) then
+  if zoneMatchesPledge(dungeon) then
     iDiff, iHM = instancePledgeMode()
   end
   local difficulty = jDiff or iDiff
@@ -1541,7 +1606,7 @@ local function readPledgeMode(journalIndex, dungeon)
   elseif jHM == false or iHM == false then
     hardMode = false
   end
-  if hardMode == true then difficulty = difficulty or "veteran" end
+  if hardMode == true then difficulty = "veteran" end
   return difficulty, hardMode, ready
 end
 

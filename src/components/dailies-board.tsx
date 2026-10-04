@@ -282,8 +282,10 @@ export function DailiesBoard({
           Check = done today. Pledge <span className="font-semibold text-fg-muted">N</span> /{" "}
           <span className="font-semibold text-fg-muted">Vet</span> /{" "}
           <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode
-          (from the journal optional objectives, not a guess). ACCEPT = that giver&apos;s
-          today pledge is in the journal on this scan. A leftover other-day pledge stays unmarked.
+          from the journal (hidden Veteran-enter + optional Death Challenge — WPamA does not
+          track this). A plain pledge check means the turn-in was seen but the optionals were
+          not captured on that run; the next clear with 0.9.26 writes N / Vet / HM. ACCEPT = that
+          giver&apos;s today pledge is in the journal on this scan. A leftover other-day pledge stays unmarked.
           Giver comes from the in-game pledge quest id, not the NPC you are standing next to.
           Today&apos;s three names are the community rotation, not an in-game scan. World-boss
           columns are the DLC / chapter daily pick WPamA tracks — one per zone. A dash on randoms

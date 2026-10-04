@@ -233,9 +233,9 @@ export const DailyPledge = z.object({
   giverName: z.string().default(""),
   dungeon: z.string().nullable().optional(),
   status: DailyStatus.default("unknown").catch("unknown"),
-  /** Veteran vs normal, from the instance when the pledge finished. */
+  /** Veteran vs normal, from the journal hidden Veteran-enter objective (or the instance while still inside). */
   difficulty: z.enum(["normal", "veteran"]).optional(),
-  /** True when the game showed a hard-mode signal on that run. */
+  /** True when the optional Death Challenge step completed. WPamA does not track this. */
   hardMode: z.boolean().optional(),
   /** True only when this gather found the pledge in the journal. */
   inJournal: z.boolean().optional(),

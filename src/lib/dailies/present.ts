@@ -127,7 +127,13 @@ function pledgeCell(
   const where = row.dungeon ? `${who} — ${row.dungeon}` : who;
   const extra = pledgeModeExtra(row);
   const note = pledgeModeNote(row);
-  if (row.status === "done") return cell("done", `${where} — done${note}`, extra);
+  if (row.status === "done") {
+    return cell(
+      "done",
+      note ? `${where} — done${note}` : `${where} — done (mode not captured)`,
+      extra,
+    );
+  }
   if (row.status === "ready") return cell("ready", `${where} — ready to turn in${note}`, extra);
   if (row.status === "accepted") {
     // ACCEPT is journal-only. A leftover QUEST_ADDED flag after turn-in is not

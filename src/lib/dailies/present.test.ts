@@ -106,6 +106,18 @@ describe("dailies presentation", () => {
     );
     assert.equal(vet.pledges.maj.difficulty, "veteran");
     assert.match(vet.pledges.maj.title, /veteran/);
+
+    const unknownMode = presentCharacterDailies(
+      char({
+        ...fresh,
+        pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done" }],
+      }),
+      now,
+    );
+    assert.equal(unknownMode.pledges.maj.status, "done");
+    assert.equal(unknownMode.pledges.maj.hardMode, null);
+    assert.equal(unknownMode.pledges.maj.difficulty, null);
+    assert.match(unknownMode.pledges.maj.title, /mode not captured/);
   });
 
   it("does not fake available after reset — unknown with timestamp", () => {

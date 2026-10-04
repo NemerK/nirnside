@@ -45,7 +45,7 @@ export default function DailiesPage() {
             <p className="font-medium text-fg">One logout needed to fill this board.</p>
             <p className="mt-1 max-w-3xl">
               Your account is loaded, but this snapshot came from an older Snapshot addon that did not export
-              dailies. The current app already installed 0.9.25 for you — log each character out once (or{" "}
+              dailies. The current app already installed 0.9.26 for you — log each character out once (or{" "}
               <code className="rounded bg-surface-2 px-1 text-fg">/reloadui</code> on that toon) and the row
               fills with live journal and LFG state.
             </p>
