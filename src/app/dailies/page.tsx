@@ -1,8 +1,8 @@
 import { CalendarDays, RefreshCw } from "lucide-react";
-import { getCharactersFull, getDataSource, hasData } from "@/lib/db/queries";
+import { getAccount, getCharactersFull, getDataSource, hasData } from "@/lib/db/queries";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { dailiesHaveAnyScan, presentAccountDailies, summarizeDailies } from "@/lib/dailies/present";
-import { nextEsoResetAt } from "@/lib/dailies/day";
+import { dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/dailies/day";
 import { communityPledgesForUnix } from "@/lib/dailies/pledges";
 import { PageFrame, PageHeader, Stat, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
@@ -15,11 +15,12 @@ export default function DailiesPage() {
   const source = safe(() => getDataSource());
   const isSample = source?.kind === "sample";
   const characters = liveCharacters(safe(() => getCharactersFull()) ?? []);
+  const region: EsoRegion = safe(() => getAccount()?.region) === "NA" ? "NA" : "EU";
   const now = Math.floor(Date.now() / 1000);
-  const todayPledges = communityPledgesForUnix(now);
-  const rows = presentAccountDailies(characters, now, { treatAsFresh: isSample, todayPledges });
+  const todayPledges = communityPledgesForUnix(now, region);
+  const rows = presentAccountDailies(characters, now, { treatAsFresh: isSample, todayPledges, region });
   const summary = summarizeDailies(rows);
-  const resetAt = nextEsoResetAt(now);
+  const resetAt = nextEsoResetAt(now, region);
   const staleAddon = populated && !isSample && characters.some((c) => c.lastSeen != null) && !dailiesHaveAnyScan(characters);
 
   return (
@@ -45,7 +46,7 @@ export default function DailiesPage() {
             <p className="font-medium text-fg">One logout needed to fill this board.</p>
             <p className="mt-1 max-w-3xl">
               Your account is loaded, but this snapshot came from an older Snapshot addon that did not export
-              dailies. The current app already installed 0.9.26 for you — log each character out once (or{" "}
+              dailies. The current app already installed 0.9.27 for you — log each character out once (or{" "}
               <code className="rounded bg-surface-2 px-1 text-fg">/reloadui</code> on that toon) and the row
               fills with live journal and LFG state.
             </p>
@@ -69,7 +70,12 @@ export default function DailiesPage() {
               value={summary.worldBossesTotal ? `${summary.worldBossesDone}/${summary.worldBossesTotal}` : "—"}
             />
           </div>
-          <DailiesBoard rows={rows} resetAt={resetAt} todayPledges={todayPledges} />
+          <DailiesBoard
+            rows={rows}
+            resetAt={resetAt}
+            todayPledges={todayPledges}
+            resetLabel={`${region} ${String(dailyResetHourUtc(region)).padStart(2, "0")}:00 UTC`}
+          />
         </>
       )}
     </PageFrame>

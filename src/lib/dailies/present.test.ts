@@ -132,6 +132,14 @@ describe("dailies presentation", () => {
     assert.match(row.randomNormal.title, /not scanned since reset/);
   });
 
+  it("rolls EU at 03:00 UTC and NA at 10:00 UTC — not a single clock", () => {
+    const sixUtc = Date.UTC(2026, 9, 4, 6, 0, 0) / 1000;
+    const euScan = { ...fresh, resetAt: resetAtForDayKey("2026-10-03", "EU") };
+    const naScan = { ...fresh, resetAt: resetAtForDayKey("2026-10-03", "NA") };
+    assert.equal(isDailyScanStale(euScan, sixUtc, "EU"), true);
+    assert.equal(isDailyScanStale(naScan, sixUtc, "NA"), false);
+  });
+
   it("marks a never-logged character unknown instead of available", () => {
     const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
     const row = presentCharacterDailies(char(null, null), now);

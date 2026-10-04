@@ -1,5 +1,5 @@
 import type { Character, CharacterDailies, DailyPledge, DailyStatus, DailyWorldBoss, DailyWrit } from "../snapshot/schema";
-import { esoDayKey } from "./day";
+import { esoDayKey, type EsoRegion } from "./day";
 import { PLEDGE_GIVER_NAMES, sameDungeon, type PledgeGiver } from "./pledges";
 import { WORLD_BOSS_ZONES, type WorldBossZoneId } from "./world-bosses";
 
@@ -79,10 +79,11 @@ function cell(status: DailyStatus, title: string, extra?: Partial<DailyCell>): D
 export function isDailyScanStale(
   dailies: CharacterDailies | null | undefined,
   nowUnix: number,
+  region: EsoRegion = "EU",
 ): boolean {
   if (!dailies) return true;
   if (dailies.resetAt > 0 && nowUnix >= dailies.resetAt) return true;
-  if (dailies.dayKey && dailies.dayKey !== esoDayKey(nowUnix)) return true;
+  if (dailies.dayKey && dailies.dayKey !== esoDayKey(nowUnix, region)) return true;
   return false;
 }
 
@@ -219,14 +220,14 @@ export function unknownCharacterDailies(
 export function presentCharacterDailies(
   character: Character,
   nowUnix: number,
-  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string> },
+  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string>; region?: EsoRegion },
 ): PresentedCharacterDailies {
   const dailies = character.dailies;
   const neverLogged = character.lastSeen == null;
   if (neverLogged) {
     return unknownCharacterDailies(character, "not scanned since last login");
   }
-  const stale = options?.treatAsFresh ? false : isDailyScanStale(dailies, nowUnix);
+  const stale = options?.treatAsFresh ? false : isDailyScanStale(dailies, nowUnix, options?.region ?? "EU");
   if (!dailies || stale) {
     const reason = dailies
       ? "not scanned since reset"
@@ -257,7 +258,7 @@ export function presentCharacterDailies(
 export function presentAccountDailies(
   characters: Character[],
   nowUnix: number,
-  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string> },
+  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string>; region?: EsoRegion },
 ): PresentedCharacterDailies[] {
   return characters.map((c) => presentCharacterDailies(c, nowUnix, options));
 }

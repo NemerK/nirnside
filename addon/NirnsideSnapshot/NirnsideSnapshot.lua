@@ -943,13 +943,21 @@ end
 --
 -- Journal + LFG APIs at logout, plus tiny quest-event flags so a turn-in
 -- still counts after the quest leaves the journal. Flags live in
--- sv.dailyFlags (addon-internal) and expire at the 10:00 UTC reset.
+-- sv.dailyFlags (addon-internal) and expire at the megaserver daily reset
+-- (EU 03:00 UTC, NA 10:00 UTC — same clock as pledges / writs / randoms).
 -- Event handlers only write a flag — they never scan bags or take a snapshot.
 -- Writs/pledges not in the journal and not flagged done are unknown, never
 -- invented as available — the game does not say "already completed today".
 ----------------------------------------------------------------------
 
-local ESO_DAILY_RESET_HOUR = 10
+-- ZOS / ESO-Hub: EU 03:00 UTC, NA 10:00 UTC. Never a single 10:00 clock.
+local function megaserverResetHourUtc()
+  local world = safe(function()
+    if GetWorldName then return GetWorldName() end
+  end, "") or ""
+  if tostring(world):find("NA", 1, true) then return 10 end
+  return 3
+end
 
 local WRIT_DEFS = {
   { craft = "blacksmithing", name = "Blacksmith Writ", match = "blacksmith" },
@@ -1128,8 +1136,17 @@ end
 
 local function nextResetAt(ts)
   ts = ts or GetTimeStamp()
+  local hour = megaserverResetHourUtc()
+  local remain = safe(function()
+    if GetTimeUntilNextDailyLoginRewardClaimS then
+      return GetTimeUntilNextDailyLoginRewardClaimS()
+    end
+  end, nil)
+  if type(remain) == "number" and remain > 0 and remain < 36 * 3600 then
+    return ts + math.floor(remain)
+  end
   local secs = ts % 86400
-  local today = ts - secs + ESO_DAILY_RESET_HOUR * 3600
+  local today = ts - secs + hour * 3600
   if ts < today then return today end
   return today + 86400
 end
@@ -1152,7 +1169,7 @@ end
 
 local function esoDayKey(ts)
   ts = ts or GetTimeStamp()
-  return utcYmd(ts - ESO_DAILY_RESET_HOUR * 3600)
+  return utcYmd(ts - megaserverResetHourUtc() * 3600)
 end
 
 local function currentCharId()

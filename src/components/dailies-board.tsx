@@ -95,7 +95,7 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
   );
 }
 
-function ResetCountdown({ resetAt }: { resetAt: number }) {
+function ResetCountdown({ resetAt, label }: { resetAt: number; label?: string }) {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   useEffect(() => {
     const id = window.setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
@@ -106,6 +106,7 @@ function ResetCountdown({ resetAt }: { resetAt: number }) {
     <div className="text-sm text-fg-muted">
       Time until reset{" "}
       <span className="font-mono tabular-nums text-fg">{formatRemainingSeconds(remaining)}</span>
+      {label ? <span className="ml-1 text-xs text-fg-subtle">({label})</span> : null}
     </div>
   );
 }
@@ -127,10 +128,12 @@ export function DailiesBoard({
   rows,
   resetAt,
   todayPledges,
+  resetLabel,
 }: {
   rows: PresentedCharacterDailies[];
   resetAt: number;
   todayPledges: Record<PledgeGiver, string>;
+  resetLabel?: string;
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -177,7 +180,7 @@ export function DailiesBoard({
               </button>
             ))}
           </div>
-          <ResetCountdown resetAt={resetAt} />
+          <ResetCountdown resetAt={resetAt} label={resetLabel} />
         </div>
       </StickyMenu>
 
@@ -284,7 +287,7 @@ export function DailiesBoard({
           <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode
           from the journal (hidden Veteran-enter + optional Death Challenge — WPamA does not
           track this). A plain pledge check means the turn-in was seen but the optionals were
-          not captured on that run; the next clear with 0.9.26 writes N / Vet / HM. ACCEPT = that
+          not captured on that run; the next clear with 0.9.27 writes N / Vet / HM. ACCEPT = that
           giver&apos;s today pledge is in the journal on this scan. A leftover other-day pledge stays unmarked.
           Giver comes from the in-game pledge quest id, not the NPC you are standing next to.
           Today&apos;s three names are the community rotation, not an in-game scan. World-boss

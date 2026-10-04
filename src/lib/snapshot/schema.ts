@@ -197,7 +197,8 @@ export const Companion = z.object({
 /**
  * Daily board cell. `available` / `accepted` / `done` come from the game
  * (LFG reward eligibility or the journal). `cooldown` is the random-dungeon
- * reward timer. After the 10:00 UTC reset we never reuse yesterday's leftovers
+ * reward timer. After the megaserver daily reset (EU 03:00 UTC / NA 10:00 UTC)
+ * we never reuse yesterday's leftovers
  * — the hub shows `unknown` until the next logout scan.
  */
 export const DailyStatus = z.enum(["available", "accepted", "ready", "done", "cooldown", "unknown"]);
@@ -251,9 +252,9 @@ export const DailyWorldBoss = z.object({
 export type DailyWorldBoss = z.infer<typeof DailyWorldBoss>;
 
 export const CharacterDailies = z.object({
-  /** ESO day this scan belongs to (rolls at 10:00 UTC). */
+  /** ESO day this scan belongs to (EU rolls at 03:00 UTC, NA at 10:00 UTC). */
   dayKey: z.string(),
-  /** Unix seconds of the next 10:00 UTC reset after this scan. */
+  /** Unix seconds of the next megaserver daily reset after this scan. */
   resetAt: z.number().int().nonnegative(),
   capturedAt: z.number().int().nonnegative(),
   randomNormal: DailyRandom.default({ status: "unknown" }),

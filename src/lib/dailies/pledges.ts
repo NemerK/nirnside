@@ -13,7 +13,7 @@
  * against ESO-Hub for 2026-10-03). Never presented as an in-game scan.
  */
 
-import { esoDayKey } from "./day";
+import { esoDayKey, type EsoRegion } from "./day";
 
 export const PLEDGE_GIVERS = ["maj", "glirion", "urgarlag"] as const;
 export type PledgeGiver = (typeof PLEDGE_GIVERS)[number];
@@ -309,6 +309,9 @@ export function communityPledgesForDayKey(dayKey: string): Record<PledgeGiver, s
   };
 }
 
-export function communityPledgesForUnix(unixSeconds: number): Record<PledgeGiver, string> {
-  return communityPledgesForDayKey(esoDayKey(unixSeconds));
+export function communityPledgesForUnix(
+  unixSeconds: number,
+  region: EsoRegion = "EU",
+): Record<PledgeGiver, string> {
+  return communityPledgesForDayKey(esoDayKey(unixSeconds, region));
 }
