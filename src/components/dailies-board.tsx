@@ -45,13 +45,14 @@ function ModeMark({ label, title, tone }: { label: string; title: string; tone: 
 }
 
 function DailyCellView({ cell }: { cell: DailyCell }) {
-  if (cell.status === "done" && cell.hardMode === true) {
+  const finished = cell.status === "done" || cell.status === "ready" || cell.status === "accepted";
+  if (finished && cell.hardMode === true) {
     return <ModeMark label="HM" title={cell.title} tone="hm" />;
   }
-  if (cell.status === "done" && cell.difficulty === "veteran") {
+  if (finished && cell.difficulty === "veteran") {
     return <ModeMark label="Vet" title={cell.title} tone="vet" />;
   }
-  if (cell.status === "done" && (cell.difficulty === "normal" || cell.hardMode === false)) {
+  if (finished && (cell.difficulty === "normal" || cell.hardMode === false)) {
     return <ModeMark label="N" title={cell.title} tone="norm" />;
   }
   if (cell.status === "done" || cell.status === "cooldown") {
@@ -244,9 +245,9 @@ export function DailiesBoard({
         <p className="mt-3 text-xs text-fg-subtle">
           Check = done today. Pledge <span className="font-semibold text-fg-muted">N</span> /{" "}
           <span className="font-semibold text-fg-muted">Vet</span> /{" "}
-          <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode.
-          ACCEPT only when the journal dungeon is today&apos;s daily — a leftover from another day
-          stays unmarked.
+          <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode
+          (from the journal optional objectives, not a guess). ACCEPT = still in the journal
+          and we have not seen the run finish. The giver is the NPC you talked to.
           Today&apos;s three names are the community rotation, not an in-game scan. A dash on randoms
           means the daily reward is still available. A question mark on a writ or pledge means it is
           not in the journal (or is yesterday&apos;s leftover) and we did not see the turn-in.

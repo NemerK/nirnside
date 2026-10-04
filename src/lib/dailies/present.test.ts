@@ -168,29 +168,38 @@ describe("dailies presentation", () => {
     assert.equal(row.randomNormal.remainingSeconds, undefined);
   });
 
-  it("shows ACCEPT only when the journal dungeon is today's pledge", () => {
+  it("keeps journal ACCEPT and carries mode so the board can show N/Vet/HM", () => {
     const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
-    const today = presentCharacterDailies(
+    const accepted = presentCharacterDailies(
       char({
         ...fresh,
         pledges: [
-          { giver: "maj", giverName: "Maj al-Ragath", dungeon: "The Banished Cells II", status: "accepted" },
+          { giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "accepted" },
         ],
       }),
       now,
     );
-    assert.equal(today.pledges.maj.status, "accepted");
-    assert.equal(today.pledges.maj.label, "ACCEPT");
-    assert.match(today.pledges.maj.title, /today's pledge/);
+    assert.equal(accepted.pledges.maj.status, "accepted");
+    assert.equal(accepted.pledges.maj.label, "ACCEPT");
 
-    const leftover = presentCharacterDailies(
+    const readyHm = presentCharacterDailies(
       char({
         ...fresh,
-        pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "accepted" }],
+        pledges: [
+          {
+            giver: "glirion",
+            giverName: "Glirion the Redbeard",
+            dungeon: "Icereach",
+            status: "ready",
+            hardMode: true,
+            difficulty: "veteran",
+          },
+        ],
       }),
       now,
     );
-    assert.equal(leftover.pledges.maj.status, "unknown");
-    assert.match(leftover.pledges.maj.title, /not today's pledge/);
+    assert.equal(readyHm.pledges.glirion.status, "ready");
+    assert.equal(readyHm.pledges.glirion.hardMode, true);
+    assert.equal(readyHm.pledges.glirion.dungeon, "Icereach");
   });
 });

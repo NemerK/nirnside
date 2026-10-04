@@ -1,6 +1,6 @@
 import type { Character, CharacterDailies, DailyPledge, DailyStatus, DailyWrit } from "../snapshot/schema";
 import { esoDayKey } from "./day";
-import { PLEDGE_GIVER_NAMES, communityPledgesForUnix, sameDungeon, type PledgeGiver } from "./pledges";
+import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "./pledges";
 
 export const WRIT_CRAFTS = [
   "blacksmithing",
@@ -114,11 +114,7 @@ function pledgeModeExtra(row: DailyPledge): Partial<DailyCell> {
   };
 }
 
-function pledgeCell(
-  pledges: DailyPledge[] | undefined,
-  giver: PledgeGiver,
-  todayDungeon: string | undefined,
-): DailyCell {
+function pledgeCell(pledges: DailyPledge[] | undefined, giver: PledgeGiver): DailyCell {
   const row = pledges?.find((p) => p.giver === giver);
   const who = PLEDGE_GIVER_NAMES[giver];
   if (!row) return { ...UNKNOWN, title: `${who} — not scanned since reset` };
@@ -128,16 +124,7 @@ function pledgeCell(
   if (row.status === "done") return cell("done", `${where} — done${note}`, extra);
   if (row.status === "ready") return cell("ready", `${where} — ready to turn in${note}`, extra);
   if (row.status === "accepted") {
-    // Leftover other-day pledges stay in the journal after reset. ACCEPT is
-    // only today's daily — community calendar, never invented as in-game truth.
-    if (todayDungeon && !sameDungeon(row.dungeon, todayDungeon)) {
-      return cell(
-        "unknown",
-        `${where} — in journal, not today's pledge (${todayDungeon})`,
-        extra,
-      );
-    }
-    return cell("accepted", `${where} — in journal (today's pledge)`, extra);
+    return cell("accepted", `${where} — in journal`, extra);
   }
   if (row.status === "available") {
     return cell("unknown", `${who} — not in journal (turn-in not seen)`);
@@ -204,7 +191,6 @@ export function presentCharacterDailies(
       : "not scanned — update the Snapshot addon and log out once";
     return unknownCharacterDailies(character, reason);
   }
-  const today = communityPledgesForUnix(nowUnix);
   return {
     characterId: character.id,
     name: character.name,
@@ -216,9 +202,9 @@ export function presentCharacterDailies(
     randomVeteran: randomCell("Random Veteran", dailies.randomVeteran),
     writs: Object.fromEntries(WRIT_CRAFTS.map((c) => [c, writCell(dailies.writs, c)])) as Record<WritCraft, DailyCell>,
     pledges: {
-      maj: pledgeCell(dailies.pledges, "maj", today.maj),
-      glirion: pledgeCell(dailies.pledges, "glirion", today.glirion),
-      urgarlag: pledgeCell(dailies.pledges, "urgarlag", today.urgarlag),
+      maj: pledgeCell(dailies.pledges, "maj"),
+      glirion: pledgeCell(dailies.pledges, "glirion"),
+      urgarlag: pledgeCell(dailies.pledges, "urgarlag"),
     },
   };
 }

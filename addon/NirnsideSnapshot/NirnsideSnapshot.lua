@@ -1111,13 +1111,118 @@ local function matchWrit(questName)
   return nil
 end
 
-local function matchPledge(questName)
+local function giverFromNpcName(name)
+  if not name or name == "" then return nil end
+  local n = tostring(name):lower()
+  if n:find("urgarlag", 1, true) then return "urgarlag" end
+  if n:find("glirion", 1, true) then return "glirion" end
+  if n:find("maj", 1, true) and n:find("ragath", 1, true) then return "maj" end
+  if n:find("maj al", 1, true) then return "maj" end
+  return nil
+end
+
+local function interactGiver()
+  for _, tag in ipairs({ "interact", "reticleover" }) do
+    local name = cleanQuestName(safe(function()
+      if GetUnitName then return GetUnitName(tag) end
+    end, ""))
+    local giver = giverFromNpcName(name)
+    if giver then return giver end
+  end
+  return nil
+end
+
+local function scanTextForGiver(text)
+  return giverFromNpcName(text)
+end
+
+-- In-game giver from the journal text (who sent you), not a dungeon-name table.
+local function giverFromJournal(journalIndex)
+  if not journalIndex then return nil end
+  if GetJournalQuestInfo then
+    local packed = { pcall(GetJournalQuestInfo, journalIndex) }
+    if packed[1] then
+      for i = 2, #packed do
+        if type(packed[i]) == "string" then
+          local giver = scanTextForGiver(packed[i])
+          if giver then return giver end
+        end
+      end
+    end
+  end
+  if GetJournalQuestConditionInfo then
+    local steps = safe(function()
+      return GetJournalQuestNumSteps and GetJournalQuestNumSteps(journalIndex)
+    end, 4) or 4
+    for step = 1, math.max(1, steps) do
+      for cond = 1, 8 do
+        local packed = { pcall(GetJournalQuestConditionInfo, journalIndex, step, cond) }
+        if packed[1] and type(packed[2]) == "string" then
+          local giver = scanTextForGiver(packed[2])
+          if giver then return giver end
+        end
+      end
+    end
+  end
+  return nil
+end
+
+local function matchPledge(questName, journalIndex)
   if not questName then return nil, nil end
   local dungeon = tostring(questName):gsub("^Pledge:%s*", ""):gsub("^pledge:%s*", "")
   dungeon = dungeon:match("^%s*(.-)%s*$") or dungeon
-  local giver = PLEDGE_BY_DUNGEON[normDungeon(dungeon)]
+  local giver = interactGiver() or giverFromJournal(journalIndex) or PLEDGE_BY_DUNGEON[normDungeon(dungeon)]
   if not giver then return nil, dungeon end
   return giver, dungeon
+end
+
+-- Pledge journal objectives are the in-game finish: optional Veteran / Hard Mode
+-- conditions stay on the quest after you leave the instance. Never guessed.
+local function journalPledgeObjectives(journalIndex)
+  local difficulty, hardMode = nil, nil
+  local combatDone, openCombat, onlyTurnIn = false, false, true
+  if not journalIndex or not GetJournalQuestConditionInfo then
+    return difficulty, hardMode, false
+  end
+  local steps = safe(function()
+    return GetJournalQuestNumSteps and GetJournalQuestNumSteps(journalIndex)
+  end, 4) or 4
+  for step = 1, math.max(1, steps) do
+    for cond = 1, 8 do
+      local packed = { pcall(GetJournalQuestConditionInfo, journalIndex, step, cond) }
+      if packed[1] and type(packed[2]) == "string" and packed[2] ~= "" then
+        local text = packed[2]:lower()
+        local current, maxv, isComplete = packed[3], packed[4], packed[6]
+        local done = isComplete == true
+          or (type(current) == "number" and type(maxv) == "number" and maxv > 0 and current >= maxv)
+        local turnIn = text:find("return", 1, true) or text:find("talk to", 1, true)
+          or text:find("undaunted", 1, true)
+        if text:find("hard mode", 1, true) then
+          if done then hardMode = true end
+        elseif text:find("veteran", 1, true) then
+          if done then difficulty = "veteran" end
+        elseif not turnIn then
+          if done then
+            combatDone = true
+          else
+            openCombat = true
+            onlyTurnIn = false
+          end
+        end
+      end
+    end
+  end
+  if hardMode == true then
+    difficulty = "veteran"
+  elseif difficulty == nil and combatDone and not openCombat then
+    difficulty = "normal"
+    hardMode = false
+  end
+  local questComplete = safe(function()
+    return GetJournalQuestIsComplete and GetJournalQuestIsComplete(journalIndex)
+  end, false)
+  local ready = questComplete == true or (combatDone and not openCombat) or (onlyTurnIn and combatDone)
+  return difficulty, hardMode, ready
 end
 
 -- Journal writs sometimes have a blank name / QUEST_TYPE_NONE. Craft type from
@@ -1153,10 +1258,9 @@ local function flagWrit(questName, status, journalIndex)
   end
 end
 
--- Instance mode for the current dungeon. Never guessed: missing APIs stay nil.
--- hardMode is true only when the game shows a hard-mode signal (vitality pool,
--- deadly boss, or "hard mode" in the pledge condition text).
-local function instancePledgeMode(journalIndex)
+-- Instance APIs only while the player is in that dungeon. Journal optional
+-- Veteran / Hard Mode conditions are read separately and kept in town.
+local function instancePledgeMode()
   local difficulty = nil
   local hardMode = nil
   local zoneDiff = safe(function()
@@ -1185,23 +1289,6 @@ local function instancePledgeMode(journalIndex)
     end
   end
 
-  if hardMode ~= true and journalIndex and GetJournalQuestConditionInfo then
-    for step = 1, 2 do
-      for cond = 1, 8 do
-        local packed = { pcall(GetJournalQuestConditionInfo, journalIndex, step, cond) }
-        if packed[1] then
-          local text = packed[2]
-          if type(text) == "string" and text:lower():find("hard mode", 1, true) then
-            hardMode = true
-            break
-          end
-        end
-      end
-      if hardMode == true then break end
-    end
-  end
-
-  -- Normal instances cannot be hard mode. Veteran without a signal stays unknown.
   if hardMode == nil and difficulty == "normal" then hardMode = false end
   return difficulty, hardMode
 end
@@ -1237,16 +1324,32 @@ local function zoneMatchesPledge(dungeon)
   return a == b or a:find(b, 1, true) or b:find(a, 1, true)
 end
 
+local function readPledgeMode(journalIndex, dungeon)
+  local jDiff, jHM, ready = journalPledgeObjectives(journalIndex)
+  local iDiff, iHM = nil, nil
+  if not dungeon or dungeon == "" or zoneMatchesPledge(dungeon) then
+    iDiff, iHM = instancePledgeMode()
+  end
+  local difficulty = jDiff or iDiff
+  local hardMode = nil
+  if jHM == true or iHM == true then
+    hardMode = true
+  elseif jHM == false or iHM == false then
+    hardMode = false
+  end
+  if hardMode == true then difficulty = difficulty or "veteran" end
+  return difficulty, hardMode, ready
+end
+
 local function flagPledge(questName, status, journalIndex)
-  local giver, dungeon = matchPledge(questName)
+  local giver, dungeon = matchPledge(questName, journalIndex)
   if not giver then return end
   local bucket = ensureDailyBucket(currentCharId())
   if not bucket then return end
-  local difficulty, hardMode = instancePledgeMode(journalIndex)
-  if dungeon and dungeon ~= "" and not zoneMatchesPledge(dungeon) then
-    difficulty, hardMode = nil, nil
-  end
+  local difficulty, hardMode, ready = readPledgeMode(journalIndex, dungeon)
+  if ready and (status == "accepted" or status == nil) then status = "ready" end
   local prev = bucket.pledges[giver]
+  if prev and prev.status == "ready" and status == "accepted" then status = "ready" end
   local row = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
   if status == "done" or not prev or prev.status ~= "done" then
     bucket.pledges[giver] = row
@@ -1296,15 +1399,11 @@ local function onQuestAdded(_, journalIndex, questName)
   end)
 end
 
--- Last pledge step usually completes in the instance, before the Undaunted turn-in.
--- Flag-only: stamp normal vs hard mode while the game still knows the dungeon.
+-- Stamp mode on every pledge condition change — not only when the quest is
+-- "complete" (that stays false until the Undaunted turn-in).
 local function onQuestCondition(_, journalIndex, questName)
   safe(function()
     if not journalIndex then return end
-    local complete = safe(function()
-      return GetJournalQuestIsComplete and GetJournalQuestIsComplete(journalIndex)
-    end, false)
-    if not complete then return end
     local name = cleanQuestName(questName)
     if name == "" then
       name = cleanQuestName(safe(function() return GetJournalQuestName(journalIndex) end, ""))
@@ -1313,7 +1412,9 @@ local function onQuestCondition(_, journalIndex, questName)
     local qtype = safe(function() return GetJournalQuestType(journalIndex) end, nil)
     local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
       or name:lower():find("pledge", 1, true)
-    if isPledge then flagPledge(name, "ready", journalIndex) end
+    if not isPledge then return end
+    local _, _, ready = journalPledgeObjectives(journalIndex)
+    flagPledge(name, ready and "ready" or "accepted", journalIndex)
   end)
 end
 
@@ -1351,6 +1452,7 @@ local function gatherDailies(charId)
   local bucket = ensureDailyBucket(charId)
   local writStatus = {}
   local pledgeStatus = {}
+  local pledgesInJournal = {}
   if bucket then
     for craft, status in pairs(bucket.writs or {}) do
       writStatus[craft] = status
@@ -1384,27 +1486,62 @@ local function gatherDailies(charId)
       local isPledge = (QUEST_TYPE_UNDAUNTED_PLEDGE ~= nil and qtype == QUEST_TYPE_UNDAUNTED_PLEDGE)
         or (name ~= "" and name:lower():find("pledge", 1, true))
       if isPledge then
-        local giver, dungeon = matchPledge(name)
+        local giver, dungeon = matchPledge(name, i)
         if giver then
-          local difficulty, hardMode = instancePledgeMode(i)
-          if dungeon and dungeon ~= "" and not zoneMatchesPledge(dungeon) then
-            difficulty, hardMode = nil, nil
+          local difficulty, hardMode, ready = readPledgeMode(i, dungeon)
+          if ready then status = "ready" end
+          -- Old dungeon-name tables filed a Glirion DLC run under Urgarlag.
+          -- Move today's flag onto the NPC/journal giver.
+          if dungeon and dungeon ~= "" then
+            for other, info in pairs(pledgeStatus) do
+              if other ~= giver and info and info.dungeon and normDungeon(info.dungeon) == normDungeon(dungeon) then
+                pledgeStatus[giver] = info
+                pledgeStatus[other] = nil
+                if bucket then
+                  bucket.pledges[giver] = info
+                  bucket.pledges[other] = nil
+                end
+              end
+            end
           end
           local prev = pledgeStatus[giver]
-          -- Leftover journal pledges from another day must not become today's
-          -- accept. Only keep journal state when this giver was already flagged
-          -- today (QUEST_ADDED / condition / turn-in).
-          if prev then
-            if prev.status ~= "done" then
+          if prev and prev.status == "ready" and status == "accepted" then status = "ready" end
+          -- Leftover other-day journal pledges: only publish if this giver was
+          -- already flagged today. The NPC we talked to is the giver — not a
+          -- dungeon-name table that can file a Glirion run under Urgarlag.
+          if prev or interactGiver() then
+            pledgesInJournal[giver] = true
+            if not prev or prev.status ~= "done" then
               pledgeStatus[giver] = mergePledgeMode(prev, dungeon, status, difficulty, hardMode)
             else
               pledgeStatus[giver] = mergePledgeMode(prev, prev.dungeon or dungeon, prev.status, difficulty, hardMode)
+            end
+            if bucket then bucket.pledges[giver] = pledgeStatus[giver] end
+            -- Same dungeon stamped on the wrong giver from the old list: drop it.
+            for other, info in pairs(pledgeStatus) do
+              if other ~= giver and info and info.dungeon and dungeon and normDungeon(info.dungeon) == normDungeon(dungeon) then
+                if info.status ~= "done" then pledgeStatus[other] = nil end
+              end
             end
           end
         end
       end
     end
   end)
+
+  -- Quest left the journal: a run we already stamped is a turn-in, not ACCEPT.
+  for giver, info in pairs(pledgeStatus) do
+    if type(info) == "table" and info.status ~= "done" and not pledgesInJournal[giver] then
+      if info.status == "ready" or info.difficulty or info.hardMode ~= nil then
+        info.status = "done"
+        if bucket then bucket.pledges[giver] = info end
+      elseif info.status == "accepted" then
+        -- Taken today, gone from the book, no mode stamp: turn-in we missed.
+        info.status = "done"
+        if bucket then bucket.pledges[giver] = info end
+      end
+    end
+  end
 
   -- Not in the journal and no turn-in flag ≠ available. The game does not
   -- expose "this daily was already completed today" after the quest leaves
