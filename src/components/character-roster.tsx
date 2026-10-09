@@ -176,16 +176,24 @@ function ClassPicker({
             aria-pressed={active}
             onClick={() => onChange(active ? "" : c)}
             className={`inline-flex items-center gap-1 bg-transparent p-0 transition ${
-              active ? "opacity-100" : count === 0 ? "opacity-25 hover:opacity-55" : "opacity-45 hover:opacity-80"
+              active
+                ? "opacity-100"
+                : value
+                  ? count === 0
+                    ? "opacity-20 hover:opacity-50"
+                    : "opacity-35 hover:opacity-70"
+                  : count === 0
+                    ? "opacity-40 hover:opacity-70"
+                    : "opacity-90 hover:opacity-100"
             }`}
           >
             <GameIcon
               name={c}
               icon={classIcon(c)}
-              size={28}
+              size={32}
               bare
               className={
-                active ? "drop-shadow-[0_0_10px_color-mix(in_oklab,var(--accent)_85%,transparent)]" : undefined
+                active ? "drop-shadow-[0_0_12px_color-mix(in_oklab,var(--accent)_90%,transparent)]" : undefined
               }
             />
             <span className={`text-[11px] tabular-nums leading-none ${active ? "text-accent" : "text-fg-subtle"}`}>
