@@ -55,9 +55,9 @@ export default async function StylesPage({
           <div className="text-sm text-fg-muted">
             <p className="font-medium text-fg">One logout needed to list Outfit Styles.</p>
             <p className="mt-1 max-w-3xl">
-              Your account is loaded, but this snapshot came from an older addon that did not export Collections
-              → Outfit Styles. Log out or <code className="rounded bg-surface-2 px-1 text-fg">/reloadui</code>{" "}
-              once and this page fills from the in-game collectible book.
+              Your account is loaded, but this snapshot has no Collections → Outfit Styles yet. Snapshot 0.9.30
+              reads that book the way live ESO does. Restart Nirnside so it can install the addon, then log out
+              or <code className="rounded bg-surface-2 px-1 text-fg">/reloadui</code> once.
             </p>
           </div>
         </div>

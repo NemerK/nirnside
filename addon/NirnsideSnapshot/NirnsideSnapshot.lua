@@ -2201,35 +2201,72 @@ end
 
 ----------------------------------------------------------------------
 -- Account-wide Collections → Outfit Styles (cosmetics, not motifs)
+--
+-- Live ESO (U50 / API 101046) no longer feeds this tree through
+-- GetCollectibleCategoryInfo. The game walks:
+--   GetNumCollectibleCategories
+--   GetCollectibleCategorySpecialization
+--   GetNumSubcategoriesInCollectibleCategory
+--   GetNumCollectiblesInCollectibleCategory
+--   GetCollectibleId(categoryIndex, subcategoryIndex, collectibleIndex)
+-- Same path ZO_COLLECTIBLE_DATA_MANAGER uses. If that walk finds nothing,
+-- fall back to GetTotalCollectiblesByCategoryType(OUTFIT_STYLE) — the
+-- same type walk that already works for houses.
 ----------------------------------------------------------------------
 
 local function collectibleCategoryName(categoryIndex, subIndex)
+  if GetCollectibleCategoryId and GetCollectibleCategoryNameByCategoryId then
+    local id = safe(function() return GetCollectibleCategoryId(categoryIndex, subIndex) end, nil)
+    if id and id > 0 then
+      local name = safe(function()
+        return zo_strformat("<<1>>", GetCollectibleCategoryNameByCategoryId(id))
+      end, nil)
+      if name and name ~= "" then return name end
+    end
+  end
+  -- Pre-U35 leftover, if a client still has it.
   local packed
-  if subIndex and subIndex > 0 then
+  if subIndex and subIndex > 0 and GetCollectibleSubCategoryInfo then
     packed = { pcall(GetCollectibleSubCategoryInfo, categoryIndex, subIndex) }
-  else
+  elseif GetCollectibleCategoryInfo then
     packed = { pcall(GetCollectibleCategoryInfo, categoryIndex) }
   end
-  if not packed[1] or not packed[2] or packed[2] == "" then return nil end
-  return zo_strformat("<<1>>", packed[2])
+  if packed and packed[1] and packed[2] and packed[2] ~= "" then
+    return zo_strformat("<<1>>", packed[2])
+  end
+  return nil
 end
 
-local function collectibleCounts(categoryIndex, subIndex)
-  local packed
-  if subIndex and subIndex > 0 then
-    packed = { pcall(GetCollectibleSubCategoryInfo, categoryIndex, subIndex) }
-  else
-    packed = { pcall(GetCollectibleCategoryInfo, categoryIndex) }
+local function numOutfitSubcategories(categoryIndex)
+  if GetNumSubcategoriesInCollectibleCategory then
+    local n = safe(function() return GetNumSubcategoriesInCollectibleCategory(categoryIndex) end, 0)
+    if type(n) == "number" then return n end
   end
-  if not packed[1] then return 0, 0 end
-  return packed[3] or 0, packed[4] or 0
+  return 0
+end
+
+local function numOutfitCollectibles(categoryIndex, subIndex)
+  if GetNumCollectiblesInCollectibleCategory then
+    local n = safe(function() return GetNumCollectiblesInCollectibleCategory(categoryIndex, subIndex) end, 0)
+    if type(n) == "number" then return n end
+  end
+  return 0
+end
+
+local function collectibleReferenceId(id)
+  if not GetCollectibleReferenceId then return nil end
+  local ref = safe(function() return GetCollectibleReferenceId(id) end, nil)
+  if type(ref) == "number" and ref > 0 then return ref end
+  return nil
 end
 
 local function outfitStyleItemStyleId(id)
-  if not GetCollectibleReferenceId then return nil end
-  local packed = { pcall(GetCollectibleReferenceId, id) }
-  if packed[1] and type(packed[2]) == "number" and packed[2] > 0 then return packed[2] end
-  return nil
+  local ref = collectibleReferenceId(id)
+  if ref and GetOutfitStyleItemStyleId then
+    local styleId = safe(function() return GetOutfitStyleItemStyleId(ref) end, nil)
+    if type(styleId) == "number" and styleId > 0 then return styleId end
+  end
+  return ref
 end
 
 local function itemStyleDisplayName(styleId)
@@ -2270,62 +2307,95 @@ end
 
 local function collectOutfitCollectibles(categoryIndex, subIndex)
   local styles = {}
-  local _nSub, numCol = collectibleCounts(categoryIndex, subIndex)
-  if type(numCol) ~= "number" or numCol < 1 then return styles end
-  local sub = subIndex or 0
+  if not GetCollectibleId then return styles end
+  local numCol = numOutfitCollectibles(categoryIndex, subIndex)
+  if numCol < 1 then return styles end
   for i = 1, numCol do
-    local idPacked = { pcall(GetCollectibleId, categoryIndex, sub, i) }
-    local style = idPacked[1] and readOutfitCollectible(idPacked[2]) or nil
+    local id = safe(function() return GetCollectibleId(categoryIndex, subIndex, i) end, nil)
+    local style = readOutfitCollectible(id)
     if style then styles[#styles + 1] = style end
   end
   return styles
 end
 
 local function categoryIsOutfitStyles(categoryIndex)
-  local packed = { pcall(GetCollectibleCategoryInfo, categoryIndex) }
-  if not packed[1] then return false end
-  local specialization = packed[8]
-  if COLLECTIBLE_CATEGORY_SPECIALIZATION_OUTFIT_STYLES
-    and specialization == COLLECTIBLE_CATEGORY_SPECIALIZATION_OUTFIT_STYLES then
-    return true
+  if GetCollectibleCategorySpecialization and COLLECTIBLE_CATEGORY_SPECIALIZATION_OUTFIT_STYLES then
+    local spec = safe(function() return GetCollectibleCategorySpecialization(categoryIndex) end, nil)
+    if spec == COLLECTIBLE_CATEGORY_SPECIALIZATION_OUTFIT_STYLES then return true end
   end
-  if COLLECTIBLE_CATEGORY_TYPE_OUTFIT_STYLE and GetCollectibleCategoryType then
-    local typePacked = { pcall(GetCollectibleCategoryType, categoryIndex) }
-    if typePacked[1] and typePacked[2] == COLLECTIBLE_CATEGORY_TYPE_OUTFIT_STYLE then return true end
-  end
-  local name = packed[2] and zo_strformat("<<1>>", packed[2]) or ""
+  local name = collectibleCategoryName(categoryIndex, nil) or ""
   local lower = name:lower()
   return lower == "outfit styles" or lower:find("outfit style", 1, true) ~= nil
 end
 
+local function outfitTypeBucket(id)
+  local ref = collectibleReferenceId(id)
+  if ref and IsOutfitStyleArmor and safe(function() return IsOutfitStyleArmor(ref) end, false) then
+    return "Armor Styles"
+  end
+  if ref and IsOutfitStyleWeapon and safe(function() return IsOutfitStyleWeapon(ref) end, false) then
+    return "Weapon Styles"
+  end
+  return "Outfit Styles"
+end
+
+local function gatherOutfitStylesByType()
+  local buckets, order = {}, {}
+  if not COLLECTIBLE_CATEGORY_TYPE_OUTFIT_STYLE then return {} end
+  if not GetTotalCollectiblesByCategoryType or not GetCollectibleIdFromType then return {} end
+  local n = safe(function() return GetTotalCollectiblesByCategoryType(COLLECTIBLE_CATEGORY_TYPE_OUTFIT_STYLE) end, 0)
+  if type(n) ~= "number" or n < 1 then return {} end
+  for i = 1, n do
+    local id = safe(function() return GetCollectibleIdFromType(COLLECTIBLE_CATEGORY_TYPE_OUTFIT_STYLE, i) end, nil)
+    local style = readOutfitCollectible(id)
+    if style then
+      local bucket = outfitTypeBucket(id)
+      if not buckets[bucket] then
+        buckets[bucket] = {}
+        order[#order + 1] = bucket
+      end
+      buckets[bucket][#buckets[bucket] + 1] = style
+    end
+  end
+  local categories = {}
+  for _, name in ipairs(order) do
+    categories[#categories + 1] = { name = name, groups = groupOutfitStyles(buckets[name]) }
+  end
+  return categories
+end
+
 local function gatherOutfitStyles()
   local categories = {}
-  if not GetNumCollectibleCategories or not GetCollectibleCategoryInfo or not GetCollectibleId then
-    return categories
-  end
-  local nPacked = { pcall(GetNumCollectibleCategories) }
-  local n = nPacked[1] and nPacked[2] or 0
-  if type(n) ~= "number" then return categories end
-  for cat = 1, n do
-    if categoryIsOutfitStyles(cat) then
-      local numSub, numCol = collectibleCounts(cat, 0)
-      local parentName = collectibleCategoryName(cat, 0) or "Outfit Styles"
-      if type(numSub) == "number" and numSub > 0 then
-        for sub = 1, numSub do
-          local subName = collectibleCategoryName(cat, sub) or parentName
-          local styles = collectOutfitCollectibles(cat, sub)
-          if #styles > 0 then
-            categories[#categories + 1] = { name = subName, groups = groupOutfitStyles(styles) }
+  if GetNumCollectibleCategories and GetCollectibleId then
+    local n = safe(function() return GetNumCollectibleCategories() end, 0)
+    if type(n) == "number" then
+      for cat = 1, n do
+        if categoryIsOutfitStyles(cat) then
+          local numSub = numOutfitSubcategories(cat)
+          if numSub > 0 then
+            for sub = 1, numSub do
+              local styles = collectOutfitCollectibles(cat, sub)
+              if #styles > 0 then
+                categories[#categories + 1] = {
+                  name = collectibleCategoryName(cat, sub) or "Outfit Styles",
+                  groups = groupOutfitStyles(styles),
+                }
+              end
+            end
+          end
+          local topStyles = collectOutfitCollectibles(cat, nil)
+          if #topStyles > 0 then
+            categories[#categories + 1] = {
+              name = collectibleCategoryName(cat, nil) or "Outfit Styles",
+              groups = groupOutfitStyles(topStyles),
+            }
           end
         end
       end
-      if type(numCol) == "number" and numCol > 0 then
-        local styles = collectOutfitCollectibles(cat, 0)
-        if #styles > 0 then
-          categories[#categories + 1] = { name = parentName, groups = groupOutfitStyles(styles) }
-        end
-      end
     end
+  end
+  if #categories == 0 then
+    categories = gatherOutfitStylesByType()
   end
   return categories
 end
