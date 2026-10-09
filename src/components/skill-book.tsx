@@ -194,9 +194,9 @@ export function SkillBook({
 }) {
   const [catName, setCatName] = useState(categories[0]?.name ?? "");
   const category = categories.find((c) => c.name === catName) ?? categories[0];
-  const [lineName, setLineName] = useState(category?.lines[0]?.name ?? "");
+  const [lineId, setLineId] = useState(category?.lines[0]?.id ?? "");
   const line: SkillLineView | undefined =
-    category?.lines.find((l) => l.name === lineName) ?? category?.lines[0];
+    category?.lines.find((l) => l.id === lineId) ?? category?.lines[0];
   const [abilityIndex, setAbilityIndex] = useState(0);
   const [morphSlot, setMorphSlot] = useState<number | null>(null);
 
@@ -214,13 +214,13 @@ export function SkillBook({
   function pickCategory(name: string) {
     setCatName(name);
     const next = categories.find((c) => c.name === name);
-    setLineName(next?.lines[0]?.name ?? "");
+    setLineId(next?.lines[0]?.id ?? "");
     setAbilityIndex(0);
     setMorphSlot(null);
   }
 
-  function pickLine(name: string) {
-    setLineName(name);
+  function pickLine(id: string) {
+    setLineId(id);
     setAbilityIndex(0);
     setMorphSlot(null);
   }
@@ -244,12 +244,12 @@ export function SkillBook({
           >
             {category?.lines.map((l) => {
               const known = l.abilities.filter((a) => a.purchased).length;
-              const active = l.name === line?.name;
+              const active = l.id === line?.id;
               return (
-                <li key={l.name} className="shrink-0 lg:shrink">
+                <li key={l.id} className="shrink-0 lg:shrink">
                   <button
                     type="button"
-                    onClick={() => pickLine(l.name)}
+                    onClick={() => pickLine(l.id)}
                     className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${
                       active ? "bg-accent-soft text-fg" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
                     }`}

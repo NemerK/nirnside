@@ -158,6 +158,8 @@ export const SkillLine = z.object({
    * Distinct from subclassing "mastered" class lines.
    */
   classMastery: z.boolean().default(false),
+  /** Owning class, set on Class Mastery so identically named trees can be told apart. */
+  className: z.string().nullable().optional(),
   abilities: lenientArray(SkillMorph).default([]),
 });
 export type SkillLine = z.infer<typeof SkillLine>;

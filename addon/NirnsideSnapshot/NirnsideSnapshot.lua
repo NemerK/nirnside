@@ -643,6 +643,7 @@ local function skillLineTraits(skillType, lineIndex)
     local mastered = data.HasMastery and data:HasMastery() or false
     return {
       isClass = isClass,
+      isOwnClass = isOwnClass,
       subclassed = isClass and active and not isOwnClass,
       mastered = isClass and mastered,
       name = data.GetName and zo_strformat("<<1>>", data:GetName()) or nil,
@@ -650,7 +651,7 @@ local function skillLineTraits(skillType, lineIndex)
   end, nil)
 end
 
-local function gatherSkills(masteriesOut, classMasteryOut)
+local function gatherSkills(masteriesOut, classMasteryOut, playerClass)
   local lines = {}
   local seenMastery = {}
   safe(function()
@@ -661,10 +662,14 @@ local function gatherSkills(masteriesOut, classMasteryOut)
         local name, rank, discovered = GetSkillLineInfo(skillType, lineIndex)
         local lineName = zo_strformat("<<1>>", name)
         local classMasteryLine = isClassMasteryLineName(lineName)
+        local traits = skillLineTraits(skillType, lineIndex)
+        -- Other classes' Class Mastery trees share the same display name.
+        -- A character only has their own; skip the rest.
+        local otherClassMastery = classMasteryLine and traits and traits.isClass and traits.isOwnClass == false
         -- Class Mastery is greyed-out (still listed) until unlocked, and hidden
-        -- while subclassing. Always dump the line when the game still lists it
-        -- so purchased passives can show; skip only when the API omits it.
-        if discovered or classMasteryLine then
+        -- while subclassing. Dump this character's line when the game still
+        -- lists it so purchased passives can show; skip only when omitted.
+        if (discovered or classMasteryLine) and not otherClassMastery then
           local abilities = {}
           local numAbilities = GetNumSkillAbilities(skillType, lineIndex)
           for a = 1, numAbilities do
@@ -674,7 +679,6 @@ local function gatherSkills(masteriesOut, classMasteryOut)
             end, nil)
             if ability then abilities[#abilities + 1] = ability end
           end
-          local traits = skillLineTraits(skillType, lineIndex)
           if masteriesOut and traits and traits.mastered then
             local mName = traits.name or lineName
             if not seenMastery[mName] then
@@ -691,6 +695,7 @@ local function gatherSkills(masteriesOut, classMasteryOut)
             rank = rank or 0,
             subclassed = (traits and traits.subclassed) or false,
             classMastery = classMasteryLine,
+            className = classMasteryLine and playerClass or nil,
             abilities = abilities,
           }
         end
@@ -2332,11 +2337,12 @@ local function gatherCharacter()
   local charId = safe(function() return zo_strformat("<<1>>", GetCurrentCharacterId()) end, name)
   local classMasteries = {}
   local classMasteryState = { unlocked = false }
-  local skillLines = gatherSkills(classMasteries, classMasteryState)
+  local class = safe(function() return zo_strformat("<<1>>", GetUnitClass("player")) end, "Unknown")
+  local skillLines = gatherSkills(classMasteries, classMasteryState, class)
   return {
     id = charId,
     name = name,
-    class = safe(function() return zo_strformat("<<1>>", GetUnitClass("player")) end, "Unknown"),
+    class = class,
     race = safe(function() return zo_strformat("<<1>>", GetUnitRace("player")) end, "Unknown"),
     alliance = ALLIANCE[safe(function() return GetUnitAlliance("player") end, 0)] or "Aldmeri Dominion",
     gender = nil,

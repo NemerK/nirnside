@@ -86,7 +86,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   } catch {
     lore = new Map();
   }
-  const skillBook = presentSkillBook(c.skillLines, lore, (name) => skillLineHref(name, c.class));
+  const skillBook = presentSkillBook(c.skillLines, lore, (name) => skillLineHref(name, c.class), c.class);
   const goals = safeList(() => listGoals());
   const lines = safeList(() => skillLineChoices());
   const hrefForLine: Record<string, string> = {};

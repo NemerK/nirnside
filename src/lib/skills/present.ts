@@ -9,7 +9,7 @@ import {
   xpProgress,
 } from "./ability";
 import { resolveSkillIcon, skillIconByName } from "../icons/skill-icons";
-import { isClassMasteryLineName } from "./class-mastery";
+import { isClassMasteryLineName, keepClassMasteryForCharacter } from "./class-mastery";
 
 export type LoreHit = {
   icon: string | null;
@@ -51,6 +51,8 @@ export type AbilityView = {
 };
 
 export type SkillLineView = {
+  /** Stable within one skill book. Class Mastery lines share a display name. */
+  id: string;
   name: string;
   category: string;
   rank: number;
@@ -167,26 +169,40 @@ function presentSlot(slot: MorphSlot, currentSlot: number | null, abilityKnown: 
   };
 }
 
+function skillLineViewId(line: SkillLine, index: number, characterClass?: string | null): string {
+  const classMastery = line.classMastery === true || isClassMasteryLineName(line.name);
+  if (classMastery) {
+    const cls = (line.className || characterClass || "").trim().toLowerCase();
+    const face = line.abilities[0]?.name?.trim().toLowerCase() || String(index);
+    return cls ? `class-mastery:${cls}:${face}` : `class-mastery:${face}`;
+  }
+  return `${line.category || "Skill"}::${line.name}`;
+}
+
 export function presentSkillBook(
   lines: SkillLine[],
   lore: LoreIndex,
   hrefFor: (lineName: string) => string | null,
+  characterClass?: string | null,
 ): SkillCategoryView[] {
+  const filtered = keepClassMasteryForCharacter(lines, characterClass);
   const byCat = new Map<string, SkillLineView[]>();
-  for (const line of lines) {
+  filtered.forEach((line, index) => {
     const cat = line.category || "Skill";
     const list = byCat.get(cat) ?? [];
+    const classMastery = line.classMastery === true || isClassMasteryLineName(line.name);
     list.push({
+      id: skillLineViewId(line, index, characterClass),
       name: line.name,
       category: cat,
       rank: line.rank,
       subclassed: line.subclassed,
-      classMastery: line.classMastery === true || isClassMasteryLineName(line.name),
+      classMastery,
       href: hrefFor(line.name),
       abilities: line.abilities.map((a) => presentAbility(a, lore)),
     });
     byCat.set(cat, list);
-  }
+  });
 
   const names = [...byCat.keys()].sort((a, b) => {
     const ia = SKILL_CATEGORY_ORDER.indexOf(a);
