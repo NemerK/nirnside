@@ -164,7 +164,7 @@ function ClassPicker({
 }) {
   if (classes.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filter by class">
+    <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Filter by class">
       {classes.map((c) => {
         const active = value === c;
         const count = counts.get(c) ?? 0;
@@ -175,15 +175,19 @@ function ClassPicker({
             title={count === 1 ? `${c} · 1 character` : `${c} · ${count} characters`}
             aria-pressed={active}
             onClick={() => onChange(active ? "" : c)}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-1.5 transition ${
-              active
-                ? "border-accent bg-accent-soft"
-                : count === 0
-                  ? "border-border/60 opacity-45 hover:border-border-strong hover:opacity-80"
-                  : "border-border hover:border-border-strong"
+            className={`inline-flex items-center gap-1 bg-transparent p-0 transition ${
+              active ? "opacity-100" : count === 0 ? "opacity-25 hover:opacity-55" : "opacity-45 hover:opacity-80"
             }`}
           >
-            <GameIcon name={c} icon={classIcon(c)} size={18} className={active ? "" : "opacity-90"} />
+            <GameIcon
+              name={c}
+              icon={classIcon(c)}
+              size={28}
+              bare
+              className={
+                active ? "drop-shadow-[0_0_10px_color-mix(in_oklab,var(--accent)_85%,transparent)]" : undefined
+              }
+            />
             <span className={`text-[11px] tabular-nums leading-none ${active ? "text-accent" : "text-fg-subtle"}`}>
               {count}
             </span>

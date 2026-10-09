@@ -39,11 +39,14 @@ export function GameIcon({
   icon,
   size = 40,
   className = "",
+  bare = false,
 }: {
   name: string;
   icon?: string | null;
   size?: number;
   className?: string;
+  /** Skip the framed tile — just the art, for filter rows and similar chrome. */
+  bare?: boolean;
 }) {
   const urls = icon ? resolveIconUrls(icon) : [];
   const [attempt, setAttempt] = useState(0);
@@ -67,7 +70,7 @@ export function GameIcon({
         decoding="async"
         fetchPriority="low"
         onError={() => setAttempt((n) => n + 1)}
-        className={`shrink-0 rounded-md border border-border bg-surface-2 object-cover ${className}`}
+        className={`shrink-0 ${bare ? "object-contain" : "rounded-md border border-border bg-surface-2 object-cover"} ${className}`}
         style={{ width: size, height: size }}
       />
     );
@@ -77,7 +80,7 @@ export function GameIcon({
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center rounded-md border border-border font-semibold ${className}`}
+      className={`flex shrink-0 items-center justify-center font-semibold ${bare ? "" : "rounded-md border border-border"} ${className}`}
       style={{
         width: size,
         height: size,
