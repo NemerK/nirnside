@@ -192,6 +192,7 @@ function ClassPicker({
               icon={classIcon(c)}
               size={32}
               bare
+              lit={active}
               className={
                 active
                   ? "class-filter-crest class-filter-crest-on"

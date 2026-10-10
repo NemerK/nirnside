@@ -89,33 +89,75 @@ body {
     radial-gradient(900px 500px at -10% 110%, var(--accent-soft), transparent 55%);
 }
 
-/* Class filter crests: light the art itself, not a halo around it. */
-@keyframes class-crest-lit {
-  0%,
-  100% {
-    filter: brightness(1.2) saturate(1.22) contrast(1.08);
-  }
-  50% {
-    filter: brightness(1.38) saturate(1.32) contrast(1.12);
-  }
-}
-
+/* Class filter crests: light the pixels, never a halo around the art. */
 .class-filter-crest {
-  transition: filter 200ms ease;
+  transition: filter 180ms ease;
 }
 
 .class-filter-crest-on {
-  animation: class-crest-lit 2.8s ease-in-out infinite;
+  filter: brightness(1.42) saturate(1.3) contrast(1.12);
 }
 
 .class-filter-crest-dim {
-  filter: brightness(0.58) saturate(0.42);
+  filter: brightness(0.52) saturate(0.35);
+}
+
+.game-icon-lit {
+  position: relative;
+  display: inline-flex;
+  isolation: isolate;
+  transform: scale(1.06);
+  transform-origin: center;
+}
+
+.game-icon-lit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    118deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 248, 220, 0.12) 46%,
+    rgba(255, 236, 186, 0.88) 50%,
+    rgba(232, 190, 90, 0.28) 54%,
+    transparent 62%,
+    transparent 100%
+  );
+  background-size: 260% 100%;
+  background-position: 140% 0;
+  animation: class-crest-sheen 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  -webkit-mask-image: var(--icon-mask);
+  mask-image: var(--icon-mask);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  mix-blend-mode: screen;
+}
+
+@keyframes class-crest-sheen {
+  0%,
+  28% {
+    background-position: 140% 0;
+  }
+  58%,
+  100% {
+    background-position: -40% 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .class-filter-crest-on {
+  .game-icon-lit {
+    transform: none;
+  }
+
+  .game-icon-lit::after {
     animation: none;
-    filter: brightness(1.28) saturate(1.26) contrast(1.1);
+    background: rgba(255, 236, 186, 0.2);
   }
 }
 

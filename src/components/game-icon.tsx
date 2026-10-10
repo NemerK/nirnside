@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { iconImageUrls } from "@/lib/icons/sources";
 
 /**
@@ -40,6 +40,7 @@ export function GameIcon({
   size = 40,
   className = "",
   bare = false,
+  lit = false,
 }: {
   name: string;
   icon?: string | null;
@@ -47,6 +48,8 @@ export function GameIcon({
   className?: string;
   /** Skip the framed tile — just the art, for filter rows and similar chrome. */
   bare?: boolean;
+  /** Sheen clipped to the icon silhouette — lights the art, not the air around it. */
+  lit?: boolean;
 }) {
   const urls = icon ? resolveIconUrls(icon) : [];
   const [attempt, setAttempt] = useState(0);
@@ -58,7 +61,7 @@ export function GameIcon({
   const src = icon === forIcon ? urls[attempt] : urls[0];
 
   if (src) {
-    return (
+    const img = (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         key={src}
@@ -73,6 +76,21 @@ export function GameIcon({
         className={`shrink-0 ${bare ? "object-contain" : "rounded-md border border-border bg-surface-2 object-cover"} ${className}`}
         style={{ width: size, height: size }}
       />
+    );
+    if (!lit) return img;
+    return (
+      <span
+        className="game-icon-lit"
+        style={
+          {
+            width: size,
+            height: size,
+            "--icon-mask": `url("${src}")`,
+          } as CSSProperties
+        }
+      >
+        {img}
+      </span>
     );
   }
 
