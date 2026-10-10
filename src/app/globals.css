@@ -89,6 +89,36 @@ body {
     radial-gradient(900px 500px at -10% 110%, var(--accent-soft), transparent 55%);
 }
 
+/* Class filter crests: light the art itself, not a halo around it. */
+@keyframes class-crest-lit {
+  0%,
+  100% {
+    filter: brightness(1.2) saturate(1.22) contrast(1.08);
+  }
+  50% {
+    filter: brightness(1.38) saturate(1.32) contrast(1.12);
+  }
+}
+
+.class-filter-crest {
+  transition: filter 200ms ease;
+}
+
+.class-filter-crest-on {
+  animation: class-crest-lit 2.8s ease-in-out infinite;
+}
+
+.class-filter-crest-dim {
+  filter: brightness(0.58) saturate(0.42);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .class-filter-crest-on {
+    animation: none;
+    filter: brightness(1.28) saturate(1.26) contrast(1.1);
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

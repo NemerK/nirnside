@@ -180,8 +180,8 @@ function ClassPicker({
                 ? "opacity-100"
                 : value
                   ? count === 0
-                    ? "opacity-20 hover:opacity-50"
-                    : "opacity-35 hover:opacity-70"
+                    ? "opacity-30 hover:opacity-55"
+                    : "opacity-80 hover:opacity-100"
                   : count === 0
                     ? "opacity-40 hover:opacity-70"
                     : "opacity-90 hover:opacity-100"
@@ -193,7 +193,11 @@ function ClassPicker({
               size={32}
               bare
               className={
-                active ? "drop-shadow-[0_0_12px_color-mix(in_oklab,var(--accent)_90%,transparent)]" : undefined
+                active
+                  ? "class-filter-crest class-filter-crest-on"
+                  : value
+                    ? "class-filter-crest class-filter-crest-dim"
+                    : "class-filter-crest"
               }
             />
             <span className={`text-[11px] tabular-nums leading-none ${active ? "text-accent" : "text-fg-subtle"}`}>
