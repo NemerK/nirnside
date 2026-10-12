@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, HelpCircle, Minus, Search } from "lucide-react";
 import { PageScroll, StickyMenu } from "@/components/ui";
 import { formatRemainingSeconds } from "@/lib/dailies/day";
@@ -142,6 +142,12 @@ export function DailiesBoard({
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [tab, setTab] = useState<BoardTab>("today");
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  function selectTab(next: BoardTab) {
+    setTab(next);
+    panelRef.current?.scrollTo({ top: 0, left: 0 });
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -155,7 +161,7 @@ export function DailiesBoard({
   }, [rows, search, filter, tab]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <StickyMenu>
         <div className="mb-2 inline-flex rounded-lg border border-border bg-surface p-0.5" role="tablist">
           {(
@@ -169,9 +175,16 @@ export function DailiesBoard({
               type="button"
               role="tab"
               aria-selected={tab === id}
-              onClick={() => setTab(id)}
-              className={`rounded-md px-3 py-1.5 text-sm transition ${
-                tab === id ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+              onPointerDown={(event) => {
+                if (event.button !== 0) return;
+                // The page scroller can swallow the click that follows this
+                // press, so enter the tab on the press itself.
+                event.preventDefault();
+                selectTab(id);
+              }}
+              onClick={() => selectTab(id)}
+              className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                tab === id ? "bg-accent font-medium text-accent-fg" : "text-fg-muted hover:text-fg"
               }`}
             >
               {label}
@@ -211,7 +224,7 @@ export function DailiesBoard({
         </div>
       </StickyMenu>
 
-      <PageScroll>
+      <PageScroll ref={panelRef}>
         {tab === "zones" ? (
           <ZoneDailiesBoard rows={filtered} accountRows={rows} />
         ) : (
