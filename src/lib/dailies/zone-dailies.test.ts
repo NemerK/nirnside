@@ -40,10 +40,13 @@ describe("zone dailies", () => {
     assert.equal(zoneDailyForQuestId(1), null);
   });
 
-  it("ships the same quest ids in the snapshot addon", () => {
+  it("does not change the snapshot addon that writes the account file", () => {
     const lua = readFileSync("addon/NirnsideSnapshot/NirnsideSnapshot.lua", "utf8");
-    for (const row of ZONE_DAILY_QUESTS) {
-      assert.match(lua, new RegExp(`\\[${row.questId}\\] = \\{ zone = "${row.zone}", kind = "${row.kind}" \\}`));
-    }
+    const txt = readFileSync("addon/NirnsideSnapshot/NirnsideSnapshot.txt", "utf8");
+    assert.match(lua, /local WORLD_BOSS_BY_ID = \{/);
+    assert.doesNotMatch(lua, /ZONE_DAILY_BY_ID/);
+    assert.doesNotMatch(lua, /zoneDailies/);
+    assert.match(txt, /## Version: 0\.9\.30/);
+    assert.match(txt, /## AddOnVersion: 32/);
   });
 });

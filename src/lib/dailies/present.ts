@@ -239,8 +239,8 @@ function zoneSlotCell(
   if (!scanned || !dailies) {
     return { status: "unscanned", title: `${where} — ${reason}`, names: [] };
   }
-  // Older snapshots recorded world bosses only. Delve and event stay unknown
-  // until a scan that sets zoneDailiesKnown.
+  // The snapshot addon records world bosses only. Delve and event stay
+  // unknown unless this file already included them.
   if (!dailies.zoneDailiesKnown && kind !== "boss") {
     return { status: "unscanned", title: `${where} — not scanned since reset`, names: [] };
   }
