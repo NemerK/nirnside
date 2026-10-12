@@ -279,11 +279,11 @@ export const CharacterDailies = z.object({
   /** DLC / chapter world-boss dailies (one pick per zone). Missing on older scans. */
   worldBosses: lenientArray(DailyWorldBoss).default([]),
   /**
-   * Delve, world-boss, and world-event dailies. Missing on scans from before
-   * Snapshot 0.9.31 — those still have `worldBosses` only.
+   * Optional delve and world-event rows. The Snapshot addon does not write
+   * these. World bosses stay in `worldBosses`.
    */
   zoneDailies: lenientArray(DailyZoneQuest).default([]),
-  /** True when this scan checked the full zone-daily catalog, so an empty slot means not done. */
+  /** True only when a file already recorded delve and world-event quests. The addon leaves this false. */
   zoneDailiesKnown: z.boolean().default(false),
 });
 export type CharacterDailies = z.infer<typeof CharacterDailies>;

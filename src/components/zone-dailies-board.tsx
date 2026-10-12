@@ -142,8 +142,8 @@ export function ZoneDailiesBoard({
       </div>
       {!catalogSeen(accountRows) && (
         <p className="mt-3 text-xs text-fg-subtle">
-          Delve and world-event boxes fill in after one logout with Snapshot 0.9.31. World boss
-          checks from an earlier scan still show.
+          World boss boxes use the snapshot already on disk. Delve and world-event boxes stay
+          dashed on that scan.
         </p>
       )}
       <p className="mt-3 text-xs text-fg-subtle">
