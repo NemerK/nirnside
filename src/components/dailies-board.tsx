@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, HelpCircle, Minus, Search } from "lucide-react";
 import { PageScroll, StickyMenu } from "@/components/ui";
 import { formatRemainingSeconds } from "@/lib/dailies/day";
@@ -65,7 +65,7 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
     return (
       <span
         title={cell.title}
-        className="inline-flex h-5 w-5 items-center justify-center rounded border border-ok/40 bg-ok/10 text-ok"
+        className="inline-flex h-4 w-4 items-center justify-center rounded border border-ok/40 bg-ok/10 text-ok"
       >
         <Check className="h-3 w-3" />
       </span>
@@ -117,7 +117,7 @@ function ResetCountdown({ resetAt, label }: { resetAt: number; label?: string })
 
 function PledgeHead({ giver, today }: { giver: PledgeGiver; today?: string }) {
   return (
-    <th className="px-2 py-2 text-center font-medium" title={PLEDGE_GIVER_NAMES[giver]}>
+    <th className="px-1.5 py-1 text-center font-medium" title={PLEDGE_GIVER_NAMES[giver]}>
       {giver === "maj" ? "Maj" : giver === "glirion" ? "Gli" : "Urg"}
       {today ? (
         <div className="mt-0.5 max-w-[7.5rem] truncate text-[10px] font-normal normal-case tracking-normal text-fg-muted">
@@ -142,6 +142,12 @@ export function DailiesBoard({
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [tab, setTab] = useState<BoardTab>("today");
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  function selectTab(next: BoardTab) {
+    setTab(next);
+    panelRef.current?.scrollTo({ top: 0, left: 0 });
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -155,37 +161,44 @@ export function DailiesBoard({
   }, [rows, search, filter, tab]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <StickyMenu>
-        <div className="mb-2 inline-flex rounded-lg border border-border bg-surface p-0.5" role="tablist">
-          {(
-            [
-              ["today", "Today"],
-              ["zones", "Zones"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              onClick={() => setTab(id)}
-              className={`rounded-md px-3 py-1.5 text-sm transition ${
-                tab === id ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[200px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+          <div className="inline-flex rounded-lg border border-border bg-surface p-0.5" role="tablist">
+            {(
+              [
+                ["today", "Today"],
+                ["zones", "Zones"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return;
+                  // The page scroller can swallow the click that follows this
+                  // press, so enter the tab on the press itself.
+                  event.preventDefault();
+                  selectTab(id);
+                }}
+                onClick={() => selectTab(id)}
+                className={`rounded-md px-2.5 py-1 text-sm transition-colors ${
+                  tab === id ? "bg-accent font-medium text-accent-fg" : "text-fg-muted hover:text-fg"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="relative min-w-[10rem] flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search characters…"
-              className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+              className="w-full rounded-lg border border-border bg-surface py-1 pl-8 pr-2 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
             />
           </div>
           <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
@@ -198,8 +211,9 @@ export function DailiesBoard({
             ).map(([k, label]) => (
               <button
                 key={k}
+                type="button"
                 onClick={() => setFilter(k)}
-                className={`rounded-md px-2.5 py-1.5 text-sm transition-colors ${
+                className={`rounded-md px-2 py-1 text-sm transition-colors ${
                   filter === k ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg"
                 }`}
               >
@@ -211,24 +225,24 @@ export function DailiesBoard({
         </div>
       </StickyMenu>
 
-      <PageScroll>
+      <PageScroll ref={panelRef}>
         {tab === "zones" ? (
           <ZoneDailiesBoard rows={filtered} accountRows={rows} />
         ) : (
         <>
         <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[52rem] border-collapse text-sm">
+          <table className="w-max min-w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wider text-fg-subtle">
-                <th className="sticky left-0 z-10 bg-surface-2/40 px-3 py-2 font-medium">Character</th>
-                <th className="px-2 py-2 text-center font-medium" title="Random Normal daily reward">
+              <tr className="border-b border-border bg-surface-2/40 text-left text-[11px] uppercase tracking-wider text-fg-subtle">
+                <th className="sticky left-0 z-10 bg-surface-2 px-2 py-1 font-medium">Character</th>
+                <th className="px-1.5 py-1 text-center font-medium" title="Random Normal daily reward">
                   RN
                 </th>
-                <th className="px-2 py-2 text-center font-medium" title="Random Veteran daily reward">
+                <th className="px-1.5 py-1 text-center font-medium" title="Random Veteran daily reward">
                   RV
                 </th>
                 {WRIT_CRAFTS.map((c) => (
-                  <th key={c} className="px-2 py-2 text-center font-medium" title={`${WRIT_LABELS[c]} writ`}>
+                  <th key={c} className="px-1.5 py-1 text-center font-medium" title={`${WRIT_LABELS[c]} writ`}>
                     {WRIT_ABBR[c]}
                   </th>
                 ))}
@@ -239,31 +253,31 @@ export function DailiesBoard({
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.characterId} className="border-b border-border/50 align-middle last:border-0 hover:bg-surface-2/30">
-                  <td className="sticky left-0 z-10 bg-surface px-3 py-1.5">
-                    <a href={`/characters/${encodeURIComponent(r.characterId)}`} className="font-medium text-fg hover:text-accent">
+                <tr key={r.characterId} className="group border-b border-border/50 align-middle last:border-0">
+                  <td className="sticky left-0 z-10 whitespace-nowrap bg-surface px-2 py-0.5 group-hover:bg-surface-2">
+                    <a href={`/characters/${encodeURIComponent(r.characterId)}`} className="text-sm font-medium text-fg hover:text-accent">
                       {r.name}
                     </a>
-                    <div className="text-[11px] text-fg-subtle">{r.className}</div>
+                    <span className="ml-1.5 text-[11px] text-fg-subtle">{r.className}</span>
                   </td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="px-1.5 py-0.5 text-center">
                     <DailyCellView cell={r.randomNormal} />
                   </td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="px-1.5 py-0.5 text-center">
                     <DailyCellView cell={r.randomVeteran} />
                   </td>
                   {WRIT_CRAFTS.map((c) => (
-                    <td key={c} className="px-2 py-1.5 text-center">
+                    <td key={c} className="px-1.5 py-0.5 text-center">
                       <DailyCellView cell={r.writs[c]} />
                     </td>
                   ))}
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="px-1.5 py-0.5 text-center">
                     <DailyCellView cell={r.pledges.maj} />
                   </td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="px-1.5 py-0.5 text-center">
                     <DailyCellView cell={r.pledges.glirion} />
                   </td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="px-1.5 py-0.5 text-center">
                     <DailyCellView cell={r.pledges.urgarlag} />
                   </td>
                 </tr>
@@ -271,17 +285,9 @@ export function DailiesBoard({
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-xs text-fg-subtle">
-          Check = done today. Pledge <span className="font-semibold text-fg-muted">N</span> /{" "}
-          <span className="font-semibold text-fg-muted">Vet</span> /{" "}
-          <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode
-          from the journal (hidden Veteran-enter + optional Death Challenge). A plain pledge check
-          means the turn-in was seen but the optionals were not captured on that run. ACCEPT = that
-          giver&apos;s today pledge is in the journal on this scan. A leftover other-day pledge stays unmarked.
-          Giver comes from the in-game pledge quest id, not the NPC you are standing next to.
-          Today&apos;s three names are the community rotation, not an in-game scan. A dash on randoms
-          means the daily reward is still available. A question mark means it is not in the journal
-          and we did not see the turn-in. Zone dailies are on the Zones tab.
+        <p className="mt-2 text-[11px] leading-relaxed text-fg-subtle">
+          Check = done today. N / Vet / HM = pledge difficulty. A dash is still available. A question
+          mark was not scanned. Zone dailies are on Zones.
         </p>
         </>
         )}

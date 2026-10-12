@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 export function Card({
   children,
@@ -34,11 +34,13 @@ export function PageFrame({
 export function PageScroll({
   children,
   className = "",
+  ref,
 }: {
   children: ReactNode;
   className?: string;
+  ref?: Ref<HTMLDivElement>;
 }) {
-  return <div className={`min-h-0 flex-1 overflow-y-auto ${className}`}>{children}</div>;
+  return <div ref={ref} className={`min-h-0 min-w-0 flex-1 overflow-y-auto ${className}`}>{children}</div>;
 }
 
 /** Solid, non-overlay page chrome (tabs, search, filters). Pair with PageFrame + PageScroll. */
