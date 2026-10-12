@@ -253,6 +253,19 @@ export const DailyWorldBoss = z.object({
 });
 export type DailyWorldBoss = z.infer<typeof DailyWorldBoss>;
 
+export const ZoneDailyKind = z.enum(["delve", "boss", "event"]);
+export type ZoneDailyKind = z.infer<typeof ZoneDailyKind>;
+
+/** One repeatable in a zone slot (delve, world boss, or world event). */
+export const DailyZoneQuest = z.object({
+  zone: z.string(),
+  kind: ZoneDailyKind,
+  questId: z.number().int().nonnegative(),
+  name: z.string().default(""),
+  status: DailyStatus.default("unknown").catch("unknown"),
+});
+export type DailyZoneQuest = z.infer<typeof DailyZoneQuest>;
+
 export const CharacterDailies = z.object({
   /** ESO day this scan belongs to (EU rolls at 03:00 UTC, NA at 10:00 UTC). */
   dayKey: z.string(),
@@ -265,6 +278,13 @@ export const CharacterDailies = z.object({
   pledges: lenientArray(DailyPledge).default([]),
   /** DLC / chapter world-boss dailies (one pick per zone). Missing on older scans. */
   worldBosses: lenientArray(DailyWorldBoss).default([]),
+  /**
+   * Delve, world-boss, and world-event dailies. Missing on scans from before
+   * Snapshot 0.9.31 — those still have `worldBosses` only.
+   */
+  zoneDailies: lenientArray(DailyZoneQuest).default([]),
+  /** True when this scan checked the full zone-daily catalog, so an empty slot means not done. */
+  zoneDailiesKnown: z.boolean().default(false),
 });
 export type CharacterDailies = z.infer<typeof CharacterDailies>;
 

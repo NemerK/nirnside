@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { Character, CharacterDailies } from "../snapshot/schema";
 import { resetAtForDayKey } from "./day";
-import { isDailyScanStale, presentCharacterDailies } from "./present";
+import { isDailyScanStale, presentCharacterDailies, zoneSlotKey } from "./present";
 
 function char(dailies: CharacterDailies | null, lastSeen: number | null = 1): Character {
   return {
@@ -50,6 +50,8 @@ const fresh: CharacterDailies = {
   ],
   pledges: [{ giver: "maj", giverName: "Maj al-Ragath", dungeon: "Fungal Grotto I", status: "done", hardMode: true, difficulty: "veteran" }],
   worldBosses: [],
+  zoneDailies: [],
+  zoneDailiesKnown: false,
 };
 
 describe("dailies presentation", () => {
@@ -279,5 +281,39 @@ describe("dailies presentation", () => {
     assert.equal(row.worldBosses.wrothgar.label, "ACCEPT");
     assert.equal(row.worldBosses["gold-coast"].status, "done");
     assert.equal(row.worldBosses.summerset.status, "unknown");
+    assert.equal(row.zoneSlots[zoneSlotKey("wrothgar", "boss")]?.status, "accepted");
+    assert.equal(row.zoneSlots[zoneSlotKey("gold-coast", "boss")]?.status, "done");
+    assert.equal(row.zoneSlots[zoneSlotKey("summerset", "delve")]?.status, "unscanned");
+
+    const unnamed = presentCharacterDailies(
+      char({
+        ...fresh,
+        worldBosses: [{ zone: "wrothgar", questId: 5522, name: "", status: "accepted" }],
+      }),
+      now,
+    );
+    assert.match(unnamed.zoneSlots[zoneSlotKey("wrothgar", "boss")]?.title ?? "", /Heresy of Ignorance/);
+  });
+
+  it("checks a zone slot when any quest in that group was turned in", () => {
+    const now = Date.UTC(2026, 9, 3, 18, 0, 0) / 1000;
+    const row = presentCharacterDailies(
+      char({
+        ...fresh,
+        zoneDailiesKnown: true,
+        worldBosses: [{ zone: "blackreach", questId: 6527, name: "Problem Growth", status: "done" }],
+        zoneDailies: [
+          { zone: "summerset", kind: "delve", questId: 6159, name: "Culling Serpents", status: "done" },
+          { zone: "summerset", kind: "event", questId: 6166, name: "Sinking Summerset", status: "accepted" },
+        ],
+      }),
+      now,
+    );
+    assert.equal(row.zoneSlots[zoneSlotKey("summerset", "delve")]?.status, "done");
+    assert.equal(row.zoneSlots[zoneSlotKey("summerset", "boss")]?.status, "open");
+    assert.equal(row.zoneSlots[zoneSlotKey("summerset", "event")]?.status, "accepted");
+    assert.equal(row.zoneSlots[zoneSlotKey("western-skyrim", "boss")]?.status, "done");
+    assert.match(row.zoneSlots[zoneSlotKey("western-skyrim", "boss")]?.title ?? "", /Problem Growth/);
+    assert.equal(row.zoneSlots[zoneSlotKey("wrothgar", "delve")]?.status, "open");
   });
 });

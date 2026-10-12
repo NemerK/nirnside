@@ -124,6 +124,8 @@ SLASH_COMMANDS["/nirnside"] = takeSnapshot`;
     assert.equal(parsed.data.characters[0].dailies?.randomNormal.status, "done");
     assert.equal(parsed.data.characters[0].dailies?.writs[0].status, "accepted");
     assert.equal(parsed.data.characters[0].dailies?.pledges[0].hardMode, true);
+    assert.equal(parsed.data.characters[0].dailies?.zoneDailiesKnown, false);
+    assert.deepEqual(parsed.data.characters[0].dailies?.zoneDailies, []);
   });
 
   it("keeps the research grid, motifs, recipes, and outfit styles", () => {

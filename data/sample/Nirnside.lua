@@ -634,6 +634,13 @@ NirnsideData =
                                 { ["zone"] = "wrothgar", ["questId"] = 5522, ["name"] = "", ["status"] = "accepted" },
                                 { ["zone"] = "gold-coast", ["questId"] = 5605, ["name"] = "", ["status"] = "done" },
                             },
+                            ["zoneDailiesKnown"] = true,
+                            ["zoneDailies"] =
+                            {
+                                { ["zone"] = "summerset", ["kind"] = "delve", ["questId"] = 6159, ["name"] = "Culling Serpents", ["status"] = "done" },
+                                { ["zone"] = "summerset", ["kind"] = "event", ["questId"] = 6166, ["name"] = "Sinking Summerset", ["status"] = "accepted" },
+                                { ["zone"] = "northern-elsweyr", ["kind"] = "event", ["questId"] = 6357, ["name"] = "Dragon Hunt", ["status"] = "done" },
+                            },
                         },
                     },
                     {
@@ -830,6 +837,13 @@ NirnsideData =
                                 { ["zone"] = "wrothgar", ["questId"] = 5518, ["name"] = "", ["status"] = "done" },
                                 { ["zone"] = "vvardenfell", ["questId"] = 5865, ["name"] = "", ["status"] = "done" },
                                 { ["zone"] = "summerset", ["questId"] = 6085, ["name"] = "", ["status"] = "accepted" },
+                            },
+                            ["zoneDailiesKnown"] = true,
+                            ["zoneDailies"] =
+                            {
+                                { ["zone"] = "wrothgar", ["kind"] = "delve", ["questId"] = 5507, ["name"] = "Breakfast of the Bizarre", ["status"] = "done" },
+                                { ["zone"] = "summerset", ["kind"] = "delve", ["questId"] = 6152, ["name"] = "Pilgrimage's End", ["status"] = "ready" },
+                                { ["zone"] = "summerset", ["kind"] = "event", ["questId"] = 6166, ["name"] = "Sinking Summerset", ["status"] = "done" },
                             },
                         },
                     },
