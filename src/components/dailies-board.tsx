@@ -12,9 +12,10 @@ import {
   type PresentedCharacterDailies,
 } from "@/lib/dailies/present";
 import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "@/lib/dailies/pledges";
-import { WORLD_BOSS_ZONES } from "@/lib/dailies/world-bosses";
+import { ZoneDailiesBoard } from "@/components/zone-dailies-board";
 
 type Filter = "all" | "open" | "done";
+type BoardTab = "today" | "zones";
 
 function rowOpen(row: PresentedCharacterDailies): boolean {
   const cells = [
@@ -24,9 +25,12 @@ function rowOpen(row: PresentedCharacterDailies): boolean {
     row.pledges.maj,
     row.pledges.glirion,
     row.pledges.urgarlag,
-    ...WORLD_BOSS_ZONES.map((z) => row.worldBosses[z.id]),
   ];
   return cells.some((c) => c.status === "available" || c.status === "accepted" || c.status === "ready");
+}
+
+function zoneRowOpen(row: PresentedCharacterDailies): boolean {
+  return Object.values(row.zoneSlots).some((slot) => slot.status !== "done");
 }
 
 function ModeMark({ label, title, tone }: { label: string; title: string; tone: "hm" | "vet" | "norm" }) {
@@ -137,20 +141,43 @@ export function DailiesBoard({
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [tab, setTab] = useState<BoardTab>("today");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return rows.filter((r) => {
       if (q && !r.name.toLowerCase().includes(q) && !r.className.toLowerCase().includes(q)) return false;
-      if (filter === "open" && !rowOpen(r)) return false;
-      if (filter === "done" && rowOpen(r)) return false;
+      const open = tab === "zones" ? zoneRowOpen(r) : rowOpen(r);
+      if (filter === "open" && !open) return false;
+      if (filter === "done" && open) return false;
       return true;
     });
-  }, [rows, search, filter]);
+  }, [rows, search, filter, tab]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <StickyMenu>
+        <div className="mb-2 inline-flex rounded-lg border border-border bg-surface p-0.5" role="tablist">
+          {(
+            [
+              ["today", "Today"],
+              ["zones", "Zones"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={`rounded-md px-3 py-1.5 text-sm transition ${
+                tab === id ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[200px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
@@ -185,6 +212,10 @@ export function DailiesBoard({
       </StickyMenu>
 
       <PageScroll>
+        {tab === "zones" ? (
+          <ZoneDailiesBoard rows={filtered} accountRows={rows} />
+        ) : (
+        <>
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full min-w-[52rem] border-collapse text-sm">
             <thead>
@@ -240,61 +271,26 @@ export function DailiesBoard({
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-xs text-fg-subtle">
+          Check = done today. Pledge <span className="font-semibold text-fg-muted">N</span> /{" "}
+          <span className="font-semibold text-fg-muted">Vet</span> /{" "}
+          <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode
+          from the journal (hidden Veteran-enter + optional Death Challenge). A plain pledge check
+          means the turn-in was seen but the optionals were not captured on that run. ACCEPT = that
+          giver&apos;s today pledge is in the journal on this scan. A leftover other-day pledge stays unmarked.
+          Giver comes from the in-game pledge quest id, not the NPC you are standing next to.
+          Today&apos;s three names are the community rotation, not an in-game scan. A dash on randoms
+          means the daily reward is still available. A question mark means it is not in the journal
+          and we did not see the turn-in. Zone dailies are on the Zones tab.
+        </p>
+        </>
+        )}
 
         {filtered.length === 0 && (
           <div className="mt-3 rounded-xl border border-border bg-surface/70 px-6 py-10 text-center text-sm text-fg-muted">
             Nothing matches these filters.
           </div>
         )}
-
-        <h2 className="mt-6 text-sm font-medium text-fg">World boss dailies</h2>
-        <p className="mb-2 text-xs text-fg-subtle">
-          DLC / chapter world-boss repeatables. One pick per zone per day. Check = turned in today.
-          ACCEPT = that zone&apos;s daily is in the journal.
-        </p>
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[48rem] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wider text-fg-subtle">
-                <th className="sticky left-0 z-10 bg-surface-2/40 px-3 py-2 font-medium">Character</th>
-                {WORLD_BOSS_ZONES.map((z) => (
-                  <th key={z.id} className="px-2 py-2 text-center font-medium" title={z.name}>
-                    {z.abbr}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={`wb-${r.characterId}`} className="border-b border-border/50 align-middle last:border-0 hover:bg-surface-2/30">
-                  <td className="sticky left-0 z-10 bg-surface px-3 py-1.5">
-                    <span className="font-medium text-fg">{r.name}</span>
-                  </td>
-                  {WORLD_BOSS_ZONES.map((z) => (
-                    <td key={z.id} className="px-2 py-1.5 text-center">
-                      <DailyCellView cell={r.worldBosses[z.id]} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <p className="mt-3 text-xs text-fg-subtle">
-          Check = done today. Pledge <span className="font-semibold text-fg-muted">N</span> /{" "}
-          <span className="font-semibold text-fg-muted">Vet</span> /{" "}
-          <span className="font-semibold text-fg-muted">HM</span> = normal, veteran, or hard mode
-          from the journal (hidden Veteran-enter + optional Death Challenge — WPamA does not
-          track this). A plain pledge check means the turn-in was seen but the optionals were
-          not captured on that run; the next clear with 0.9.27 writes N / Vet / HM. ACCEPT = that
-          giver&apos;s today pledge is in the journal on this scan. A leftover other-day pledge stays unmarked.
-          Giver comes from the in-game pledge quest id, not the NPC you are standing next to.
-          Today&apos;s three names are the community rotation, not an in-game scan. World-boss
-          columns are the DLC / chapter daily pick WPamA tracks — one per zone. A dash on randoms
-          means the daily reward is still available. A question mark means it is not in the journal
-          and we did not see the turn-in.
-        </p>
       </PageScroll>
     </div>
   );

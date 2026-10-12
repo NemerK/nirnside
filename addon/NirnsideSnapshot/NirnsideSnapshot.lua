@@ -1096,29 +1096,148 @@ local WRIT_BY_ID = {
   [6218] = "jewelry", [6227] = "jewelry", [6228] = "jewelry",
 }
 
--- WPamA world-boss daily quest IDs. One pick per zone per day.
-local WORLD_BOSS_BY_ID = {
-  [5522] = "wrothgar", [5523] = "wrothgar", [5524] = "wrothgar",
-  [5519] = "wrothgar", [5518] = "wrothgar", [5521] = "wrothgar",
-  [5865] = "vvardenfell", [5904] = "vvardenfell", [5866] = "vvardenfell",
-  [5918] = "vvardenfell", [5916] = "vvardenfell", [5906] = "vvardenfell",
-  [5606] = "gold-coast", [5605] = "gold-coast",
-  [6082] = "summerset", [6087] = "summerset", [6083] = "summerset",
-  [6084] = "summerset", [6086] = "summerset", [6085] = "summerset",
-  [6380] = "northern-elsweyr", [6382] = "northern-elsweyr", [6381] = "northern-elsweyr",
-  [6377] = "northern-elsweyr", [6378] = "northern-elsweyr", [6379] = "northern-elsweyr",
-  [6509] = "western-skyrim", [6517] = "western-skyrim", [6518] = "western-skyrim", [6519] = "western-skyrim",
-  [6526] = "blackreach", [6527] = "blackreach",
-  [6651] = "blackwood", [6652] = "blackwood", [6650] = "blackwood",
-  [6653] = "blackwood", [6645] = "blackwood", [6649] = "blackwood",
-  [6816] = "high-isle", [6807] = "high-isle", [6821] = "high-isle",
-  [6808] = "high-isle", [6803] = "high-isle", [6822] = "high-isle",
-  [7040] = "telvanni", [7044] = "telvanni",
-  [7039] = "apocrypha", [7041] = "apocrypha", [7042] = "apocrypha", [7043] = "apocrypha",
-  [7109] = "gold-road", [7116] = "gold-road", [7117] = "gold-road",
-  [7118] = "gold-road", [7119] = "gold-road", [7120] = "gold-road",
-  [7266] = "solstice", [7264] = "solstice", [7265] = "solstice",
-  [7271] = "solstice", [7272] = "solstice", [7270] = "solstice",
+-- Zone dailies. One delve pick, one world-boss pick, and a world event
+-- where the zone has one. Quest ids are the live repeatables. World bosses
+-- match WPamA. A shared name that belongs to two zones is not in the name map.
+local ZONE_DAILY_BY_ID = {
+  -- Wrothgar
+  [5504] = { zone = "wrothgar", kind = "delve" }, [5505] = { zone = "wrothgar", kind = "delve" },
+  [5507] = { zone = "wrothgar", kind = "delve" }, [5509] = { zone = "wrothgar", kind = "delve" },
+  [5514] = { zone = "wrothgar", kind = "delve" }, [5515] = { zone = "wrothgar", kind = "delve" },
+  [5518] = { zone = "wrothgar", kind = "boss" }, [5519] = { zone = "wrothgar", kind = "boss" },
+  [5521] = { zone = "wrothgar", kind = "boss" }, [5522] = { zone = "wrothgar", kind = "boss" },
+  [5523] = { zone = "wrothgar", kind = "boss" }, [5524] = { zone = "wrothgar", kind = "boss" },
+  -- Hew's Bane
+  [5588] = { zone = "hews-bane", kind = "delve" }, [5589] = { zone = "hews-bane", kind = "delve" },
+  [5586] = { zone = "hews-bane", kind = "boss" }, [5587] = { zone = "hews-bane", kind = "boss" },
+  -- Gold Coast
+  [5603] = { zone = "gold-coast", kind = "delve" }, [5604] = { zone = "gold-coast", kind = "delve" },
+  [5605] = { zone = "gold-coast", kind = "boss" }, [5606] = { zone = "gold-coast", kind = "boss" },
+  -- Vvardenfell
+  [5915] = { zone = "vvardenfell", kind = "delve" }, [5934] = { zone = "vvardenfell", kind = "delve" },
+  [5956] = { zone = "vvardenfell", kind = "delve" }, [5958] = { zone = "vvardenfell", kind = "delve" },
+  [5961] = { zone = "vvardenfell", kind = "delve" }, [5962] = { zone = "vvardenfell", kind = "delve" },
+  [5865] = { zone = "vvardenfell", kind = "boss" }, [5866] = { zone = "vvardenfell", kind = "boss" },
+  [5904] = { zone = "vvardenfell", kind = "boss" }, [5906] = { zone = "vvardenfell", kind = "boss" },
+  [5916] = { zone = "vvardenfell", kind = "boss" }, [5918] = { zone = "vvardenfell", kind = "boss" },
+  -- Clockwork City
+  [6073] = { zone = "clockwork", kind = "delve" }, [6079] = { zone = "clockwork", kind = "delve" },
+  [6080] = { zone = "clockwork", kind = "delve" }, [6081] = { zone = "clockwork", kind = "delve" },
+  [6088] = { zone = "clockwork", kind = "delve" }, [6089] = { zone = "clockwork", kind = "delve" },
+  [6076] = { zone = "clockwork", kind = "boss" }, [6077] = { zone = "clockwork", kind = "boss" },
+  -- Summerset
+  [6152] = { zone = "summerset", kind = "delve" }, [6156] = { zone = "summerset", kind = "delve" },
+  [6157] = { zone = "summerset", kind = "delve" }, [6158] = { zone = "summerset", kind = "delve" },
+  [6159] = { zone = "summerset", kind = "delve" }, [6160] = { zone = "summerset", kind = "delve" },
+  [6082] = { zone = "summerset", kind = "boss" }, [6083] = { zone = "summerset", kind = "boss" },
+  [6084] = { zone = "summerset", kind = "boss" }, [6085] = { zone = "summerset", kind = "boss" },
+  [6086] = { zone = "summerset", kind = "boss" }, [6087] = { zone = "summerset", kind = "boss" },
+  [6166] = { zone = "summerset", kind = "event" },
+  -- Murkmire
+  [6247] = { zone = "murkmire", kind = "delve" }, [6248] = { zone = "murkmire", kind = "delve" },
+  [6253] = { zone = "murkmire", kind = "delve" }, [6264] = { zone = "murkmire", kind = "delve" },
+  [6267] = { zone = "murkmire", kind = "delve" }, [6268] = { zone = "murkmire", kind = "delve" },
+  [6233] = { zone = "murkmire", kind = "boss" }, [6234] = { zone = "murkmire", kind = "boss" },
+  [6235] = { zone = "murkmire", kind = "boss" }, [6236] = { zone = "murkmire", kind = "boss" },
+  [6237] = { zone = "murkmire", kind = "boss" }, [6238] = { zone = "murkmire", kind = "boss" },
+  -- Northern Elsweyr
+  [6356] = { zone = "northern-elsweyr", kind = "delve" },
+  [6359] = { zone = "northern-elsweyr", kind = "delve" },
+  [6360] = { zone = "northern-elsweyr", kind = "delve" },
+  [6361] = { zone = "northern-elsweyr", kind = "delve" },
+  [6362] = { zone = "northern-elsweyr", kind = "delve" },
+  [6363] = { zone = "northern-elsweyr", kind = "delve" },
+  [6377] = { zone = "northern-elsweyr", kind = "boss" },
+  [6378] = { zone = "northern-elsweyr", kind = "boss" },
+  [6379] = { zone = "northern-elsweyr", kind = "boss" },
+  [6380] = { zone = "northern-elsweyr", kind = "boss" },
+  [6381] = { zone = "northern-elsweyr", kind = "boss" },
+  [6382] = { zone = "northern-elsweyr", kind = "boss" },
+  [6357] = { zone = "northern-elsweyr", kind = "event" },
+  -- Southern Elsweyr
+  [6419] = { zone = "southern-elsweyr", kind = "delve" },
+  [6431] = { zone = "southern-elsweyr", kind = "delve" },
+  [6432] = { zone = "southern-elsweyr", kind = "delve" },
+  [6436] = { zone = "southern-elsweyr", kind = "delve" },
+  [6437] = { zone = "southern-elsweyr", kind = "delve" },
+  [6438] = { zone = "southern-elsweyr", kind = "delve" },
+  [6376] = { zone = "southern-elsweyr", kind = "boss" },
+  [6421] = { zone = "southern-elsweyr", kind = "boss" },
+  [6422] = { zone = "southern-elsweyr", kind = "boss" },
+  [6423] = { zone = "southern-elsweyr", kind = "boss" },
+  [6424] = { zone = "southern-elsweyr", kind = "boss" },
+  [6425] = { zone = "southern-elsweyr", kind = "boss" },
+  [6435] = { zone = "southern-elsweyr", kind = "event" },
+  -- Western Skyrim
+  [6493] = { zone = "western-skyrim", kind = "delve" }, [6494] = { zone = "western-skyrim", kind = "delve" },
+  [6495] = { zone = "western-skyrim", kind = "delve" }, [6520] = { zone = "western-skyrim", kind = "delve" },
+  [6523] = { zone = "western-skyrim", kind = "delve" }, [6524] = { zone = "western-skyrim", kind = "delve" },
+  [6509] = { zone = "western-skyrim", kind = "boss" }, [6517] = { zone = "western-skyrim", kind = "boss" },
+  [6518] = { zone = "western-skyrim", kind = "boss" }, [6519] = { zone = "western-skyrim", kind = "boss" },
+  [6526] = { zone = "western-skyrim", kind = "boss" }, [6527] = { zone = "western-skyrim", kind = "boss" },
+  [6512] = { zone = "western-skyrim", kind = "event" },
+  -- The Reach
+  [6557] = { zone = "the-reach", kind = "delve" }, [6567] = { zone = "the-reach", kind = "delve" },
+  [6569] = { zone = "the-reach", kind = "delve" }, [6571] = { zone = "the-reach", kind = "delve" },
+  [6572] = { zone = "the-reach", kind = "delve" }, [6573] = { zone = "the-reach", kind = "delve" },
+  [6556] = { zone = "the-reach", kind = "boss" }, [6581] = { zone = "the-reach", kind = "boss" },
+  [6582] = { zone = "the-reach", kind = "boss" }, [6583] = { zone = "the-reach", kind = "boss" },
+  [6584] = { zone = "the-reach", kind = "boss" }, [6585] = { zone = "the-reach", kind = "boss" },
+  [6558] = { zone = "the-reach", kind = "event" }, [6559] = { zone = "the-reach", kind = "event" },
+  -- Blackwood
+  [6644] = { zone = "blackwood", kind = "delve" }, [6665] = { zone = "blackwood", kind = "delve" },
+  [6668] = { zone = "blackwood", kind = "delve" }, [6673] = { zone = "blackwood", kind = "delve" },
+  [6674] = { zone = "blackwood", kind = "delve" }, [6675] = { zone = "blackwood", kind = "delve" },
+  [6645] = { zone = "blackwood", kind = "boss" }, [6649] = { zone = "blackwood", kind = "boss" },
+  [6650] = { zone = "blackwood", kind = "boss" }, [6651] = { zone = "blackwood", kind = "boss" },
+  [6652] = { zone = "blackwood", kind = "boss" }, [6653] = { zone = "blackwood", kind = "boss" },
+  -- Deadlands
+  [6710] = { zone = "deadlands", kind = "delve" }, [6711] = { zone = "deadlands", kind = "delve" },
+  [6712] = { zone = "deadlands", kind = "delve" }, [6713] = { zone = "deadlands", kind = "delve" },
+  [6714] = { zone = "deadlands", kind = "delve" }, [6715] = { zone = "deadlands", kind = "delve" },
+  [6716] = { zone = "deadlands", kind = "boss" }, [6717] = { zone = "deadlands", kind = "boss" },
+  [6718] = { zone = "deadlands", kind = "boss" }, [6719] = { zone = "deadlands", kind = "boss" },
+  [6720] = { zone = "deadlands", kind = "boss" }, [6721] = { zone = "deadlands", kind = "boss" },
+  -- High Isle
+  [6805] = { zone = "high-isle", kind = "delve" }, [6809] = { zone = "high-isle", kind = "delve" },
+  [6815] = { zone = "high-isle", kind = "delve" }, [6818] = { zone = "high-isle", kind = "delve" },
+  [6825] = { zone = "high-isle", kind = "delve" }, [6826] = { zone = "high-isle", kind = "delve" },
+  [6803] = { zone = "high-isle", kind = "boss" }, [6807] = { zone = "high-isle", kind = "boss" },
+  [6808] = { zone = "high-isle", kind = "boss" }, [6816] = { zone = "high-isle", kind = "boss" },
+  [6821] = { zone = "high-isle", kind = "boss" }, [6822] = { zone = "high-isle", kind = "boss" },
+  [6812] = { zone = "high-isle", kind = "event" },
+  -- Galen
+  [6883] = { zone = "galen", kind = "delve" }, [6884] = { zone = "galen", kind = "delve" },
+  [6885] = { zone = "galen", kind = "delve" }, [6886] = { zone = "galen", kind = "delve" },
+  [6887] = { zone = "galen", kind = "delve" }, [6888] = { zone = "galen", kind = "delve" },
+  [6878] = { zone = "galen", kind = "boss" }, [6881] = { zone = "galen", kind = "boss" },
+  [6889] = { zone = "galen", kind = "boss" }, [6890] = { zone = "galen", kind = "boss" },
+  [6891] = { zone = "galen", kind = "boss" }, [6892] = { zone = "galen", kind = "boss" },
+  [6899] = { zone = "galen", kind = "event" }, [6901] = { zone = "galen", kind = "event" },
+  -- Necrom
+  [7033] = { zone = "necrom", kind = "delve" }, [7034] = { zone = "necrom", kind = "delve" },
+  [7035] = { zone = "necrom", kind = "delve" }, [7036] = { zone = "necrom", kind = "delve" },
+  [7037] = { zone = "necrom", kind = "delve" }, [7038] = { zone = "necrom", kind = "delve" },
+  [7039] = { zone = "necrom", kind = "boss" }, [7040] = { zone = "necrom", kind = "boss" },
+  [7041] = { zone = "necrom", kind = "boss" }, [7042] = { zone = "necrom", kind = "boss" },
+  [7043] = { zone = "necrom", kind = "boss" }, [7044] = { zone = "necrom", kind = "boss" },
+  [7013] = { zone = "necrom", kind = "event" }, [7056] = { zone = "necrom", kind = "event" },
+  [7057] = { zone = "necrom", kind = "event" }, [7058] = { zone = "necrom", kind = "event" },
+  -- West Weald
+  [7108] = { zone = "west-weald", kind = "delve" }, [7111] = { zone = "west-weald", kind = "delve" },
+  [7112] = { zone = "west-weald", kind = "delve" }, [7113] = { zone = "west-weald", kind = "delve" },
+  [7114] = { zone = "west-weald", kind = "delve" }, [7115] = { zone = "west-weald", kind = "delve" },
+  [7109] = { zone = "west-weald", kind = "boss" }, [7116] = { zone = "west-weald", kind = "boss" },
+  [7117] = { zone = "west-weald", kind = "boss" }, [7118] = { zone = "west-weald", kind = "boss" },
+  [7119] = { zone = "west-weald", kind = "boss" }, [7120] = { zone = "west-weald", kind = "boss" },
+  [7110] = { zone = "west-weald", kind = "event" }, [7182] = { zone = "west-weald", kind = "event" },
+  -- Solstice
+  [7261] = { zone = "solstice", kind = "delve" }, [7262] = { zone = "solstice", kind = "delve" },
+  [7263] = { zone = "solstice", kind = "delve" }, [7267] = { zone = "solstice", kind = "delve" },
+  [7268] = { zone = "solstice", kind = "delve" }, [7269] = { zone = "solstice", kind = "delve" },
+  [7264] = { zone = "solstice", kind = "boss" }, [7265] = { zone = "solstice", kind = "boss" },
+  [7266] = { zone = "solstice", kind = "boss" }, [7270] = { zone = "solstice", kind = "boss" },
+  [7271] = { zone = "solstice", kind = "boss" }, [7272] = { zone = "solstice", kind = "boss" },
 }
 
 local function normDungeon(name)
@@ -1205,10 +1324,11 @@ local function ensureDailyBucket(charId)
       bucket.writs = bucket.writs or {}
       bucket.pledges = bucket.pledges or {}
       bucket.worldBosses = bucket.worldBosses or {}
+      bucket.zoneDailies = bucket.zoneDailies or {}
       return bucket
     end
   end
-  local bucket = { dayKey = today, writs = {}, pledges = {}, worldBosses = {} }
+  local bucket = { dayKey = today, writs = {}, pledges = {}, worldBosses = {}, zoneDailies = {} }
   sv.dailyFlags[tostring(charId)] = bucket
   return bucket
 end
@@ -1490,45 +1610,74 @@ local function flagWrit(questName, status, journalIndex, questId)
   end
 end
 
-local WORLD_BOSS_BY_NAME = nil
-local function ensureWorldBossNameMap()
-  if WORLD_BOSS_BY_NAME then return end
-  WORLD_BOSS_BY_NAME = {}
-  for id, zone in pairs(WORLD_BOSS_BY_ID) do
+-- Names shared by two zones (Halt the Harrowstorms) stay out of this map.
+local ZONE_DAILY_BY_NAME = nil
+local function ensureZoneDailyNameMap()
+  if ZONE_DAILY_BY_NAME then return end
+  ZONE_DAILY_BY_NAME = {}
+  local seen = {}
+  for id, row in pairs(ZONE_DAILY_BY_ID) do
     local n = questNameFromId(id)
-    if n ~= "" then WORLD_BOSS_BY_NAME[n:lower()] = { zone = zone, questId = id } end
+    if n ~= "" then
+      local key = n:lower()
+      local prev = seen[key]
+      if not prev then
+        seen[key] = { zone = row.zone, kind = row.kind, questId = id }
+      elseif prev.zone ~= row.zone or prev.kind ~= row.kind then
+        seen[key] = false
+      end
+    end
+  end
+  for key, row in pairs(seen) do
+    if row then ZONE_DAILY_BY_NAME[key] = row end
   end
 end
 
-local function flagWorldBoss(questName, status, journalIndex, questId)
+local function flagZoneDaily(questName, status, journalIndex, questId)
   questId = journalQuestId(journalIndex, questId)
-  local zone = questId and WORLD_BOSS_BY_ID[questId] or nil
-  if not zone then
-    ensureWorldBossNameMap()
-    local row = WORLD_BOSS_BY_NAME[tostring(cleanQuestName(questName) or ""):lower()]
-    if row then
-      zone = row.zone
-      questId = row.questId
+  local row = questId and ZONE_DAILY_BY_ID[questId] or nil
+  if not row then
+    ensureZoneDailyNameMap()
+    local named = ZONE_DAILY_BY_NAME[tostring(cleanQuestName(questName) or ""):lower()]
+    if named then
+      row = named
+      questId = named.questId
     end
   end
-  if not zone or not questId then return end
+  if not row or not questId then return end
   local bucket = ensureDailyBucket(currentCharId())
   if not bucket then return end
+  bucket.zoneDailies = bucket.zoneDailies or {}
   bucket.worldBosses = bucket.worldBosses or {}
   local name = cleanQuestName(questName)
   if name == "" then name = questNameFromId(questId) end
-  local prev = bucket.worldBosses[tostring(questId)]
+  local key = tostring(questId)
+  local prev = bucket.zoneDailies[key]
   if status == "cleared" then
-    if prev and prev.status ~= "done" then bucket.worldBosses[tostring(questId)] = nil end
+    if prev and prev.status ~= "done" then bucket.zoneDailies[key] = nil end
+    if row.kind == "boss" then
+      local boss = bucket.worldBosses[key]
+      if boss and boss.status ~= "done" then bucket.worldBosses[key] = nil end
+    end
     return
   end
   if prev and prev.status == "done" and status ~= "done" then return end
-  bucket.worldBosses[tostring(questId)] = {
-    zone = zone,
+  local record = {
+    zone = row.zone,
+    kind = row.kind,
     questId = questId,
     name = name,
     status = status,
   }
+  bucket.zoneDailies[key] = record
+  if row.kind == "boss" then
+    bucket.worldBosses[key] = {
+      zone = row.zone,
+      questId = questId,
+      name = name,
+      status = status,
+    }
+  end
 end
 
 -- Instance APIs only while the player is in a dungeon. Journal hidden /
@@ -1672,7 +1821,7 @@ local function onQuestComplete(_, questName, _level, _prevXp, _xp, _cp, questTyp
       or name:lower():find("pledge", 1, true)
     if isWrit then flagWrit(name, "done") end
     if isPledge then flagPledge(name, "done") end
-    flagWorldBoss(name, "done")
+    flagZoneDaily(name, "done")
   end)
 end
 
@@ -1687,11 +1836,11 @@ local function onQuestRemoved(_, isCompleted, journalIndex, questName, _zone, _p
     if isCompleted then
       flagWrit(name, "done", journalIndex, questId)
       if name ~= "" then flagPledge(name, "done", journalIndex, questId) end
-      flagWorldBoss(name, "done", journalIndex, questId)
+      flagZoneDaily(name, "done", journalIndex, questId)
     else
       flagWrit(name, "cleared", journalIndex, questId)
       if name ~= "" then flagPledge(name, "cleared", journalIndex, questId) end
-      flagWorldBoss(name, "cleared", journalIndex, questId)
+      flagZoneDaily(name, "cleared", journalIndex, questId)
     end
   end)
 end
@@ -1702,7 +1851,7 @@ local function onQuestAdded(_, journalIndex, questName, _objective, questId)
     questId = journalQuestId(journalIndex, questId)
     flagWrit(name, "accepted", journalIndex, questId)
     if name ~= "" then flagPledge(name, "accepted", journalIndex, questId) end
-    flagWorldBoss(name, "accepted", journalIndex, questId)
+    flagZoneDaily(name, "accepted", journalIndex, questId)
   end)
 end
 
@@ -1767,8 +1916,8 @@ local function gatherDailies(charId)
   local writStatus = {}
   local pledgeStatus = {}
   local pledgesInJournal = {}
-  local worldBosses = {}
-  local bossesInJournal = {}
+  local zoneDailies = {}
+  local zoneInJournal = {}
   if bucket then
     for craft, status in pairs(bucket.writs or {}) do
       if status == "done" then writStatus[craft] = status end
@@ -1779,9 +1928,26 @@ local function gatherDailies(charId)
         pledgeStatus[giver] = info
       end
     end
-    for key, info in pairs(bucket.worldBosses or {}) do
+    bucket.zoneDailies = bucket.zoneDailies or {}
+    for key, info in pairs(bucket.zoneDailies) do
       if type(info) == "table" and info.status == "done" then
-        worldBosses[key] = info
+        zoneDailies[key] = info
+      end
+    end
+    -- A boss turned in before this addon learned delve/event ids.
+    for _, info in pairs(bucket.worldBosses or {}) do
+      if type(info) == "table" and info.status == "done" and info.questId and ZONE_DAILY_BY_ID[info.questId] then
+        local meta = ZONE_DAILY_BY_ID[info.questId]
+        local key = tostring(info.questId)
+        if not zoneDailies[key] then
+          zoneDailies[key] = {
+            zone = meta.zone,
+            kind = meta.kind,
+            questId = info.questId,
+            name = info.name or "",
+            status = "done",
+          }
+        end
       end
     end
   end
@@ -1826,20 +1992,31 @@ local function gatherDailies(charId)
           if bucket then bucket.pledges[giver] = pledgeStatus[giver] end
         end
       end
-      if questId and WORLD_BOSS_BY_ID[questId] then
-        local zone = WORLD_BOSS_BY_ID[questId]
+      local zoneMeta = questId and ZONE_DAILY_BY_ID[questId] or nil
+      if zoneMeta then
         local key = tostring(questId)
-        bossesInJournal[key] = true
-        if not worldBosses[key] or worldBosses[key].status ~= "done" then
-          worldBosses[key] = {
-            zone = zone,
+        zoneInJournal[key] = true
+        if not zoneDailies[key] or zoneDailies[key].status ~= "done" then
+          local qname = name ~= "" and name or questNameFromId(questId)
+          zoneDailies[key] = {
+            zone = zoneMeta.zone,
+            kind = zoneMeta.kind,
             questId = questId,
-            name = name ~= "" and name or questNameFromId(questId),
+            name = qname,
             status = status,
           }
           if bucket then
-            bucket.worldBosses = bucket.worldBosses or {}
-            bucket.worldBosses[key] = worldBosses[key]
+            bucket.zoneDailies = bucket.zoneDailies or {}
+            bucket.zoneDailies[key] = zoneDailies[key]
+            if zoneMeta.kind == "boss" then
+              bucket.worldBosses = bucket.worldBosses or {}
+              bucket.worldBosses[key] = {
+                zone = zoneMeta.zone,
+                questId = questId,
+                name = qname,
+                status = status,
+              }
+            end
           end
         end
       end
@@ -1852,10 +2029,20 @@ local function gatherDailies(charId)
         bucket.pledges[giver] = nil
       end
     end
+    for key, info in pairs(bucket.zoneDailies or {}) do
+      if type(info) == "table" and info.status ~= "done" and not zoneInJournal[key] then
+        bucket.zoneDailies[key] = nil
+      end
+    end
     for key, info in pairs(bucket.worldBosses or {}) do
-      if type(info) == "table" and info.status ~= "done" and not bossesInJournal[key] then
+      if type(info) == "table" and info.status ~= "done" and not zoneInJournal[key] then
         bucket.worldBosses[key] = nil
       end
+    end
+  end
+  for key, info in pairs(zoneDailies) do
+    if type(info) == "table" and info.status ~= "done" and not zoneInJournal[key] then
+      zoneDailies[key] = nil
     end
   end
 
@@ -1889,13 +2076,23 @@ local function gatherDailies(charId)
   end
 
   local worldBossList = {}
-  for _, info in pairs(worldBosses) do
-    worldBossList[#worldBossList + 1] = {
+  local zoneDailyList = {}
+  for _, info in pairs(zoneDailies) do
+    zoneDailyList[#zoneDailyList + 1] = {
       zone = info.zone,
+      kind = info.kind,
       questId = info.questId,
       name = info.name or "",
       status = info.status or "unknown",
     }
+    if info.kind == "boss" then
+      worldBossList[#worldBossList + 1] = {
+        zone = info.zone,
+        questId = info.questId,
+        name = info.name or "",
+        status = info.status or "unknown",
+      }
+    end
   end
 
   return {
@@ -1907,6 +2104,8 @@ local function gatherDailies(charId)
     writs = writs,
     pledges = pledges,
     worldBosses = worldBossList,
+    zoneDailies = zoneDailyList,
+    zoneDailiesKnown = true,
   }
 end
 

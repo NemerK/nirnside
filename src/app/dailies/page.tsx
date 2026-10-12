@@ -27,7 +27,7 @@ export default function DailiesPage() {
     <PageFrame>
       <PageHeader
         title="Dailies"
-        subtitle="Randoms, writs, pledges, and DLC world-boss dailies. Pledge marks are N, Vet, or HM when we know the mode."
+        subtitle="Randoms, writs, and pledges on Today. Zone dailies — delve, world boss, and a world event where the zone has one — are on Zones."
         action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
       />
 
@@ -66,8 +66,8 @@ export default function DailiesPage() {
               value={summary.pledgesTotal ? `${summary.pledgesDone}/${summary.pledgesTotal}` : "—"}
             />
             <Stat
-              label="World bosses"
-              value={summary.worldBossesTotal ? `${summary.worldBossesDone}/${summary.worldBossesTotal}` : "—"}
+              label="Zone dailies"
+              value={summary.zoneDailiesTotal ? `${summary.zoneDailiesDone}/${summary.zoneDailiesTotal}` : "—"}
             />
           </div>
           <DailiesBoard
