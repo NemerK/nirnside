@@ -4,7 +4,7 @@ import { liveCharacters } from "@/lib/snapshot/roster";
 import { dailiesHaveAnyScan, presentAccountDailies, summarizeDailies } from "@/lib/dailies/present";
 import { dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/dailies/day";
 import { communityPledgesForUnix } from "@/lib/dailies/pledges";
-import { PageFrame, PageHeader, Stat, EmptyState } from "@/components/ui";
+import { PageFrame, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { DailiesBoard } from "@/components/dailies-board";
 
@@ -25,11 +25,46 @@ export default function DailiesPage() {
 
   return (
     <PageFrame>
-      <PageHeader
-        title="Dailies"
-        subtitle="Randoms, writs, and pledges on Today. Zone dailies — delve, world boss, and a world event where the zone has one — are on Zones."
-        action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
-      />
+      <div className="mb-2 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1">
+        <h1 className="text-lg font-semibold tracking-tight text-fg">Dailies</h1>
+        {populated && !staleAddon && (
+          <div className="flex flex-wrap items-center gap-x-3 text-xs text-fg-muted">
+            <span>
+              <span className="tabular-nums text-fg">
+                {summary.scanned}/{summary.total}
+              </span>{" "}
+              scanned
+            </span>
+            <span>
+              <span className="tabular-nums text-fg">
+                {summary.randomsTotal ? `${summary.randomsDone}/${summary.randomsTotal}` : "—"}
+              </span>{" "}
+              randoms
+            </span>
+            <span>
+              <span className="tabular-nums text-fg">
+                {summary.writsTotal ? `${summary.writsDone}/${summary.writsTotal}` : "—"}
+              </span>{" "}
+              writs
+            </span>
+            <span>
+              <span className="tabular-nums text-fg">
+                {summary.pledgesTotal ? `${summary.pledgesDone}/${summary.pledgesTotal}` : "—"}
+              </span>{" "}
+              pledges
+            </span>
+            <span>
+              <span className="tabular-nums text-fg">
+                {summary.zoneDailiesTotal ? `${summary.zoneDailiesDone}/${summary.zoneDailiesTotal}` : "—"}
+              </span>{" "}
+              zones
+            </span>
+          </div>
+        )}
+        <div className="ml-auto">
+          <SourceBadge source={populated && !isSample ? "ingame" : "reference"} />
+        </div>
+      </div>
 
       {!populated ? (
         <EmptyState title="No account data yet" icon={<CalendarDays className="h-8 w-8" />}>
@@ -53,30 +88,12 @@ export default function DailiesPage() {
           </div>
         </div>
       ) : (
-        <>
-          <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-5">
-            <Stat label="Scanned today" value={`${summary.scanned}/${summary.total}`} />
-            <Stat
-              label="Randoms"
-              value={summary.randomsTotal ? `${summary.randomsDone}/${summary.randomsTotal}` : "—"}
-            />
-            <Stat label="Writs" value={summary.writsTotal ? `${summary.writsDone}/${summary.writsTotal}` : "—"} />
-            <Stat
-              label="Pledges"
-              value={summary.pledgesTotal ? `${summary.pledgesDone}/${summary.pledgesTotal}` : "—"}
-            />
-            <Stat
-              label="Zone dailies"
-              value={summary.zoneDailiesTotal ? `${summary.zoneDailiesDone}/${summary.zoneDailiesTotal}` : "—"}
-            />
-          </div>
-          <DailiesBoard
-            rows={rows}
-            resetAt={resetAt}
-            todayPledges={todayPledges}
-            resetLabel={`${region} ${String(dailyResetHourUtc(region)).padStart(2, "0")}:00 UTC`}
-          />
-        </>
+        <DailiesBoard
+          rows={rows}
+          resetAt={resetAt}
+          todayPledges={todayPledges}
+          resetLabel={`${region} ${String(dailyResetHourUtc(region)).padStart(2, "0")}:00 UTC`}
+        />
       )}
     </PageFrame>
   );

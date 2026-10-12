@@ -9,7 +9,7 @@ function ZoneBox({ cell }: { cell: ZoneSlotCell }) {
     return (
       <span
         title={cell.title}
-        className="inline-flex h-5 w-5 items-center justify-center rounded border border-ok/50 bg-ok/15 text-ok"
+        className="inline-flex h-4 w-4 items-center justify-center rounded border border-ok/50 bg-ok/15 text-ok"
       >
         <Check className="h-3 w-3" />
       </span>
@@ -19,7 +19,7 @@ function ZoneBox({ cell }: { cell: ZoneSlotCell }) {
     return (
       <span
         title={cell.title}
-        className="inline-flex h-5 w-5 rounded border border-dashed border-border/80 bg-transparent"
+        className="inline-flex h-4 w-4 rounded border border-dashed border-border/80 bg-transparent"
       />
     );
   }
@@ -32,7 +32,7 @@ function ZoneBox({ cell }: { cell: ZoneSlotCell }) {
   const dot =
     cell.status === "ready" ? "bg-accent" : cell.status === "accepted" ? "bg-amber-500" : "";
   return (
-    <span title={cell.title} className={`inline-flex h-5 w-5 items-center justify-center rounded border bg-surface ${tone}`}>
+    <span title={cell.title} className={`inline-flex h-4 w-4 items-center justify-center rounded border bg-surface ${tone}`}>
       {dot ? <span className={`h-1.5 w-1.5 rounded-full ${dot}`} /> : null}
     </span>
   );
@@ -40,12 +40,6 @@ function ZoneBox({ cell }: { cell: ZoneSlotCell }) {
 
 function doneCount(rows: PresentedCharacterDailies[], key: string): number {
   return rows.filter((row) => row.zoneSlots[key]?.status === "done").length;
-}
-
-function catalogSeen(rows: PresentedCharacterDailies[]): boolean {
-  return rows.some((row) =>
-    Object.entries(row.zoneSlots).some(([key, slot]) => key.endsWith(":delve") && slot.status !== "unscanned"),
-  );
 }
 
 export function ZoneDailiesBoard({
@@ -57,100 +51,77 @@ export function ZoneDailiesBoard({
 }) {
   const counts = accountRows;
   return (
-    <div>
-      <p className="mb-2 text-xs text-fg-subtle">
-        Each zone has a delve and a world boss. Some also have a world event. A check is turned in
-        today. An empty box was scanned and is still open. The number under a column is how many
-        characters have finished that daily.
-      </p>
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border bg-surface-2/40 text-left text-xs text-fg-subtle">
-              <th className="sticky left-0 z-10 bg-surface-2/40 px-3 py-2 font-medium" rowSpan={2}>
-                Character
+    <div className="overflow-x-auto rounded-xl border border-border">
+      <table className="w-max min-w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-border bg-surface-2 text-left text-[11px] text-fg-subtle">
+            <th className="sticky left-0 z-10 bg-surface-2 px-2 py-1 font-medium" rowSpan={2}>
+              Character
+            </th>
+            {ZONE_DAILY_ZONES.map((zone, index) => (
+              <th
+                key={zone.id}
+                colSpan={zone.slots.length}
+                className={`whitespace-nowrap border-l border-border px-1 py-0.5 text-center font-medium text-fg ${index % 2 === 0 ? "bg-surface-2" : ""}`}
+              >
+                {zone.name}
               </th>
-              {ZONE_DAILY_ZONES.map((zone, index) => (
-                <th
-                  key={zone.id}
-                  colSpan={zone.slots.length}
-                  className={`px-1 py-1.5 text-center font-medium text-fg ${index % 2 === 0 ? "bg-surface-2/70" : ""} border-l border-border`}
-                >
-                  {zone.name}
-                </th>
-              ))}
-            </tr>
-            <tr className="border-b border-border bg-surface-2/20 text-[10px] uppercase tracking-wide text-fg-subtle">
+            ))}
+          </tr>
+          <tr className="border-b border-border bg-surface-2/80 text-[10px] text-fg-subtle">
+            {ZONE_DAILY_ZONES.map((zone) =>
+              zone.slots.map((slot, slotIndex) => {
+                const key = zoneSlotKey(zone.id, slot.kind);
+                const count = doneCount(counts, key);
+                return (
+                  <th
+                    key={key}
+                    className={`whitespace-nowrap px-1.5 py-0.5 text-center font-medium ${slotIndex === 0 ? "border-l border-border" : ""}`}
+                    title={
+                      count > 0
+                        ? `${zone.name} ${slot.label} — done on ${count} ${count === 1 ? "character" : "characters"}`
+                        : `${zone.name} ${slot.label}`
+                    }
+                  >
+                    {slot.label}
+                    {count > 0 ? <span className="ml-0.5 tabular-nums normal-case tracking-normal text-fg-muted">{count}</span> : null}
+                  </th>
+                );
+              }),
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.characterId} className="group border-b border-border/50 align-middle last:border-0">
+              <td className="sticky left-0 z-10 whitespace-nowrap bg-surface px-2 py-0.5 group-hover:bg-surface-2">
+                <a href={`/characters/${encodeURIComponent(row.characterId)}`} className="text-sm font-medium text-fg hover:text-accent">
+                  {row.name}
+                </a>
+                <span className="ml-1.5 text-[11px] text-fg-subtle">{row.className}</span>
+              </td>
               {ZONE_DAILY_ZONES.map((zone) =>
                 zone.slots.map((slot, slotIndex) => {
                   const key = zoneSlotKey(zone.id, slot.kind);
-                  const count = doneCount(counts, key);
+                  const cell = row.zoneSlots[key] ?? {
+                    status: "unscanned" as const,
+                    title: `${zone.name} ${slot.label} — not scanned since reset`,
+                    names: [],
+                  };
                   return (
-                    <th
+                    <td
                       key={key}
-                      className={`px-1 py-1 text-center font-medium ${slotIndex === 0 ? "border-l border-border" : ""}`}
-                      title={`${zone.name} ${slot.label}`}
+                      className={`px-1 py-0.5 text-center ${slotIndex === 0 ? "border-l border-border/70" : ""}`}
                     >
-                      {slot.label}
-                      {count > 0 ? (
-                        <div
-                          className="mt-0.5 font-normal normal-case tracking-normal text-fg-muted"
-                          title={`Done on ${count} ${count === 1 ? "character" : "characters"}`}
-                        >
-                          {count}
-                        </div>
-                      ) : (
-                        <div className="mt-0.5 font-normal text-transparent">0</div>
-                      )}
-                    </th>
+                      <ZoneBox cell={cell} />
+                    </td>
                   );
                 }),
               )}
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.characterId} className="border-b border-border/50 align-middle last:border-0 hover:bg-surface-2/30">
-                <td className="sticky left-0 z-10 bg-surface px-3 py-1.5">
-                  <a href={`/characters/${encodeURIComponent(row.characterId)}`} className="font-medium text-fg hover:text-accent">
-                    {row.name}
-                  </a>
-                  <div className="text-[11px] text-fg-subtle">{row.className}</div>
-                </td>
-                {ZONE_DAILY_ZONES.map((zone) =>
-                  zone.slots.map((slot, slotIndex) => {
-                    const key = zoneSlotKey(zone.id, slot.kind);
-                    const cell = row.zoneSlots[key] ?? {
-                      status: "unscanned" as const,
-                      title: `${zone.name} ${slot.label} — not scanned since reset`,
-                      names: [],
-                    };
-                    return (
-                      <td
-                        key={key}
-                        className={`px-1 py-1.5 text-center ${slotIndex === 0 ? "border-l border-border/70" : ""}`}
-                      >
-                        <ZoneBox cell={cell} />
-                      </td>
-                    );
-                  }),
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {!catalogSeen(accountRows) && (
-        <p className="mt-3 text-xs text-fg-subtle">
-          World boss boxes use the snapshot already on disk. Delve and world-event boxes stay
-          dashed on that scan.
-        </p>
-      )}
-      <p className="mt-3 text-xs text-fg-subtle">
-        A dashed box has not been scanned since reset. A dot in an empty box means that quest is in
-        the journal. The number in the column header is the account total, across every character,
-        including ones hidden by the search.
-      </p>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
