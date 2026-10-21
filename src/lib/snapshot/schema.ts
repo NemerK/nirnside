@@ -81,6 +81,12 @@ export const Item = z.object({
   /** Requested/effective level (e.g. CP160). */
   level: z.number().int().nonnegative().nullable().default(null),
   equipSlot: z.string().nullable().default(null),
+  /**
+   * Broad in-game category for the inventory Type filter (e.g. "Armor",
+   * "Weapon", "Jewelry", "Consumable", "Crafting"). Straight from the game's
+   * own item/equip type — null on older snapshots that predate this field.
+   */
+  itemType: z.string().nullable().default(null),
   /** Item still exists in the live game catalog? False = keep showing in bags, hide from browse. */
   obtainable: z.boolean().default(true),
   bound: z.boolean().default(false),

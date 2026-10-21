@@ -287,6 +287,22 @@ export function getCharacter(id: string): Character | null {
   return row ? (JSON.parse(row.json) as Character) : null;
 }
 
+/** Columns the inventory table can be sorted by, mapped to real item columns. */
+export const ITEM_SORT_COLUMNS = {
+  item: "name",
+  qty: "count",
+  type: "itemType",
+  location: "location",
+  owner: "ownerCharacter",
+  set: "setName",
+  trait: "trait",
+} as const;
+export type ItemSortKey = keyof typeof ITEM_SORT_COLUMNS;
+
+export function isItemSortKey(v: string | undefined): v is ItemSortKey {
+  return !!v && Object.prototype.hasOwnProperty.call(ITEM_SORT_COLUMNS, v);
+}
+
 export interface ItemFilters {
   search?: string;
   location?: string;
@@ -294,8 +310,13 @@ export interface ItemFilters {
   setName?: string;
   trait?: string;
   owner?: string;
+  itemType?: string;
   /** When true, include bags that belonged to deleted (archived) characters. */
   includeArchived?: boolean;
+  /** Column to sort by. Defaults to item name. */
+  sort?: ItemSortKey;
+  /** Sort direction. Defaults to ascending. */
+  dir?: "asc" | "desc";
 }
 
 export function getItems(filters: ItemFilters = {}): Item[] {
@@ -325,10 +346,19 @@ export function getItems(filters: ItemFilters = {}): Item[] {
     where.push("ownerCharacter = @owner");
     params.owner = filters.owner;
   }
+  if (filters.itemType) {
+    where.push("itemType = @itemType");
+    params.itemType = filters.itemType;
+  }
+  // Sort column comes from a fixed allowlist (never user text), so interpolating
+  // it is safe. NULLs always sort last so unknowns do not crowd the top.
+  const sortCol = filters.sort ? ITEM_SORT_COLUMNS[filters.sort] : "name";
+  const dir = filters.dir === "desc" ? "DESC" : "ASC";
+  const orderBy = `ORDER BY (${sortCol} IS NULL) ASC, ${sortCol} ${dir}, name ASC, location ASC`;
   const sql =
     "SELECT json FROM items" +
     (where.length ? " WHERE " + where.join(" AND ") : "") +
-    " ORDER BY name ASC, location ASC LIMIT 5000";
+    ` ${orderBy} LIMIT 5000`;
   const rows = getDb().prepare(sql).all(params) as { json: string }[];
   let items = rows.map((r) => JSON.parse(r.json) as Item);
   if (!filters.includeArchived && !filters.owner) {
@@ -350,6 +380,7 @@ export interface FacetValues {
   sets: string[];
   traits: string[];
   owners: string[];
+  types: string[];
 }
 
 export function getItemFacets(): FacetValues {
@@ -365,6 +396,7 @@ export function getItemFacets(): FacetValues {
     sets: col("setName"),
     traits: col("trait"),
     owners: col("ownerCharacter").filter((name) => !archived.has(name)),
+    types: col("itemType"),
   };
 }
 

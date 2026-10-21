@@ -158,6 +158,41 @@ local function pieceTypeInfo(link)
   return slot, nil
 end
 
+-- Broad inventory category for the app's "Type" filter (Armor / Weapon /
+-- Jewelry / Consumable / ...). Gear is split from the item's own weapon and
+-- equip type -- the same authoritative source the equipped-gear reader uses --
+-- and everything else falls back to the game's own inventory filter category.
+-- buildLookup skips any constant missing in the current API, so an unknown
+-- release never errors; the field is simply nil (shown as unknown in the app).
+local ITEM_CATEGORY = buildLookup({
+  { ITEMFILTERTYPE_WEAPONS,       "Weapon" },
+  { ITEMFILTERTYPE_ARMOR,         "Armor" },
+  { ITEMFILTERTYPE_JEWELRY,       "Jewelry" },
+  { ITEMFILTERTYPE_CONSUMABLE,    "Consumable" },
+  { ITEMFILTERTYPE_CRAFTING,      "Crafting" },
+  { ITEMFILTERTYPE_FURNISHING,    "Furnishing" },
+  { ITEMFILTERTYPE_COMPANION,     "Companion" },
+  { ITEMFILTERTYPE_QUEST,         "Quest" },
+  { ITEMFILTERTYPE_JUNK,          "Junk" },
+  { ITEMFILTERTYPE_MISCELLANEOUS, "Miscellaneous" },
+})
+
+local function itemCategory(link)
+  -- Weapons/shields report a weapon type; shields are worn as armor, so bucket
+  -- them with Armor (matching how the in-game character sheet treats them).
+  local wt = safe(function() return GetItemLinkWeaponType(link) end, nil)
+  if wt and wt ~= 0 and wt ~= WEAPONTYPE_NONE then
+    if wt == WEAPONTYPE_SHIELD then return "Armor" end
+    return "Weapon"
+  end
+  local et = safe(function() return GetItemLinkEquipType(link) end, nil)
+  if et == EQUIP_TYPE_NECK or et == EQUIP_TYPE_RING then return "Jewelry" end
+  if et and EQUIP_SLOT_NAME[et] then return "Armor" end
+  -- Non-gear: use the game's own primary inventory filter category.
+  local ft = safe(function() return (GetItemLinkFilterTypeInfo(link)) end, nil)
+  return ft and ITEM_CATEGORY[ft] or nil
+end
+
 ----------------------------------------------------------------------
 -- Bags / items
 ----------------------------------------------------------------------
@@ -187,6 +222,7 @@ local function readItem(bagId, slotIndex, location, owner, ownerId)
     ownerCharacter = owner,
     ownerCharacterId = ownerId,
     location  = location,
+    itemType  = itemCategory(link),
     setName   = hasSet and setName ~= "" and setName or nil,
     setId     = hasSet and setId or nil,
     trait     = traitString(link),
