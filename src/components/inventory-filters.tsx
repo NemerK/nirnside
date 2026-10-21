@@ -34,12 +34,19 @@ export function InventoryFilters({ facets }: { facets: FacetValues }) {
 
   function clearAll() {
     setSearch("");
-    startTransition(() => router.replace(pathname, { scroll: false }));
+    // Keep the chosen column sort; only clear the filters themselves.
+    const next = new URLSearchParams();
+    for (const k of ["sort", "dir"]) {
+      const v = params.get(k);
+      if (v) next.set(k, v);
+    }
+    const qs = next.toString();
+    startTransition(() => router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
   }
 
   const hasFilters =
     !!search ||
-    ["location", "quality", "setName", "trait", "owner"].some((k) => params.get(k));
+    ["location", "quality", "setName", "trait", "owner", "itemType"].some((k) => params.get(k));
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -53,6 +60,8 @@ export function InventoryFilters({ facets }: { facets: FacetValues }) {
         />
       </div>
 
+      <FilterSelect label="Type" value={params.get("itemType") ?? ""} onChange={(v) => setParam("itemType", v)}
+        options={facets.types.map((t) => ({ value: t, label: t }))} />
       <FilterSelect label="Location" value={params.get("location") ?? ""} onChange={(v) => setParam("location", v)}
         options={facets.locations.map((l) => ({ value: l, label: locationLabel(l) }))} />
       <FilterSelect label="Quality" value={params.get("quality") ?? ""} onChange={(v) => setParam("quality", v)}

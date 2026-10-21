@@ -128,9 +128,9 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
     const insItem = db.prepare(`
       INSERT INTO items
         (itemId, name, icon, quality, count, ownerCharacter, location,
-         setName, setId, trait, level, equipSlot, obtainable, bound, stolen, json)
+         setName, setId, trait, level, equipSlot, itemType, obtainable, bound, stolen, json)
       VALUES (@itemId, @name, @icon, @quality, @count, @ownerCharacter, @location,
-              @setName, @setId, @trait, @level, @equipSlot, @obtainable, @bound, @stolen, @json)
+              @setName, @setId, @trait, @level, @equipSlot, @itemType, @obtainable, @bound, @stolen, @json)
     `);
     for (const it of snap.items) {
       insItem.run({
@@ -146,6 +146,7 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         trait: it.trait,
         level: it.level,
         equipSlot: it.equipSlot,
+        itemType: it.itemType,
         obtainable: it.obtainable ? 1 : 0,
         bound: it.bound ? 1 : 0,
         stolen: it.stolen ? 1 : 0,

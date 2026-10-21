@@ -1,6 +1,15 @@
 import Link from "next/link";
-import { Backpack, Ban, Coins, Hand } from "lucide-react";
-import { getAccount, getArchivedCharacters, getCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
+import { ArrowDown, ArrowUp, ArrowUpDown, Backpack, Ban, Coins, Hand } from "lucide-react";
+import {
+  getAccount,
+  getArchivedCharacters,
+  getCharacters,
+  getItemFacets,
+  getItems,
+  isItemSortKey,
+  type ItemFilters,
+  type ItemSortKey,
+} from "@/lib/db/queries";
 import { setHref } from "@/lib/db/catalog-queries";
 import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
@@ -14,6 +23,9 @@ export const dynamic = "force-dynamic";
 export default async function InventoryPage({ searchParams }: PageProps<"/inventory">) {
   const sp = await searchParams;
   const view = str(sp.view) === "currency" ? "currency" : "items";
+  const sortParam = str(sp.sort);
+  const sort: ItemSortKey | undefined = isItemSortKey(sortParam) ? sortParam : undefined;
+  const dir: "asc" | "desc" = str(sp.dir) === "desc" ? "desc" : "asc";
   const filters: ItemFilters = {
     search: str(sp.search),
     location: str(sp.location),
@@ -21,6 +33,19 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
     setName: str(sp.setName),
     trait: str(sp.trait),
     owner: str(sp.owner),
+    itemType: str(sp.itemType),
+    sort,
+    dir,
+  };
+  // Current filters, carried into every sort link so sorting keeps the view.
+  const baseParams: Record<string, string | undefined> = {
+    search: filters.search,
+    location: filters.location,
+    quality: filters.quality,
+    setName: filters.setName,
+    trait: filters.trait,
+    owner: filters.owner,
+    itemType: filters.itemType,
   };
 
   let items: ReturnType<typeof getItems> = [];
@@ -30,6 +55,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
     sets: [],
     traits: [],
     owners: [],
+    types: [],
   };
   let archivedOwner = false;
   let ownerWallet: {
@@ -123,12 +149,13 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-subtle">
-                        <th className="px-4 py-2.5 font-medium">Item</th>
-                        <th className="px-3 py-2.5 font-medium text-right">Qty</th>
-                        <th className="px-3 py-2.5 font-medium">Location</th>
-                        <th className="px-3 py-2.5 font-medium">Owner</th>
-                        <th className="px-3 py-2.5 font-medium">Set</th>
-                        <th className="px-3 py-2.5 font-medium">Trait</th>
+                        <SortHeader col="item" label="Item" base={baseParams} current={sort} dir={dir} padClass="px-4" />
+                        <SortHeader col="qty" label="Qty" base={baseParams} current={sort} dir={dir} />
+                        <SortHeader col="type" label="Type" base={baseParams} current={sort} dir={dir} />
+                        <SortHeader col="location" label="Location" base={baseParams} current={sort} dir={dir} />
+                        <SortHeader col="owner" label="Owner" base={baseParams} current={sort} dir={dir} />
+                        <SortHeader col="set" label="Set" base={baseParams} current={sort} dir={dir} />
+                        <SortHeader col="trait" label="Trait" base={baseParams} current={sort} dir={dir} />
                       </tr>
                     </thead>
                     <tbody>
@@ -153,6 +180,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
                           <td className="px-3 py-2.5 text-right tabular-nums text-fg-muted">
                             {it.count.toLocaleString("en-US")}
                           </td>
+                          <td className="px-3 py-2.5 text-fg-muted">{it.itemType ?? "—"}</td>
                           <td className="px-3 py-2.5">
                             <span className="rounded-md border border-border px-1.5 py-0.5 text-xs text-fg-muted">
                               {locationLabel(it.location)}
@@ -218,6 +246,45 @@ function CurrencyView() {
   }
 
   return <CurrencyTable characters={characters} bankGold={bankGold} gold={gold} currencies={currencies} />;
+}
+
+function SortHeader({
+  col,
+  label,
+  current,
+  dir,
+  base,
+  padClass = "px-3",
+}: {
+  col: ItemSortKey;
+  label: string;
+  current: ItemSortKey | undefined;
+  dir: "asc" | "desc";
+  base: Record<string, string | undefined>;
+  padClass?: string;
+}) {
+  const active = current === col;
+  const nextDir = active && dir === "asc" ? "desc" : "asc";
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(base)) if (v) params.set(k, v);
+  params.set("sort", col);
+  params.set("dir", nextDir);
+  const Icon = active ? (dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`${padClass} py-2.5 font-medium`}>
+      <Link
+        href={`/inventory?${params.toString()}`}
+        scroll={false}
+        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+        className={`group inline-flex items-center gap-1 ${active ? "text-fg" : "hover:text-fg"}`}
+      >
+        {label}
+        <Icon
+          className={`h-3 w-3 ${active ? "text-accent" : "text-fg-subtle/40 group-hover:text-fg-subtle"}`}
+        />
+      </Link>
+    </th>
+  );
 }
 
 function str(v: string | string[] | undefined): string | undefined {

@@ -61,6 +61,7 @@ function migrate(db: Database.Database) {
       trait           TEXT,
       level           INTEGER,
       equipSlot       TEXT,
+      itemType        TEXT,
       obtainable      INTEGER NOT NULL DEFAULT 1,
       bound           INTEGER NOT NULL DEFAULT 0,
       stolen          INTEGER NOT NULL DEFAULT 0,
@@ -157,6 +158,24 @@ function migrate(db: Database.Database) {
     );
   `);
   migrateCharacterRolesToMany(db);
+  addItemTypeColumn(db);
+}
+
+/**
+ * Older DBs created the items table before the inventory Type filter existed.
+ * CREATE TABLE IF NOT EXISTS never adds columns, so add it here; existing rows
+ * read as itemType = NULL (unknown) until the next snapshot re-imports them.
+ */
+function addItemTypeColumn(db: Database.Database) {
+  const cols = db.prepare("PRAGMA table_info(items)").all() as { name: string }[];
+  if (cols.length === 0) return;
+  // The index references itemType, so the column must exist first. It is created
+  // here (not in the schema block above) so old DBs get the column before the
+  // index, and new DBs — where the column already exists — still get the index.
+  if (!cols.some((c) => c.name === "itemType")) {
+    db.exec("ALTER TABLE items ADD COLUMN itemType TEXT");
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_items_type ON items(itemType)");
 }
 
 /** Old DBs keyed assignments by character id only (one role). Keep existing rows. */
