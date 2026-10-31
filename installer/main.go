@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-//go:embed wizard.html
+//go:embed launcher.html
 var wizardFS embed.FS
 
 func main() {
@@ -30,15 +30,14 @@ func main() {
 
 	// ---- Launcher layer: keep the launcher itself current, independently of
 	// the app. Runs before everything else and can never block startup.
+	launcherStatus := "Checking…"
 	if os.Getenv("NIRNSIDE_SKIP_UPDATE") != "1" && os.Getenv("NIRNSIDE_LAUNCHER_CHECKED") != "1" {
 		launcherRoot := existing
 		if launcherRoot == "" {
 			launcherRoot = exeDir
 		}
 		status, restart := checkLauncherUpdate(launcherRoot, "https://api.github.com")
-		if status != "" {
-			fmt.Println("[launcher]", status)
-		}
+		launcherStatus = status
 		if restart {
 			restartLauncher(exe, os.Args[1:]...)
 		}
@@ -51,16 +50,18 @@ func main() {
 	holdJobForChildren()
 
 	// Already-running app: nothing to install or update (launchExisting skips
-	// all of that too), so no wizard is needed. Opening the wizard here used to
-	// leave a second Nirnside tab behind on every double-click.
+	// all of that too), so no launcher window is needed — open the app itself.
 	if existing != "" && appAlreadyUp() {
 		fmt.Println("Nirnside")
 		fmt.Println("Already running — opening", appURL())
-		_ = openURL(appURL())
+		_ = openLauncherWindow(appURL())
 		select {}
 	}
 
 	in := newInstaller()
+	in.set(func(s *jobState) {
+		s.Launcher.Status = launcherStatus
+	})
 	if existing != "" {
 		in.set(func(s *jobState) {
 			s.Dest = existing
@@ -84,7 +85,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data, _ := fs.ReadFile(wizardFS, "wizard.html")
+		data, _ := fs.ReadFile(wizardFS, "launcher.html")
 		page := strings.ReplaceAll(string(data), "{{LAUNCHER_VERSION}}", launcherVersion)
 		page = strings.ReplaceAll(page, "{{LAUNCHER_COMMIT}}", launcherCommit)
 		_, _ = w.Write([]byte(page))
@@ -95,10 +96,10 @@ func main() {
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 8 * time.Second}
 	go func() { _ = srv.Serve(ln) }()
 
-	wizardURL := fmt.Sprintf("http://127.0.0.1:%d/", port)
-	fmt.Println("Nirnside")
-	fmt.Println("Opening", wizardURL)
-	_ = openURL(wizardURL)
+	launcherURL := fmt.Sprintf("http://127.0.0.1:%d/", port)
+	fmt.Println("Nirnside Launcher", launcherVersion, "("+launcherCommit+")")
+	fmt.Println("Opening the launcher window:", launcherURL)
+	_ = openLauncherWindow(launcherURL)
 
 	if existing != "" {
 		go func() {
@@ -114,7 +115,7 @@ func main() {
 	}
 
 	if existing == "" {
-		fmt.Println("Waiting for you to click Install in the browser…")
+		fmt.Println("Waiting for you to click Install in the launcher window…")
 	}
 
 	for {

@@ -90,6 +90,26 @@ func killProcessTree(pid int) {
 	_ = cmd.Run()
 }
 
+// A chrome-less "app" window for the launcher UI: no tabs or address bar, and
+// the site's own icon (the Nirnside mark) in the taskbar. Falls back to the
+// default browser when Edge is not around.
+func openLauncherWindow(u string) error {
+	candidates := []string{
+		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		filepath.Join(os.Getenv("LocalAppData"), "Microsoft", "Edge", "Application", "msedge.exe"),
+	}
+	for _, p := range candidates {
+		if p == filepath.Join("", "Microsoft") {
+			continue
+		}
+		if _, err := os.Stat(p); err == nil {
+			return exec.Command(p, "--app="+u).Start()
+		}
+	}
+	return openURL(u)
+}
+
 func openURL(u string) error {
 	return exec.Command("cmd.exe", "/c", "start", "", u).Start()
 }
