@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Nirnside">
+  <!-- Original nirnroot-inspired leaf mark. Original artwork made for this project:
+    no game assets, no trademarked logos. -->
+  <defs>
+    <linearGradient id="nirn-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2130"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </linearGradient>
+    <radialGradient id="nirn-glow" cx="0.5" cy="0.8" r="0.6">
+      <stop offset="0" stop-color="#c8a35a" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#c8a35a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="nirn-leaf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0ddaa"/>
+      <stop offset="0.55" stop-color="#d8b269"/>
+      <stop offset="1" stop-color="#c8a35a"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#nirn-bg)"/>
+  <rect width="64" height="64" rx="14" fill="url(#nirn-glow)"/>
+  <g fill="url(#nirn-leaf)">
+    <path d="M32 8 C40.5 24 40.5 40 32 56 C23.5 40 23.5 24 32 8 Z"/>
+    <path d="M32 16 C38.5 28 38.5 40 32 56 C25.5 40 25.5 28 32 16 Z" transform="rotate(36 32 56)"/>
+    <path d="M32 16 C38.5 28 38.5 40 32 56 C25.5 40 25.5 28 32 16 Z" transform="rotate(-36 32 56)"/>
+  </g>
+  <path d="M32 8 C40.5 24 40.5 40 32 56" fill="none" stroke="#0d0f13" stroke-opacity="0.28" stroke-width="1.2"/>
+</svg>
