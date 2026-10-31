@@ -53,14 +53,19 @@ func main() {
 
 	holdJobForChildren()
 
-	// Already-running app: nothing to install or update (launchExisting skips
-	// all of that too). The keeper instance owns the server; this one just
-	// opens the app window and steps away.
+	// Already-running app: only skip the update machinery when the running
+	// build is actually current. Headless mode keeps the server alive across
+	// window closes, so treating "already up" as "done" would strand a machine
+	// on old code forever — when main has moved, stop the old server and let
+	// the normal launch flow update, rebuild, and start it again.
 	if existing != "" && appAlreadyUp() {
-		fmt.Println("Nirnside")
-		fmt.Println("Already running — opening the app window.")
-		_ = openLauncherWindow(appURL())
-		return
+		if !updatePending(existing, "https://api.github.com") {
+			fmt.Println("Already running and up to date — opening the app window.")
+			_ = openLauncherWindow(appURL())
+			return
+		}
+		fmt.Println("A Nirnside update is ready — restarting it with the update…")
+		stopRunningApp()
 	}
 
 	in := newInstaller()

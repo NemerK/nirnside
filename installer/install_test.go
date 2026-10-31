@@ -471,3 +471,43 @@ func TestCleanupSwapArtifacts(t *testing.T) {
 		t.Fatal("the current launcher must never be touched")
 	}
 }
+
+func TestUpdatePendingZip(t *testing.T) {
+	dir := t.TempDir()
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/commits/main") {
+			_, _ = w.Write([]byte(`{"sha":"abc123"}`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+	base := "http://" + srv.Listener.Addr().String()
+
+	// No revision applied yet: counts as pending so a fresh install updates.
+	if !updatePendingZip(dir, base) {
+		t.Fatal("a missing revision must count as pending")
+	}
+
+	// Matching revision: current, nothing to do.
+	if err := os.WriteFile(filepath.Join(dir, revisionName), []byte(`{"sha":"abc123"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if updatePendingZip(dir, base) {
+		t.Fatal("a matching revision must not be pending")
+	}
+
+	// Main moved on: pending again.
+	if err := os.WriteFile(filepath.Join(dir, revisionName), []byte(`{"sha":"def456"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !updatePendingZip(dir, base) {
+		t.Fatal("a moved revision must be pending")
+	}
+
+	// Offline or bad responses must read as "no update" (never block startup).
+	if updatePendingZip(dir, "http://127.0.0.1:1") {
+		t.Fatal("an unreachable probe must read as not pending")
+	}
+}
