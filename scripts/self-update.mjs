@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readdirSync, cpSync, rmSync, statSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, cpSync, rmSync, renameSync, statSync, writeFileSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -11,6 +12,7 @@ export const DEFAULT_REF = "main";
 
 const RESTART_NAME = ".nirnside-restart";
 const REVISION_NAME = ".nirnside-revision";
+const EXE_DIGEST_NAME = ".nirnside-exe-digest";
 const CHANNEL_NAME = "nirnside-channel.json";
 
 export function shouldSkip(relPath) {
@@ -21,7 +23,7 @@ export function shouldSkip(relPath) {
   if (n === "runtime" || n.startsWith("runtime/")) return true;
   if (/(^|\/)Nirnside\.exe$/i.test(n)) return true;
   if (n === "nirnside-installer.log") return true;
-  if (n === REVISION_NAME || n === RESTART_NAME) return true;
+  if (n === REVISION_NAME || n === RESTART_NAME || n === EXE_DIGEST_NAME) return true;
   if (n === ".env" || n.startsWith(".env.")) return true;
   if (/(^|\/)[^/]+\.db(-wal|-shm)?$/i.test(n)) return true;
   if (/^data\/incoming\/.+\.lua$/i.test(n)) return true;
@@ -155,6 +157,69 @@ async function githubJson(url) {
     throw new Error(`GitHub ${res.status} for ${url}`);
   }
   return res.json();
+}
+
+/**
+ * Keep the Nirnside.exe binary itself fresh, the same as the app code.
+ * The exe in an install is never touched by code updates (an update may even
+ * run while it is starting), so launcher-side fixes (icons, launch flow)
+ * would otherwise require a manual redownload — the one thing this app
+ * promises never to need.
+ *
+ * The published exe is fetched from the GitHub release, verified against the
+ * release API's sha256 digest before it is trusted, then swapped in with a
+ * rename (a running exe can be renamed but not overwritten on Windows). The
+ * running process is unaffected; the new exe takes effect next launch.
+ */
+export async function maybeUpdateExe(root, repo, apiBase = "https://api.github.com") {
+  const exePath = join(root, "Nirnside.exe");
+  if (!existsSync(exePath)) return;
+  try {
+    const release = await githubJson(`${apiBase}/repos/${repo}/releases/latest`);
+    const asset = (release.assets ?? []).find((a) => a && a.name === "Nirnside.exe");
+    const digest = String(asset?.digest ?? "").replace(/^sha256:/, "").toLowerCase();
+    if (!asset || !digest || !asset.browser_download_url) return;
+    let stored = "";
+    try {
+      stored = readFileSync(join(root, EXE_DIGEST_NAME), "utf8").trim().toLowerCase();
+    } catch {
+      /* first run */
+    }
+    if (stored === digest) return;
+
+    log("A newer Nirnside.exe is available — downloading it once…");
+    const tmpPath = `${exePath}.new`;
+    await download(asset.browser_download_url, tmpPath);
+    const got = createHash("sha256").update(readFileSync(tmpPath)).digest("hex");
+    if (got !== digest) {
+      rmSync(tmpPath, { force: true });
+      log("The downloaded Nirnside.exe failed its checksum — keeping the current one.");
+      return;
+    }
+    const oldPath = `${exePath}.old`;
+    try {
+      rmSync(oldPath, { force: true });
+    } catch {
+      /* a previous leftover may be locked; rename below will still try */
+    }
+    renameSync(exePath, oldPath);
+    try {
+      renameSync(tmpPath, exePath);
+    } catch (err) {
+      // Put the old one back so the app still launches.
+      if (!existsSync(exePath)) renameSync(oldPath, exePath);
+      throw err;
+    }
+    writeFileSync(join(root, EXE_DIGEST_NAME), `${digest}\n`);
+    try {
+      rmSync(oldPath, { force: true });
+    } catch {
+      /* Windows may hold it a moment; the next swap cleans it up */
+    }
+    log("Nirnside.exe updated — the new one starts on the next launch.");
+  } catch (err) {
+    log(`Nirnside.exe check skipped: ${err instanceof Error ? err.message : err}`);
+  }
 }
 
 async function download(url, dest) {
@@ -298,8 +363,12 @@ export async function runSelfUpdate(root = process.cwd()) {
   const repo = process.env.NIRNSIDE_UPDATE_REPO || channel.repo;
   const ref = process.env.NIRNSIDE_UPDATE_REF || channel.ref;
   try {
-    if (isGitClone(root)) return await updateFromGit(root);
-    return await updateFromZip(root, repo, ref);
+    let code;
+    if (isGitClone(root)) code = await updateFromGit(root);
+    else code = await updateFromZip(root, repo, ref);
+    // Best effort and never fatal: keep the launcher binary fresh too.
+    await maybeUpdateExe(root, repo);
+    return code;
   } catch (err) {
     log(`Update failed, starting the copy you already have. ${err instanceof Error ? err.message : err}`);
     return 0;
