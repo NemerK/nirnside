@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
-import { listGoals, skillLineChoices } from "@/lib/db/goals";
+import { listGoals } from "@/lib/db/goals";
+import { skillLineChoices } from "@/lib/planner/data";
 import { getSkillLineByName, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
@@ -26,6 +27,7 @@ import { Wardrobe } from "@/components/wardrobe";
 import { RolePicker } from "@/components/role-picker";
 import { CharacterGoals } from "@/components/goals-board";
 import { toGoalSubject } from "@/lib/goals/progress";
+import { buildGoalIndexes } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 import { formatResearchRemaining, presentMotifs, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
 
@@ -91,11 +93,14 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   const lines = safeList(() => skillLineChoices());
   const hrefForLine: Record<string, string> = {};
   for (const g of goals) {
-    const key = g.lineName.toLowerCase();
+    if (g.domain !== "skillline") continue;
+    const key = g.target.toLowerCase();
     if (hrefForLine[key]) continue;
-    const dest = skillLineHref(g.lineName, c.class);
+    const dest = skillLineHref(g.target, c.class);
     if (dest) hrefForLine[key] = dest;
   }
+  const roleIds = assigned.map((r) => r.id);
+  const goalIndexes = safe(buildGoalIndexes) ?? { lineIndex: [], abilityIndex: [] };
 
   // Cross-link every set worn in a Wizard's Wardrobe setup back to its catalog page.
   const hrefForSet: Record<string, string> = {};
@@ -223,7 +228,14 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         </p>
       )}
 
-      <CharacterGoals goals={goals} subject={toGoalSubject(c)} lines={lines} hrefForLine={hrefForLine} />
+      <CharacterGoals
+        goals={goals}
+        subject={toGoalSubject(c, roleIds, true)}
+        lines={lines}
+        hrefForLine={hrefForLine}
+        indexes={goalIndexes}
+        roles={roles.map((r) => ({ id: r.id, name: r.name }))}
+      />
 
       <div className="mt-6">
         <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
@@ -473,5 +485,13 @@ function safeList<T>(fn: () => T[]): T[] {
     return fn();
   } catch {
     return [];
+  }
+}
+
+function safe<T>(fn: () => T): T | null {
+  try {
+    return fn();
+  } catch {
+    return null;
   }
 }

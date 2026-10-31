@@ -1,8 +1,11 @@
 import { Crosshair } from "lucide-react";
 import { getCharacter, getCharacters } from "@/lib/db/queries";
 import { catalogAbilityLoreFor, getScripts, getSkillLineByName } from "@/lib/db/catalog-queries";
-import { listGoals, skillLineChoices } from "@/lib/db/goals";
+import { listGoals } from "@/lib/db/goals";
+import { skillLineChoices } from "@/lib/planner/data";
+import { listRoles, listAssignments } from "@/lib/db/roles";
 import { toGoalSubject } from "@/lib/goals/progress";
+import { buildGoalIndexes } from "@/lib/planner/data";
 import { FOCUS_AREAS, focusAreasFor, getFocusConfig } from "@/lib/focus/config";
 import { presentSkillBook } from "@/lib/skills/present";
 import { EmptyState, PageFrame, PageHeader } from "@/components/ui";
@@ -133,19 +136,27 @@ export default async function FocusPage({ searchParams }: PageProps<"/focus">) {
           const lines = safe(() => skillLineChoices()) ?? [];
           const hrefForLine: Record<string, string> = {};
           for (const g of goals) {
-            const key = g.lineName.toLowerCase();
+            if (g.domain !== "skillline") continue;
+            const key = g.target.toLowerCase();
             if (hrefForLine[key]) continue;
-            const dest = skillLineHref(g.lineName, character.class);
+            const dest = skillLineHref(g.target, character.class);
             if (dest) hrefForLine[key] = dest;
           }
+          const goalIndexes = safe(buildGoalIndexes) ?? { lineIndex: [], abilityIndex: [] };
+          const roleIds = (safe(() => (listAssignments()[character.id] ?? [])) ?? []).filter(
+            (id): id is string => typeof id === "string",
+          );
+          const roleRows = (safe(listRoles) ?? []).map((r) => ({ id: r.id, name: r.name }));
           panels.push({
             id: "goals",
             node: (
               <CharacterGoals
                 goals={goals}
-                subject={toGoalSubject(character)}
+                subject={toGoalSubject(character, roleIds, true)}
                 lines={lines}
                 hrefForLine={hrefForLine}
+                indexes={goalIndexes}
+                roles={roleRows}
               />
             ),
           });

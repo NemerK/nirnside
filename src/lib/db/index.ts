@@ -143,20 +143,25 @@ function migrate(db: Database.Database) {
       FOREIGN KEY (roleId) REFERENCES roles(id) ON DELETE CASCADE
     );
 
-    -- Player-authored skill-line rank targets. Not game data; keyed so a
-    -- snapshot re-import cannot wipe them. scope=account applies to every
-    -- live character; scope=character is one toon.
+    -- Player-authored planning targets. Not game data; keyed so a
+    -- snapshot re-import cannot wipe them. scope: account = every live
+    -- character; role/class/character narrow it (scopeKey = role id or
+    -- class name). domain: skillline (rank target), ability, or script.
     CREATE TABLE IF NOT EXISTS goals (
-      id            TEXT PRIMARY KEY,
-      scope         TEXT NOT NULL,
-      characterId   TEXT,
-      lineName      TEXT NOT NULL,
-      targetRank    INTEGER NOT NULL,
-      note          TEXT NOT NULL DEFAULT '',
-      createdAt     INTEGER NOT NULL
+      id          TEXT PRIMARY KEY,
+      domain      TEXT NOT NULL DEFAULT 'skillline',
+      tier        TEXT NOT NULL DEFAULT 'essential',
+      scope       TEXT NOT NULL,
+      characterId TEXT,
+      scopeKey    TEXT,
+      target      TEXT NOT NULL,
+      targetRank  INTEGER NOT NULL DEFAULT 0,
+      note        TEXT NOT NULL DEFAULT '',
+      createdAt   INTEGER NOT NULL
     );
   `);
   migrateCharacterRolesToMany(db);
+  migrateGoalsTable(db);
 }
 
 /** Old DBs keyed assignments by character id only (one role). Keep existing rows. */
@@ -180,6 +185,38 @@ function migrateCharacterRolesToMany(db: Database.Database) {
       SELECT characterId, roleId FROM character_roles;
     DROP TABLE character_roles;
     ALTER TABLE character_roles_new RENAME TO character_roles;
+  `);
+}
+
+/**
+ * Old DBs stored goals as skill-line rank targets only (lineName, two scopes).
+ * Rebuild into the planner shape: same rows, domain=skillline, tier=essential.
+ */
+function migrateGoalsTable(db: Database.Database) {
+  const cols = db.prepare("PRAGMA table_info(goals)").all() as { name: string }[];
+  if (cols.length === 0) return;
+  if (!cols.some((c) => c.name === "lineName")) return;
+
+  db.exec(`
+    CREATE TABLE goals_new (
+      id          TEXT PRIMARY KEY,
+      domain      TEXT NOT NULL DEFAULT 'skillline',
+      tier        TEXT NOT NULL DEFAULT 'essential',
+      scope       TEXT NOT NULL,
+      characterId TEXT,
+      scopeKey    TEXT,
+      target      TEXT NOT NULL,
+      targetRank  INTEGER NOT NULL DEFAULT 0,
+      note        TEXT NOT NULL DEFAULT '',
+      createdAt   INTEGER NOT NULL
+    );
+    INSERT INTO goals_new (id, domain, tier, scope, characterId, scopeKey, target, targetRank, note, createdAt)
+      SELECT id, 'skillline', 'essential',
+             CASE WHEN scope = 'character' THEN 'character' ELSE 'account' END,
+             characterId, NULL, lineName, targetRank, note, createdAt
+      FROM goals;
+    DROP TABLE goals;
+    ALTER TABLE goals_new RENAME TO goals;
   `);
 }
 

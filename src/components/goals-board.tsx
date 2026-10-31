@@ -2,261 +2,162 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Minus, Trash2 } from "lucide-react";
-import type { Goal, GoalSubject, LineProgress, SkillLineChoice } from "@/lib/goals/types";
-import { progressLabel, skillLineProgress, summarizeAccountGoal } from "@/lib/goals/progress";
-import { Badge, Card, ProgressBar, SectionTitle } from "./ui";
+import { Trash2 } from "lucide-react";
+import type { Goal, GoalSubject, SkillLineChoice } from "@/lib/goals/types";
+import { TIERS, TIER_LABEL } from "@/lib/goals/types";
+import { goalAppliesTo, goalProgress } from "@/lib/goals/progress";
+import { Badge, Card, SectionTitle } from "./ui";
 import { AddGoalButton } from "./goal-editor";
+import { GoalCard, useGoalIndexes, type IndexArrays } from "./goal-card";
+import { GoalMark } from "./goal-mark";
 
+const TIER_TONE: Record<string, "accent" | "muted" | "ok"> = {
+  essential: "accent",
+  optional: "muted",
+  completionist: "ok",
+};
+
+/** The Home "Targets" board: every planned target with its account progress. */
 export function GoalsBoard({
   goals,
   live,
-  roster,
-  lines,
+  indexes,
+  roles,
   hrefForLine,
 }: {
   goals: Goal[];
   live: GoalSubject[];
-  roster?: GoalSubject[];
-  lines: SkillLineChoice[];
+  indexes: IndexArrays;
+  roles: { id: string; name: string }[];
   hrefForLine: Record<string, string>;
 }) {
-  const account = goals.filter((g) => g.scope === "account");
-  const personal = goals.filter((g) => g.scope === "character");
-  const known = roster ?? live;
-  const nameById = new Map(known.map((c) => [c.id, c.name]));
+  const router = useRouter();
+
+  if (goals.length === 0) {
+    return (
+      <section className="mb-8">
+        <SectionTitle>Targets</SectionTitle>
+        <Card className="px-5 py-8 text-center text-sm text-fg-muted">
+          Nothing planned yet. Open the{" "}
+          <Link href="/planner" className="text-accent hover:underline">
+            Planner
+          </Link>{" "}
+          to set account-wide essentials — Assault 7 for everyone, weapon and armor lines to 50, exact abilities per
+          role — and watch each character tick off.
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section className="mb-8">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <SectionTitle className="mb-0">Goals</SectionTitle>
-        <AddGoalButton lines={lines} defaultScope="account" label="Account goal" />
+        <SectionTitle className="mb-0">Targets</SectionTitle>
+        <Link href="/planner" className="text-xs text-accent hover:underline">
+          Plan in the Planner →
+        </Link>
       </div>
-      {goals.length === 0 ? (
-        <Card className="px-5 py-8 text-center text-sm text-fg-muted">
-          Set an account-wide target (Assault 7 on every toon) or open a character and add a personal one (Werewolf
-          10). Progress is the skill line rank from the last snapshot — nothing is guessed.
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {account.map((g) => (
-            <AccountGoalCard key={g.id} goal={g} live={live} href={hrefForLine[g.lineName.toLowerCase()]} />
-          ))}
-          {personal.map((g) => {
-            const subject = known.find((c) => c.id === g.characterId);
-            const progress = subject
-              ? skillLineProgress(subject, g.lineName, g.targetRank)
-              : ({ state: "unknown" } as LineProgress);
-            return (
-              <GoalCard
-                key={g.id}
-                goal={g}
-                href={hrefForLine[g.lineName.toLowerCase()]}
-                subtitle={nameById.get(g.characterId ?? "") ?? "Unknown character"}
-                characterHref={g.characterId ? `/characters/${encodeURIComponent(g.characterId)}` : undefined}
-                progress={progress}
-              />
-            );
-          })}
-        </div>
-      )}
+      <div className="space-y-4">
+        {TIERS.map((tier) => {
+          const tierGoals = goals.filter((g) => g.tier === tier);
+          if (tierGoals.length === 0) return null;
+          return (
+            <div key={tier}>
+              <div className="mb-2 flex items-center gap-2">
+                <Badge tone={TIER_TONE[tier]}>{TIER_LABEL[tier]}</Badge>
+                <span className="text-xs text-fg-subtle">
+                  {tierGoals.length} target{tierGoals.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {tierGoals.map((goal) => (
+                  <GoalCard
+                    key={goal.id}
+                    goal={goal}
+                    subjects={live}
+                    indexes={indexes}
+                    roles={roles}
+                    href={goal.domain === "skillline" ? hrefForLine[goal.target.toLowerCase()] : undefined}
+                    onDelete={async (id) => {
+                      await fetch(`/api/goals/${encodeURIComponent(id)}`, { method: "DELETE" });
+                      router.refresh();
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }
 
-function AccountGoalCard({
-  goal,
-  live,
-  href,
-}: {
-  goal: Goal;
-  live: GoalSubject[];
-  href?: string;
-}) {
-  const summary = summarizeAccountGoal(goal, live);
-  return (
-    <Card className="p-4">
-      <GoalHeader goal={goal} href={href} badge="Every character" />
-      {goal.note ? <p className="mt-1 text-xs text-fg-subtle">{goal.note}</p> : null}
-      <div className="mt-3">
-        <div className="mb-1 flex items-baseline justify-between text-xs text-fg-muted">
-          <span>
-            {summary.done}/{summary.total} at rank {goal.targetRank}
-            {summary.unknown > 0 ? ` · ${summary.unknown} not scanned` : ""}
-          </span>
-        </div>
-        <ProgressBar value={summary.done} max={summary.total || 1} />
-      </div>
-      {summary.rows.length > 0 && (
-        <ul className="mt-3 divide-y divide-border/60">
-          {summary.rows.map((r) => (
-            <li key={r.character.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
-              <Link
-                href={`/characters/${encodeURIComponent(r.character.id)}`}
-                className="truncate text-fg hover:text-accent hover:underline"
-              >
-                {r.character.name}
-              </Link>
-              <ProgressMark progress={r.progress} targetRank={goal.targetRank} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
-function GoalCard({
-  goal,
-  href,
-  subtitle,
-  characterHref,
-  progress,
-}: {
-  goal: Goal;
-  href?: string;
-  subtitle: string;
-  characterHref?: string;
-  progress: LineProgress;
-}) {
-  return (
-    <Card className="p-4">
-      <GoalHeader goal={goal} href={href} badge="One character" />
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-sm">
-        {characterHref ? (
-          <Link href={characterHref} className="text-fg-muted hover:text-accent hover:underline">
-            {subtitle}
-          </Link>
-        ) : (
-          <span className="text-fg-muted">{subtitle}</span>
-        )}
-        <ProgressMark progress={progress} targetRank={goal.targetRank} />
-      </div>
-      {goal.note ? <p className="mt-1 text-xs text-fg-subtle">{goal.note}</p> : null}
-    </Card>
-  );
-}
-
-function GoalHeader({
-  goal,
-  href,
-  badge,
-}: {
-  goal: Goal;
-  href?: string;
-  badge: string;
-}) {
-  const router = useRouter();
-  const title = `${goal.lineName} ${goal.targetRank}`;
-  return (
-    <div className="flex items-start justify-between gap-2">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          {href ? (
-            <Link href={href} className="font-medium text-fg hover:text-accent hover:underline">
-              {title}
-            </Link>
-          ) : (
-            <span className="font-medium text-fg">{title}</span>
-          )}
-          <Badge tone="muted">{badge}</Badge>
-        </div>
-      </div>
-      <button
-        type="button"
-        aria-label={`Delete ${title}`}
-        onClick={async () => {
-          await fetch(`/api/goals/${encodeURIComponent(goal.id)}`, { method: "DELETE" });
-          router.refresh();
-        }}
-        className="rounded p-1 text-fg-subtle hover:text-danger"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-export function ProgressMark({ progress, targetRank }: { progress: LineProgress; targetRank: number }) {
-  const label = progressLabel(progress, targetRank);
-  if (progress.state === "done") {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-accent">
-        <Check className="h-3.5 w-3.5" /> {label}
-      </span>
-    );
-  }
-  if (progress.state === "short") {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-fg-muted">
-        <Minus className="h-3.5 w-3.5" /> {label}
-      </span>
-    );
-  }
-  return <span className="text-xs text-fg-subtle">{label}</span>;
-}
-
+/** One character's view: every target that applies to them, with live progress. */
 export function CharacterGoals({
   goals,
   subject,
   lines,
   hrefForLine,
+  indexes,
+  roles,
 }: {
   goals: Goal[];
   subject: GoalSubject;
   lines: SkillLineChoice[];
   hrefForLine: Record<string, string>;
+  indexes: IndexArrays;
+  roles: { id: string; name: string }[];
 }) {
-  const inherited = goals.filter((g) => g.scope === "account");
-  const personal = goals.filter((g) => g.scope === "character" && g.characterId === subject.id);
   const router = useRouter();
+  const built = useGoalIndexes(indexes);
+  const roleName = new Map(roles.map((r) => [r.id, r.name]));
+
+  const inherited = goals.filter((g) => g.scope !== "character" && goalAppliesTo(g, subject));
+  const personal = goals.filter((g) => g.scope === "character" && g.characterId === subject.id);
 
   return (
     <section className="mb-6">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <SectionTitle className="mb-0">Goals</SectionTitle>
-        <AddGoalButton
-          lines={lines}
-          defaultScope="character"
-          characterId={subject.id}
-          allowAccount
-          label="Add goal"
-        />
+        <SectionTitle className="mb-0">Targets</SectionTitle>
+        <div className="flex items-center gap-2">
+          <Link href="/planner" className="text-xs text-accent hover:underline">
+            Planner →
+          </Link>
+          <AddGoalButton
+            lines={lines}
+            defaultScope="character"
+            characterId={subject.id}
+            allowAccount
+            label="Quick add"
+          />
+        </div>
       </div>
       {inherited.length === 0 && personal.length === 0 ? (
         <Card className="px-4 py-6 text-sm text-fg-muted">
-          No goals yet. Add one for this character, or an account-wide target that applies to every toon.
+          No targets apply to this character yet. Open the{" "}
+          <Link href="/planner" className="text-accent hover:underline">
+            Planner
+          </Link>{" "}
+          to set them.
         </Card>
       ) : (
         <Card className="divide-y divide-border overflow-hidden">
-          {inherited.map((g) => {
-            const p = skillLineProgress(subject, g.lineName, g.targetRank);
-            return (
-              <GoalRow
-                key={g.id}
-                goal={g}
-                progress={p}
-                href={hrefForLine[g.lineName.toLowerCase()]}
-                tag="Account"
-              />
-            );
-          })}
-          {personal.map((g) => {
-            const p = skillLineProgress(subject, g.lineName, g.targetRank);
-            return (
-              <GoalRow
-                key={g.id}
-                goal={g}
-                progress={p}
-                href={hrefForLine[g.lineName.toLowerCase()]}
-                tag="Personal"
-                onDelete={async () => {
-                  await fetch(`/api/goals/${encodeURIComponent(g.id)}`, { method: "DELETE" });
-                  router.refresh();
-                }}
-              />
-            );
-          })}
+          {[...inherited, ...personal].map((g) => (
+            <GoalRow
+              key={g.id}
+              goal={g}
+              subject={subject}
+              built={built}
+              roleName={roleName}
+              href={g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined}
+              deletable={g.scope === "character"}
+              onDelete={async () => {
+                await fetch(`/api/goals/${encodeURIComponent(g.id)}`, { method: "DELETE" });
+                router.refresh();
+              }}
+            />
+          ))}
         </Card>
       )}
     </section>
@@ -265,18 +166,30 @@ export function CharacterGoals({
 
 function GoalRow({
   goal,
-  progress,
+  subject,
+  built,
+  roleName,
   href,
-  tag,
+  deletable,
   onDelete,
 }: {
   goal: Goal;
-  progress: LineProgress;
+  subject: GoalSubject;
+  built: ReturnType<typeof useGoalIndexes>;
+  roleName: Map<string, string>;
   href?: string;
-  tag: string;
-  onDelete?: () => void;
+  deletable: boolean;
+  onDelete: () => void;
 }) {
-  const title = `${goal.lineName} ${goal.targetRank}`;
+  const title = goal.domain === "skillline" ? `${goal.target} ${goal.targetRank}` : goal.target;
+  const scopeLabel =
+    goal.scope === "account"
+      ? "Account"
+      : goal.scope === "role"
+        ? `Role: ${roleName.get(goal.scopeKey ?? "") ?? "deleted role"}`
+        : goal.scope === "class"
+          ? `Class: ${goal.scopeKey}`
+          : "Personal";
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="min-w-0">
@@ -288,13 +201,14 @@ function GoalRow({
           ) : (
             <span className="text-sm font-medium text-fg">{title}</span>
           )}
-          <Badge tone="muted">{tag}</Badge>
+          <Badge tone="muted">{scopeLabel}</Badge>
+          <Badge tone={TIER_TONE[goal.tier]}>{TIER_LABEL[goal.tier]}</Badge>
         </div>
         {goal.note ? <p className="mt-0.5 text-xs text-fg-subtle">{goal.note}</p> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <ProgressMark progress={progress} targetRank={goal.targetRank} />
-        {onDelete && (
+        <GoalMark progress={goalProgress(goal, subject, built)} goal={goal} />
+        {deletable && (
           <button
             type="button"
             aria-label={`Delete ${title}`}

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Download, MonitorSmartphone, Users } from "lucide-react";
 import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getCharactersFull, getHouses, getItemCount, getOutfitStyles, getStickerbookStats } from "@/lib/db/queries";
-import { listGoals, skillLineChoices } from "@/lib/db/goals";
+import { listGoals } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
+import { loadPlannerData } from "@/lib/planner/data";
 import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
 import { characterWalletBreakdown, dashboardWallet } from "@/lib/currencies";
@@ -10,7 +11,7 @@ import { Card, PageHeader, Stat, EmptyState, Badge, SectionTitle } from "@/compo
 import { LoadDemoButton } from "@/components/demo-controls";
 import { GoalsBoard } from "@/components/goals-board";
 import { AccountWallet } from "@/components/account-wallet";
-import { toGoalSubject } from "@/lib/goals/progress";
+
 import type { Goal } from "@/lib/goals/types";
 import { presentOutfitStyles, summarizeAccountKnowledge } from "@/lib/knowledge/present";
 import { liveCharacters } from "@/lib/snapshot/roster";
@@ -36,7 +37,7 @@ export default function HomePage() {
   const sticker = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
   const stickerPct = sticker.total ? Math.round((sticker.collected / sticker.total) * 100) : 0;
   const goals = safe(() => listGoals()) ?? [];
-  const lines = safe(() => skillLineChoices()) ?? [];
+  const planner = safe(() => loadPlannerData());
   // Champion Points are account-wide, so show one number for the whole account.
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
   const gold = goldBreakdown({
@@ -139,9 +140,9 @@ export default function HomePage() {
 
       <GoalsBoard
         goals={goals}
-        live={characters.map(toGoalSubject)}
-        roster={[...characters, ...archived].map(toGoalSubject)}
-        lines={lines}
+        live={planner?.subjects ?? []}
+        indexes={planner ?? { lineIndex: [], abilityIndex: [] }}
+        roles={planner?.roles ?? []}
         hrefForLine={lineHrefs(goals)}
       />
 
@@ -166,10 +167,11 @@ export default function HomePage() {
 function lineHrefs(goals: Goal[]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const g of goals) {
-    const key = g.lineName.toLowerCase();
+    if (g.domain !== "skillline") continue;
+    const key = g.target.toLowerCase();
     if (out[key]) continue;
     try {
-      const row = getSkillLineByName(g.lineName);
+      const row = getSkillLineByName(g.target);
       if (row) out[key] = `/encyclopedia/skills/${encodeURIComponent(row.entry.id)}`;
     } catch {
       // catalog missing this line
