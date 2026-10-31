@@ -14,6 +14,7 @@ import { toGoalSubject } from "@/lib/goals/progress";
 import type { Goal } from "@/lib/goals/types";
 import { presentOutfitStyles, summarizeAccountKnowledge } from "@/lib/knowledge/present";
 import { liveCharacters } from "@/lib/snapshot/roster";
+import { disabledModuleSet } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
 
@@ -55,44 +56,62 @@ export default function HomePage() {
   const houses = safe(() => getHouses()) ?? [];
   const knowledge = summarizeAccountKnowledge(liveCharacters(safe(() => getCharactersFull()) ?? []));
   const styles = presentOutfitStyles(safe(() => getOutfitStyles()) ?? []);
+  // Setup can turn modules off (e.g. a finished stickerbook). A turned-off
+  // module keeps working at its URL — it just stops taking space on Home.
+  const off = safe(() => disabledModuleSet()) ?? new Set<string>();
+  const show = (module: string) => !off.has(module);
 
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Link href="/characters" className="block h-full rounded-xl transition-colors hover:brightness-110">
-          <Stat
-            label="Characters"
-            value={characters.length}
-            hint={archived.length > 0 ? `${archived.length} archived` : "live roster"}
-          />
-        </Link>
+        {show("characters") && (
+          <Link href="/characters" className="block h-full rounded-xl transition-colors hover:brightness-110">
+            <Stat
+              label="Characters"
+              value={characters.length}
+              hint={archived.length > 0 ? `${archived.length} archived` : "live roster"}
+            />
+          </Link>
+        )}
         <Stat label="Champion Points" value={accountCP.toLocaleString("en-US")} hint="account-wide" />
-        <Link href="/inventory" className="block h-full rounded-xl transition-colors hover:brightness-110">
-          <Stat label="Items" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
-        </Link>
-        <Link href="/stickerbook" className="block h-full rounded-xl transition-colors hover:brightness-110">
-          <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
-        </Link>
-        <Link href="/dailies" className="block h-full rounded-xl transition-colors hover:brightness-110">
-          <Stat label="Dailies" value="Board" hint="randoms, writs, pledges" />
-        </Link>
-        <Link href="/houses" className="block h-full rounded-xl transition-colors hover:brightness-110">
-          <Stat label="Houses" value={houses.length} hint="owned on this account" />
-        </Link>
-        <Link href="/knowledge" className="block h-full rounded-xl transition-colors hover:brightness-110">
-          <Stat
-            label="Knowledge"
-            value={knowledge.motifTotal ? `${Math.round((knowledge.motifKnown / knowledge.motifTotal) * 100)}%` : "Board"}
-            hint={knowledge.motifTotal ? `${knowledge.motifKnown}/${knowledge.motifTotal} motif chapters` : "research, motifs, recipes"}
-          />
-        </Link>
-        <Link href="/styles" className="block h-full rounded-xl transition-colors hover:brightness-110">
-          <Stat
-            label="Outfit Styles"
-            value={styles.total ? `${Math.round((styles.unlocked / styles.total) * 100)}%` : "—"}
-            hint={styles.total ? `${styles.unlocked}/${styles.total} unlocked` : "collections"}
-          />
-        </Link>
+        {show("inventory") && (
+          <Link href="/inventory" className="block h-full rounded-xl transition-colors hover:brightness-110">
+            <Stat label="Items" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
+          </Link>
+        )}
+        {show("stickerbook") && (
+          <Link href="/stickerbook" className="block h-full rounded-xl transition-colors hover:brightness-110">
+            <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
+          </Link>
+        )}
+        {show("dailies") && (
+          <Link href="/dailies" className="block h-full rounded-xl transition-colors hover:brightness-110">
+            <Stat label="Dailies" value="Board" hint="randoms, writs, pledges" />
+          </Link>
+        )}
+        {show("houses") && (
+          <Link href="/houses" className="block h-full rounded-xl transition-colors hover:brightness-110">
+            <Stat label="Houses" value={houses.length} hint="owned on this account" />
+          </Link>
+        )}
+        {show("knowledge") && (
+          <Link href="/knowledge" className="block h-full rounded-xl transition-colors hover:brightness-110">
+            <Stat
+              label="Knowledge"
+              value={knowledge.motifTotal ? `${Math.round((knowledge.motifKnown / knowledge.motifTotal) * 100)}%` : "Board"}
+              hint={knowledge.motifTotal ? `${knowledge.motifKnown}/${knowledge.motifTotal} motif chapters` : "research, motifs, recipes"}
+            />
+          </Link>
+        )}
+        {show("styles") && (
+          <Link href="/styles" className="block h-full rounded-xl transition-colors hover:brightness-110">
+            <Stat
+              label="Outfit Styles"
+              value={styles.total ? `${Math.round((styles.unlocked / styles.total) * 100)}%` : "—"}
+              hint={styles.total ? `${styles.unlocked}/${styles.total} unlocked` : "collections"}
+            />
+          </Link>
+        )}
       </div>
 
       <section className="mb-8">

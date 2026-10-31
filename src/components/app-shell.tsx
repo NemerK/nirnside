@@ -1,19 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearLoadingRetry } from "./loading-recovery";
+import { NirnsideMark } from "./nirnside-mark";
 import {
   Backpack,
   BookMarked,
   BookOpen,
   CalendarDays,
+  Crosshair,
   FolderCog,
   Home,
   Landmark,
   Library,
   Menu,
-  ScrollText,
   Search,
   Shirt,
   Trophy,
@@ -32,6 +34,7 @@ export interface ShellAccount {
 
 const NAV = [
   { href: "/", label: "Home", icon: Home, exact: true },
+  { href: "/focus", label: "Focus", icon: Crosshair },
   { href: "/characters", label: "Characters", icon: Users },
   { href: "/inventory", label: "Inventory", icon: Backpack },
   { href: "/stickerbook", label: "Stickerbook", icon: BookMarked },
@@ -46,22 +49,23 @@ const NAV = [
 
 function Wordmark() {
   return (
-    <a href="/" className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-md border border-accent/40 bg-accent-soft text-accent">
-        <ScrollText className="h-4.5 w-4.5" />
-      </span>
+    <Link href="/" className="flex items-center gap-2.5">
+      <NirnsideMark className="h-8 w-8 shrink-0" />
       <span className="text-lg font-semibold tracking-wide text-fg">
         Nirn<span className="text-accent">side</span>
       </span>
-    </a>
+    </Link>
   );
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({ hiddenModules, onNavigate }: { hiddenModules?: string[]; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const hidden = new Set(hiddenModules ?? []);
   return (
     <nav className="flex flex-col gap-1">
       {NAV.map(({ href, label, icon: Icon, exact }) => {
+        const moduleId = href === "/" ? "home" : href.slice(1);
+        if (hidden.has(moduleId)) return null;
         const active = exact ? pathname === href : pathname.startsWith(href);
         return (
           <a
@@ -107,9 +111,12 @@ function SearchBox({ onSubmit }: { onSubmit?: () => void }) {
 
 export function AppShell({
   account,
+  hiddenModules,
   children,
 }: {
   account: ShellAccount | null;
+  /** Module ids the player turned off in Setup. Hidden from the sidebar only. */
+  hiddenModules?: string[];
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -125,7 +132,7 @@ export function AppShell({
         <div className="mb-8 px-1">
           <Wordmark />
         </div>
-        <NavLinks />
+        <NavLinks hiddenModules={hiddenModules} />
         <div className="mt-auto space-y-3 px-1 pt-4">
           <ThemeToggle />
           <p className="text-xs leading-relaxed text-fg-subtle">
@@ -150,7 +157,7 @@ export function AppShell({
           <div className="mb-3">
             <SearchBox onSubmit={() => setOpen(false)} />
           </div>
-          <NavLinks onNavigate={() => setOpen(false)} />
+          <NavLinks hiddenModules={hiddenModules} onNavigate={() => setOpen(false)} />
           <div className="mt-4">
             <ThemeToggle />
           </div>
