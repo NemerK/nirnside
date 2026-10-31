@@ -176,16 +176,16 @@ func (in *installer) launch(root string, log *os.File) error {
 	return nil
 }
 
-// Open the app in the browser exactly once. The wizard page that has been
+// Open the app exactly once. The launcher page that has been
 // showing progress polls /api/state and navigates its own tab to the app when
 // ready — so when that tab is still around, opening another one would show
-// Nirnside twice. Only open a fresh tab when nobody is polling (the wizard
+// Nirnside twice. Only open a fresh window when nobody is polling (the launcher
 // never opened, or the player closed it while the app was still starting).
 func (in *installer) openAppOnce() {
-	// Give a freshly opened wizard tab a moment to load and start polling.
+	// Give a freshly opened launcher window a moment to load and start polling.
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
-		if in.wizardWatching() {
+		if in.launcherWindowWatching() {
 			return
 		}
 		time.Sleep(400 * time.Millisecond)

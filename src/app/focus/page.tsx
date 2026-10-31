@@ -18,6 +18,7 @@ import {
   ScribingPanel,
   type FocusScript,
 } from "@/components/focus-panels";
+import { presentMotifs, presentResearch } from "@/lib/knowledge/present";
 import { FocusBoard } from "@/components/focus-board";
 import type { ReactNode } from "react";
 
@@ -45,6 +46,7 @@ export default async function FocusPage({ searchParams }: PageProps<"/focus">) {
   const roster = (safe(() => getCharacters()) ?? []).map((c) => ({
     id: c.id,
     name: c.name,
+    className: c.class,
     lastSeen: c.lastSeen ?? null,
   }));
 
@@ -83,7 +85,7 @@ export default async function FocusPage({ searchParams }: PageProps<"/focus">) {
   const character = safe(() => getCharacter(selectedId));
   const areas = safe(() => focusAreasFor(selectedId)) ?? FOCUS_AREAS.map((a) => a.id);
 
-  const panels: { id: string; node: ReactNode }[] = [];
+  const panels: { id: string; title: string; summary?: string; node: ReactNode }[] = [];
   if (character) {
     for (const area of FOCUS_AREAS) {
       if (!areas.includes(area.id)) continue;
@@ -93,8 +95,12 @@ export default async function FocusPage({ searchParams }: PageProps<"/focus">) {
             line.abilities.flatMap((a) => [a.name, ...(a.morphs ?? []).map((m) => m.name)]),
           );
           const lore = safe(() => catalogAbilityLoreFor(names));
+          const at50 = character.skillLines.filter((l) => l.rank >= 50).length;
+          const lines = character.skillLines.length;
           panels.push({
             id: "skills",
+            title: "Skills",
+            summary: lines ? `${at50} of ${lines} lines at 50` : undefined,
             node: (
               <div className="mb-6">
                 <SkillBook
@@ -111,9 +117,16 @@ export default async function FocusPage({ searchParams }: PageProps<"/focus">) {
           });
           break;
         }
-        case "crafting":
-          panels.push({ id: "crafting", node: <CraftingPanel character={character} /> });
+        case "crafting": {
+          const research = presentResearch(character.research);
+          panels.push({
+            id: "crafting",
+            title: "Crafting",
+            summary: research.total ? `Research ${research.known}/${research.total} traits` : undefined,
+            node: <CraftingPanel character={character} />,
+          });
           break;
+        }
         case "scribing": {
           const scripts: FocusScript[] = (safe(() => getScripts()) ?? []).map(({ entry }) => ({
             id: entry.id,
@@ -121,15 +134,39 @@ export default async function FocusPage({ searchParams }: PageProps<"/focus">) {
             slot: entry.slot,
             effect: entry.effect,
           }));
-          panels.push({ id: "scribing", node: <ScribingPanel character={character} scripts={scripts} /> });
+          panels.push({
+            id: "scribing",
+            title: "Scribing",
+            summary:
+              scripts.length > 0 ? `${character.scribingScripts.length}/${scripts.length} scripts` : undefined,
+            node: <ScribingPanel character={character} scripts={scripts} />,
+          });
           break;
         }
-        case "knowledge":
-          panels.push({ id: "knowledge", node: <KnowledgePanel character={character} /> });
+        case "knowledge": {
+          const motifs = presentMotifs(character.motifs);
+          panels.push({
+            id: "knowledge",
+            title: "Knowledge",
+            summary: motifs.total ? `Motifs ${motifs.known}/${motifs.total} chapters` : undefined,
+            node: <KnowledgePanel character={character} />,
+          });
           break;
-        case "champion":
-          panels.push({ id: "champion", node: <ChampionPanel character={character} /> });
+        }
+        case "champion": {
+          const invested = character.champion.reduce(
+            (sum, d) => sum + d.stars.reduce((s, star) => s + star.points, 0),
+            0,
+          );
+          const slotted = character.champion.flatMap((d) => d.stars.filter((s) => s.slotted)).length;
+          panels.push({
+            id: "champion",
+            title: "Champion Points",
+            summary: character.champion.length ? `${invested.toLocaleString("en-US")} CP · ${slotted} slotted` : undefined,
+            node: <ChampionPanel character={character} />,
+          });
           break;
+        }
         case "goals": {
           const goals = safe(() => listGoals()) ?? [];
           const lines = safe(() => skillLineChoices()) ?? [];
@@ -153,6 +190,8 @@ export default async function FocusPage({ searchParams }: PageProps<"/focus">) {
           );
           panels.push({
             id: "goals",
+            title: "Targets",
+            summary: `${goalRows.length} target${goalRows.length === 1 ? "" : "s"}`,
             node: (
               <CharacterGoals rows={goalRows} lines={lines} subjectId={character.id} subjectName={character.name} />
             ),

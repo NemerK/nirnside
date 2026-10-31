@@ -10,15 +10,24 @@ import (
 	"time"
 )
 
+type LauncherState struct {
+	Version string `json:"version"`
+	Commit  string `json:"commit,omitempty"`
+	Status  string `json:"status,omitempty"`
+}
+
 type jobState struct {
-	Phase   string `json:"phase"`
-	Step    string `json:"step"`
-	Detail  string `json:"detail"`
-	Percent int    `json:"percent"`
-	Error   string `json:"error,omitempty"`
-	AppURL  string `json:"appUrl,omitempty"`
-	Dest    string `json:"dest"`
-	Ready   bool   `json:"ready"`
+	Phase    string `json:"phase"`
+	Step     string `json:"step"`
+	Detail   string `json:"detail"`
+	Percent  int    `json:"percent"`
+	Error    string `json:"error,omitempty"`
+	AppURL   string `json:"appUrl,omitempty"`
+	Dest     string `json:"dest"`
+	Ready    bool   `json:"ready"`
+	Launcher LauncherState `json:"launcher"`
+	/** Short code revision of the app layer, from the updater's revision file. */
+	AppRevision string `json:"appRevision,omitempty"`
 }
 
 type installer struct {
@@ -26,7 +35,7 @@ type installer struct {
 	state    jobState
 	busy     bool
 	client   *http.Client
-	lastPoll int64 // unix ms of the last /api/state poll from the wizard page
+	lastPoll int64 // unix ms of the last /api/state poll from the launcher window
 }
 
 func newInstaller() *installer {
@@ -36,6 +45,11 @@ func newInstaller() *installer {
 			Phase: "welcome",
 			Step:  "Ready to install",
 			Dest:  defaultInstallDir(),
+			Launcher: LauncherState{
+				Version: launcherVersion,
+				Commit:  launcherCommit,
+				Status:  "Checking…",
+			},
 		},
 	}
 }
@@ -73,13 +87,21 @@ func (in *installer) handleState(w http.ResponseWriter, _ *http.Request) {
 	in.mu.Lock()
 	in.lastPoll = time.Now().UnixMilli()
 	in.mu.Unlock()
+	st := in.snapshot()
+	// The app layer's revision straight from the updater's revision file, so
+	// the launcher window can show "app 1e8401e" at a glance.
+	if st.Dest != "" {
+		if rev := revisionSha(filepath.Join(st.Dest, ".nirnside-revision")); len(rev) >= 7 {
+			st.AppRevision = rev[:7]
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(in.snapshot())
+	_ = json.NewEncoder(w).Encode(st)
 }
 
-// True when the wizard tab is open and polling — meaning it will navigate
+// True when the launcher window is open and polling — meaning it will navigate
 // itself to the app when the install turns ready, so nothing else should.
-func (in *installer) wizardWatching() bool {
+func (in *installer) launcherWindowWatching() bool {
 	in.mu.Lock()
 	defer in.mu.Unlock()
 	return in.lastPoll != 0 && time.Now().UnixMilli()-in.lastPoll < 3_000

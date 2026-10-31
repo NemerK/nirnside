@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nirnside Launcher</title>
+  <style>
+    :root {
+      --bg: #0d0f13;
+      --surface: #161b26;
+      --border: #2a3240;
+      --fg: #e8e3d6;
+      --muted: #9aa4b2;
+      --subtle: #6b7686;
+      --accent: #c8a35a;
+      --accent-fg: #1a1409;
+      --ok: #4ba36a;
+      --danger: #e0574b;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+      font: 16px/1.5 "Segoe UI", system-ui, sans-serif; }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+    .top { width: min(34rem, 100%); display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .top svg { border-radius: 10px; }
+    .brand { font-size: 1.35rem; font-weight: 600; letter-spacing: 0.02em; }
+    .brand span { color: var(--accent); }
+    .lver { color: var(--subtle); font-size: 0.78rem; }
+    .card { width: min(34rem, 100%); background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px 28px 24px; }
+    .lead { color: var(--muted); margin: 0 0 18px; }
+    .layers { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+    .layer { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 14px; }
+    .layer + .layer { border-top: 1px solid var(--border); }
+    .lname { font-weight: 600; }
+    .lstat { color: var(--muted); font-size: 0.88rem; text-align: right; }
+    .lstat .ok { color: var(--ok); }
+    .lstat .warn { color: var(--accent); }
+    .bar { height: 8px; background: #0d0f13; border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+    .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s; }
+    .step { margin: 12px 0 6px; font-weight: 600; }
+    .detail { color: var(--muted); min-height: 1.5em; font-size: 0.9rem; }
+    .ok { color: var(--ok); }
+    ul { margin: 0 0 18px; padding-left: 1.1rem; color: var(--muted); }
+    li { margin: 6px 0; }
+    .path { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; color: var(--fg);
+      background: #0d0f13; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+      word-break: break-all; margin-bottom: 14px; }
+    label { display: flex; gap: 8px; align-items: flex-start; color: var(--muted); margin-bottom: 18px; cursor: pointer; }
+    input[type=checkbox] { margin-top: 4px; accent-color: var(--accent); }
+    button { appearance: none; border: 0; background: var(--accent); color: var(--accent-fg);
+      font: inherit; font-weight: 600; padding: 12px 18px; border-radius: 10px; cursor: pointer; width: 100%; }
+    button:disabled { opacity: 0.55; cursor: default; }
+    button.secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .fine { color: var(--subtle); font-size: 0.82rem; margin: 12px 0 0; }
+    .ver { color: var(--subtle); font-size: 0.75rem; margin-top: 14px; }
+    .err { color: var(--danger); white-space: pre-wrap; font-size: 0.9rem; margin: 12px 0; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <svg viewBox="0 0 64 64" width="42" height="42" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#161b26"/><rect width="64" height="64" rx="14" fill="#c8a35a" opacity="0.14"/><circle cx="32" cy="46" r="21" fill="#c8a35a" opacity="0.22"/><g fill="#c8a35a"><path d="M32 8 C40.5 24 40.5 40 32 56 C23.5 40 23.5 24 32 8 Z"/><path d="M32 16 C38.5 28 38.5 40 32 56 C25.5 40 25.5 28 32 16 Z" transform="rotate(36 32 56)"/><path d="M32 16 C38.5 28 38.5 40 32 56 C25.5 40 25.5 28 32 16 Z" transform="rotate(-36 32 56)"/></g></svg>
+    <div>
+      <div class="brand">Nirnside <span>Launcher</span></div>
+      <div class="lver" id="launcher-ver">{{LAUNCHER_VERSION}} · {{LAUNCHER_COMMIT}}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="layers">
+      <div class="layer"><span class="lname">Launcher</span><span class="lstat" id="launcher-stat">Checking…</span></div>
+      <div class="layer"><span class="lname">Nirnside (app)</span><span class="lstat" id="app-stat">Waiting…</span></div>
+    </div>
+
+    <!-- First run: the install form -->
+    <section id="welcome">
+      <p class="lead">Your Elder Scrolls Online account, on <span style="color: var(--accent)">this PC only</span>.</p>
+      <ul>
+        <li>Nothing is uploaded. There is no Nirnside account.</li>
+        <li>It never asks for your ESO password.</li>
+        <li>It installs a private runtime for itself — you do not install Node.js, Visual Studio, or Python.</li>
+      </ul>
+      <div class="fine">Install location</div>
+      <div class="path" id="dest"></div>
+      <label><input type="checkbox" id="shortcut" checked /> Create a desktop shortcut</label>
+      <button type="button" id="go">Install Nirnside</button>
+      <p class="fine">Windows may warn that this app is unsigned. Choose More info → Run anyway. That warning is about a missing publisher certificate, not about ESO.</p>
+    </section>
+
+    <!-- Installing / updating: progress -->
+    <section id="progress" class="hidden">
+      <div class="bar"><i id="pct"></i></div>
+      <div class="step" id="step">Starting…</div>
+      <div class="detail" id="detail"></div>
+    </section>
+
+    <!-- Ready: Play -->
+    <section id="ready" class="hidden">
+      <button type="button" id="play">Play Nirnside</button>
+      <p class="fine">Nirnside opens in this window. Keep the Nirnside console window open — closing it stops the app.</p>
+    </section>
+
+    <p class="err hidden" id="err"></p>
+    <button type="button" id="retry" class="secondary hidden">Try again</button>
+  </div>
+  <p class="ver" id="foot-ver">Local &amp; private. Your data never leaves this machine.</p>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const welcome = $("welcome");
+    const progress = $("progress");
+    const ready = $("ready");
+    let dest = "";
+    let polling = false;
+    let navigated = false;
+    let restartHint = false;
+
+    async function defaults() {
+      const r = await fetch("/api/defaults");
+      const j = await r.json();
+      dest = j.dest;
+      $("dest").textContent = dest;
+    }
+
+    function show(which) {
+      for (const el of [welcome, progress, ready]) el.classList.add("hidden");
+      which.classList.remove("hidden");
+    }
+
+    function applyLauncher(s) {
+      if (s.launcher && s.launcher.version) {
+        $("launcher-ver").textContent = s.launcher.version + " · " + (s.launcher.commit || "");
+      }
+      const stat = $("launcher-stat");
+      if (s.launcher && s.launcher.status) {
+        const good = /up to date|restart/i.test(s.launcher.status);
+        stat.innerHTML = good ? '<span class="ok"></span>' : '<span class="warn"></span>';
+        stat.firstChild.textContent = s.launcher.status;
+      }
+      const app = $("app-stat");
+      if (restartHint) {
+        app.innerHTML = '<span class="warn">Restarting into the new launcher…</span>';
+        return;
+      }
+      if (s.phase === "welcome") {
+        app.textContent = "Not installed yet";
+      } else if (s.appRevision) {
+        app.innerHTML = '<span class="ok"></span>';
+        app.firstChild.textContent = "Up to date · " + s.appRevision;
+      } else if (s.phase === "installing") {
+        app.textContent = "Updating…";
+      } else {
+        app.textContent = s.step || "…";
+      }
+    }
+
+    async function tick() {
+      let r;
+      try {
+        r = await fetch("/api/state");
+        restartHint = false;
+      } catch {
+        restartHint = true;
+        applyLauncher({});
+        return true; // the launcher may be restarting into a new version — keep polling
+      }
+      const s = await r.json();
+      applyLauncher(s);
+      if (s.dest) $("dest").textContent = s.dest;
+      if (s.phase === "welcome") return true;
+
+      show(progress);
+      $("pct").style.width = (s.percent || 0) + "%";
+      $("step").textContent = s.step || "";
+      $("detail").textContent = s.detail || "";
+
+      if (s.phase === "error") {
+        $("err").textContent = s.error || "The update did not finish.";
+        $("err").classList.remove("hidden");
+        $("retry").classList.remove("hidden");
+        return false;
+      }
+      $("err").classList.add("hidden");
+      $("retry").classList.add("hidden");
+
+      if (s.ready && s.appUrl) {
+        if (navigated) return false;
+        show(ready);
+        $("play").onclick = () => location.replace(s.appUrl);
+        // The launcher window becomes the app window — one window, one tab.
+        setTimeout(() => { navigated = true; location.replace(s.appUrl); }, 1200);
+        return false;
+      }
+      return true;
+    }
+
+    async function loop() {
+      if (polling) return;
+      polling = true;
+      while (await tick()) await new Promise((r) => setTimeout(r, 700));
+      polling = false;
+    }
+
+    $("go").addEventListener("click", async () => {
+      $("go").disabled = true;
+      show(progress);
+      await fetch("/api/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dest, shortcut: $("shortcut").checked }),
+      });
+      loop();
+    });
+    $("retry").addEventListener("click", async () => {
+      $("retry").classList.add("hidden");
+      $("err").classList.add("hidden");
+      await fetch("/api/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dest, shortcut: $("shortcut").checked, launchOnly: true }),
+      });
+      loop();
+    });
+
+    defaults().then(tick).then((more) => { if (more === true || more === undefined) loop(); }).catch(() => {});
+  </script>
+</body>
+</html>

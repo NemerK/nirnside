@@ -34,6 +34,8 @@ func openURL(u string) error {
 	}
 }
 
+func openLauncherWindow(u string) error { return openURL(u) }
+
 func createShortcuts(dest string) error { return nil }
 
 func messageBox(title, text string) {
