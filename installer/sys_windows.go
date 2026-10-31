@@ -93,8 +93,7 @@ func killProcessTree(pid int) {
 // A chrome-less "app" window for the launcher UI: no tabs or address bar, and
 // the site's own icon (the Nirnside mark) in the taskbar. Falls back to the
 // default browser when Edge is not around.
-func openLauncherWindow(u string) error {
-	candidates := []string{
+func openLauncherWindow(u string) error {	candidates := []string{
 		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
 		filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
 		filepath.Join(os.Getenv("LocalAppData"), "Microsoft", "Edge", "Application", "msedge.exe"),
@@ -112,6 +111,16 @@ func openLauncherWindow(u string) error {
 
 func openURL(u string) error {
 	return exec.Command("cmd.exe", "/c", "start", "", u).Start()
+}
+
+// True when this process has a real console window. GUI-subsystem builds
+// (windowsgui) have none: writes to os.Stdout would go to an invalid handle
+// and silently break child-process piping, so callers must check this first.
+func haveConsole() bool {
+	k32 := syscall.NewLazyDLL("kernel32.dll")
+	getConsoleWindow := k32.NewProc("GetConsoleWindow")
+	h, _, _ := getConsoleWindow.Call()
+	return h != 0
 }
 
 func createShortcuts(dest string) error {

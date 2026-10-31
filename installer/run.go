@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -58,11 +59,15 @@ func runLogged(log *os.File, dir string, env []string, name string, args ...stri
 	cmd.Dir = dir
 	cmd.Env = env
 	var buf bytes.Buffer
+	var out io.Writer = &buf
 	// Stream to the console as it happens: update failures (git pull refused,
 	// download errors) used to be invisible until the player dug through the
-	// log file, and "it said it updated" hid a failed update.
-	cmd.Stdout = io.MultiWriter(&buf, os.Stdout)
-	cmd.Stderr = io.MultiWriter(&buf, os.Stdout)
+	// log file. GUI-subsystem builds have no console; the log file gets it all.
+	if haveConsole() {
+		out = io.MultiWriter(&buf, os.Stdout)
+	}
+	cmd.Stdout = out
+	cmd.Stderr = out
 	hideWindow(cmd)
 	err := cmd.Run()
 	if log != nil && buf.Len() > 0 {
@@ -196,15 +201,27 @@ func installAddonsBestEffort(log *os.File, root string) {
 }
 
 func waitHTTP(url string, timeout time.Duration) error {
-	return waitReady(url, nil, timeout, nil)
+	return waitReady(url, nil, timeout, nil, nil)
 }
 
-func waitReady(url string, cmd *exec.Cmd, timeout time.Duration, onTick func(waited time.Duration)) error {
+/**
+ * Wait until the app answers on its URL. When the app later stops by itself
+ * (settings → Stop Nirnside) or dies, onExit fires — but only if it had
+ * reached ready first, so a failed start keeps its error UI on screen.
+ */
+func waitReady(url string, cmd *exec.Cmd, timeout time.Duration, onTick func(waited time.Duration), onExit func()) error {
 	deadline := time.Now().Add(timeout)
 	started := time.Now()
+	var reachedReady atomic.Bool
 	exited := make(chan error, 1)
 	if cmd != nil && cmd.Process != nil {
-		go func() { exited <- cmd.Wait() }()
+		go func() {
+			err := cmd.Wait()
+			exited <- err
+			if onExit != nil && reachedReady.Load() {
+				onExit()
+			}
+		}()
 	}
 	for time.Now().Before(deadline) {
 		select {
@@ -216,6 +233,7 @@ func waitReady(url string, cmd *exec.Cmd, timeout time.Duration, onTick func(wai
 		default:
 		}
 		if probeApp(url) {
+			reachedReady.Store(true)
 			return nil
 		}
 		if onTick != nil {

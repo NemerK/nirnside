@@ -50,12 +50,13 @@ func main() {
 	holdJobForChildren()
 
 	// Already-running app: nothing to install or update (launchExisting skips
-	// all of that too), so no launcher window is needed — open the app itself.
+	// all of that too). The keeper instance owns the server; this one just
+	// opens the app window and steps away.
 	if existing != "" && appAlreadyUp() {
 		fmt.Println("Nirnside")
-		fmt.Println("Already running — opening", appURL())
+		fmt.Println("Already running — opening the app window.")
 		_ = openLauncherWindow(appURL())
-		select {}
+		return
 	}
 
 	in := newInstaller()
@@ -92,6 +93,7 @@ func main() {
 	})
 	mux.HandleFunc("/api/defaults", in.handleDefaults)
 	mux.HandleFunc("/api/state", in.handleState)
+	mux.HandleFunc("/api/launcher-log", in.handleLauncherLog)
 	mux.HandleFunc("/api/install", in.handleInstall)
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 8 * time.Second}
 	go func() { _ = srv.Serve(ln) }()
