@@ -397,14 +397,16 @@ export function getItemCount(): number {
   // Count in SQL — never parse thousands of item JSON blobs just for a number.
   // The WHERE mirrors getItems()'s archived-owner filter exactly:
   //   !ownerCharacter || (!archived(ownerCharacter) && (!ownerCharacterId || !archived(ownerCharacterId)))
+  // ownerCharacterId is not a table column — it lives in the item JSON.
   const all = loadRoster();
   const names = [...archivedOwnerNames(all)];
   const ids = [...archivedOwnerIds(all)];
   const notIn = (col: string, list: string[]) =>
     list.length ? `${col} NOT IN (${list.map(() => "?").join(", ")})` : "1=1";
+  const ownerId = "json_extract(json, '$.ownerCharacterId')";
   const where = `ownerCharacter IS NULL OR (
     ${notIn("ownerCharacter", names)}
-    AND (ownerCharacterId IS NULL OR ownerCharacterId = '' OR ${notIn("ownerCharacterId", ids)})
+    AND (${ownerId} IS NULL OR ${ownerId} = '' OR ${notIn(ownerId, ids)})
   )`;
   const row = getDb()
     .prepare(`SELECT COUNT(*) c FROM items WHERE ${where}`)
