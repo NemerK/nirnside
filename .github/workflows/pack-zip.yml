@@ -26,6 +26,25 @@ jobs:
         run: |
           mkdir -p ../dist
           GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.launcherCommit=$(git rev-parse --short HEAD)" -o ../dist/Nirnside.exe .
+
+      # Code signing kills the SmartScreen "Windows protected your PC" warning.
+      # Set the repo variable CODE_SIGNING=azure-trusted-signing and the five
+      # secrets below (Azure Trusted Signing, ~$9.99/month; individual accounts
+      # are supported) and every release exe is signed automatically.
+      #   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET,
+      #   TRUSTED_SIGNING_ENDPOINT (e.g. https://eus.codesigning.azure.net),
+      #   TRUSTED_SIGNING_ACCOUNT_NAME, TRUSTED_SIGNING_CERT_PROFILE
+      - name: Code sign the launcher (Azure Trusted Signing)
+        if: vars.CODE_SIGNING == 'azure-trusted-signing'
+        uses: microsoft/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.TRUSTED_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.TRUSTED_SIGNING_CERT_PROFILE }}
+          files: ${{ github.workspace }}/dist/Nirnside.exe
       - name: Zip (no node_modules, no account data)
         run: |
           mkdir -p dist
