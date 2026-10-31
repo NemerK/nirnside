@@ -3,7 +3,7 @@ import { Download, MonitorSmartphone, Users } from "lucide-react";
 import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getCharactersFull, getHouses, getItemCount, getOutfitStyles, getStickerbookStats } from "@/lib/db/queries";
 import { listGoals } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
-import { loadPlannerData } from "@/lib/planner/data";
+import { loadPlannerData, goalCardsForClient } from "@/lib/planner/data";
 import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
 import { characterWalletBreakdown, dashboardWallet } from "@/lib/currencies";
@@ -138,13 +138,16 @@ export default function HomePage() {
         />
       </section>
 
-      <GoalsBoard
-        goals={goals}
-        live={planner?.subjects ?? []}
-        indexes={planner ?? { lineIndex: [], abilityIndex: [] }}
-        roles={planner?.roles ?? []}
-        hrefForLine={lineHrefs(goals)}
-      />
+      {(() => {
+        // Progress is computed here on the server; the board only gets compact rows.
+        const hrefForLine = lineHrefs(goals);
+        const cards = planner
+          ? goalCardsForClient(goals, planner, (g) =>
+              g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined,
+            )
+          : [];
+        return <GoalsBoard cards={cards} roles={planner?.roles ?? []} />;
+      })()}
 
       {account.guilds?.length > 0 && (
         <section className="mt-8">

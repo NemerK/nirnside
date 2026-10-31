@@ -3,16 +3,17 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Search } from "lucide-react";
-import type { Goal, GoalDomain, GoalScope, GoalTier } from "@/lib/goals/types";
+import type { GoalDomain, GoalScope, GoalTier } from "@/lib/goals/types";
 import { TIERS, TIER_LABEL } from "@/lib/goals/types";
-import type { PlannerData } from "@/lib/planner/data";
+import type { GoalCardView } from "@/lib/goals/views";
 import { Badge, Card, SectionTitle } from "./ui";
 import { GoalCard } from "./goal-card";
 
 /**
  * The Planner: compose tiered targets (skill lines, abilities, scribing
  * scripts) for the account, a role, a class, or one character — then watch
- * per-character progress, straight from the last snapshot.
+ * per-character progress. All progress arrives precomputed from the server;
+ * this component only composes new targets.
  */
 
 const DOMAINS: { id: GoalDomain; label: string; hint: string }[] = [
@@ -46,7 +47,22 @@ const DOMAIN_LABEL: Record<GoalDomain, string> = {
   script: "Scribing",
 };
 
-export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[] }) {
+export interface PlannerChoices {
+  lines: { name: string; category: string; className: string | null }[];
+  scripts: { name: string; slot: string }[];
+  abilities: { name: string; lineName: string; className: string | null }[];
+  roles: { id: string; name: string }[];
+  classes: string[];
+  characters: { id: string; name: string; className: string }[];
+}
+
+export function PlannerBoard({
+  choices,
+  cards,
+}: {
+  choices: PlannerChoices;
+  cards: GoalCardView[];
+}) {
   const router = useRouter();
   const [domain, setDomain] = useState<GoalDomain>("skillline");
   const [tier, setTier] = useState<GoalTier>("essential");
@@ -59,16 +75,20 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sharedLines = useMemo(() => data.lines.filter((l) => l.category.toLowerCase() !== "class"), [data.lines]);
-  const classLines = useMemo(() => data.lines.filter((l) => l.category.toLowerCase() === "class"), [data.lines]);
+  const sharedLines = useMemo(
+    () => choices.lines.filter((l) => l.category.toLowerCase() !== "class"),
+    [choices.lines],
+  );
+  const classLines = useMemo(
+    () => choices.lines.filter((l) => l.category.toLowerCase() === "class"),
+    [choices.lines],
+  );
 
   const abilityMatches = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = q
-      ? data.abilities.filter((a) => a.name.toLowerCase().includes(q))
-      : data.abilities.slice(0, 40);
+    const list = q ? choices.abilities.filter((a) => a.name.toLowerCase().includes(q)) : choices.abilities.slice(0, 40);
     return list.slice(0, 60);
-  }, [data.abilities, search]);
+  }, [choices.abilities, search]);
 
   function toggle(name: string) {
     setSelected((prev) => {
@@ -138,23 +158,23 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
   const canSubmit =
     selected.size > 0 && (!scopeNeedsKey || scopeKey.trim().length > 0) && (domain !== "skillline" || rank >= 1);
 
+  const scopeBlocked =
+    scope === "role" && choices.roles.length === 0
+      ? "No roles yet — create them on a character page (Tank, Healer…), then role targets appear here."
+      : null;
+
   const byDomainTier = useMemo(() => {
-    const groups: { domain: GoalDomain; tiers: { tier: GoalTier; goals: Goal[] }[] }[] = [];
+    const groups: { domain: GoalDomain; tiers: { tier: GoalTier; cards: GoalCardView[] }[] }[] = [];
     for (const d of DOMAINS.map((x) => x.id)) {
-      const forDomain = goals.filter((g) => g.domain === d);
+      const forDomain = cards.filter((c) => c.goal.domain === d);
       if (forDomain.length === 0) continue;
-      const tiers = TIERS.map((t) => ({ tier: t, goals: forDomain.filter((g) => g.tier === t) })).filter(
-        (t) => t.goals.length > 0,
+      const tiers = TIERS.map((t) => ({ tier: t, cards: forDomain.filter((c) => c.goal.tier === t) })).filter(
+        (t) => t.cards.length > 0,
       );
       if (tiers.length > 0) groups.push({ domain: d, tiers });
     }
     return groups;
-  }, [goals]);
-
-  const scopeBlocked =
-    scope === "role" && data.roles.length === 0
-      ? "No roles yet — create them on a character page (Tank, Healer…), then role targets appear here."
-      : null;
+  }, [cards]);
 
   return (
     <div>
@@ -164,7 +184,14 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
 
         <div className="mb-4">
           <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">What</div>
-          <Segmented options={DOMAINS} value={domain} onChange={(d) => { setDomain(d as GoalDomain); setSelected(new Set()); }} />
+          <Segmented
+            options={DOMAINS}
+            value={domain}
+            onChange={(d) => {
+              setDomain(d as GoalDomain);
+              setSelected(new Set());
+            }}
+          />
           <p className="mt-1.5 text-xs text-fg-subtle">{DOMAINS.find((d) => d.id === domain)?.hint}</p>
         </div>
 
@@ -173,7 +200,10 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
           <Segmented
             options={SCOPES.map((s) => ({ id: s.id, label: s.label, hidden: s.id === "class" && domain === "script" }))}
             value={scope}
-            onChange={(s) => { setScope(s as GoalScope); setScopeKey(""); }}
+            onChange={(s) => {
+              setScope(s as GoalScope);
+              setScopeKey("");
+            }}
           />
           {scopeBlocked && <p className="mt-1.5 text-xs text-accent">{scopeBlocked}</p>}
           {scopeNeedsKey && !scopeBlocked && (
@@ -186,14 +216,14 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
                 {scope === "role" ? "Pick a role…" : scope === "class" ? "Pick a class…" : "Pick a character…"}
               </option>
               {scope === "role" &&
-                data.roles.map((r) => (
+                choices.roles.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
                   </option>
                 ))}
-              {scope === "class" && data.classes.map((c) => <option key={c} value={c}>{c}</option>)}
+              {scope === "class" && choices.classes.map((c) => <option key={c} value={c}>{c}</option>)}
               {scope === "character" &&
-                data.subjects.map((s) => (
+                choices.characters.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} ({s.className})
                   </option>
@@ -203,7 +233,9 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
         </div>
 
         <div className="mb-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">How much it matters</div>
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+            How much it matters
+          </div>
           <Segmented
             options={TIERS.map((t) => ({ id: t, label: TIER_LABEL[t] }))}
             value={tier}
@@ -263,7 +295,9 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
 
         {domain === "ability" && (
           <div className="mb-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Abilities and morphs</div>
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+              Abilities and morphs
+            </div>
             <div className="relative mb-2">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
               <input
@@ -275,7 +309,9 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
             </div>
             <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border bg-surface/40 p-3">
               {abilityMatches.length === 0 ? (
-                <p className="text-sm text-fg-subtle">Nothing matches. Log each character out with the addon to teach Nirnside their abilities.</p>
+                <p className="text-sm text-fg-subtle">
+                  Nothing matches. Log each character out with the addon to teach Nirnside their abilities.
+                </p>
               ) : (
                 abilityMatches.map((a) => (
                   <Chip
@@ -300,7 +336,7 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
             <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Scribing scripts</div>
             <div className="max-h-64 space-y-3 overflow-y-auto rounded-lg border border-border bg-surface/40 p-3">
               {(["focus", "signature", "affix"] as const).map((slot) => {
-                const list = data.scripts.filter((s) => s.slot === slot);
+                const list = choices.scripts.filter((s) => s.slot === slot);
                 if (list.length === 0) return null;
                 return (
                   <div key={slot}>
@@ -315,8 +351,10 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
                   </div>
                 );
               })}
-              {data.scripts.length === 0 && (
-                <p className="text-sm text-fg-subtle">No scripts in the catalog yet — scan the in-game catalog to list them.</p>
+              {choices.scripts.length === 0 && (
+                <p className="text-sm text-fg-subtle">
+                  No scripts in the catalog yet — scan the in-game catalog to list them.
+                </p>
               )}
             </div>
           </div>
@@ -347,7 +385,7 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
       </Card>
 
       {/* ---------- Targets in effect ---------- */}
-      {goals.length === 0 ? (
+      {cards.length === 0 ? (
         <Card className="px-5 py-8 text-center text-sm text-fg-muted">
           Nothing planned yet. Set account-wide essentials above — every character is checked against them.
         </Card>
@@ -356,22 +394,20 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
           <section key={d} className="mb-6">
             <SectionTitle>{DOMAIN_LABEL[d]}</SectionTitle>
             <div className="space-y-4">
-              {tiers.map(({ tier: t, goals: tierGoals }) => (
+              {tiers.map(({ tier: t, cards: tierCards }) => (
                 <div key={t}>
                   <div className="mb-2 flex items-center gap-2">
                     <Badge tone={TIER_TONE[t]}>{TIER_LABEL[t]}</Badge>
                     <span className="text-xs text-fg-subtle">
-                      {tierGoals.length} target{tierGoals.length === 1 ? "" : "s"}
+                      {tierCards.length} target{tierCards.length === 1 ? "" : "s"}
                     </span>
                   </div>
                   <div className="space-y-3">
-                    {tierGoals.map((goal) => (
+                    {tierCards.map((card) => (
                       <GoalCard
-                        key={goal.id}
-                        goal={goal}
-                        subjects={data.subjects}
-                        indexes={{ lineIndex: data.lineIndex, abilityIndex: data.abilityIndex }}
-                        roles={data.roles}
+                        key={card.goal.id}
+                        card={card}
+                        roles={choices.roles}
                         onDelete={async (id) => {
                           await fetch(`/api/goals/${encodeURIComponent(id)}`, { method: "DELETE" });
                           router.refresh();
@@ -389,11 +425,13 @@ export function PlannerBoard({ data, goals }: { data: PlannerData; goals: Goal[]
   );
 }
 
-function groupLines(lines: PlannerData["lines"]): { key: string; entries: PlannerData["lines"] }[] {
-  const map = new Map<string, PlannerData["lines"]>();
+function groupLines(lines: PlannerChoices["lines"]): { key: string; entries: PlannerChoices["lines"] }[] {
+  const map = new Map<string, PlannerChoices["lines"]>();
   for (const l of lines) {
     const key = l.className ?? l.category;
-    (map.get(key) ?? map.set(key, []).get(key)!).push(l);
+    const arr = map.get(key);
+    if (arr) arr.push(l);
+    else map.set(key, [l]);
   }
   return [...map.entries()].map(([key, entries]) => ({ key, entries }));
 }
@@ -405,7 +443,7 @@ function LineChips({
   onToggle,
 }: {
   title: string;
-  groups: { key: string; entries: PlannerData["lines"] }[];
+  groups: { key: string; entries: PlannerChoices["lines"] }[];
   selected: Set<string>;
   onToggle: (name: string) => void;
 }) {

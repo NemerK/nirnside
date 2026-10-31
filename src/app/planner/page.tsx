@@ -1,13 +1,25 @@
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
-import { loadPlannerData } from "@/lib/planner/data";
+import { loadPlannerData, goalCardsForClient } from "@/lib/planner/data";
 import { listGoals } from "@/lib/db/goals";
+import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { getAccount } from "@/lib/db/queries";
+import type { Goal } from "@/lib/goals/types";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { LoadDemoButton } from "@/components/demo-controls";
-import { PlannerBoard } from "@/components/planner-board";
+import { PlannerBoard, type PlannerChoices } from "@/components/planner-board";
 
 export const dynamic = "force-dynamic";
+
+function lineHref(goal: Goal): string | undefined {
+  if (goal.domain !== "skillline") return undefined;
+  try {
+    const row = getSkillLineByName(goal.target);
+    return row ? `/encyclopedia/skills/${encodeURIComponent(row.entry.id)}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export default function PlannerPage() {
   const account = safe(getAccount);
@@ -40,6 +52,16 @@ export default function PlannerPage() {
   }
 
   const goals = safe(listGoals) ?? [];
+  // Progress is computed here, on the server: the browser only gets compact rows.
+  const cards = goalCardsForClient(goals, data, lineHref);
+  const choices: PlannerChoices = {
+    lines: data.lines,
+    scripts: data.scripts,
+    abilities: data.abilities,
+    roles: data.roles,
+    classes: data.classes,
+    characters: data.subjects.map((s) => ({ id: s.id, name: s.name, className: s.className })),
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -47,7 +69,7 @@ export default function PlannerPage() {
         title="Planner"
         subtitle="Set what every character, role, or class must have — essential first, optional and completionist after. Progress reads straight from your last snapshot; nothing is guessed."
       />
-      <PlannerBoard data={data} goals={goals} />
+      <PlannerBoard choices={choices} cards={cards} />
     </div>
   );
 }

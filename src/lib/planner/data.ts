@@ -1,9 +1,19 @@
 import "server-only";
+import { cache } from "react";
 import { getCharacters, getCharactersFull } from "../db/queries";
 import { liveCharacters } from "../snapshot/roster";
 import { listRoles, listAssignments } from "../db/roles";
 import { getSkillLines, getScripts, getSkills } from "../db/catalog-queries";
-import { toGoalSubject, mergeSkillLineChoices } from "../goals/progress";
+import {
+  goalAppliesTo,
+  goalProgress,
+  mergeSkillLineChoices,
+  progressLabel,
+  summarizeGoal,
+  toGoalSubject,
+} from "../goals/progress";
+import type { Goal, GoalIndexes } from "../goals/types";
+import type { GoalCardView, GoalMarkView, GoalRowItem } from "../goals/views";
 import { ESO_CLASSES } from "../classes";
 import type { AbilityMeta, GoalSubject, LineMeta, SkillLineChoice } from "../goals/types";
 
@@ -123,13 +133,76 @@ function liveFull() {
 }
 
 /** Line + ability metadata only, for pages that show per-character progress. */
-export function buildGoalIndexes(): GoalIndexArrays {
+export const buildGoalIndexes = cache(function buildGoalIndexes(): GoalIndexArrays {
   const { lineIndex, abilityIndex } = collectLineAbilityData(liveFull());
   return { lineIndex, abilityIndex };
+});
+
+function toMark(
+  progress: ReturnType<typeof goalProgress>,
+  goal: Goal,
+): GoalMarkView {
+  return {
+    state: progress.state,
+    label: progressLabel(progress, { targetRank: goal.targetRank, domain: goal.domain }),
+    reason: progress.state === "notapplicable" ? progress.reason : undefined,
+  };
+}
+
+/**
+ * Precompute every goal's matrix on the server. The client receives compact
+ * rows only — never the account's full skill/ability data.
+ */
+export function goalCardsForClient(
+  goals: Goal[],
+  data: PlannerData,
+  hrefFor?: (goal: Goal) => string | undefined,
+): GoalCardView[] {
+  const indexes: GoalIndexes = {
+    lines: new Map(data.lineIndex),
+    abilities: new Map(data.abilityIndex),
+  };
+  return goals.map((goal) => {
+    const summary = summarizeGoal(goal, data.subjects, indexes);
+    return {
+      goal,
+      done: summary.done,
+      total: summary.total,
+      unknown: summary.unknown,
+      notApplicable: summary.notApplicable,
+      rows: summary.rows.map((r) => ({
+        id: r.character.id,
+        name: r.character.name,
+        mark: toMark(goalProgress(goal, r.character, indexes), goal),
+      })),
+      href: hrefFor?.(goal),
+    };
+  });
+}
+
+/** The goals that apply to one character, precomputed with their marks. */
+export function characterGoalRows(
+  goals: Goal[],
+  subject: GoalSubject,
+  indexes: GoalIndexArrays,
+  hrefFor?: (goal: Goal) => string | undefined,
+): GoalRowItem[] {
+  const built: GoalIndexes = {
+    lines: new Map(indexes.lineIndex),
+    abilities: new Map(indexes.abilityIndex),
+  };
+  return goals
+    .filter((g) => goalAppliesTo(g, subject))
+    .map((goal) => ({
+      goal,
+      mark: toMark(goalProgress(goal, subject, built), goal),
+      deletable: goal.scope === "character",
+      href: hrefFor?.(goal),
+    }));
 }
 
 /** Catalog lines plus any names already on the account (in-game snapshot wins for extras). */
-export function skillLineChoices(): SkillLineChoice[] {
+export const skillLineChoices = cache(function skillLineChoices(): SkillLineChoice[] {
   let catalog: SkillLineChoice[] = [];
   try {
     catalog = getSkillLines().map(({ entry }) => ({ name: entry.name, category: entry.category }));
@@ -145,9 +218,9 @@ export function skillLineChoices(): SkillLineChoice[] {
     // no roster yet
   }
   return mergeSkillLineChoices(catalog, fromChars);
-}
+});
 
-export function loadPlannerData(): PlannerData {
+export const loadPlannerData = cache(function loadPlannerData(): PlannerData {
   const live = liveFull();
   const assignments = safe(listAssignments) ?? {};
   const roleRows = safe(listRoles) ?? [];
@@ -173,7 +246,7 @@ export function loadPlannerData(): PlannerData {
     lineIndex,
     abilityIndex,
   };
-}
+});
 
 function safe<T>(fn: () => T): T | null {
   try {

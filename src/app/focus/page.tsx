@@ -2,10 +2,9 @@ import { Crosshair } from "lucide-react";
 import { getCharacter, getCharacters } from "@/lib/db/queries";
 import { catalogAbilityLoreFor, getScripts, getSkillLineByName } from "@/lib/db/catalog-queries";
 import { listGoals } from "@/lib/db/goals";
-import { skillLineChoices } from "@/lib/planner/data";
-import { listRoles, listAssignments } from "@/lib/db/roles";
+import { buildGoalIndexes, characterGoalRows, skillLineChoices } from "@/lib/planner/data";
+import { listAssignments } from "@/lib/db/roles";
 import { toGoalSubject } from "@/lib/goals/progress";
-import { buildGoalIndexes } from "@/lib/planner/data";
 import { FOCUS_AREAS, focusAreasFor, getFocusConfig } from "@/lib/focus/config";
 import { presentSkillBook } from "@/lib/skills/present";
 import { EmptyState, PageFrame, PageHeader } from "@/components/ui";
@@ -146,18 +145,16 @@ export default async function FocusPage({ searchParams }: PageProps<"/focus">) {
           const roleIds = (safe(() => (listAssignments()[character.id] ?? [])) ?? []).filter(
             (id): id is string => typeof id === "string",
           );
-          const roleRows = (safe(listRoles) ?? []).map((r) => ({ id: r.id, name: r.name }));
+          const goalRows = characterGoalRows(
+            goals,
+            toGoalSubject(character, roleIds, true),
+            goalIndexes,
+            (g) => (g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined),
+          );
           panels.push({
             id: "goals",
             node: (
-              <CharacterGoals
-                goals={goals}
-                subject={toGoalSubject(character, roleIds, true)}
-                lines={lines}
-                hrefForLine={hrefForLine}
-                indexes={goalIndexes}
-                roles={roleRows}
-              />
+              <CharacterGoals rows={goalRows} lines={lines} subjectId={character.id} subjectName={character.name} />
             ),
           });
           break;

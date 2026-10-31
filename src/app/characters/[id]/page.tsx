@@ -27,7 +27,7 @@ import { Wardrobe } from "@/components/wardrobe";
 import { RolePicker } from "@/components/role-picker";
 import { CharacterGoals } from "@/components/goals-board";
 import { toGoalSubject } from "@/lib/goals/progress";
-import { buildGoalIndexes } from "@/lib/planner/data";
+import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 import { formatResearchRemaining, presentMotifs, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
 
@@ -101,6 +101,14 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   }
   const roleIds = assigned.map((r) => r.id);
   const goalIndexes = safe(buildGoalIndexes) ?? { lineIndex: [], abilityIndex: [] };
+  const goalSubject = toGoalSubject(c, roleIds, true);
+  // Server-side marks: the browser gets one small row per applicable target.
+  const goalRows = characterGoalRows(
+    goals,
+    goalSubject,
+    goalIndexes,
+    (g) => (g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined),
+  );
 
   // Cross-link every set worn in a Wizard's Wardrobe setup back to its catalog page.
   const hrefForSet: Record<string, string> = {};
@@ -228,14 +236,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         </p>
       )}
 
-      <CharacterGoals
-        goals={goals}
-        subject={toGoalSubject(c, roleIds, true)}
-        lines={lines}
-        hrefForLine={hrefForLine}
-        indexes={goalIndexes}
-        roles={roles.map((r) => ({ id: r.id, name: r.name }))}
-      />
+      <CharacterGoals rows={goalRows} lines={lines} subjectId={c.id} subjectName={c.name} />
 
       <div className="mt-6">
         <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
