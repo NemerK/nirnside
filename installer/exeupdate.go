@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 /**
@@ -166,13 +167,24 @@ func syncLauncherIntoInstallAt(exePath, root string) (copied bool) {
 /**
  * Sweep leftover self-update artifacts. The swap that updates a running exe
  * renames it to Nirnside.exe.old; Windows refuses to delete the image of a
- * running process, so the file could only linger until now. Also removes
- * aborted .new downloads. Best effort — locked files are simply retried next
- * start.
+ * running process, and the old launcher may still be exiting when we start -
+ * so the removal retries briefly in the background instead of leaving the
+ * file for the next launch. Also removes aborted .new downloads.
  */
 func cleanupSwapArtifacts(dir string) {
-	_ = os.Remove(filepath.Join(dir, "Nirnside.exe.old"))
+	oldPath := filepath.Join(dir, "Nirnside.exe.old")
 	_ = os.Remove(filepath.Join(dir, "Nirnside.exe.new"))
+	if os.Remove(oldPath) == nil {
+		return
+	}
+	go func() {
+		for i := 0; i < 20; i++ {
+			if os.Remove(oldPath) == nil {
+				return
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+	}()
 }
 
 /**
