@@ -55,6 +55,7 @@ export function NirnsideSettings({
   const [open, setOpen] = useState(false);
   const [off, setOff] = useState<Set<string>>(new Set(hiddenModules));
   const [busy, setBusy] = useState(false);
+  const [confirmingStop, setConfirmingStop] = useState(false);
 
   async function toggle(id: string) {
     setBusy(true);
@@ -128,13 +129,31 @@ export function NirnsideSettings({
               );
             })}
           </ul>
-          <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
             <p className="text-xs text-fg-subtle">
               {off.size > 0 ? `${off.size} module${off.size === 1 ? "" : "s"} hidden` : "Everything is shown"}
             </p>
-            <Link href="/setup" className="text-xs text-accent hover:underline" onClick={() => setOpen(false)}>
-              Full Setup →
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirmingStop) {
+                    setOpen(false);
+                    fetch("/api/shutdown", { method: "POST" }).catch(() => {});
+                    return;
+                  }
+                  setConfirmingStop(true);
+                  setTimeout(() => setConfirmingStop(false), 4000);
+                }}
+                className="text-xs text-fg-subtle transition hover:text-danger"
+                title="Stops the background server and closes the launcher. Start it again from the shortcut."
+              >
+                {confirmingStop ? "Really stop? Click again" : "Stop Nirnside"}
+              </button>
+              <Link href="/setup" className="text-xs text-accent hover:underline" onClick={() => setOpen(false)}>
+                Full Setup →
+              </Link>
+            </div>
           </div>
         </Modal>
       )}

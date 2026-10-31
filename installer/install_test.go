@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"sync/atomic"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -264,9 +265,43 @@ func TestWaitReadyFailsWhenProcessExits(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	err := waitReady("http://127.0.0.1:1/", cmd, 5*time.Second, nil)
+	err := waitReady("http://127.0.0.1:1/", cmd, 5*time.Second, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "exited") {
 		t.Fatalf("expected process-exit error, got %v", err)
+	}
+}
+
+func TestWaitReadyOnExitAfterReady(t *testing.T) {
+	if os.Getenv("NIRNSIDE_TEST_CHILD") == "1" {
+		// A stand-in app: alive long enough to reach ready, then it stops.
+		time.Sleep(400 * time.Millisecond)
+		os.Exit(0)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/api/health") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"ok":true,"app":"nirnside"}`))
+			return
+		}
+		_, _ = w.Write([]byte("nirnside"))
+	}))
+	defer srv.Close()
+
+	cmd := exec.Command(os.Args[0])
+	cmd.Env = append(os.Environ(), "NIRNSIDE_TEST_CHILD=1")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	var exited atomic.Bool
+	if err := waitReady(srv.URL, cmd, 5*time.Second, nil, func() { exited.Store(true) }); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for !exited.Load() && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	if !exited.Load() {
+		t.Fatal("the exit callback must fire once the ready app stops")
 	}
 }
 

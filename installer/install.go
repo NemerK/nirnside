@@ -160,6 +160,11 @@ func (in *installer) launch(root string, log *os.File) error {
 	}
 	if err := waitReady(url, cmd, 3*time.Minute, func(waited time.Duration) {
 		in.progress(98, "Starting Nirnside", fmt.Sprintf("Waiting for the app… %ds", int(waited.Seconds())))
+	}, func() {
+		// The app stopped itself or died: the launcher exits with it, so
+		// nothing is left running invisible.
+		fmt.Println("[launcher] the app stopped — Nirnside is closed.")
+		os.Exit(0)
 	}); err != nil {
 		logPath := filepath.Join(root, "nirnside-installer.log")
 		if tail := strings.TrimSpace(tailFile(logPath, 1800)); tail != "" {
@@ -170,8 +175,8 @@ func (in *installer) launch(root string, log *os.File) error {
 	in.markReady()
 	in.openAppOnce()
 	fmt.Println()
-	fmt.Println("Nirnside is running.")
-	fmt.Println("Leave this window open. Close it to stop Nirnside.")
+	fmt.Println("Nirnside is running in the background.")
+	fmt.Println("Reopen it from the shortcut any time; stop it from Nirnside settings.")
 	fmt.Println("Browser:", url)
 	return nil
 }

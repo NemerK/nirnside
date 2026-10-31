@@ -83,8 +83,23 @@ type installReq struct {
 	LaunchOnly bool   `json:"launchOnly"`
 }
 
-func (in *installer) handleState(w http.ResponseWriter, _ *http.Request) {
-	in.mu.Lock()
+/** The tail of nirnside-installer.log, so the launcher page can show what happened without any console window. */
+func (in *installer) handleLauncherLog(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	st := in.snapshot()
+	if st.Dest == "" {
+		_, _ = w.Write([]byte("No install yet."))
+		return
+	}
+	p := filepath.Join(st.Dest, "nirnside-installer.log")
+	if _, err := os.Stat(p); err != nil {
+		_, _ = w.Write([]byte("No log yet."))
+		return
+	}
+	_, _ = w.Write([]byte(tailFile(p, 6000)))
+}
+
+func (in *installer) handleState(w http.ResponseWriter, _ *http.Request) {	in.mu.Lock()
 	in.lastPoll = time.Now().UnixMilli()
 	in.mu.Unlock()
 	st := in.snapshot()
