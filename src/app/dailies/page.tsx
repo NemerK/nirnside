@@ -2,7 +2,7 @@ import { CalendarDays, RefreshCw } from "lucide-react";
 import { getAccount, getCharactersFull, getDataSource, hasData } from "@/lib/db/queries";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { dailiesHaveAnyScan, presentAccountDailies, summarizeDailies } from "@/lib/dailies/present";
-import { dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/dailies/day";
+import { currentUnix, dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/dailies/day";
 import { communityPledgesForUnix } from "@/lib/dailies/pledges";
 import { PageFrame, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
@@ -16,7 +16,7 @@ export default function DailiesPage() {
   const isSample = source?.kind === "sample";
   const characters = liveCharacters(safe(() => getCharactersFull()) ?? []);
   const region: EsoRegion = safe(() => getAccount()?.region) === "NA" ? "NA" : "EU";
-  const now = Math.floor(Date.now() / 1000);
+  const now = currentUnix();
   const todayPledges = communityPledgesForUnix(now, region);
   const rows = presentAccountDailies(characters, now, { treatAsFresh: isSample, todayPledges, region });
   const summary = summarizeDailies(rows);

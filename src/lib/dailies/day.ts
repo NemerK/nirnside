@@ -48,3 +48,8 @@ export function formatRemainingSeconds(total: number): string {
   const m = Math.floor((n % 3600) / 60);
   return `${h}:${String(m).padStart(2, "0")}`;
 }
+
+/** Current wall-clock time in unix seconds. Call this outside render. */
+export function currentUnix(): number {
+  return Math.floor(Date.now() / 1000);
+}
