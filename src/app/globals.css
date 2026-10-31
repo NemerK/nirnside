@@ -89,6 +89,23 @@ body {
     radial-gradient(900px 500px at -10% 110%, var(--accent-soft), transparent 55%);
 }
 
+/* Collapsible Focus sections: clean summary rows, no default triangle. */
+.focus-panel {
+  margin-bottom: 0.75rem;
+}
+.focus-panel > summary {
+  list-style: none;
+}
+.focus-panel > summary::-webkit-details-marker {
+  display: none;
+}
+.focus-panel > summary .chev {
+  transition: transform 150ms ease;
+}
+.focus-panel[open] > summary .chev {
+  transform: rotate(180deg);
+}
+
 /* Class filter crests: light the pixels, never a halo around the art. */
 .class-filter-crest {
   transition: filter 180ms ease;
