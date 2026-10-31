@@ -194,6 +194,53 @@ func TestNeedBuild(t *testing.T) {
 	}
 }
 
+func TestNeedBuildRevisionStamp(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, ".next"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".next", "BUILD_ID"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Never-updated installs have no revision file: old behavior.
+	if needBuild(dir) {
+		t.Fatal("no revision file should keep the old behavior")
+	}
+
+	// An applied update that was never stamped into the build is stale.
+	if err := os.WriteFile(filepath.Join(dir, revisionName), []byte(`{"sha":"abc123"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !needBuild(dir) {
+		t.Fatal("an unstamped code revision must force a rebuild")
+	}
+
+	// Matching stamp: fresh.
+	if err := os.WriteFile(filepath.Join(dir, ".next", builtRevisionName), []byte("abc123"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if needBuild(dir) {
+		t.Fatal("a matching revision stamp should skip the build")
+	}
+
+	// The revision moved on: stale again, and stamping brings it back.
+	if err := os.WriteFile(filepath.Join(dir, revisionName), []byte(`{"sha":"def456"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !needBuild(dir) {
+		t.Fatal("a moved revision must force a rebuild")
+	}
+	stampBuiltRevision(dir)
+	stamped, err := os.ReadFile(filepath.Join(dir, ".next", builtRevisionName))
+	if err != nil || strings.TrimSpace(string(stamped)) != "def456" {
+		t.Fatalf("buildApp should stamp the revision it compiled, got %q", string(stamped))
+	}
+	if needBuild(dir) {
+		t.Fatal("a stamped revision should skip the build")
+	}
+}
+
 func TestProbeAppHealth(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/health" {

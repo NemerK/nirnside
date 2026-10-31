@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -92,6 +93,8 @@ func runNodeScript(log *os.File, root string, script string, extra ...string) er
 }
 
 const needBuildName = ".nirnside-need-build"
+const revisionName = ".nirnside-revision"
+const builtRevisionName = "nirnside-built-revision" // stored inside .next
 
 func nextBin(root string) (string, error) {
 	p := filepath.Join(root, "node_modules", "next", "dist", "bin", "next")
@@ -101,12 +104,46 @@ func nextBin(root string) (string, error) {
 	return p, nil
 }
 
+/** The code revision the updater last applied, from .nirnside-revision. */
+func revisionSha(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	var rev struct {
+		Sha string `json:"sha"`
+	}
+	if err := json.Unmarshal(data, &rev); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(rev.Sha)
+}
+
 func needBuild(root string) bool {
 	if _, err := os.Stat(filepath.Join(root, ".next", "BUILD_ID")); err != nil {
 		return true
 	}
-	_, err := os.Stat(filepath.Join(root, needBuildName))
-	return err == nil
+	if _, err := os.Stat(filepath.Join(root, needBuildName)); err == nil {
+		return true
+	}
+	// Belt and braces: a build is stale whenever the code revision moved since
+	// it was compiled, even if an update path forgot to drop the marker
+	// (git-clone updates once did — fresh code on disk, old UI served).
+	rev := revisionSha(filepath.Join(root, revisionName))
+	if rev == "" {
+		return false
+	}
+	built, err := os.ReadFile(filepath.Join(root, ".next", builtRevisionName))
+	return err != nil || strings.TrimSpace(string(built)) != rev
+}
+
+/** Stamp the just-built output with the code revision it was compiled from. */
+func stampBuiltRevision(root string) {
+	rev := revisionSha(filepath.Join(root, revisionName))
+	if rev == "" {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(root, ".next", builtRevisionName), []byte(rev), 0o644)
 }
 
 func buildApp(log *os.File, root string) error {
@@ -118,6 +155,7 @@ func buildApp(log *os.File, root string) error {
 		return fmt.Errorf("could not build Nirnside: %w", err)
 	}
 	_ = os.Remove(filepath.Join(root, needBuildName))
+	stampBuiltRevision(root)
 	return nil
 }
 
