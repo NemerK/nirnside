@@ -46,7 +46,16 @@ describe("zone dailies", () => {
     assert.match(lua, /local WORLD_BOSS_BY_ID = \{/);
     assert.doesNotMatch(lua, /ZONE_DAILY_BY_ID/);
     assert.doesNotMatch(lua, /zoneDailies/);
-    assert.match(txt, /## Version: 0\.9\.30/);
+    // The Version must stay at or above every version ever shipped: the
+    // self-updater refuses overlays whose addon version is older than the
+    // local one, so a regression here bricks every updating install.
+    const m = /^## Version: (\d+)\.(\d+)\.(\d+)\s*$/m.exec(txt);
+    assert.ok(m, "addon Version must follow major.minor.patch");
+    const [major, minor, patch] = m.slice(1).map(Number);
+    assert.ok(
+      major > 0 || minor > 9 || patch >= 32,
+      `addon Version must be >= 0.9.32, found ${m[0].trim()}`,
+    );
     assert.match(txt, /## AddOnVersion: 32/);
   });
 });
