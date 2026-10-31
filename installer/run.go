@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -57,8 +58,11 @@ func runLogged(log *os.File, dir string, env []string, name string, args ...stri
 	cmd.Dir = dir
 	cmd.Env = env
 	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
+	// Stream to the console as it happens: update failures (git pull refused,
+	// download errors) used to be invisible until the player dug through the
+	// log file, and "it said it updated" hid a failed update.
+	cmd.Stdout = io.MultiWriter(&buf, os.Stdout)
+	cmd.Stderr = io.MultiWriter(&buf, os.Stdout)
 	hideWindow(cmd)
 	err := cmd.Run()
 	if log != nil && buf.Len() > 0 {

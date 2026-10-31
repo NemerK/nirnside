@@ -269,13 +269,25 @@ async function updateFromGit(root) {
   const branch = git(root, ["rev-parse", "--abbrev-ref", "HEAD"]).stdout.trim() || DEFAULT_REF;
   if (branch !== "main") {
     log(`This copy was on ${branch}; switching to main so the hub stays live.`);
-    const co = git(root, ["checkout", "-B", "main", "origin/main"]);
+    let co = git(root, ["checkout", "-B", "main", "origin/main"]);
+    if (co.status !== 0) {
+      // Installs are never hand-edited: restore tracked files and retry once
+      // so file churn can't strand a machine on an old version.
+      git(root, ["checkout", "--", "."]);
+      co = git(root, ["checkout", "-B", "main", "origin/main"]);
+    }
     if (co.status !== 0) {
       log(`checkout main failed (local changes were not overwritten): ${(co.stderr || "").trim()}`);
       return 0;
     }
   } else {
-    const pull = git(root, ["pull", "--ff-only", "origin", "main"]);
+    let pull = git(root, ["pull", "--ff-only", "origin", "main"]);
+    if (pull.status !== 0) {
+      // An install is never intentionally edited — tracked-file churn from npm
+      // or tools must not block updates. Restore everything and try once more.
+      git(root, ["checkout", "--", "."]);
+      pull = git(root, ["pull", "--ff-only", "origin", "main"]);
+    }
     if (pull.status !== 0) {
       log(`git pull failed (your local changes were not overwritten): ${(pull.stderr || "").trim()}`);
       return 0;
