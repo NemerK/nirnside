@@ -28,23 +28,38 @@ jobs:
           GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.launcherCommit=$(git rev-parse --short HEAD)" -o ../dist/Nirnside.exe .
 
       # Code signing kills the SmartScreen "Windows protected your PC" warning.
-      # Set the repo variable CODE_SIGNING=azure-trusted-signing and the five
+      # Set the repo variable CODE_SIGNING=azure-trusted-signing and the six
       # secrets below (Azure Trusted Signing, ~$9.99/month; individual accounts
       # are supported) and every release exe is signed automatically.
       #   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET,
       #   TRUSTED_SIGNING_ENDPOINT (e.g. https://eus.codesigning.azure.net),
       #   TRUSTED_SIGNING_ACCOUNT_NAME, TRUSTED_SIGNING_CERT_PROFILE
+      # Uses the Azure CLI trusted-signing extension (preinstalled on runners)
+      # exactly as in Microsoft's Trusted Signing quickstart — no third-party
+      # action to resolve, so the pipeline stays green even while signing is
+      # not configured.
       - name: Code sign the launcher (Azure Trusted Signing)
         if: vars.CODE_SIGNING == 'azure-trusted-signing'
-        uses: microsoft/trusted-signing-action@v0
-        with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: ${{ secrets.TRUSTED_SIGNING_ENDPOINT }}
-          trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
-          certificate-profile-name: ${{ secrets.TRUSTED_SIGNING_CERT_PROFILE }}
-          files: ${{ github.workspace }}/dist/Nirnside.exe
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          TRUSTED_SIGNING_ENDPOINT: ${{ secrets.TRUSTED_SIGNING_ENDPOINT }}
+          TRUSTED_SIGNING_ACCOUNT_NAME: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
+          TRUSTED_SIGNING_CERT_PROFILE: ${{ secrets.TRUSTED_SIGNING_CERT_PROFILE }}
+        run: |
+          az extension add --name trusted-signing --yes
+          az login --service-principal \
+            --username "$AZURE_CLIENT_ID" \
+            --password "$AZURE_CLIENT_SECRET" \
+            --tenant "$AZURE_TENANT_ID" \
+            --output none
+          az trusted-signing \
+            --endpoint "$TRUSTED_SIGNING_ENDPOINT" \
+            --account-name "$TRUSTED_SIGNING_ACCOUNT_NAME" \
+            --certificate-profile-name "$TRUSTED_SIGNING_CERT_PROFILE" \
+            --file-path "$PWD/dist/Nirnside.exe" \
+            --file-digest SHA256
       - name: Zip (no node_modules, no account data)
         run: |
           mkdir -p dist
