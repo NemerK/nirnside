@@ -3,14 +3,15 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Check,
   ChevronDown,
   Loader2,
   Plus,
   Search,
   Sparkles,
   Trash2,
-  X,
 } from "lucide-react";
+import { Modal } from "./modal";
 import type { Goal, GoalTier } from "@/lib/goals/types";
 import { TIERS, TIER_LABEL } from "@/lib/goals/types";
 import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
@@ -37,12 +38,6 @@ export interface PlannerChoices {
   characters: { id: string; name: string; className: string }[];
 }
 
-interface SearchHit {
-  domain: "skillline" | "ability" | "script";
-  name: string;
-  hint: string;
-}
-
 const TIER_TONE: Record<GoalTier, "accent" | "muted" | "ok"> = {
   essential: "accent",
   optional: "muted",
@@ -64,9 +59,10 @@ export function PlannerBoard({
 }) {
   const router = useRouter();
 
-  // ---- Composer state (one search → one popover, not a form) ----
-  const [query, setQuery] = useState("");
-  const [picking, setPicking] = useState<SearchHit | null>(null);
+  // ---- Composer state: three buttons, each opens a picker modal ----
+  const [composer, setComposer] = useState<Goal["domain"] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [abilityQuery, setAbilityQuery] = useState("");
   const [scope, setScope] = useState<"account" | "role" | "class" | "character">("account");
   const [scopeKey, setScopeKey] = useState("");
   const [tier, setTier] = useState<GoalTier>("essential");
@@ -80,23 +76,55 @@ export function PlannerBoard({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const hits = useMemo<SearchHit[]>(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    const out: SearchHit[] = [];
-    for (const l of choices.lines) {
-      if (l.name.toLowerCase().includes(q))
-        out.push({ domain: "skillline", name: l.name, hint: l.category + (l.className ? ` · ${l.className}` : "") });
+  function openComposer(domain: Goal["domain"]) {
+    setComposer(domain);
+    setSelected(new Set());
+    setAbilityQuery("");
+    setScope("account");
+    setScopeKey("");
+    setTier("essential");
+    setRank(50);
+    setError(null);
+  }
+
+  function toggleSelected(name: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  /** Skill lines: shared lines by category, class lines after, under their class. */
+  const lineGroups = useMemo(() => {
+    const shared = choices.lines.filter((l) => l.category.toLowerCase() !== "class");
+    const cls = choices.lines.filter((l) => l.category.toLowerCase() === "class");
+    const byKey = new Map<string, typeof shared>();
+    for (const l of [...shared, ...cls]) {
+      const key = l.category.toLowerCase() === "class" ? `${l.className} — class` : l.category;
+      const arr = byKey.get(key);
+      if (arr) arr.push(l);
+      else byKey.set(key, [l]);
     }
-    for (const a of choices.abilities) {
-      if (a.name.toLowerCase().includes(q))
-        out.push({ domain: "ability", name: a.name, hint: a.lineName + (a.className ? ` · ${a.className}` : "") });
-    }
+    return [...byKey.entries()].map(([key, entries]) => ({ key, entries }));
+  }, [choices]);
+
+  const scriptGroups = useMemo(() => {
+    const bySlot = new Map<string, typeof choices.scripts>();
     for (const s of choices.scripts) {
-      if (s.name.toLowerCase().includes(q)) out.push({ domain: "script", name: s.name, hint: `${s.slot} script` });
+      const arr = bySlot.get(s.slot);
+      if (arr) arr.push(s);
+      else bySlot.set(s.slot, [s]);
     }
-    return out.slice(0, 12);
-  }, [query, choices]);
+    return [...bySlot.entries()].map(([key, entries]) => ({ key, entries }));
+  }, [choices]);
+
+  const abilityMatches = useMemo(() => {
+    const q = abilityQuery.trim().toLowerCase();
+    const list = q ? choices.abilities.filter((a) => a.name.toLowerCase().includes(q)) : choices.abilities;
+    return list.slice(0, 150);
+  }, [choices, abilityQuery]);
 
   const scopeLabel = (goal: Goal): string => {
     if (goal.scope === "account") return "Everyone";
@@ -130,22 +158,19 @@ export function PlannerBoard({
     }
   }
 
-  async function addPicked() {
-    if (!picking) return;
+  async function addSelected() {
+    if (!composer || selected.size === 0) return;
     await post(
       {
-        domain: picking.domain,
+        domain: composer,
         tier,
         scope,
         characterId: scope === "character" ? scopeKey : null,
         scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
-        targets: [picking.name],
-        targetRank: picking.domain === "skillline" ? rank : 0,
+        targets: [...selected],
+        targetRank: composer === "skillline" ? rank : 0,
       },
-      () => {
-        setPicking(null);
-        setQuery("");
-      },
+      () => setComposer(null),
     );
   }
 
@@ -219,131 +244,13 @@ export function PlannerBoard({
 
   return (
     <div className="space-y-4">
-      {/* ---------- Search-first composer ---------- */}
+      {/* ---------- Composer: three buttons, each opens a picker modal ---------- */}
       <Card className="p-4">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
-          <input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPicking(null);
-            }}
-            placeholder="Add a target — search a skill line, an ability, or a scribing script…"
-            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                setPicking(null);
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-fg-subtle hover:text-fg"
-              aria-label="Clear search"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {query && !picking && (
-            <div className="absolute z-10 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-border bg-bg-elev shadow-xl">
-              {hits.length === 0 ? (
-                <p className="px-3 py-3 text-sm text-fg-subtle">
-                  Nothing matches. Lines and abilities appear as your characters log out with the addon.
-                </p>
-              ) : (
-                hits.map((hit) => (
-                  <button
-                    key={`${hit.domain}:${hit.name}`}
-                    type="button"
-                    onClick={() => {
-                      setPicking(hit);
-                      setTier("essential");
-                      setScope("account");
-                      setScopeKey("");
-                      setRank(hit.domain === "skillline" ? 50 : 0);
-                    }}
-                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface-2"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-fg">{hit.name}</span>
-                      <span className="block truncate text-xs text-fg-subtle">{hit.hint}</span>
-                    </span>
-                    <Badge tone="muted">{DOMAIN_SHORT[hit.domain]}</Badge>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
+          <DomainButton label="Skill lines" hint="Line ranks — Assault 7, Heavy Armor 50…" onClick={() => openComposer("skillline")} />
+          <DomainButton label="Abilities" hint="Exact abilities and morphs" onClick={() => openComposer("ability")} />
+          <DomainButton label="Scribing scripts" hint="Focus, signature, affix" onClick={() => openComposer("script")} />
         </div>
-
-        {picking && (
-          <div className="mt-3 rounded-lg border border-accent/40 bg-accent-soft/40 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-sm font-medium text-fg">
-                {picking.name} <span className="text-xs font-normal text-fg-subtle">{picking.hint}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setPicking(null)}
-                className="rounded p-1 text-fg-subtle hover:text-fg"
-                aria-label="Cancel"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <ScopePicker
-                choices={choices}
-                scope={scope}
-                scopeKey={scopeKey}
-                onScope={(s, k) => {
-                  setScope(s);
-                  setScopeKey(k);
-                }}
-              />
-              {picking.domain === "skillline" && (
-                <label className="text-xs text-fg-subtle">
-                  to rank
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={rank}
-                    onChange={(e) => setRank(Number(e.target.value))}
-                    className="ml-1.5 w-16 rounded border border-border bg-surface px-1.5 py-1 text-sm text-fg"
-                  />
-                </label>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
-                {TIERS.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    aria-pressed={tier === t}
-                    onClick={() => setTier(t)}
-                    className={`rounded-md px-2 py-1 text-xs ${
-                      tier === t ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
-                    }`}
-                  >
-                    {TIER_LABEL[t]}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={addPicked}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-50"
-              >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Add target
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Presets: the common intents, one click each */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-3">
@@ -401,8 +308,137 @@ export function PlannerBoard({
               </button>
             ))}
         </div>
-        {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+        {error && !composer && <p className="mt-2 text-sm text-danger">{error}</p>}
       </Card>
+
+      {/* ---------- The picker modal ---------- */}
+      {composer && (
+        <Modal
+          title={`Add ${composer === "skillline" ? "skill line" : composer === "ability" ? "ability" : "scribing"} targets`}
+          onClose={() => setComposer(null)}
+          maxWidthClass="max-w-xl"
+        >
+          {/* Who + how much, decided once, applies to every selection below */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-3">
+            <ScopePicker
+              choices={choices}
+              scope={scope}
+              scopeKey={scopeKey}
+              onScope={(s, k) => {
+                setScope(s);
+                setScopeKey(k);
+              }}
+            />
+            {composer === "skillline" && (
+              <label className="text-xs text-fg-subtle">
+                to rank
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={rank}
+                  onChange={(e) => setRank(Number(e.target.value))}
+                  className="ml-1.5 w-16 rounded border border-border bg-surface px-1.5 py-1 text-sm text-fg"
+                />
+              </label>
+            )}
+            <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
+              {TIERS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={tier === t}
+                  onClick={() => setTier(t)}
+                  className={`rounded-md px-2 py-1 text-xs ${
+                    tier === t ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+                  }`}
+                >
+                  {TIER_LABEL[t]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {composer === "ability" && (
+            <div className="relative mt-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+              <input
+                value={abilityQuery}
+                onChange={(e) => setAbilityQuery(e.target.value)}
+                placeholder="Filter abilities…"
+                className="w-full rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+              />
+            </div>
+          )}
+
+          <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface/40 p-2">
+            {composer === "skillline" &&
+              lineGroups.map((group) => (
+                <GroupBlock
+                  key={group.key}
+                  title={group.key}
+                  selected={selected}
+                  entries={group.entries.map((l) => ({
+                    name: l.name,
+                    hint: l.category + (l.className ? ` · ${l.className}` : ""),
+                  }))}
+                  onToggle={toggleSelected}
+                />
+              ))}
+            {composer === "ability" &&
+              (abilityMatches.length === 0 ? (
+                <p className="px-2 py-3 text-sm text-fg-subtle">
+                  Nothing matches. Abilities appear as your characters log out with the addon.
+                </p>
+              ) : (
+                <div className="space-y-0.5">
+                  {abilityMatches.map((a) => (
+                    <PickerRow
+                      key={a.name}
+                      name={a.name}
+                      hint={a.lineName + (a.className ? ` · ${a.className}` : "")}
+                      checked={selected.has(a.name)}
+                      onToggle={() => toggleSelected(a.name)}
+                    />
+                  ))}
+                  {choices.abilities.length > abilityMatches.length && (
+                    <p className="px-2 pt-1 text-xs text-fg-subtle">
+                      Showing {abilityMatches.length} of {choices.abilities.length} — keep typing to narrow.
+                    </p>
+                  )}
+                </div>
+              ))}
+            {composer === "script" &&
+              scriptGroups.map((group) => (
+                <GroupBlock
+                  key={group.key}
+                  title={`${group.key} scripts`}
+                  selected={selected}
+                  entries={group.entries.map((s) => ({ name: s.name, hint: s.slot }))}
+                  onToggle={toggleSelected}
+                />
+              ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs text-fg-subtle">
+              {selected.size === 0
+                ? "Pick anything from the list"
+                : `${selected.size} target${selected.size === 1 ? "" : "s"} selected`}
+            </span>
+            <button
+              type="button"
+              disabled={busy || selected.size === 0 || !scopeOk(scope, scopeKey)}
+              onClick={addSelected}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Add {selected.size > 0 ? `${selected.size} target${selected.size === 1 ? "" : "s"}` : ""}
+            </button>
+          </div>
+          {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+        </Modal>
+      )}
 
       {/* ---------- Next up: the toon I'm playing ---------- */}
       <Card className="p-4">
@@ -697,5 +733,85 @@ function PresetButton({ label, title, onClick }: { label: string; title: string;
     >
       {label}
     </button>
+  );
+}
+
+function scopeOk(scope: "account" | "role" | "class" | "character", scopeKey: string): boolean {
+  if (scope === "account") return true;
+  return scopeKey.trim().length > 0;
+}
+
+/** One of the three composer entry points. */
+function DomainButton({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={hint}
+      className="inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent-soft px-3.5 py-2 text-sm font-medium text-accent transition hover:bg-accent hover:text-accent-fg"
+    >
+      <Plus className="h-4 w-4" />
+      {label}
+    </button>
+  );
+}
+
+/** A clickable item in a picker modal. */
+function PickerRow({ name, hint, checked, onToggle }: { name: string; hint: string; checked: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={checked}
+      onClick={onToggle}
+      className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition ${
+        checked ? "bg-accent-soft" : "hover:bg-surface-2"
+      }`}
+    >
+      <span
+        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+          checked ? "border-accent bg-accent text-accent-fg" : "border-border-strong text-transparent"
+        }`}
+      >
+        <Check className="h-3 w-3" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={`block truncate ${checked ? "font-medium text-fg" : "text-fg"}`}>{name}</span>
+        <span className="block truncate text-xs text-fg-subtle">{hint}</span>
+      </span>
+    </button>
+  );
+}
+
+/** A titled block of picker items with a select-all header. */
+function GroupBlock({
+  title,
+  selected,
+  entries,
+  onToggle,
+}: {
+  title: string;
+  selected: Set<string>;
+  entries: { name: string; hint: string }[];
+  onToggle: (name: string) => void;
+}) {
+  const all = entries.length > 0 && entries.every((e) => selected.has(e.name));
+  return (
+    <div className="mb-2 last:mb-0">
+      <div className="flex items-center justify-between gap-2 px-2.5 py-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{title}</span>
+        <button
+          type="button"
+          onClick={() => entries.forEach((e) => onToggle(e.name))}
+          className="text-[11px] text-fg-subtle transition hover:text-accent"
+        >
+          {all ? "Deselect all" : "Select all"}
+        </button>
+      </div>
+      <div className="space-y-0.5">
+        {entries.map((e) => (
+          <PickerRow key={e.name} name={e.name} hint={e.hint} checked={selected.has(e.name)} onToggle={() => onToggle(e.name)} />
+        ))}
+      </div>
+    </div>
   );
 }
