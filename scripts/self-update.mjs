@@ -86,6 +86,12 @@ function versionLess(a, b) {
  * Refuse to overlay GitHub main onto a newer local copy (e.g. this PR zip
  * before main has caught up). Overlay does not delete extra files, but it
  * *would* overwrite addon Lua and start scripts with the older tree.
+ *
+ * CAREFUL: this check reads the Snapshot addon's version. A main-side
+ * version regression (restoring an old addon file without re-bumping the
+ * version) makes every install that carried the higher version silently
+ * refuse ALL updates. If you restore an old addon file, bump its Version
+ * above every version ever shipped.
  */
 export function wouldDowngrade(fromDir, toDir) {
   const incomingHasUpdater = existsSync(join(fromDir, "scripts", "self-update.mjs"));
