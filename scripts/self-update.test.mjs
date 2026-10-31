@@ -2,11 +2,9 @@ import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { createServer } from "node:http";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { maybeUpdateExe, overlayCopy, runSelfUpdate, shouldSkip, wouldDowngrade } from "./self-update.mjs";
+import { overlayCopy, runSelfUpdate, shouldSkip, wouldDowngrade } from "./self-update.mjs";
 
 describe("self-update overlay", () => {
   it("skips account data and incoming lua", () => {
@@ -140,112 +138,5 @@ describe("self-update git path", () => {
     assert.equal(readFileSync(join(root, ".nirnside-need-build"), "utf8").trim(), "1");
 
     rmSync(base, { recursive: true, force: true });
-  });
-});
-
-function sha256(buf) {
-  return createHash("sha256").update(buf).digest("hex");
-}
-
-/** A stand-in GitHub release server: /releases/latest plus the exe download. */
-function releaseServer({ assetDigest, exeBytes }) {
-  return createServer((req, res) => {
-    const url = req.url ?? "";
-    if (url.endsWith("/releases/latest")) {
-      res.setHeader("content-type", "application/json");
-      res.end(
-        JSON.stringify({
-          assets: [
-            {
-              name: "Nirnside.exe",
-              digest: `sha256:${assetDigest}`,
-              browser_download_url: `http://${req.headers.host}/download/Nirnside.exe`,
-            },
-          ],
-        }),
-      );
-      return;
-    }
-    if (url.endsWith("Nirnside.exe")) {
-      res.end(exeBytes);
-      return;
-    }
-    res.statusCode = 404;
-    res.end("nope");
-  });
-}
-
-function listen(srv) {
-  return new Promise((resolve) => srv.listen(0, "127.0.0.1", () => resolve(`http://127.0.0.1:${srv.address().port}`)));
-}
-
-function exeRoot() {
-  const root = join(tmpdir(), `nirnside-exe-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-  mkdirSync(root, { recursive: true });
-  return root;
-}
-
-describe("self-update exe swap", () => {
-  it("downloads, checksums, and swaps the exe when the release digest differs", async () => {
-    const root = exeRoot();
-    writeFileSync(join(root, "Nirnside.exe"), "old-exe");
-    const newExe = Buffer.from("new-exe-contents");
-    const srv = releaseServer({ assetDigest: sha256(newExe), exeBytes: newExe });
-    const base = await listen(srv);
-    try {
-      await maybeUpdateExe(root, "NemerK/nirnside", base);
-      assert.equal(readFileSync(join(root, "Nirnside.exe"), "utf8"), "new-exe-contents");
-      assert.equal(readFileSync(join(root, ".nirnside-exe-digest"), "utf8").trim(), sha256(newExe));
-      assert.equal(existsSync(join(root, "Nirnside.exe.new")), false, "temp file must be cleaned up");
-    } finally {
-      srv.close();
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  it("skips the download when the stored digest already matches", async () => {
-    const root = exeRoot();
-    const exe = Buffer.from("already-fresh");
-    writeFileSync(join(root, "Nirnside.exe"), exe);
-    writeFileSync(join(root, ".nirnside-exe-digest"), `${sha256(exe)}\n`);
-    const srv = releaseServer({ assetDigest: sha256(exe), exeBytes: Buffer.from("should-never-be-downloaded") });
-    const base = await listen(srv);
-    try {
-      await maybeUpdateExe(root, "NemerK/nirnside", base);
-      assert.equal(readFileSync(join(root, "Nirnside.exe"), "utf8"), "already-fresh");
-    } finally {
-      srv.close();
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  it("keeps the current exe when the download fails the checksum", async () => {
-    const root = exeRoot();
-    writeFileSync(join(root, "Nirnside.exe"), "old-exe");
-    const served = Buffer.from("tampered-or-broken");
-    const srv = releaseServer({ assetDigest: sha256(Buffer.from("expected-but-not-served")), exeBytes: served });
-    const base = await listen(srv);
-    try {
-      await maybeUpdateExe(root, "NemerK/nirnside", base);
-      assert.equal(readFileSync(join(root, "Nirnside.exe"), "utf8"), "old-exe");
-      assert.equal(existsSync(join(root, ".nirnside-exe-digest")), false, "an unverified exe must not be recorded");
-      assert.equal(existsSync(join(root, "Nirnside.exe.new")), false);
-    } finally {
-      srv.close();
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  it("is a no-op when no exe is installed", async () => {
-    const root = exeRoot();
-    const srv = releaseServer({ assetDigest: sha256(Buffer.from("x")), exeBytes: Buffer.from("x") });
-    const base = await listen(srv);
-    try {
-      await maybeUpdateExe(root, "NemerK/nirnside", base);
-      assert.equal(existsSync(join(root, ".nirnside-exe-digest")), false);
-    } finally {
-      srv.close();
-      rmSync(root, { recursive: true, force: true });
-    }
   });
 });

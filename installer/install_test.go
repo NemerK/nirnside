@@ -2,6 +2,9 @@ package main
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -281,4 +284,135 @@ func TestLooksInstalled(t *testing.T) {
 	if !looksInstalled(dir) {
 		t.Fatal("zip/dev copy should count as installed")
 	}
+}
+
+func TestLauncherSelfUpdateSwapsOnDigestChange(t *testing.T) {
+	dir := t.TempDir()
+	exePath := filepath.Join(dir, "Nirnside.exe")
+	if err := os.WriteFile(exePath, []byte("old-launcher"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	newBytes := []byte("new-launcher")
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/releases/latest") {
+			sum := sha256.Sum256(newBytes)
+			digest := "sha256:" + hex.EncodeToString(sum[:])
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"assets": []map[string]string{{
+					"name":                 "Nirnside.exe",
+					"digest":               digest,
+					"browser_download_url": srvBase(srv) + "/download/Nirnside.exe",
+				}},
+			})
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "Nirnside.exe") {
+			_, _ = w.Write(newBytes)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	status, restart := checkLauncherUpdateAt(exePath, dir, srvBase(srv))
+	if !restart {
+		t.Fatalf("digest change must restart, status: %q", status)
+	}
+	got, err := os.ReadFile(exePath)
+	if err != nil || string(got) != "new-launcher" {
+		t.Fatalf("expected the swapped launcher on disk, got %q", string(got))
+	}
+	if _, err := os.Stat(exePath + ".new"); err == nil {
+		t.Fatal("temp download must be cleaned up")
+	}
+	if _, err := os.Stat(exePath + ".old"); err == nil {
+		t.Fatal("old launcher must be cleaned up")
+	}
+
+	// Second check on the fresh bytes: up to date, no restart.
+	status, restart = checkLauncherUpdateAt(exePath, dir, srvBase(srv))
+	if restart {
+		t.Fatal("a matching digest must not restart")
+	}
+	if !strings.Contains(status, "up to date") {
+		t.Fatalf("unexpected status: %q", status)
+	}
+}
+
+func TestLauncherSelfUpdateKeepsCurrentOnChecksumFailure(t *testing.T) {
+	dir := t.TempDir()
+	exePath := filepath.Join(dir, "Nirnside.exe")
+	if err := os.WriteFile(exePath, []byte("old-launcher"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/releases/latest") {
+			// The published digest does not match what we actually serve.
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"assets": []map[string]string{{
+					"name":                 "Nirnside.exe",
+					"digest":               "sha256:" + strings.Repeat("00", 32),
+					"browser_download_url": srvBase(srv) + "/download/Nirnside.exe",
+				}},
+			})
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "Nirnside.exe") {
+			_, _ = w.Write([]byte("tampered"))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	status, restart := checkLauncherUpdateAt(exePath, dir, srvBase(srv))
+	if restart {
+		t.Fatal("an unverified download must never restart")
+	}
+	if !strings.Contains(status, "checksum") {
+		t.Fatalf("unexpected status: %q", status)
+	}
+	got, _ := os.ReadFile(exePath)
+	if string(got) != "old-launcher" {
+		t.Fatal("the current launcher must be kept on checksum failure")
+	}
+}
+
+func TestSyncLauncherIntoInstall(t *testing.T) {
+	dir := t.TempDir()
+	freshExe := filepath.Join(dir, "Downloaded", "Nirnside.exe")
+	if err := os.MkdirAll(filepath.Dir(freshExe), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(freshExe, []byte("fresh-launcher"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// No install exe yet: nothing to do (fresh install flow owns that).
+	if syncLauncherIntoInstallAt(freshExe, dir) {
+		t.Fatal("no install exe yet means nothing to sync")
+	}
+
+	// An install with an older launcher: the fresh one is copied in.
+	if err := os.WriteFile(filepath.Join(dir, "Nirnside.exe"), []byte("old-launcher"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if !syncLauncherIntoInstallAt(freshExe, dir) {
+		t.Fatal("a differing install launcher must be replaced")
+	}
+	got, _ := os.ReadFile(filepath.Join(dir, "Nirnside.exe"))
+	if string(got) != "fresh-launcher" {
+		t.Fatalf("install should now hold the fresh launcher, got %q", string(got))
+	}
+
+	// Same bytes already in place: no copy, no error.
+	if syncLauncherIntoInstallAt(freshExe, dir) {
+		t.Fatal("an identical install launcher must not be re-copied")
+	}
+}
+
+func srvBase(srv *httptest.Server) string {
+	return "http://" + srv.Listener.Addr().String()
 }
