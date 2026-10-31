@@ -1,9 +1,10 @@
 import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { overlayCopy, shouldSkip, wouldDowngrade } from "./self-update.mjs";
+import { overlayCopy, runSelfUpdate, shouldSkip, wouldDowngrade } from "./self-update.mjs";
 
 describe("self-update overlay", () => {
   it("skips account data and incoming lua", () => {
@@ -59,5 +60,63 @@ describe("self-update overlay", () => {
     assert.ok(wouldDowngrade(from, to));
     rmSync(from, { recursive: true, force: true });
     rmSync(to, { recursive: true, force: true });
+  });
+});
+
+function gitAvailable() {
+  return spawnSync("git", ["--version"], { encoding: "utf8" }).status === 0;
+}
+
+/** A throwaway remote + clone pair wired for the git update path. */
+function gitFixture(base) {
+  const remote = join(base, "remote");
+  const root = join(base, "root");
+  mkdirSync(remote, { recursive: true });
+  const g = (cwd, args) =>
+    spawnSync("git", ["-c", "user.email=test@test", "-c", "user.name=test", ...args], {
+      cwd,
+      encoding: "utf8",
+    });
+  g(remote, ["init", "-q"]);
+  g(remote, ["symbolic-ref", "HEAD", "refs/heads/main"]);
+  writeFileSync(join(remote, "src.txt"), "one\n");
+  g(remote, ["add", "."]);
+  g(remote, ["commit", "-q", "-m", "one"]);
+  const clone = spawnSync("git", ["clone", "-q", remote, root], { encoding: "utf8" });
+  assert.equal(clone.status, 0, clone.stderr || "clone failed");
+  return { remote, root, g };
+}
+
+describe("self-update git path", () => {
+  it("forces a rebuild after a git pull changes HEAD", async (t) => {
+    if (!gitAvailable()) return t.skip("git is not installed");
+    const base = join(tmpdir(), `nirnside-git-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const { remote, root, g } = gitFixture(base);
+    // A previous build must not trick the launcher into skipping the rebuild.
+    mkdirSync(join(root, ".next"), { recursive: true });
+    writeFileSync(join(root, ".next", "BUILD_ID"), "stale\n");
+
+    writeFileSync(join(remote, "src.txt"), "two\n");
+    g(remote, ["add", "."]);
+    g(remote, ["commit", "-q", "-m", "two"]);
+
+    const code = await runSelfUpdate(root);
+    assert.equal(code, 2, "an updated clone asks for a restart");
+    assert.equal(readFileSync(join(root, "src.txt"), "utf8"), "two\n");
+    assert.equal(readFileSync(join(root, ".nirnside-need-build"), "utf8").trim(), "1");
+
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it("does not force a rebuild when the clone is already up to date", async (t) => {
+    if (!gitAvailable()) return t.skip("git is not installed");
+    const base = join(tmpdir(), `nirnside-git-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const { root } = gitFixture(base);
+
+    const code = await runSelfUpdate(root);
+    assert.equal(code, 0, "nothing to update");
+    assert.equal(existsSync(join(root, ".nirnside-need-build")), false);
+
+    rmSync(base, { recursive: true, force: true });
   });
 });
