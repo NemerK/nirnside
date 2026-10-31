@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearLoadingRetry } from "./loading-recovery";
 import { NirnsideMark } from "./nirnside-mark";
+import { NirnsideSettings } from "./nirnside-settings";
+import type { ModuleDef } from "@/lib/modules";
 import {
   Backpack,
   BookMarked,
@@ -15,6 +17,7 @@ import {
   Home,
   Landmark,
   Library,
+  ListChecks,
   Menu,
   Search,
   Shirt,
@@ -35,6 +38,7 @@ export interface ShellAccount {
 const NAV = [
   { href: "/", label: "Home", icon: Home, exact: true },
   { href: "/focus", label: "Focus", icon: Crosshair },
+  { href: "/planner", label: "Planner", icon: ListChecks },
   { href: "/characters", label: "Characters", icon: Users },
   { href: "/inventory", label: "Inventory", icon: Backpack },
   { href: "/stickerbook", label: "Stickerbook", icon: BookMarked },
@@ -112,11 +116,14 @@ function SearchBox({ onSubmit }: { onSubmit?: () => void }) {
 export function AppShell({
   account,
   hiddenModules,
+  modules,
   children,
 }: {
   account: ShellAccount | null;
   /** Module ids the player turned off in Setup. Hidden from the sidebar only. */
   hiddenModules?: string[];
+  /** The toggleable module registry, for the settings modal. */
+  modules?: ModuleDef[];
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -134,7 +141,10 @@ export function AppShell({
         </div>
         <NavLinks hiddenModules={hiddenModules} />
         <div className="mt-auto space-y-3 px-1 pt-4">
-          <ThemeToggle />
+          <div className="flex items-center justify-between gap-2">
+            <ThemeToggle />
+            <NirnsideSettings modules={modules ?? []} hiddenModules={hiddenModules ?? []} compact />
+          </div>
           <p className="text-xs leading-relaxed text-fg-subtle">
             Local &amp; private. Your data never leaves this machine.
           </p>
@@ -158,8 +168,9 @@ export function AppShell({
             <SearchBox onSubmit={() => setOpen(false)} />
           </div>
           <NavLinks hiddenModules={hiddenModules} onNavigate={() => setOpen(false)} />
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <ThemeToggle />
+            <NirnsideSettings modules={modules ?? []} hiddenModules={hiddenModules ?? []} />
           </div>
         </div>
       )}

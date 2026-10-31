@@ -27,6 +27,12 @@ export const TOGGLEABLE_MODULES: ModuleDef[] = [
     description: "Pick a character and what you care about right now — skills, crafting, scribing, knowledge, goals.",
   },
   {
+    id: "planner",
+    label: "Planner",
+    href: "/planner",
+    description: "Set essential, optional and completionist targets for the account, a role, a class, or one character.",
+  },
+  {
     id: "characters",
     label: "Characters",
     href: "/characters",

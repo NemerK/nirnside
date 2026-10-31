@@ -4,7 +4,7 @@ import "./globals.css";
 import { ThemeProvider, themeScript } from "@/components/theme-provider";
 import { AppShell, type ShellAccount } from "@/components/app-shell";
 import { getAccount } from "@/lib/db/queries";
-import { getDisabledModules } from "@/lib/modules";
+import { getDisabledModules, TOGGLEABLE_MODULES } from "@/lib/modules";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -52,7 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="h-full overflow-hidden">
         <ThemeProvider>
-          <AppShell account={account} hiddenModules={hiddenModules}>
+          <AppShell account={account} hiddenModules={hiddenModules} modules={TOGGLEABLE_MODULES}>
             {children}
           </AppShell>
         </ThemeProvider>
