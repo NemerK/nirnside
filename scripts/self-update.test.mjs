@@ -121,6 +121,26 @@ describe("self-update git path", () => {
 
     rmSync(base, { recursive: true, force: true });
   });
+
+  it("heals a locally-modified clone that would block the pull", async (t) => {
+    if (!gitAvailable()) return t.skip("git is not installed");
+    const base = join(tmpdir(), `nirnside-git-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const { remote, root, g } = gitFixture(base);
+
+    // A tracked file the incoming commit also touches, modified locally —
+    // exactly the state that makes "git pull --ff-only" refuse forever.
+    writeFileSync(join(root, "src.txt"), "local-edit\n");
+    writeFileSync(join(remote, "src.txt"), "two\n");
+    g(remote, ["add", "."]);
+    g(remote, ["commit", "-q", "-m", "two"]);
+
+    const code = await runSelfUpdate(root);
+    assert.equal(code, 2, "the healed clone must still count as updated");
+    assert.equal(readFileSync(join(root, "src.txt"), "utf8"), "two\n", "remote content must win");
+    assert.equal(readFileSync(join(root, ".nirnside-need-build"), "utf8").trim(), "1");
+
+    rmSync(base, { recursive: true, force: true });
+  });
 });
 
 function sha256(buf) {
