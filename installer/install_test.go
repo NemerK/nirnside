@@ -415,8 +415,7 @@ func TestLauncherSelfUpdateKeepsCurrentOnChecksumFailure(t *testing.T) {
 	}
 }
 
-func TestSyncLauncherIntoInstall(t *testing.T) {
-	dir := t.TempDir()
+func TestSyncLauncherIntoInstall(t *testing.T) {	dir := t.TempDir()
 	freshExe := filepath.Join(dir, "Downloaded", "Nirnside.exe")
 	if err := os.MkdirAll(filepath.Dir(freshExe), 0o755); err != nil {
 		t.Fatal(err)
@@ -450,4 +449,25 @@ func TestSyncLauncherIntoInstall(t *testing.T) {
 
 func srvBase(srv *httptest.Server) string {
 	return "http://" + srv.Listener.Addr().String()
+}
+
+func TestCleanupSwapArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"Nirnside.exe.old", "Nirnside.exe.new"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("leftover"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "Nirnside.exe"), []byte("current"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cleanupSwapArtifacts(dir)
+	for _, name := range []string{"Nirnside.exe.old", "Nirnside.exe.new"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			t.Fatalf("%s should be removed on startup", name)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "Nirnside.exe")); err != nil {
+		t.Fatal("the current launcher must never be touched")
+	}
 }

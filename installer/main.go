@@ -26,7 +26,11 @@ func main() {
 
 	exe, _ := os.Executable()
 	exeDir := filepath.Dir(exe)
+	cleanupSwapArtifacts(exeDir)
 	existing := detectExistingRoot(exeDir)
+	if existing != "" && existing != exeDir {
+		cleanupSwapArtifacts(existing)
+	}
 
 	// ---- Launcher layer: keep the launcher itself current, independently of
 	// the app. Runs before everything else and can never block startup.

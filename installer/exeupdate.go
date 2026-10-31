@@ -164,6 +164,18 @@ func syncLauncherIntoInstallAt(exePath, root string) (copied bool) {
 }
 
 /**
+ * Sweep leftover self-update artifacts. The swap that updates a running exe
+ * renames it to Nirnside.exe.old; Windows refuses to delete the image of a
+ * running process, so the file could only linger until now. Also removes
+ * aborted .new downloads. Best effort — locked files are simply retried next
+ * start.
+ */
+func cleanupSwapArtifacts(dir string) {
+	_ = os.Remove(filepath.Join(dir, "Nirnside.exe.old"))
+	_ = os.Remove(filepath.Join(dir, "Nirnside.exe.new"))
+}
+
+/**
  * After an in-place swap, hand over to the fresh launcher immediately. Safe at
  * this point in startup: nothing is assigned to the job object yet, so exiting
  * the old process cannot kill the new one, and the console window carries over.
