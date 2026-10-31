@@ -25,7 +25,7 @@ jobs:
         working-directory: installer
         run: |
           mkdir -p ../dist
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w" -o ../dist/Nirnside.exe .
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.launcherCommit=$(git rev-parse --short HEAD)" -o ../dist/Nirnside.exe .
       - name: Zip (no node_modules, no account data)
         run: |
           mkdir -p dist

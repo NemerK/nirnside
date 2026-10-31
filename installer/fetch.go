@@ -117,13 +117,18 @@ func copySelf(dest string) error {
 	if err != nil {
 		return err
 	}
+	return copySelfFrom(exe, dest)
+}
+
+/** Copy a launcher binary into an install folder (not over itself). */
+func copySelfFrom(exePath, dest string) error {
 	target := filepath.Join(dest, "Nirnside.exe")
-	absExe, _ := filepath.Abs(exe)
+	absExe, _ := filepath.Abs(exePath)
 	absTarget, _ := filepath.Abs(target)
 	if strings.EqualFold(absExe, absTarget) {
 		return nil
 	}
-	in, err := os.Open(exe)
+	in, err := os.Open(exePath)
 	if err != nil {
 		return err
 	}

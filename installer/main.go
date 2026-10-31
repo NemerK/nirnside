@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -21,9 +22,32 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Println(launcherBanner())
+
 	exe, _ := os.Executable()
 	exeDir := filepath.Dir(exe)
 	existing := detectExistingRoot(exeDir)
+
+	// ---- Launcher layer: keep the launcher itself current, independently of
+	// the app. Runs before everything else and can never block startup.
+	if os.Getenv("NIRNSIDE_SKIP_UPDATE") != "1" && os.Getenv("NIRNSIDE_LAUNCHER_CHECKED") != "1" {
+		launcherRoot := existing
+		if launcherRoot == "" {
+			launcherRoot = exeDir
+		}
+		status, restart := checkLauncherUpdate(launcherRoot, "https://api.github.com")
+		if status != "" {
+			fmt.Println("[launcher]", status)
+		}
+		if restart {
+			restartLauncher(exe, os.Args[1:]...)
+		}
+	}
+
+	if existing != "" {
+		syncLauncherIntoInstall(existing)
+	}
+
 	holdJobForChildren()
 
 	// Already-running app: nothing to install or update (launchExisting skips
@@ -61,7 +85,9 @@ func main() {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		data, _ := fs.ReadFile(wizardFS, "wizard.html")
-		_, _ = w.Write(data)
+		page := strings.ReplaceAll(string(data), "{{LAUNCHER_VERSION}}", launcherVersion)
+		page = strings.ReplaceAll(page, "{{LAUNCHER_COMMIT}}", launcherCommit)
+		_, _ = w.Write([]byte(page))
 	})
 	mux.HandleFunc("/api/defaults", in.handleDefaults)
 	mux.HandleFunc("/api/state", in.handleState)
