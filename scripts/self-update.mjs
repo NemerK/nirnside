@@ -226,6 +226,9 @@ async function updateFromGit(root) {
   });
   if (before && after && before !== after) {
     log(`Updated ${before.slice(0, 7)} → ${after.slice(0, 7)}.`);
+    // The launcher only rebuilds when this marker exists. Without it, a git
+    // pull fetched new code but kept serving the stale .next build.
+    writeFileSync(join(root, ".nirnside-need-build"), "1\n");
     markRestart(root);
     return 2;
   }
