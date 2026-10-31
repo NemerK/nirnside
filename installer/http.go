@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type jobState struct {
@@ -21,10 +22,11 @@ type jobState struct {
 }
 
 type installer struct {
-	mu     sync.Mutex
-	state  jobState
-	busy   bool
-	client *http.Client
+	mu       sync.Mutex
+	state    jobState
+	busy     bool
+	client   *http.Client
+	lastPoll int64 // unix ms of the last /api/state poll from the wizard page
 }
 
 func newInstaller() *installer {
@@ -68,8 +70,19 @@ type installReq struct {
 }
 
 func (in *installer) handleState(w http.ResponseWriter, _ *http.Request) {
+	in.mu.Lock()
+	in.lastPoll = time.Now().UnixMilli()
+	in.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(in.snapshot())
+}
+
+// True when the wizard tab is open and polling — meaning it will navigate
+// itself to the app when the install turns ready, so nothing else should.
+func (in *installer) wizardWatching() bool {
+	in.mu.Lock()
+	defer in.mu.Unlock()
+	return in.lastPoll != 0 && time.Now().UnixMilli()-in.lastPoll < 3_000
 }
 
 func (in *installer) handleDefaults(w http.ResponseWriter, _ *http.Request) {

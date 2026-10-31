@@ -26,6 +26,16 @@ func main() {
 	existing := detectExistingRoot(exeDir)
 	holdJobForChildren()
 
+	// Already-running app: nothing to install or update (launchExisting skips
+	// all of that too), so no wizard is needed. Opening the wizard here used to
+	// leave a second Nirnside tab behind on every double-click.
+	if existing != "" && appAlreadyUp() {
+		fmt.Println("Nirnside")
+		fmt.Println("Already running — opening", appURL())
+		_ = openURL(appURL())
+		select {}
+	}
+
 	in := newInstaller()
 	if existing != "" {
 		in.set(func(s *jobState) {

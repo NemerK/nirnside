@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider, themeScript } from "@/components/theme-provider";
 import { AppShell, type ShellAccount } from "@/components/app-shell";
 import { getAccount } from "@/lib/db/queries";
+import { getDisabledModules, TOGGLEABLE_MODULES } from "@/lib/modules";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   let account: ShellAccount | null = null;
+  let hiddenModules: string[] = [];
   try {
     const a = getAccount();
     if (a) {
@@ -28,6 +30,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     }
   } catch {
     account = null;
+  }
+  try {
+    hiddenModules = getDisabledModules();
+  } catch {
+    hiddenModules = [];
   }
 
   return (
@@ -45,7 +52,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="h-full overflow-hidden">
         <ThemeProvider>
-          <AppShell account={account}>{children}</AppShell>
+          <AppShell account={account} hiddenModules={hiddenModules} modules={TOGGLEABLE_MODULES}>
+            {children}
+          </AppShell>
         </ThemeProvider>
       </body>
     </html>

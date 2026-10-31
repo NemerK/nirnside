@@ -101,6 +101,17 @@ func createShortcuts(dest string) error {
 	}
 	desktop := filepath.Join(os.Getenv("USERPROFILE"), "Desktop", "Nirnside.lnk")
 	startMenu := filepath.Join(os.Getenv("APPDATA"), "Microsoft", "Windows", "Start Menu", "Programs", "Nirnside.lnk")
+	// The exe carries its own icon, but the shortcut can also fall back to
+	// targeting start-nirnside.cmd — pin the .ico so the tile never shows the
+	// generic cmd icon.
+	ico := ""
+	if _, err := os.Stat(filepath.Join(dest, "nirnside.ico")); err == nil {
+		ico = filepath.Join(dest, "nirnside.ico")
+	}
+	iconLine := ""
+	if ico != "" {
+		iconLine = "  $s.IconLocation = '" + psQuote(ico) + ",0'\n"
+	}
 	ps := fmt.Sprintf(`
 $ws = New-Object -ComObject WScript.Shell
 foreach ($p in @('%s','%s')) {
@@ -109,9 +120,9 @@ foreach ($p in @('%s','%s')) {
   $s.WorkingDirectory = '%s'
   $s.WindowStyle = 1
   $s.Description = 'Nirnside — your ESO account, on this PC'
-  $s.Save()
+%s  $s.Save()
 }
-`, psQuote(desktop), psQuote(startMenu), psQuote(exe), psQuote(dest))
+`, psQuote(desktop), psQuote(startMenu), psQuote(exe), psQuote(dest), iconLine)
 	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps)
 	hideWindow(cmd)
 	out, err := cmd.CombinedOutput()
