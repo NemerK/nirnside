@@ -67,7 +67,7 @@ export default function PlannerPage() {
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Planner"
-        subtitle="Set what every character, role, or class must have — essential first, optional and completionist after. Progress reads straight from your last snapshot; nothing is guessed."
+        subtitle="Search what you want your account, a role, a class, or one character to have — pick how much it matters, and the planner tracks the rest from your snapshots."
       />
       <PlannerBoard choices={choices} cards={cards} />
     </div>

@@ -2,50 +2,31 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, Search } from "lucide-react";
-import type { GoalDomain, GoalScope, GoalTier } from "@/lib/goals/types";
+import {
+  ChevronDown,
+  Loader2,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
+import type { Goal, GoalTier } from "@/lib/goals/types";
 import { TIERS, TIER_LABEL } from "@/lib/goals/types";
-import type { GoalCardView } from "@/lib/goals/views";
-import { Badge, Card, SectionTitle } from "./ui";
-import { GoalCard } from "./goal-card";
+import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
+import { Badge, Card, ProgressBar } from "./ui";
+import { GoalMark } from "./goal-mark";
 
 /**
- * The Planner: compose tiered targets (skill lines, abilities, scribing
- * scripts) for the account, a role, a class, or one character — then watch
- * per-character progress. All progress arrives precomputed from the server;
- * this component only composes new targets.
+ * The Planner, built around what you want to do rather than the data model:
+ *
+ * - One search box adds anything (a line, an ability, a script). Pick who it
+ *   applies to and how much it matters, done.
+ * - Presets do the common bulk intents in one click.
+ * - "Next up" answers the real question: what's left on the toon I'm playing?
+ * - Targets are grouped by tier — Essential first — as compact rows with
+ *   inline progress; per-character detail only expands when asked for.
  */
-
-const DOMAINS: { id: GoalDomain; label: string; hint: string }[] = [
-  { id: "skillline", label: "Skill lines", hint: "Line ranks — Assault 7, Heavy Armor 50, a class line to 50…" },
-  { id: "ability", label: "Abilities", hint: "Exact abilities or morphs every target character must own." },
-  { id: "script", label: "Scribing", hint: "Scripts every target character must know." },
-];
-
-const SCOPES: { id: GoalScope; label: string }[] = [
-  { id: "account", label: "Account" },
-  { id: "role", label: "Role" },
-  { id: "class", label: "Class" },
-  { id: "character", label: "Character" },
-];
-
-const TIER_HINT: Record<GoalTier, string> = {
-  essential: "Must-have. The stuff you actually need.",
-  optional: "Nice to have, no rush.",
-  completionist: "Have it just to have it — the long grind.",
-};
-
-const TIER_TONE: Record<GoalTier, "accent" | "muted" | "ok"> = {
-  essential: "accent",
-  optional: "muted",
-  completionist: "ok",
-};
-
-const DOMAIN_LABEL: Record<GoalDomain, string> = {
-  skillline: "Skill lines",
-  ability: "Abilities",
-  script: "Scribing",
-};
 
 export interface PlannerChoices {
   lines: { name: string; category: string; className: string | null }[];
@@ -56,6 +37,24 @@ export interface PlannerChoices {
   characters: { id: string; name: string; className: string }[];
 }
 
+interface SearchHit {
+  domain: "skillline" | "ability" | "script";
+  name: string;
+  hint: string;
+}
+
+const TIER_TONE: Record<GoalTier, "accent" | "muted" | "ok"> = {
+  essential: "accent",
+  optional: "muted",
+  completionist: "ok",
+};
+
+const DOMAIN_SHORT: Record<Goal["domain"], string> = {
+  skillline: "line",
+  ability: "ability",
+  script: "script",
+};
+
 export function PlannerBoard({
   choices,
   cards,
@@ -64,89 +63,66 @@ export function PlannerBoard({
   cards: GoalCardView[];
 }) {
   const router = useRouter();
-  const [domain, setDomain] = useState<GoalDomain>("skillline");
-  const [tier, setTier] = useState<GoalTier>("essential");
-  const [scope, setScope] = useState<GoalScope>("account");
+
+  // ---- Composer state (one search → one popover, not a form) ----
+  const [query, setQuery] = useState("");
+  const [picking, setPicking] = useState<SearchHit | null>(null);
+  const [scope, setScope] = useState<"account" | "role" | "class" | "character">("account");
   const [scopeKey, setScopeKey] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [tier, setTier] = useState<GoalTier>("essential");
   const [rank, setRank] = useState(50);
-  const [note, setNote] = useState("");
-  const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sharedLines = useMemo(
-    () => choices.lines.filter((l) => l.category.toLowerCase() !== "class"),
-    [choices.lines],
-  );
-  const classLines = useMemo(
-    () => choices.lines.filter((l) => l.category.toLowerCase() === "class"),
-    [choices.lines],
-  );
+  // ---- View state ----
+  const [charFilter, setCharFilter] = useState(""); // "" = everyone view
+  const [domainFilter, setDomainFilter] = useState<"all" | Goal["domain"]>("all");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [confirmClear, setConfirmClear] = useState(false);
 
-  const abilityMatches = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const list = q ? choices.abilities.filter((a) => a.name.toLowerCase().includes(q)) : choices.abilities.slice(0, 40);
-    return list.slice(0, 60);
-  }, [choices.abilities, search]);
+  const hits = useMemo<SearchHit[]>(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const out: SearchHit[] = [];
+    for (const l of choices.lines) {
+      if (l.name.toLowerCase().includes(q))
+        out.push({ domain: "skillline", name: l.name, hint: l.category + (l.className ? ` · ${l.className}` : "") });
+    }
+    for (const a of choices.abilities) {
+      if (a.name.toLowerCase().includes(q))
+        out.push({ domain: "ability", name: a.name, hint: a.lineName + (a.className ? ` · ${a.className}` : "") });
+    }
+    for (const s of choices.scripts) {
+      if (s.name.toLowerCase().includes(q)) out.push({ domain: "script", name: s.name, hint: `${s.slot} script` });
+    }
+    return out.slice(0, 12);
+  }, [query, choices]);
 
-  function toggle(name: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
-  }
+  const scopeLabel = (goal: Goal): string => {
+    if (goal.scope === "account") return "Everyone";
+    if (goal.scope === "class") return goal.scopeKey ?? "";
+    if (goal.scope === "character")
+      return choices.characters.find((c) => c.id === goal.characterId)?.name ?? "One character";
+    return choices.roles.find((r) => r.id === goal.scopeKey)?.name ?? "role";
+  };
 
-  function selectShared(which: "weapon-armor" | "all") {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const l of sharedLines) {
-        const cat = l.category.toLowerCase();
-        if (which === "weapon-armor" ? cat === "weapon" || cat === "armor" : true) {
-          next.add(l.name);
-        }
-      }
-      return next;
-    });
-    setRank(50);
-  }
-
-  async function submit() {
-    if (busy || selected.size === 0) return;
+  async function post(body: Record<string, unknown>, onDone?: () => void) {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/goals", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          domain,
-          tier,
-          scope,
-          characterId: scope === "character" ? scopeKey : null,
-          scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
-          targets: [...selected],
-          targetRank: domain === "skillline" ? rank : 0,
-          note,
-        }),
+        body: JSON.stringify(body),
       });
       const json = (await res.json()) as { error?: string; created?: string[] };
       if (!res.ok) {
-        if (json.created && json.created.length > 0) {
-          setError(`${json.created.length} saved, then: ${json.error}`);
-          setSelected(new Set());
-          setNote("");
-          router.refresh();
-        } else {
-          setError(json.error ?? "Could not save targets.");
-        }
-        return;
+        setError(json.created?.length ? `${json.created.length} saved, then: ${json.error}` : json.error ?? "Could not save.");
+        router.refresh();
+      } else {
+        onDone?.();
+        router.refresh();
       }
-      setSelected(new Set());
-      setNote("");
-      router.refresh();
     } catch {
       setError("Request failed.");
     } finally {
@@ -154,375 +130,572 @@ export function PlannerBoard({
     }
   }
 
-  const scopeNeedsKey = scope === "role" || scope === "class" || scope === "character";
-  const canSubmit =
-    selected.size > 0 && (!scopeNeedsKey || scopeKey.trim().length > 0) && (domain !== "skillline" || rank >= 1);
+  async function addPicked() {
+    if (!picking) return;
+    await post(
+      {
+        domain: picking.domain,
+        tier,
+        scope,
+        characterId: scope === "character" ? scopeKey : null,
+        scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
+        targets: [picking.name],
+        targetRank: picking.domain === "skillline" ? rank : 0,
+      },
+      () => {
+        setPicking(null);
+        setQuery("");
+      },
+    );
+  }
 
-  const scopeBlocked =
-    scope === "role" && choices.roles.length === 0
-      ? "No roles yet — create them on a character page (Tank, Healer…), then role targets appear here."
-      : null;
+  async function preset(targets: string[], presetTier: GoalTier, presetDomain: Goal["domain"], label: string) {
+    if (busy || targets.length === 0) return;
+    await post({ domain: presetDomain, tier: presetTier, scope: "account", targets, targetRank: 50, note: label });
+  }
 
-  const byDomainTier = useMemo(() => {
-    const groups: { domain: GoalDomain; tiers: { tier: GoalTier; cards: GoalCardView[] }[] }[] = [];
-    for (const d of DOMAINS.map((x) => x.id)) {
-      const forDomain = cards.filter((c) => c.goal.domain === d);
-      if (forDomain.length === 0) continue;
-      const tiers = TIERS.map((t) => ({ tier: t, cards: forDomain.filter((c) => c.goal.tier === t) })).filter(
-        (t) => t.cards.length > 0,
-      );
-      if (tiers.length > 0) groups.push({ domain: d, tiers });
+  const weaponArmor = useMemo(
+    () =>
+      choices.lines
+        .filter((l) => ["weapon", "armor"].includes(l.category.toLowerCase()))
+        .map((l) => l.name),
+    [choices.lines],
+  );
+  const sharedLines = useMemo(
+    () => choices.lines.filter((l) => l.category.toLowerCase() !== "class").map((l) => l.name),
+    [choices.lines],
+  );
+
+  // ---- The character view: what's left on this toon ----
+  const nextUp = useMemo(() => {
+    if (!charFilter) return [];
+    const out: { goal: Goal; mark: GoalMarkView }[] = [];
+    for (const card of cards) {
+      const row = card.rows.find((r) => r.id === charFilter);
+      if (row && row.mark.state !== "done" && row.mark.state !== "notapplicable") {
+        out.push({ goal: card.goal, mark: row.mark });
+      }
     }
-    return groups;
-  }, [cards]);
+    return out.sort(
+      (a, b) => TIERS.indexOf(a.goal.tier) - TIERS.indexOf(b.goal.tier) || a.goal.target.localeCompare(b.goal.target),
+    );
+  }, [cards, charFilter]);
+
+  const doneCount = useMemo(() => {
+    if (!charFilter) return 0;
+    return cards.filter((c) => c.rows.find((r) => r.id === charFilter)?.mark.state === "done").length;
+  }, [cards, charFilter]);
+
+  function visibleCards(list: GoalCardView[]): GoalCardView[] {
+    let out = list;
+    if (domainFilter !== "all") out = out.filter((c) => c.goal.domain === domainFilter);
+    if (charFilter) out = out.filter((c) => c.rows.some((r) => r.id === charFilter));
+    return out;
+  }
+
+  async function removeGoal(id: string) {
+    setBusy(true);
+    try {
+      await fetch(`/api/goals/${encodeURIComponent(id)}`, { method: "DELETE" });
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changeTier(goal: Goal, next: GoalTier) {
+    setBusy(true);
+    try {
+      await fetch(`/api/goals/${encodeURIComponent(goal.id)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tier: next }),
+      });
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div>
-      {/* ---------- Composer ---------- */}
-      <Card className="mb-6 p-5">
-        <SectionTitle>Set a target</SectionTitle>
-
-        <div className="mb-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">What</div>
-          <Segmented
-            options={DOMAINS}
-            value={domain}
-            onChange={(d) => {
-              setDomain(d as GoalDomain);
-              setSelected(new Set());
+    <div className="space-y-4">
+      {/* ---------- Search-first composer ---------- */}
+      <Card className="p-4">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+          <input
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPicking(null);
             }}
+            placeholder="Add a target — search a skill line, an ability, or a scribing script…"
+            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
           />
-          <p className="mt-1.5 text-xs text-fg-subtle">{DOMAINS.find((d) => d.id === domain)?.hint}</p>
-        </div>
-
-        <div className="mb-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Who</div>
-          <Segmented
-            options={SCOPES.map((s) => ({ id: s.id, label: s.label, hidden: s.id === "class" && domain === "script" }))}
-            value={scope}
-            onChange={(s) => {
-              setScope(s as GoalScope);
-              setScopeKey("");
-            }}
-          />
-          {scopeBlocked && <p className="mt-1.5 text-xs text-accent">{scopeBlocked}</p>}
-          {scopeNeedsKey && !scopeBlocked && (
-            <select
-              value={scopeKey}
-              onChange={(e) => setScopeKey(e.target.value)}
-              className="mt-2 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setPicking(null);
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-fg-subtle hover:text-fg"
+              aria-label="Clear search"
             >
-              <option value="">
-                {scope === "role" ? "Pick a role…" : scope === "class" ? "Pick a class…" : "Pick a character…"}
-              </option>
-              {scope === "role" &&
-                choices.roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              {scope === "class" && choices.classes.map((c) => <option key={c} value={c}>{c}</option>)}
-              {scope === "character" &&
-                choices.characters.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.className})
-                  </option>
-                ))}
-            </select>
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
-        </div>
-
-        <div className="mb-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-            How much it matters
-          </div>
-          <Segmented
-            options={TIERS.map((t) => ({ id: t, label: TIER_LABEL[t] }))}
-            value={tier}
-            onChange={(t) => setTier(t as GoalTier)}
-          />
-          <p className="mt-1.5 text-xs text-fg-subtle">{TIER_HINT[tier]}</p>
-        </div>
-
-        {domain === "skillline" && (
-          <div className="mb-4">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Skill lines</span>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => selectShared("weapon-armor")}
-                  className="rounded border border-border px-2 py-0.5 text-xs text-fg-muted hover:text-fg"
-                >
-                  Weapon + armor at 50
-                </button>
-                <button
-                  type="button"
-                  onClick={() => selectShared("all")}
-                  className="rounded border border-border px-2 py-0.5 text-xs text-fg-muted hover:text-fg"
-                >
-                  All shared lines
-                </button>
-              </div>
-            </div>
-            <div className="max-h-64 space-y-3 overflow-y-auto rounded-lg border border-border bg-surface/40 p-3">
-              <LineChips
-                title="Shared — every class can level these"
-                groups={groupLines(sharedLines)}
-                selected={selected}
-                onToggle={toggle}
-              />
-              <LineChips
-                title="Class lines — only apply to their own class"
-                groups={groupLines(classLines)}
-                selected={selected}
-                onToggle={toggle}
-              />
-            </div>
-            <label className="mt-3 block text-xs text-fg-subtle">
-              Target rank
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={rank}
-                onChange={(e) => setRank(Number(e.target.value))}
-                className="ml-2 w-20 rounded-lg border border-border bg-surface px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
-              />
-            </label>
-          </div>
-        )}
-
-        {domain === "ability" && (
-          <div className="mb-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-              Abilities and morphs
-            </div>
-            <div className="relative mb-2">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search abilities — e.g. Inner, Aggressive Warhorn, Render Soul…"
-                className="w-full rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
-              />
-            </div>
-            <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border bg-surface/40 p-3">
-              {abilityMatches.length === 0 ? (
-                <p className="text-sm text-fg-subtle">
-                  Nothing matches. Log each character out with the addon to teach Nirnside their abilities.
+          {query && !picking && (
+            <div className="absolute z-10 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-border bg-bg-elev shadow-xl">
+              {hits.length === 0 ? (
+                <p className="px-3 py-3 text-sm text-fg-subtle">
+                  Nothing matches. Lines and abilities appear as your characters log out with the addon.
                 </p>
               ) : (
-                abilityMatches.map((a) => (
-                  <Chip
-                    key={a.name}
-                    active={selected.has(a.name)}
-                    onClick={() => toggle(a.name)}
-                    title={`${a.lineName}${a.className ? ` (${a.className})` : ""}`}
-                    label={a.name}
-                    suffix={a.className ? `${a.lineName} · ${a.className}` : a.lineName}
-                  />
+                hits.map((hit) => (
+                  <button
+                    key={`${hit.domain}:${hit.name}`}
+                    type="button"
+                    onClick={() => {
+                      setPicking(hit);
+                      setTier("essential");
+                      setScope("account");
+                      setScopeKey("");
+                      setRank(hit.domain === "skillline" ? 50 : 0);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-fg">{hit.name}</span>
+                      <span className="block truncate text-xs text-fg-subtle">{hit.hint}</span>
+                    </span>
+                    <Badge tone="muted">{DOMAIN_SHORT[hit.domain]}</Badge>
+                  </button>
                 ))
               )}
             </div>
-            {selected.size > 0 && (
-              <p className="mt-2 text-xs text-fg-muted">{selected.size} ability target(s) selected</p>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
-        {domain === "script" && (
-          <div className="mb-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Scribing scripts</div>
-            <div className="max-h-64 space-y-3 overflow-y-auto rounded-lg border border-border bg-surface/40 p-3">
-              {(["focus", "signature", "affix"] as const).map((slot) => {
-                const list = choices.scripts.filter((s) => s.slot === slot);
-                if (list.length === 0) return null;
-                return (
-                  <div key={slot}>
-                    <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-                      {slot} · {list.length}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {list.map((s) => (
-                        <Chip key={s.name} active={selected.has(s.name)} onClick={() => toggle(s.name)} label={s.name} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-              {choices.scripts.length === 0 && (
-                <p className="text-sm text-fg-subtle">
-                  No scripts in the catalog yet — scan the in-game catalog to list them.
-                </p>
+        {picking && (
+          <div className="mt-3 rounded-lg border border-accent/40 bg-accent-soft/40 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium text-fg">
+                {picking.name} <span className="text-xs font-normal text-fg-subtle">{picking.hint}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setPicking(null)}
+                className="rounded p-1 text-fg-subtle hover:text-fg"
+                aria-label="Cancel"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <ScopePicker
+                choices={choices}
+                scope={scope}
+                scopeKey={scopeKey}
+                onScope={(s, k) => {
+                  setScope(s);
+                  setScopeKey(k);
+                }}
+              />
+              {picking.domain === "skillline" && (
+                <label className="text-xs text-fg-subtle">
+                  to rank
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={rank}
+                    onChange={(e) => setRank(Number(e.target.value))}
+                    className="ml-1.5 w-16 rounded border border-border bg-surface px-1.5 py-1 text-sm text-fg"
+                  />
+                </label>
               )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
+                {TIERS.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    aria-pressed={tier === t}
+                    onClick={() => setTier(t)}
+                    className={`rounded-md px-2 py-1 text-xs ${
+                      tier === t ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+                    }`}
+                  >
+                    {TIER_LABEL[t]}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={addPicked}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Add target
+              </button>
             </div>
           </div>
         )}
 
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-0 flex-1 text-xs text-fg-subtle">
-            Reason <span className="text-fg-subtle/70">(optional)</span>
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={120}
-              placeholder="e.g. trial-ready healers"
-              className="mt-1 w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={busy || !canSubmit}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            Add {selected.size > 0 ? `${selected.size} target${selected.size === 1 ? "" : "s"}` : "target"}
-          </button>
+        {/* Presets: the common intents, one click each */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-3">
+          <span className="mr-1 inline-flex items-center gap-1 text-xs text-fg-subtle">
+            <Sparkles className="h-3.5 w-3.5 text-accent" /> Quick add:
+          </span>
+          <PresetButton
+            label={`Weapon + armor to 50 · everyone · essential`}
+            title="Every weapon and armor line to rank 50 for every character"
+            onClick={() => preset(weaponArmor, "essential", "skillline", "weapon + armor to 50")}
+          />
+          <PresetButton
+            label={`Every shared line to 50 · completionist`}
+            title="All non-class lines to rank 50 for every character"
+            onClick={() => preset(sharedLines, "completionist", "skillline", "every shared line to 50")}
+          />
+          <PresetButton
+            label={`All scribing scripts · completionist`}
+            title="Every known catalog script for every character"
+            onClick={() => preset(
+              choices.scripts.map((s) => s.name),
+              "completionist",
+              "script",
+              "all scribing scripts",
+            )}
+          />
+          {cards.length > 0 &&
+            (confirmClear ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  setConfirmClear(false);
+                  setBusy(true);
+                  try {
+                    for (const c of cards) await fetch(`/api/goals/${encodeURIComponent(c.goal.id)}`, { method: "DELETE" });
+                  } finally {
+                    setBusy(false);
+                    router.refresh();
+                  }
+                }}
+                className="rounded-full border border-danger/50 px-3 py-1 text-xs text-danger"
+              >
+                Really remove everything? Click again
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmClear(true);
+                  setTimeout(() => setConfirmClear(false), 4000);
+                }}
+                className="rounded-full border border-border px-3 py-1 text-xs text-fg-subtle hover:text-fg"
+              >
+                Clear all targets
+              </button>
+            ))}
         </div>
         {error && <p className="mt-2 text-sm text-danger">{error}</p>}
       </Card>
 
-      {/* ---------- Targets in effect ---------- */}
+      {/* ---------- Next up: the toon I'm playing ---------- */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-fg">Next up</div>
+          <select
+            value={charFilter}
+            onChange={(e) => setCharFilter(e.target.value)}
+            className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+          >
+            <option value="">Everyone — overview</option>
+            {choices.characters.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.className})
+              </option>
+            ))}
+          </select>
+        </div>
+        {charFilter === "" ? (
+          <p className="mt-2 text-xs text-fg-subtle">
+            Pick the character you&apos;re playing and the planner tells you what&apos;s left on them — the targets below
+            re-scope to that toon too.
+          </p>
+        ) : nextUp.length === 0 ? (
+          <p className="mt-2 text-sm text-fg-muted">
+            Nothing left — every target on this character is done. {doneCount > 0 ? `(${doneCount} done)` : ""}
+          </p>
+        ) : (
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {nextUp.slice(0, 8).map(({ goal, mark }) => (
+              <li
+                key={goal.id}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs"
+              >
+                <Badge tone={TIER_TONE[goal.tier]}>{DOMAIN_SHORT[goal.domain]}</Badge>
+                <span className="text-fg">{goal.domain === "skillline" ? `${goal.target} ${goal.targetRank}` : goal.target}</span>
+                <span className="text-fg-subtle">{mark.label}</span>
+              </li>
+            ))}
+            {nextUp.length > 8 && <li className="text-xs text-fg-subtle">+{nextUp.length - 8} more below</li>}
+          </ul>
+        )}
+      </Card>
+
+      {/* ---------- Targets, organized by tier ---------- */}
       {cards.length === 0 ? (
         <Card className="px-5 py-8 text-center text-sm text-fg-muted">
-          Nothing planned yet. Set account-wide essentials above — every character is checked against them.
+          Nothing planned yet. Use a Quick add above (weapon + armor to 50 for everyone is the usual start), or search
+          for any line, ability, or script.
         </Card>
       ) : (
-        byDomainTier.map(({ domain: d, tiers }) => (
-          <section key={d} className="mb-6">
-            <SectionTitle>{DOMAIN_LABEL[d]}</SectionTitle>
-            <div className="space-y-4">
-              {tiers.map(({ tier: t, cards: tierCards }) => (
-                <div key={t}>
-                  <div className="mb-2 flex items-center gap-2">
-                    <Badge tone={TIER_TONE[t]}>{TIER_LABEL[t]}</Badge>
-                    <span className="text-xs text-fg-subtle">
-                      {tierCards.length} target{tierCards.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    {tierCards.map((card) => (
-                      <GoalCard
-                        key={card.goal.id}
-                        card={card}
-                        roles={choices.roles}
-                        onDelete={async (id) => {
-                          await fetch(`/api/goals/${encodeURIComponent(id)}`, { method: "DELETE" });
-                          router.refresh();
-                        }}
-                      />
-                    ))}
-                  </div>
+        <>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(["all", "skillline", "ability", "script"] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                aria-pressed={domainFilter === d}
+                onClick={() => setDomainFilter(d)}
+                className={`rounded-full border px-2.5 py-1 text-xs transition ${
+                  domainFilter === d
+                    ? "border-accent/60 bg-accent-soft font-medium text-accent"
+                    : "border-border text-fg-muted hover:text-fg"
+                }`}
+              >
+                {d === "all" ? "All targets" : d === "skillline" ? "Skill lines" : d === "ability" ? "Abilities" : "Scripts"}
+              </button>
+            ))}
+            {charFilter && (
+              <button
+                type="button"
+                onClick={() => setCharFilter("")}
+                className="rounded-full border border-border px-2.5 py-1 text-xs text-fg-muted hover:text-fg"
+              >
+                Showing one character · show everyone
+              </button>
+            )}
+          </div>
+
+          {TIERS.map((t) => {
+            const tierCards = visibleCards(cards.filter((c) => c.goal.tier === t));
+            if (tierCards.length === 0) return null;
+            return (
+              <section key={t}>
+                <div className="mb-1.5 flex items-center gap-2">
+                  <Badge tone={TIER_TONE[t]}>{TIER_LABEL[t]}</Badge>
+                  <span className="text-xs text-fg-subtle">{tierCards.length}</span>
                 </div>
-              ))}
-            </div>
-          </section>
-        ))
+                <Card className="divide-y divide-border overflow-hidden">
+                  {tierCards.map((card) => (
+                    <TargetRow
+                      key={card.goal.id}
+                      card={card}
+                      charFilter={charFilter}
+                      choices={choices}
+                      expanded={expanded.has(card.goal.id)}
+                      onToggle={() =>
+                        setExpanded((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(card.goal.id)) next.delete(card.goal.id);
+                          else next.add(card.goal.id);
+                          return next;
+                        })
+                      }
+                      scopeLabel={scopeLabel}
+                      onRemove={() => removeGoal(card.goal.id)}
+                      onTier={(nt) => changeTier(card.goal, nt)}
+                    />
+                  ))}
+                </Card>
+              </section>
+            );
+          })}
+
+          {visibleCards(cards).length === 0 && (
+            <Card className="px-4 py-6 text-center text-sm text-fg-muted">
+              No targets match this filter.
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function groupLines(lines: PlannerChoices["lines"]): { key: string; entries: PlannerChoices["lines"] }[] {
-  const map = new Map<string, PlannerChoices["lines"]>();
-  for (const l of lines) {
-    const key = l.className ?? l.category;
-    const arr = map.get(key);
-    if (arr) arr.push(l);
-    else map.set(key, [l]);
-  }
-  return [...map.entries()].map(([key, entries]) => ({ key, entries }));
-}
-
-function LineChips({
-  title,
-  groups,
-  selected,
+/** One target as a compact row: title, scope, progress; detail expands on demand. */
+function TargetRow({
+  card,
+  charFilter,
+  choices,
+  expanded,
   onToggle,
+  scopeLabel,
+  onRemove,
+  onTier,
 }: {
-  title: string;
-  groups: { key: string; entries: PlannerChoices["lines"] }[];
-  selected: Set<string>;
-  onToggle: (name: string) => void;
+  card: GoalCardView;
+  charFilter: string;
+  choices: PlannerChoices;
+  expanded: boolean;
+  onToggle: () => void;
+  scopeLabel: (goal: Goal) => string;
+  onRemove: () => void;
+  onTier: (tier: GoalTier) => void;
 }) {
-  if (groups.length === 0) return null;
+  const { goal } = card;
+  const title = goal.domain === "skillline" ? `${goal.target} ${goal.targetRank}` : goal.target;
+  const charRow = charFilter ? card.rows.find((r) => r.id === charFilter) : undefined;
+
   return (
     <div>
-      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{title}</div>
-      <div className="space-y-2">
-        {groups.map((g) => (
-          <div key={g.key}>
-            <div className="mb-1 text-[11px] uppercase tracking-wider text-fg-subtle/80">{g.key}</div>
-            <div className="flex flex-wrap gap-1.5">
-              {g.entries.map((l) => (
-                <Chip key={l.name} active={selected.has(l.name)} onClick={() => onToggle(l.name)} label={l.name} />
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5">
+        <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <ChevronDown className={`h-4 w-4 shrink-0 text-accent transition-transform ${expanded ? "" : "-rotate-90"}`} />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium text-fg">
+              {title} <span className="font-normal text-fg-subtle">· {scopeLabel(goal)}</span>
+            </span>
+            {goal.note ? <span className="block truncate text-xs text-fg-subtle">{goal.note}</span> : null}
+          </span>
+        </button>
+
+        {charRow ? (
+          <GoalMark mark={charRow.mark} />
+        ) : (
+          <span className="w-24 shrink-0">
+            <ProgressBar value={card.done} max={card.total || 1} />
+          </span>
+        )}
+        <span className="w-14 shrink-0 text-right text-xs tabular-nums text-fg-muted">
+          {charRow ? "" : `${card.done}/${card.total}`}
+        </span>
+
+        <select
+          value={goal.tier}
+          onChange={(e) => onTier(e.target.value as GoalTier)}
+          className="shrink-0 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-fg-muted"
+          aria-label="Tier"
+        >
+          {TIERS.map((t) => (
+            <option key={t} value={t}>
+              {TIER_LABEL[t]}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="shrink-0 rounded p-1 text-fg-subtle hover:text-danger"
+          aria-label={`Delete ${title}`}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
+
+      {expanded && (
+        <div className="border-t border-border/60 bg-surface/40 px-4 py-2">
+          {card.rows.length === 0 ? (
+            <p className="py-1.5 text-xs text-fg-subtle">No live character matches this target.</p>
+          ) : (
+            <ul className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
+              {card.rows.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                  <span className="min-w-0 truncate text-fg-muted">
+                    {r.name}
+                    {choices.characters.find((c) => c.id === r.id)?.className ? (
+                      <span className="ml-1 text-xs text-fg-subtle">
+                        {choices.characters.find((c) => c.id === r.id)?.className}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0">
+                    <GoalMark mark={r.mark} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {(card.unknown > 0 || card.notApplicable > 0) && (
+            <p className="pt-1.5 text-xs text-fg-subtle">
+              {card.unknown > 0 ? `${card.unknown} not scanned yet` : ""}
+              {card.unknown > 0 && card.notApplicable > 0 ? " · " : ""}
+              {card.notApplicable > 0 ? `${card.notApplicable} can never have this (other class / no curse)` : ""}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function Chip({
-  active,
-  onClick,
-  label,
-  suffix,
-  title,
+/** Who a target applies to, as a couple of compact selects. */
+function ScopePicker({
+  choices,
+  scope,
+  scopeKey,
+  onScope,
 }: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  suffix?: string;
-  title?: string;
+  choices: PlannerChoices;
+  scope: "account" | "role" | "class" | "character";
+  scopeKey: string;
+  onScope: (scope: "account" | "role" | "class" | "character", key: string) => void;
 }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-fg-subtle">
+      <span>for</span>
+      <select
+        value={scope === "account" ? "account" : scopeKey || ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === "account") onScope("account", "");
+          else if (choices.roles.some((r) => r.id === v)) onScope("role", v);
+          else if (choices.classes.includes(v)) onScope("class", v);
+          else onScope("character", v);
+        }}
+        className="rounded-lg border border-border bg-surface px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
+      >
+        <option value="account">Everyone</option>
+        {choices.roles.length > 0 && <optgroup label="Roles">
+          {choices.roles.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </optgroup>}
+        <optgroup label="Classes">
+          {choices.classes.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Characters">
+          {choices.characters.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+    </div>
+  );
+}
+
+function PresetButton({ label, title, onClick }: { label: string; title: string; onClick: () => void }) {
   return (
     <button
       type="button"
-      aria-pressed={active}
-      title={title ?? label}
+      title={title}
       onClick={onClick}
-      className={`max-w-full rounded-full border px-2.5 py-1 text-xs transition ${
-        active
-          ? "border-accent/60 bg-accent-soft font-medium text-accent"
-          : "border-border text-fg-muted hover:border-border-strong hover:text-fg"
-      }`}
+      className="rounded-full border border-accent/40 bg-accent-soft px-3 py-1 text-xs font-medium text-accent transition hover:bg-accent hover:text-accent-fg"
     >
-      <span className="truncate">{label}</span>
-      {suffix && <span className="ml-1.5 text-[10px] text-fg-subtle">{suffix}</span>}
+      {label}
     </button>
-  );
-}
-
-function Segmented({
-  options,
-  value,
-  onChange,
-}: {
-  options: { id: string; label: string; hidden?: boolean }[];
-  value: string;
-  onChange: (id: string) => void;
-}) {
-  const visible = options.filter((o) => !o.hidden);
-  return (
-    <div className="inline-flex flex-wrap gap-0.5 rounded-lg border border-border bg-surface p-0.5">
-      {visible.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          aria-pressed={value === o.id}
-          onClick={() => onChange(o.id)}
-          className={`rounded-md px-2.5 py-1.5 text-sm transition ${
-            value === o.id ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
   );
 }
