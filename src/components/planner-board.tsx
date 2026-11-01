@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import {
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Plus,
-  Search,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -62,7 +63,11 @@ export function PlannerBoard({
   // ---- Composer state: three buttons, each opens a picker modal ----
   const [composer, setComposer] = useState<Goal["domain"] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [abilityQuery, setAbilityQuery] = useState("");
+  // Abilities browse like the game: (class →) skill line → abilities.
+  const [abilityNav, setAbilityNav] = useState<{ className: string | null; lineName: string | null }>({
+    className: null,
+    lineName: null,
+  });
   const [scope, setScope] = useState<"account" | "role" | "class" | "character">("account");
   const [scopeKey, setScopeKey] = useState("");
   const [tier, setTier] = useState<GoalTier>("essential");
@@ -79,7 +84,7 @@ export function PlannerBoard({
   function openComposer(domain: Goal["domain"]) {
     setComposer(domain);
     setSelected(new Set());
-    setAbilityQuery("");
+    setAbilityNav({ className: null, lineName: null });
     setScope("account");
     setScopeKey("");
     setTier("essential");
@@ -120,11 +125,35 @@ export function PlannerBoard({
     return [...bySlot.entries()].map(([key, entries]) => ({ key, entries }));
   }, [choices]);
 
-  const abilityMatches = useMemo(() => {
-    const q = abilityQuery.trim().toLowerCase();
-    const list = q ? choices.abilities.filter((a) => a.name.toLowerCase().includes(q)) : choices.abilities;
-    return list.slice(0, 150);
-  }, [choices, abilityQuery]);
+  /** Abilities browsed like the game: class lines under their class, shared lines after. */
+  const classLineMap = useMemo(() => {
+    const m = new Map<string, PlannerChoices["lines"]>();
+    for (const l of choices.lines) {
+      if (l.category.toLowerCase() !== "class") continue;
+      const key = l.className ?? "Class";
+      const arr = m.get(key);
+      if (arr) arr.push(l);
+      else m.set(key, [l]);
+    }
+    return m;
+  }, [choices]);
+
+  const sharedLineList = useMemo(
+    () => choices.lines.filter((l) => l.category.toLowerCase() !== "class"),
+    [choices],
+  );
+
+  const lineAbilityCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of choices.abilities) {
+      const key = a.lineName.toLowerCase();
+      m.set(key, (m.get(key) ?? 0) + 1);
+    }
+    return m;
+  }, [choices.abilities]);
+
+  const abilitiesForLine = (lineName: string) =>
+    choices.abilities.filter((a) => a.lineName.toLowerCase() === lineName.toLowerCase());
 
   const scopeLabel = (goal: Goal): string => {
     if (goal.scope === "account") return "Everyone";
@@ -360,65 +389,46 @@ export function PlannerBoard({
           </div>
 
           {composer === "ability" && (
-            <div className="relative mt-3">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
-              <input
-                value={abilityQuery}
-                onChange={(e) => setAbilityQuery(e.target.value)}
-                placeholder="Filter abilities…"
-                className="w-full rounded-lg border border-border bg-surface py-1.5 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
-              />
-            </div>
+            <AbilityDrilldown
+              choices={choices}
+              nav={abilityNav}
+              onNav={setAbilityNav}
+              selected={selected}
+              onToggle={toggleSelected}
+              classLineMap={classLineMap}
+              sharedLineList={sharedLineList}
+              lineAbilityCounts={lineAbilityCounts}
+              abilitiesForLine={abilitiesForLine}
+            />
           )}
 
-          <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface/40 p-2">
-            {composer === "skillline" &&
-              lineGroups.map((group) => (
-                <GroupBlock
-                  key={group.key}
-                  title={group.key}
-                  selected={selected}
-                  entries={group.entries.map((l) => ({
-                    name: l.name,
-                    hint: l.category + (l.className ? ` · ${l.className}` : ""),
-                  }))}
-                  onToggle={toggleSelected}
-                />
-              ))}
-            {composer === "ability" &&
-              (abilityMatches.length === 0 ? (
-                <p className="px-2 py-3 text-sm text-fg-subtle">
-                  Nothing matches. Abilities appear as your characters log out with the addon.
-                </p>
-              ) : (
-                <div className="space-y-0.5">
-                  {abilityMatches.map((a) => (
-                    <PickerRow
-                      key={a.name}
-                      name={a.name}
-                      hint={a.lineName + (a.className ? ` · ${a.className}` : "")}
-                      checked={selected.has(a.name)}
-                      onToggle={() => toggleSelected(a.name)}
-                    />
-                  ))}
-                  {choices.abilities.length > abilityMatches.length && (
-                    <p className="px-2 pt-1 text-xs text-fg-subtle">
-                      Showing {abilityMatches.length} of {choices.abilities.length} — keep typing to narrow.
-                    </p>
-                  )}
-                </div>
-              ))}
-            {composer === "script" &&
-              scriptGroups.map((group) => (
-                <GroupBlock
-                  key={group.key}
-                  title={`${group.key} scripts`}
-                  selected={selected}
-                  entries={group.entries.map((s) => ({ name: s.name, hint: s.slot }))}
-                  onToggle={toggleSelected}
-                />
-              ))}
-          </div>
+          {composer !== "ability" && (
+            <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface/40 p-2">
+              {composer === "skillline" &&
+                lineGroups.map((group) => (
+                  <GroupBlock
+                    key={group.key}
+                    title={group.key}
+                    selected={selected}
+                    entries={group.entries.map((l) => ({
+                      name: l.name,
+                      hint: l.category + (l.className ? ` · ${l.className}` : ""),
+                    }))}
+                    onToggle={toggleSelected}
+                  />
+                ))}
+              {composer === "script" &&
+                scriptGroups.map((group) => (
+                  <GroupBlock
+                    key={group.key}
+                    title={`${group.key} scripts`}
+                    selected={selected}
+                    entries={group.entries.map((s) => ({ name: s.name, hint: s.slot }))}
+                    onToggle={toggleSelected}
+                  />
+                ))}
+            </div>
+          )}
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-fg-subtle">
@@ -732,6 +742,185 @@ function PresetButton({ label, title, onClick }: { label: string; title: string;
       className="rounded-full border border-accent/40 bg-accent-soft px-3 py-1 text-xs font-medium text-accent transition hover:bg-accent hover:text-accent-fg"
     >
       {label}
+    </button>
+  );
+}
+
+/**
+ * Abilities, browsed like the game browses them: shared lines directly, class
+ * abilities one drill-down deeper (class → one of its skill lines → abilities).
+ * Selections accumulate across navigation until Add.
+ */
+function AbilityDrilldown({
+  choices,
+  nav,
+  onNav,
+  selected,
+  onToggle,
+  classLineMap,
+  sharedLineList,
+  lineAbilityCounts,
+  abilitiesForLine,
+}: {
+  choices: PlannerChoices;
+  nav: { className: string | null; lineName: string | null };
+  onNav: (nav: { className: string | null; lineName: string | null }) => void;
+  selected: Set<string>;
+  onToggle: (name: string) => void;
+  classLineMap: Map<string, PlannerChoices["lines"]>;
+  sharedLineList: PlannerChoices["lines"];
+  lineAbilityCounts: Map<string, number>;
+  abilitiesForLine: (lineName: string) => PlannerChoices["abilities"];
+}) {
+  const list = useMemo(() => {
+    if (nav.lineName) return abilitiesForLine(nav.lineName);
+    if (nav.className) return classLineMap.get(nav.className) ?? [];
+    return sharedLineList;
+  }, [nav, abilitiesForLine, classLineMap, sharedLineList]);
+
+  const countFor = (lineName: string) => lineAbilityCounts.get(lineName.toLowerCase()) ?? 0;
+
+  return (
+    <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface/40 p-2">
+      {/* Breadcrumb */}
+      <div className="mb-2 flex items-center gap-2 px-1">
+        {nav.lineName || nav.className ? (
+          <button
+            type="button"
+            onClick={() =>
+              onNav(nav.lineName ? { className: nav.className, lineName: null } : { className: null, lineName: null })
+            }
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-fg-muted hover:text-fg"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            {nav.lineName ? `${nav.className} lines` : "All abilities"}
+          </button>
+        ) : (
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+            Browse like the game — pick a skill line{choices.classes.length > 1 ? " or a class" : ""}
+          </span>
+        )}
+        {(nav.lineName || nav.className) && (
+          <span className="text-xs text-fg-subtle">
+            {nav.className ? nav.className : ""}
+            {nav.lineName ? ` · ${nav.lineName}` : ""}
+          </span>
+        )}
+      </div>
+
+      {/* Level: a class's skill lines */}
+      {nav.className && !nav.lineName && (
+        <div className="mb-2">
+          <div className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+            {nav.className} skill lines
+          </div>
+          <div className="space-y-0.5">
+            {list.length === 0 && (
+              <p className="px-2.5 py-2 text-sm text-fg-subtle">No lines known for this class yet.</p>
+            )}
+            {(list as PlannerChoices["lines"]).map((l) => (
+              <NavRow
+                key={l.name}
+                title={l.name}
+                hint={countFor(l.name) > 0 ? `${countFor(l.name)} abilities` : "no abilities known yet"}
+                onClick={() => onNav({ className: nav.className, lineName: l.name })}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Level: top — class buttons + shared lines */}
+      {!nav.className && !nav.lineName && (
+        <>
+          <div className="mb-2">
+            <div className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+              Class abilities
+            </div>
+            <div className="flex flex-wrap gap-1.5 px-2 pb-1 pt-1">
+              {choices.classes.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => onNav({ className: c, lineName: null })}
+                  className="rounded-full border border-accent/40 bg-accent-soft px-3 py-1 text-xs font-medium text-accent transition hover:bg-accent hover:text-accent-fg"
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mb-1">
+            <div className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+              Shared skill lines — every class can level these
+            </div>
+            <div className="space-y-0.5">
+              {(list as PlannerChoices["lines"]).map((l) => (
+                <NavRow
+                  key={l.name}
+                  title={l.name}
+                  hint={l.category + (countFor(l.name) > 0 ? ` · ${countFor(l.name)} abilities` : "")}
+                  onClick={() => onNav({ className: null, lineName: l.name })}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Level: abilities of a line */}
+      {nav.lineName && (
+        <div>
+          <div className="flex items-center justify-between px-2.5 py-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+              {nav.lineName} abilities
+            </span>
+            {list.length > 0 && (
+              <button
+                type="button"
+                onClick={() => (list as PlannerChoices["abilities"]).forEach((a) => onToggle(a.name))}
+                className="text-[11px] text-fg-subtle transition hover:text-accent"
+              >
+                {list.every((a) => selected.has(a.name)) ? "Deselect all" : "Select all"}
+              </button>
+            )}
+          </div>
+          <div className="space-y-0.5">
+            {list.length === 0 ? (
+              <p className="px-2.5 py-2 text-sm text-fg-subtle">
+                No abilities known for this line yet. They appear as your characters log out with the addon.
+              </p>
+            ) : (
+              (list as PlannerChoices["abilities"]).map((a) => (
+                <PickerRow
+                  key={a.name}
+                  name={a.name}
+                  hint={a.className ?? "shared"}
+                  checked={selected.has(a.name)}
+                  onToggle={() => onToggle(a.name)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A clickable navigation row in a drill-down. */
+function NavRow({ title, hint, onClick }: { title: string; hint: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-surface-2"
+    >
+      <span className="min-w-0">
+        <span className="block truncate text-fg">{title}</span>
+        <span className="block truncate text-xs text-fg-subtle">{hint}</span>
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-fg-subtle" />
     </button>
   );
 }
