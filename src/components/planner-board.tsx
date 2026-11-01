@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -390,18 +390,35 @@ export function PlannerBoard({
           maxWidthClass="max-w-xl"
         >
           {/* Who + how much, decided once, applies to every selection below */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-3">
-            <ScopePicker
-              choices={choices}
-              scope={scope}
-              scopeKey={scopeKey}
-              onScope={(s, k) => {
-                setScope(s);
-                setScopeKey(k);
-              }}
-            />
+          <div className="border-b border-border pb-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <ScopePicker
+                choices={choices}
+                scope={scope}
+                scopeKey={scopeKey}
+                onScope={(s, k) => {
+                  setScope(s);
+                  setScopeKey(k);
+                }}
+              />
+              <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
+                {TIERS.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    aria-pressed={tier === t}
+                    onClick={() => setTier(t)}
+                    className={`rounded-md px-2 py-1 text-xs ${
+                      tier === t ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+                    }`}
+                  >
+                    {TIER_LABEL[t]}
+                  </button>
+                ))}
+              </div>
+            </div>
             {composer === "skillline" && selected.size > 0 && (
-              <div className="max-w-xs">
+              <div className="mt-2">
                 <RankChips
                   cap={selectedLineCap}
                   capHint={capHint}
@@ -410,21 +427,6 @@ export function PlannerBoard({
                 />
               </div>
             )}
-            <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
-              {TIERS.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  aria-pressed={tier === t}
-                  onClick={() => setTier(t)}
-                  className={`rounded-md px-2 py-1 text-xs ${
-                    tier === t ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
-                  }`}
-                >
-                  {TIER_LABEL[t]}
-                </button>
-              ))}
-            </div>
           </div>
 
           {composer === "ability" && (
@@ -981,31 +983,45 @@ function RankChips({
   onPick: (rank: number) => void;
 }) {
   const effective = Math.min(rank, cap);
-  const steps = cap <= 12 ? Array.from({ length: cap }, (_, i) => i + 1) : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50].filter((n) => n <= cap);
+  const ranks = Array.from({ length: cap }, (_, i) => i + 1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Keep the selected rank visible when the strip appears.
+  useEffect(() => {
+    const el = scrollRef.current?.querySelector<HTMLElement>('[data-selected="true"]');
+    el?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [cap]);
+
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="mr-1 text-xs text-fg-subtle">to</span>
-        {steps.map((n) => (
-          <button
-            key={n}
-            type="button"
-            aria-pressed={effective === n}
-            onClick={() => onPick(n)}
-            className={`h-7 min-w-7 rounded-md border px-1.5 text-xs tabular-nums transition ${
-              effective === n
-                ? "border-accent/60 bg-accent-soft font-semibold text-accent"
-                : "border-border bg-surface text-fg-muted hover:text-fg"
-            }`}
-          >
-            {n}
-          </button>
-        ))}
-        <span className="text-xs text-fg-subtle">/ {cap}</span>
+      <div className="flex items-center gap-1">
+        <span className="shrink-0 text-xs text-fg-subtle">to rank</span>
+        <div
+          ref={scrollRef}
+          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-lg border border-border bg-surface/60 px-2 py-1.5"
+        >
+          {ranks.map((n) => (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={effective === n}
+              data-selected={effective === n ? "true" : undefined}
+              onClick={() => onPick(n)}
+              className={`h-7 w-7 shrink-0 rounded-md border text-xs tabular-nums transition ${
+                effective === n
+                  ? "border-accent/60 bg-accent-soft font-semibold text-accent"
+                  : "border-border bg-surface text-fg-muted hover:text-fg"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+          <span className="ml-1 shrink-0 text-xs text-fg-subtle">max {cap}</span>
+        </div>
       </div>
-      {capHint && (
-        <p className="mt-1 text-[11px] text-fg-subtle">{capHint}</p>
-      )}
+      <p className="mt-1 text-[11px] text-fg-subtle">
+        Scroll for any rank{capHint ? ` — ${capHint}` : ""}
+      </p>
     </div>
   );
 }
