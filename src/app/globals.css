@@ -89,8 +89,41 @@ body {
     radial-gradient(900px 500px at -10% 110%, var(--accent-soft), transparent 55%);
 }
 
-/* Collapsible Focus sections: clean summary rows, no default triangle. */
-.focus-panel {
+/* The planner's rank slider: draggable, keyboard-friendly, gold. */
+.range-gold {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+.range-gold::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 3px solid var(--bg-elev);
+  box-shadow: 0 0 0 1px var(--border-strong);
+  cursor: grab;
+}
+.range-gold:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+.range-gold::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 3px solid var(--bg-elev);
+  box-shadow: 0 0 0 1px var(--border-strong);
+  cursor: grab;
+}
+
+/* Collapsible Focus sections: clean summary rows, no default triangle. */.focus-panel {
   margin-bottom: 0.75rem;
 }
 .focus-panel > summary {

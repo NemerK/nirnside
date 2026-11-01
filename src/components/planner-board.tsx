@@ -418,8 +418,8 @@ export function PlannerBoard({
               </div>
             </div>
             {composer === "skillline" && selected.size > 0 && (
-              <div className="mt-2">
-                <RankChips
+              <div className="mt-3">
+                <RankSlider
                   cap={selectedLineCap}
                   capHint={capHint}
                   rank={rank}
@@ -967,11 +967,12 @@ function NavRow({ title, hint, onClick }: { title: string; hint: string; onClick
 }
 
 /**
- * Clickable, viable ranks for the selected lines — no typing. Low-capped lines
- * offer every rank; long lines offer clean steps of five. Never offers a rank
- * a selected line cannot reach.
+ * The rank picker: a draggable slider with the number beside it, and a manual
+ * input for people who'd rather type. Always clamped to the viable range for
+ * whatever lines are selected — capped lines simply can't be dragged past
+ * their cap.
  */
-function RankChips({
+function RankSlider({
   cap,
   capHint,
   rank,
@@ -982,46 +983,59 @@ function RankChips({
   rank: number;
   onPick: (rank: number) => void;
 }) {
-  const effective = Math.min(rank, cap);
-  const ranks = Array.from({ length: cap }, (_, i) => i + 1);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const effective = Math.min(Math.max(rank, 1), cap);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [text, setText] = useState(String(effective));
 
-  // Keep the selected rank visible when the strip appears.
+  // Follow external changes (a new selection clamping the cap) unless the
+  // user is mid-typing in the number box.
   useEffect(() => {
-    const el = scrollRef.current?.querySelector<HTMLElement>('[data-selected="true"]');
-    el?.scrollIntoView({ block: "nearest", inline: "center" });
-  }, [cap]);
+    if (inputRef.current && document.activeElement !== inputRef.current) {
+      setText(String(effective));
+    }
+  }, [effective]);
+
+  function commit(raw: string) {
+    const n = Number.parseInt(raw.replace(/[^0-9]/g, ""), 10);
+    if (Number.isFinite(n) && n >= 1 && n <= cap) onPick(n);
+  }
+
+  const fill = cap > 1 ? ((effective - 1) / (cap - 1)) * 100 : 100;
 
   return (
     <div>
-      <div className="flex items-center gap-1">
-        <span className="shrink-0 text-xs text-fg-subtle">to rank</span>
-        <div
-          ref={scrollRef}
-          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-lg border border-border bg-surface/60 px-2 py-1.5"
-        >
-          {ranks.map((n) => (
-            <button
-              key={n}
-              type="button"
-              aria-pressed={effective === n}
-              data-selected={effective === n ? "true" : undefined}
-              onClick={() => onPick(n)}
-              className={`h-7 w-7 shrink-0 rounded-md border text-xs tabular-nums transition ${
-                effective === n
-                  ? "border-accent/60 bg-accent-soft font-semibold text-accent"
-                  : "border-border bg-surface text-fg-muted hover:text-fg"
-              }`}
-            >
-              {n}
-            </button>
-          ))}
-          <span className="ml-1 shrink-0 text-xs text-fg-subtle">max {cap}</span>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="text-xs text-fg-subtle">to rank</span>
+        <div className="flex items-center gap-1.5">
+          <input
+            ref={inputRef}
+            value={text}
+            inputMode="numeric"
+            aria-label="Target rank"
+            onChange={(e) => {
+              setText(e.target.value);
+              commit(e.target.value);
+            }}
+            onBlur={() => setText(String(effective))}
+            className="w-14 rounded-lg border border-border bg-surface px-2 py-1 text-center text-sm font-medium tabular-nums text-fg focus:border-accent focus:outline-none"
+          />
+          <span className="text-xs text-fg-subtle">/ {cap}</span>
         </div>
+        {capHint && <span className="text-[11px] text-fg-subtle">{capHint}</span>}
       </div>
-      <p className="mt-1 text-[11px] text-fg-subtle">
-        Scroll for any rank{capHint ? ` — ${capHint}` : ""}
-      </p>
+      <input
+        type="range"
+        min={1}
+        max={cap}
+        step={1}
+        value={effective}
+        aria-label="Target rank"
+        onChange={(e) => onPick(Number(e.target.value))}
+        className="range-gold mt-2 w-full"
+        style={{
+          background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${fill}%, var(--surface-2) ${fill}%, var(--surface-2) 100%)`,
+        }}
+      />
     </div>
   );
 }
