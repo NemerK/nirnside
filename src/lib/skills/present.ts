@@ -1,4 +1,5 @@
 import type { CatalogSource } from "../catalog/schema";
+import { isExcludedLineName } from "../catalog/excluded";
 import type { MorphSlot, SkillLine, SkillMorph } from "../snapshot/schema";
 import {
   abilityIsKnown,
@@ -185,7 +186,7 @@ export function presentSkillBook(
   hrefFor: (lineName: string) => string | null,
   characterClass?: string | null,
 ): SkillCategoryView[] {
-  const filtered = keepClassMasteryForCharacter(lines, characterClass);
+  const filtered = keepClassMasteryForCharacter(lines, characterClass).filter((l) => !isExcludedLineName(l.name));
   const byCat = new Map<string, SkillLineView[]>();
   filtered.forEach((line, index) => {
     const cat = line.category || "Skill";

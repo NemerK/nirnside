@@ -1,9 +1,29 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { importCatalogBundle } from "./import";
+import { EXCLUDED_SKILL_LINES, excludedLineIds } from "./excluded";
+import { getDb } from "../db";
 import { parseLua, type LuaValue } from "../snapshot/lua-parser";
 
 const CATALOG_DIR = join(process.cwd(), "data", "catalog");
+
+/**
+ * Remove excluded content an earlier in-game catalog scan may have stored
+ * (the unlevelable PvP "Vengeance" line and its abilities). Safe to run on
+ * every startup: deleting what is deliberately not tracked is idempotent.
+ */
+function pruneExcludedCatalogRows(): void {
+  const db = getDb();
+  const placeholders = EXCLUDED_SKILL_LINES.map(() => "?").join(", ");
+  db.prepare(`DELETE FROM catalog WHERE domain = 'skillline' AND lower(name) IN (${placeholders})`).run(
+    ...EXCLUDED_SKILL_LINES,
+  );
+  const idHolders = excludedLineIds().map(() => "?").join(", ");
+  db.prepare(
+    // Skill rows store their line id in the `category` column (see importCatalogBundle).
+    `DELETE FROM catalog WHERE domain = 'skill' AND lower(category) IN (${idHolders})`,
+  ).run(...excludedLineIds());
+}
 
 /**
  * Load the bundled reference catalog (data/catalog/*.json). These are tagged
@@ -12,6 +32,7 @@ const CATALOG_DIR = join(process.cwd(), "data", "catalog");
  */
 export function loadReferenceCatalog(): { files: number; counts: Record<string, number> } {
   if (!existsSync(CATALOG_DIR)) return { files: 0, counts: {} };
+  pruneExcludedCatalogRows();
   const files = readdirSync(CATALOG_DIR).filter((f) => f.endsWith(".json"));
   const total: Record<string, number> = {};
   for (const file of files) {

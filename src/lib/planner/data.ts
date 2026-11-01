@@ -4,6 +4,7 @@ import { getCharacters, getCharactersFull } from "../db/queries";
 import { liveCharacters } from "../snapshot/roster";
 import { listRoles, listAssignments } from "../db/roles";
 import { getSkillLines, getScripts, getSkills } from "../db/catalog-queries";
+import { isExcludedLineName } from "../catalog/excluded";
 import {
   goalAppliesTo,
   goalProgress,
@@ -75,6 +76,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   }
   for (const c of live) {
     for (const line of c.skillLines) {
+      if (isExcludedLineName(line.name)) continue; // e.g. the unlevelable PvP "Vengeance" line
       const key = line.name.trim().toLowerCase();
       if (!key || lineMeta.has(key)) continue;
       const meta: LineMeta = {
@@ -108,6 +110,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   }
   for (const c of live) {
     for (const line of c.skillLines) {
+      if (isExcludedLineName(line.name)) continue;
       const meta: AbilityMeta = {
         lineName: line.name,
         category: line.category || "Skill",
@@ -219,7 +222,10 @@ export const skillLineChoices = cache(function skillLineChoices(): SkillLineChoi
   const fromChars: SkillLineChoice[] = [];
   try {
     for (const c of getCharacters()) {
-      for (const l of c.skillLines) fromChars.push({ name: l.name, category: l.category });
+      for (const l of c.skillLines) {
+        if (isExcludedLineName(l.name)) continue;
+        fromChars.push({ name: l.name, category: l.category });
+      }
     }
   } catch {
     // no roster yet
