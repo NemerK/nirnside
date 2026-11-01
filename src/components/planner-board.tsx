@@ -31,7 +31,7 @@ import { GoalMark } from "./goal-mark";
  */
 
 export interface PlannerChoices {
-  lines: { name: string; category: string; className: string | null }[];
+  lines: { name: string; category: string; className: string | null; maxRank: number | null }[];
   scripts: { name: string; slot: string }[];
   abilities: { name: string; lineName: string; className: string | null }[];
   roles: { id: string; name: string }[];
@@ -115,6 +115,30 @@ export function PlannerBoard({
     return [...byKey.entries()].map(([key, entries]) => ({ key, entries }));
   }, [choices]);
 
+  const lineByName = useMemo(() => {
+    const m = new Map<string, PlannerChoices["lines"][number]>();
+    for (const l of choices.lines) m.set(l.name.toLowerCase(), l);
+    return m;
+  }, [choices]);
+
+  /** Only viable ranks for what's picked: the lowest cap among the selected lines. */
+  const selectedLineCap = useMemo(() => {
+    let cap = 50;
+    for (const name of selected) {
+      const line = lineByName.get(name.toLowerCase());
+      if (line?.maxRank && line.maxRank < cap) cap = line.maxRank;
+    }
+    return cap;
+  }, [selected, lineByName]);
+
+  const capHint = useMemo(() => {
+    const capped = [...selected]
+      .map((n) => lineByName.get(n.toLowerCase()))
+      .filter((l): l is PlannerChoices["lines"][number] => !!l && !!l.maxRank && l.maxRank < 50);
+    if (capped.length === 0) return null;
+    return `${capped.map((l) => `${l.name} caps at ${l.maxRank}`).join(" · ")}`;
+  }, [selected, lineByName]);
+
   const scriptGroups = useMemo(() => {
     const bySlot = new Map<string, typeof choices.scripts>();
     for (const s of choices.scripts) {
@@ -197,26 +221,42 @@ export function PlannerBoard({
         characterId: scope === "character" ? scopeKey : null,
         scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
         targets: [...selected],
-        targetRank: composer === "skillline" ? rank : 0,
+        targetRank: composer === "skillline" ? Math.min(rank, selectedLineCap) : 0,
       },
       () => setComposer(null),
     );
   }
 
-  async function preset(targets: string[], presetTier: GoalTier, presetDomain: Goal["domain"], label: string) {
-    if (busy || targets.length === 0) return;
-    await post({ domain: presetDomain, tier: presetTier, scope: "account", targets, targetRank: 50, note: label });
+  async function preset(domain: Goal["domain"], presetTier: GoalTier, entries: { name: string; rank?: number }[], label: string) {
+    if (busy || entries.length === 0) return;
+    // One request per distinct rank so capped lines (Assault 10, Mages Guild 10…)
+    // never get a rank they cannot reach.
+    const byRank = new Map<number, string[]>();
+    for (const e of entries) {
+      const rank = e.rank ?? 0;
+      const arr = byRank.get(rank);
+      if (arr) arr.push(e.name);
+      else byRank.set(rank, [e.name]);
+    }
+    for (const [rank, targets] of byRank) {
+      await post({ domain, tier: presetTier, scope: "account", targets, targetRank: rank, note: label });
+    }
   }
 
+  /** Shared-line presets target each line's own cap, not a blanket 50. */
+  const lineCap = (l: PlannerChoices["lines"][number]) => l.maxRank ?? 50;
   const weaponArmor = useMemo(
     () =>
       choices.lines
         .filter((l) => ["weapon", "armor"].includes(l.category.toLowerCase()))
-        .map((l) => l.name),
+        .map((l) => ({ name: l.name, rank: lineCap(l) })),
     [choices.lines],
   );
   const sharedLines = useMemo(
-    () => choices.lines.filter((l) => l.category.toLowerCase() !== "class").map((l) => l.name),
+    () =>
+      choices.lines
+        .filter((l) => l.category.toLowerCase() !== "class")
+        .map((l) => ({ name: l.name, rank: lineCap(l) })),
     [choices.lines],
   );
 
@@ -287,24 +327,26 @@ export function PlannerBoard({
             <Sparkles className="h-3.5 w-3.5 text-accent" /> Quick add:
           </span>
           <PresetButton
-            label={`Weapon + armor to 50 · everyone · essential`}
-            title="Every weapon and armor line to rank 50 for every character"
-            onClick={() => preset(weaponArmor, "essential", "skillline", "weapon + armor to 50")}
+            label={`Weapon + armor to their caps · everyone · mandatory`}
+            title="Every weapon and armor line to its max rank for every character"
+            onClick={() => preset("skillline", "essential", weaponArmor, "weapon + armor to their caps")}
           />
           <PresetButton
-            label={`Every shared line to 50 · completionist`}
-            title="All non-class lines to rank 50 for every character"
-            onClick={() => preset(sharedLines, "completionist", "skillline", "every shared line to 50")}
+            label={`Every shared line to its cap · completionist`}
+            title="All non-class lines to their max rank for every character (Assault caps at 10, Mages Guild at 10, and so on)"
+            onClick={() => preset("skillline", "completionist", sharedLines, "every shared line to its cap")}
           />
           <PresetButton
             label={`All scribing scripts · completionist`}
             title="Every known catalog script for every character"
-            onClick={() => preset(
-              choices.scripts.map((s) => s.name),
-              "completionist",
-              "script",
-              "all scribing scripts",
-            )}
+            onClick={() =>
+              preset(
+                "script",
+                "completionist",
+                choices.scripts.map((s) => ({ name: s.name })),
+                "all scribing scripts",
+              )
+            }
           />
           {cards.length > 0 &&
             (confirmClear ? (
@@ -358,18 +400,15 @@ export function PlannerBoard({
                 setScopeKey(k);
               }}
             />
-            {composer === "skillline" && (
-              <label className="text-xs text-fg-subtle">
-                to rank
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={rank}
-                  onChange={(e) => setRank(Number(e.target.value))}
-                  className="ml-1.5 w-16 rounded border border-border bg-surface px-1.5 py-1 text-sm text-fg"
+            {composer === "skillline" && selected.size > 0 && (
+              <div className="max-w-xs">
+                <RankChips
+                  cap={selectedLineCap}
+                  capHint={capHint}
+                  rank={rank}
+                  onPick={setRank}
                 />
-              </label>
+              </div>
             )}
             <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
               {TIERS.map((t) => (
@@ -925,14 +964,59 @@ function NavRow({ title, hint, onClick }: { title: string; hint: string; onClick
   );
 }
 
+/**
+ * Clickable, viable ranks for the selected lines — no typing. Low-capped lines
+ * offer every rank; long lines offer clean steps of five. Never offers a rank
+ * a selected line cannot reach.
+ */
+function RankChips({
+  cap,
+  capHint,
+  rank,
+  onPick,
+}: {
+  cap: number;
+  capHint: string | null;
+  rank: number;
+  onPick: (rank: number) => void;
+}) {
+  const effective = Math.min(rank, cap);
+  const steps = cap <= 12 ? Array.from({ length: cap }, (_, i) => i + 1) : [5, 10, 15, 20, 25, 30, 35, 40, 45, 50].filter((n) => n <= cap);
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="mr-1 text-xs text-fg-subtle">to</span>
+        {steps.map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-pressed={effective === n}
+            onClick={() => onPick(n)}
+            className={`h-7 min-w-7 rounded-md border px-1.5 text-xs tabular-nums transition ${
+              effective === n
+                ? "border-accent/60 bg-accent-soft font-semibold text-accent"
+                : "border-border bg-surface text-fg-muted hover:text-fg"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+        <span className="text-xs text-fg-subtle">/ {cap}</span>
+      </div>
+      {capHint && (
+        <p className="mt-1 text-[11px] text-fg-subtle">{capHint}</p>
+      )}
+    </div>
+  );
+}
+
 function scopeOk(scope: "account" | "role" | "class" | "character", scopeKey: string): boolean {
   if (scope === "account") return true;
   return scopeKey.trim().length > 0;
 }
 
 /** One of the three composer entry points. */
-function DomainButton({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) {
-  return (
+function DomainButton({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) {  return (
     <button
       type="button"
       onClick={onClick}

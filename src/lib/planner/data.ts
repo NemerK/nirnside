@@ -29,6 +29,8 @@ export interface PlannerLineChoice {
   name: string;
   category: string;
   className: string | null;
+  /** Live rank cap for this line, when known (most are 50; guild/PvP/curse lines cap lower). */
+  maxRank: number | null;
 }
 
 export interface PlannerAbilityChoice {
@@ -64,7 +66,12 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
     if (!key) continue;
     const meta: LineMeta = { category: entry.category, className: entry.className ?? null };
     if (!lineMeta.has(key)) lineMeta.set(key, meta);
-    lines.push({ name: entry.name, category: entry.category, className: entry.className ?? null });
+    lines.push({
+      name: entry.name,
+      category: entry.category,
+      className: entry.className ?? null,
+      maxRank: entry.maxRank ?? null,
+    });
   }
   for (const c of live) {
     for (const line of c.skillLines) {
@@ -75,7 +82,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         className: isClassCategory(line.category) ? c.class : null,
       };
       lineMeta.set(key, meta);
-      lines.push({ name: line.name, category: meta.category, className: meta.className });
+      lines.push({ name: line.name, category: meta.category, className: meta.className, maxRank: null });
     }
   }
 
