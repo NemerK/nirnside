@@ -71,7 +71,6 @@ export function PlannerBoard({
   const [scope, setScope] = useState<"account" | "role" | "class" | "character">("account");
   const [scopeKey, setScopeKey] = useState("");
   const [tier, setTier] = useState<GoalTier>("essential");
-  const [rank, setRank] = useState(50);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,7 +87,7 @@ export function PlannerBoard({
     setScope("account");
     setScopeKey("");
     setTier("essential");
-    setRank(50);
+    setRankByLine({});
     setError(null);
   }
 
@@ -121,23 +120,18 @@ export function PlannerBoard({
     return m;
   }, [choices]);
 
-  /** Only viable ranks for what's picked: the lowest cap among the selected lines. */
-  const selectedLineCap = useMemo(() => {
-    let cap = 50;
-    for (const name of selected) {
-      const line = lineByName.get(name.toLowerCase());
-      if (line?.maxRank && line.maxRank < cap) cap = line.maxRank;
-    }
-    return cap;
-  }, [selected, lineByName]);
-
-  const capHint = useMemo(() => {
-    const capped = [...selected]
-      .map((n) => lineByName.get(n.toLowerCase()))
-      .filter((l): l is PlannerChoices["lines"][number] => !!l && !!l.maxRank && l.maxRank < 50);
-    if (capped.length === 0) return null;
-    return `${capped.map((l) => `${l.name} caps at ${l.maxRank}`).join(" · ")}`;
-  }, [selected, lineByName]);
+  /** Per-line target ranks. Each bar matches its own line's cap — a line
+   * picked for the first time defaults to its cap. */
+  const [rankByLine, setRankByLine] = useState<Record<string, number>>({});
+  const capFor = (name: string): number =>
+    lineByName.get(name.toLowerCase())?.maxRank ?? 50;
+  const rankFor = (name: string): number => {
+    const cap = capFor(name);
+    const saved = rankByLine[name];
+    return saved == null ? cap : Math.min(Math.max(saved, 1), cap);
+  };
+  const pickRank = (name: string, n: number) =>
+    setRankByLine((prev) => ({ ...prev, [name]: n }));
 
   const scriptGroups = useMemo(() => {
     const bySlot = new Map<string, typeof choices.scripts>();
@@ -187,7 +181,7 @@ export function PlannerBoard({
     return choices.roles.find((r) => r.id === goal.scopeKey)?.name ?? "role";
   };
 
-  async function post(body: Record<string, unknown>, onDone?: () => void) {
+  async function post(body: Record<string, unknown>, onDone?: () => void): Promise<boolean> {
     setBusy(true);
     setError(null);
     try {
@@ -200,12 +194,14 @@ export function PlannerBoard({
       if (!res.ok) {
         setError(json.created?.length ? `${json.created.length} saved, then: ${json.error}` : json.error ?? "Could not save.");
         router.refresh();
-      } else {
-        onDone?.();
-        router.refresh();
+        return false;
       }
+      onDone?.();
+      router.refresh();
+      return true;
     } catch {
       setError("Request failed.");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -213,18 +209,47 @@ export function PlannerBoard({
 
   async function addSelected() {
     if (!composer || selected.size === 0) return;
-    await post(
-      {
-        domain: composer,
-        tier,
-        scope,
-        characterId: scope === "character" ? scopeKey : null,
-        scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
-        targets: [...selected],
-        targetRank: composer === "skillline" ? Math.min(rank, selectedLineCap) : 0,
-      },
-      () => setComposer(null),
-    );
+    if (composer !== "skillline") {
+      await post(
+        {
+          domain: composer,
+          tier,
+          scope,
+          characterId: scope === "character" ? scopeKey : null,
+          scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
+          targets: [...selected],
+          targetRank: 0,
+        },
+        () => setComposer(null),
+      );
+      return;
+    }
+    // Each line carries its own rank (its bar matched its own cap), so one
+    // request per distinct rank keeps every target viable.
+    const byRank = new Map<number, string[]>();
+    for (const name of selected) {
+      const rank = rankFor(name);
+      const arr = byRank.get(rank);
+      if (arr) arr.push(name);
+      else byRank.set(rank, [name]);
+    }
+    let lastOk = true;
+    for (const [rank, targets] of byRank) {
+      const ok = await post(
+        {
+          domain: composer,
+          tier,
+          scope,
+          characterId: scope === "character" ? scopeKey : null,
+          scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
+          targets,
+          targetRank: rank,
+        },
+        undefined,
+      );
+      if (!ok) lastOk = false;
+    }
+    if (lastOk) setComposer(null);
   }
 
   async function preset(domain: Goal["domain"], presetTier: GoalTier, entries: { name: string; rank?: number }[], label: string) {
@@ -418,13 +443,23 @@ export function PlannerBoard({
               </div>
             </div>
             {composer === "skillline" && selected.size > 0 && (
-              <div className="mt-3">
-                <RankSlider
-                  cap={selectedLineCap}
-                  capHint={capHint}
-                  rank={rank}
-                  onPick={setRank}
-                />
+              <div className="mt-3 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface/40">
+                <div className="sticky top-0 bg-surface/95 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                  Each line gets its own target — the bar matches the line
+                </div>
+                {[...selected].map((name) => {
+                  const line = lineByName.get(name.toLowerCase());
+                  return (
+                    <LineRankRow
+                      key={name}
+                      name={name}
+                      hint={(line?.category ?? "") + (line?.className ? ` · ${line.className}` : "")}
+                      cap={capFor(name)}
+                      rank={rankFor(name)}
+                      onPick={(n) => pickRank(name, n)}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
@@ -967,19 +1002,20 @@ function NavRow({ title, hint, onClick }: { title: string; hint: string; onClick
 }
 
 /**
- * The rank picker: a draggable slider with the number beside it, and a manual
- * input for people who'd rather type. Always clamped to the viable range for
- * whatever lines are selected — capped lines simply can't be dragged past
- * their cap.
+ * One selected skill line with its own target. The bar matches THIS line: its
+ * max is the line's own live cap, the number sits beside it, and typing works
+ * too. Newly picked lines start at their cap.
  */
-function RankSlider({
+function LineRankRow({
+  name,
+  hint,
   cap,
-  capHint,
   rank,
   onPick,
 }: {
+  name: string;
+  hint: string;
   cap: number;
-  capHint: string | null;
   rank: number;
   onPick: (rank: number) => void;
 }) {
@@ -987,7 +1023,7 @@ function RankSlider({
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(String(effective));
 
-  // Follow external changes (a new selection clamping the cap) unless the
+  // Follow external changes (cap shifts from a different selection) unless the
   // user is mid-typing in the number box.
   useEffect(() => {
     if (inputRef.current && document.activeElement !== inputRef.current) {
@@ -1003,25 +1039,26 @@ function RankSlider({
   const fill = cap > 1 ? ((effective - 1) / (cap - 1)) * 100 : 100;
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center gap-2.5">
-        <span className="text-xs text-fg-subtle">to rank</span>
-        <div className="flex items-center gap-1.5">
+    <div className="border-t border-border/60 px-2.5 py-2 first:border-t-0">
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm text-fg">
+          {name} <span className="text-xs text-fg-subtle">{hint}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5">
           <input
             ref={inputRef}
             value={text}
             inputMode="numeric"
-            aria-label="Target rank"
+            aria-label={`Target rank for ${name}`}
             onChange={(e) => {
               setText(e.target.value);
               commit(e.target.value);
             }}
             onBlur={() => setText(String(effective))}
-            className="w-14 rounded-lg border border-border bg-surface px-2 py-1 text-center text-sm font-medium tabular-nums text-fg focus:border-accent focus:outline-none"
+            className="w-12 rounded-md border border-border bg-surface px-1.5 py-0.5 text-center text-sm font-medium tabular-nums text-fg focus:border-accent focus:outline-none"
           />
-          <span className="text-xs text-fg-subtle">/ {cap}</span>
-        </div>
-        {capHint && <span className="text-[11px] text-fg-subtle">{capHint}</span>}
+          <span className="text-xs tabular-nums text-fg-subtle">/ {cap}</span>
+        </span>
       </div>
       <input
         type="range"
@@ -1029,9 +1066,9 @@ function RankSlider({
         max={cap}
         step={1}
         value={effective}
-        aria-label="Target rank"
+        aria-label={`Target rank for ${name}`}
         onChange={(e) => onPick(Number(e.target.value))}
-        className="range-gold mt-2 w-full"
+        className="range-gold mt-1.5 w-full"
         style={{
           background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${fill}%, var(--surface-2) ${fill}%, var(--surface-2) 100%)`,
         }}
