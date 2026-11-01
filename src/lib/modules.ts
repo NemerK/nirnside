@@ -21,6 +21,12 @@ export interface ModuleDef {
 
 export const TOGGLEABLE_MODULES: ModuleDef[] = [
   {
+    id: "dashboard",
+    label: "Dashboard",
+    href: "/dashboard",
+    description: "Per-character progress against your targets — skills, scribing, research, completion at a glance.",
+  },
+  {
     id: "focus",
     label: "Focus",
     href: "/focus",
