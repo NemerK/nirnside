@@ -91,8 +91,8 @@ export type LineProgress =
 export const TIERS: GoalTier[] = ["essential", "optional", "completionist"];
 
 export const TIER_LABEL: Record<GoalTier, string> = {
-  essential: "Essential",
-  optional: "Optional",
+  essential: "Mandatory",
+  optional: "Extra",
   completionist: "Completionist",
 };
 
