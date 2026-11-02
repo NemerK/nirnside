@@ -16,6 +16,7 @@ import {
 import type { Goal, GoalIndexes } from "../goals/types";
 import type { GoalCardView, GoalMarkView, GoalRowItem } from "../goals/views";
 import { ESO_CLASSES } from "../classes";
+import { skillLineCap } from "../skills/line-cap";
 import type { AbilityMeta, GoalSubject, LineMeta, SkillLineChoice } from "../goals/types";
 
 /**
@@ -71,7 +72,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
       name: entry.name,
       category: entry.category,
       className: entry.className ?? null,
-      maxRank: entry.maxRank ?? null,
+      maxRank: entry.maxRank ?? skillLineCap(entry.name),
     });
   }
   for (const c of live) {
@@ -84,7 +85,12 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         className: isClassCategory(line.category) ? c.class : null,
       };
       lineMeta.set(key, meta);
-      lines.push({ name: line.name, category: meta.category, className: meta.className, maxRank: null });
+      lines.push({
+        name: line.name,
+        category: meta.category,
+        className: meta.className,
+        maxRank: skillLineCap(line.name),
+      });
     }
   }
 
@@ -154,7 +160,11 @@ function toMark(
 ): GoalMarkView {
   return {
     state: progress.state,
-    label: progressLabel(progress, { targetRank: goal.targetRank, domain: goal.domain }),
+    label: progressLabel(progress, {
+      targetRank: goal.targetRank,
+      extraRank: goal.extraRank,
+      domain: goal.domain,
+    }),
     reason: progress.state === "notapplicable" ? progress.reason : undefined,
   };
 }
@@ -215,7 +225,11 @@ export function characterGoalRows(
 export const skillLineChoices = cache(function skillLineChoices(): SkillLineChoice[] {
   let catalog: SkillLineChoice[] = [];
   try {
-    catalog = getSkillLines().map(({ entry }) => ({ name: entry.name, category: entry.category }));
+    catalog = getSkillLines().map(({ entry }) => ({
+      name: entry.name,
+      category: entry.category,
+      maxRank: entry.maxRank ?? skillLineCap(entry.name),
+    }));
   } catch {
     catalog = [];
   }
@@ -224,7 +238,7 @@ export const skillLineChoices = cache(function skillLineChoices(): SkillLineChoi
     for (const c of getCharacters()) {
       for (const l of c.skillLines) {
         if (isExcludedLineName(l.name)) continue;
-        fromChars.push({ name: l.name, category: l.category });
+        fromChars.push({ name: l.name, category: l.category, maxRank: skillLineCap(l.name) });
       }
     }
   } catch {

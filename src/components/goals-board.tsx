@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import type { GoalCardView, GoalRowItem } from "@/lib/goals/views";
-import { TIERS, TIER_LABEL, type SkillLineChoice } from "@/lib/goals/types";
+import { TIERS, TIER_LABEL, skillLineTitle, type SkillLineChoice } from "@/lib/goals/types";
 import { Badge, Card, SectionTitle } from "./ui";
 import { AddGoalButton } from "./goal-editor";
 import { GoalCard } from "./goal-card";
@@ -142,7 +142,7 @@ export function CharacterGoals({
 
 function GoalRow({ row, onDelete }: { row: GoalRowItem; onDelete: () => void }) {
   const { goal } = row;
-  const title = goal.domain === "skillline" ? `${goal.target} ${goal.targetRank}` : goal.target;
+  const title = goal.domain === "skillline" ? skillLineTitle(goal) : goal.target;
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="min-w-0">

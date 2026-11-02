@@ -25,6 +25,7 @@ interface GoalBody {
   /** Legacy field name for skill-line targets. */
   lineName?: string;
   targetRank?: number;
+  extraRank?: number;
   note?: string;
 }
 
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
         scopeKey: body.scopeKey,
         target,
         targetRank: body.targetRank,
+        extraRank: body.extraRank,
         note: body.note,
       });
       created.push(goal.id);

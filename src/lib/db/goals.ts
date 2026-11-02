@@ -5,6 +5,9 @@ import { ESO_CLASSES } from "../classes";
 import type { Goal, GoalDomain, GoalScope, GoalTier } from "../goals/types";
 import { TIERS } from "../goals/types";
 import { normalizeLineName } from "../goals/progress";
+import { isExcludedLineName } from "../catalog/excluded";
+import { isClassMasteryLineName } from "../skills/class-mastery";
+import { skillLineCap } from "../skills/line-cap";
 
 export function ensureGoalTables() {
   getDb().exec(`
@@ -17,6 +20,7 @@ export function ensureGoalTables() {
       scopeKey    TEXT,
       target      TEXT NOT NULL,
       targetRank  INTEGER NOT NULL DEFAULT 0,
+      extraRank   INTEGER NOT NULL DEFAULT 0,
       note        TEXT NOT NULL DEFAULT '',
       createdAt   INTEGER NOT NULL
     );
@@ -40,9 +44,11 @@ function rowToGoal(r: {
   scopeKey: string | null;
   target: string;
   targetRank: number;
+  extraRank?: number;
   note: string;
   createdAt: number;
 }): Goal {
+  const extra = Number(r.extraRank);
   return {
     id: r.id,
     domain: (DOMAINS.includes(r.domain as GoalDomain) ? r.domain : "skillline") as GoalDomain,
@@ -52,6 +58,7 @@ function rowToGoal(r: {
     scopeKey: r.scopeKey,
     target: r.target,
     targetRank: Number.isFinite(r.targetRank) ? r.targetRank : 0,
+    extraRank: Number.isFinite(extra) ? extra : 0,
     note: r.note ?? "",
     createdAt: r.createdAt,
   };
@@ -60,7 +67,7 @@ function rowToGoal(r: {
 export function listGoals(): Goal[] {
   const rows = db()
     .prepare(
-      `SELECT id, domain, tier, scope, characterId, scopeKey, target, targetRank, note, createdAt
+      `SELECT id, domain, tier, scope, characterId, scopeKey, target, targetRank, extraRank, note, createdAt
        FROM goals
        ORDER BY createdAt ASC`,
     )
@@ -71,7 +78,7 @@ export function listGoals(): Goal[] {
 export function getGoal(id: string): Goal | null {
   const row = db()
     .prepare(
-      `SELECT id, domain, tier, scope, characterId, scopeKey, target, targetRank, note, createdAt
+      `SELECT id, domain, tier, scope, characterId, scopeKey, target, targetRank, extraRank, note, createdAt
        FROM goals WHERE id = ?`,
     )
     .get(id) as Parameters<typeof rowToGoal>[0] | undefined;
@@ -116,6 +123,29 @@ function assertScope(
   return { scope: s, characterId: null, scopeKey: canonicalClass(key) };
 }
 
+function assertSkillLineRanks(
+  name: string,
+  mandatory: number,
+  extra: number,
+): { targetRank: number; extraRank: number } {
+  if (isClassMasteryLineName(name) || isExcludedLineName(name)) {
+    throw new Error(`${name} is not a rank line.`);
+  }
+  const cap = skillLineCap(name);
+  if (cap == null) throw new Error(`No confirmed rank cap for ${name}.`);
+  if (!Number.isInteger(mandatory) || mandatory < 0 || mandatory > cap) {
+    throw new Error(`${name} mandatory rank must be a whole number from 0 to ${cap}.`);
+  }
+  if (!Number.isInteger(extra) || extra < 0 || extra > cap) {
+    throw new Error(`${name} extra rank must be a whole number from 0 to ${cap}.`);
+  }
+  const extraRank = extra > mandatory ? extra : 0;
+  if (mandatory === 0 && extraRank === 0) {
+    throw new Error("Set a mandatory rank, an extra rank, or both.");
+  }
+  return { targetRank: mandatory, extraRank };
+}
+
 function assertTarget(domain: GoalDomain, target: string): string {
   const name = domain === "skillline" ? normalizeLineName(target) : target.trim().replace(/\s+/g, " ");
   if (!name) throw new Error("Pick what to target.");
@@ -153,6 +183,7 @@ export function createGoal(input: {
   /** Legacy field name for skill-line targets (old editor + tests). */
   lineName?: string;
   targetRank?: number;
+  extraRank?: number;
   note?: string;
 }): Goal {
   const domain = ((input.domain ?? (input.lineName ? "skillline" : "skillline")) as GoalDomain) ?? "skillline";
@@ -163,11 +194,11 @@ export function createGoal(input: {
   const note = (input.note ?? "").trim().slice(0, 120);
 
   let targetRank = 0;
+  let extraRank = 0;
   if (domain === "skillline") {
-    if (!Number.isInteger(Number(input.targetRank)) || Number(input.targetRank) < 1 || Number(input.targetRank) > 50) {
-      throw new Error("Rank must be a whole number from 1 to 50.");
-    }
-    targetRank = Number(input.targetRank);
+    const ranks = assertSkillLineRanks(target, Number(input.targetRank), Number(input.extraRank ?? 0));
+    targetRank = ranks.targetRank;
+    extraRank = ranks.extraRank;
   }
 
   const dup = duplicate(domain, scope, characterId, scopeKey, target);
@@ -184,13 +215,14 @@ export function createGoal(input: {
     scopeKey,
     target,
     targetRank,
+    extraRank,
     note,
     createdAt: Date.now(),
   };
   db()
     .prepare(
-      `INSERT INTO goals (id, domain, tier, scope, characterId, scopeKey, target, targetRank, note, createdAt)
-       VALUES (@id, @domain, @tier, @scope, @characterId, @scopeKey, @target, @targetRank, @note, @createdAt)`,
+      `INSERT INTO goals (id, domain, tier, scope, characterId, scopeKey, target, targetRank, extraRank, note, createdAt)
+       VALUES (@id, @domain, @tier, @scope, @characterId, @scopeKey, @target, @targetRank, @extraRank, @note, @createdAt)`,
     )
     .run(goal);
   return goal;
@@ -198,21 +230,27 @@ export function createGoal(input: {
 
 export function updateGoal(
   id: string,
-  patch: { targetRank?: number; note?: string; tier?: string },
+  patch: { targetRank?: number; extraRank?: number; note?: string; tier?: string },
 ): Goal {
   const existing = getGoal(id);
   if (!existing) throw new Error("That target is gone.");
-  let { targetRank } = existing;
-  if (patch.targetRank != null) {
+  let { targetRank, extraRank } = existing;
+  if (patch.targetRank != null || patch.extraRank != null) {
     if (existing.domain !== "skillline") throw new Error("Only skill-line targets have a rank.");
-    const n = Number(patch.targetRank);
-    if (!Number.isInteger(n) || n < 1 || n > 50) throw new Error("Rank must be a whole number from 1 to 50.");
-    targetRank = n;
+    const ranks = assertSkillLineRanks(
+      existing.target,
+      patch.targetRank != null ? Number(patch.targetRank) : targetRank,
+      patch.extraRank != null ? Number(patch.extraRank) : extraRank,
+    );
+    targetRank = ranks.targetRank;
+    extraRank = ranks.extraRank;
   }
   const note = patch.note != null ? patch.note.trim().slice(0, 120) : existing.note;
   const tier = patch.tier != null ? assertTier(patch.tier) : existing.tier;
-  db().prepare("UPDATE goals SET targetRank = ?, note = ?, tier = ? WHERE id = ?").run(targetRank, note, tier, id);
-  return { ...existing, targetRank, note, tier };
+  db()
+    .prepare("UPDATE goals SET targetRank = ?, extraRank = ?, note = ?, tier = ? WHERE id = ?")
+    .run(targetRank, extraRank, note, tier, id);
+  return { ...existing, targetRank, extraRank, note, tier };
 }
 
 export function deleteGoal(id: string): void {

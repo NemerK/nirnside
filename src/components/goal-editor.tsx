@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Target } from "lucide-react";
 import type { GoalScope, SkillLineChoice } from "@/lib/goals/types";
@@ -70,6 +70,11 @@ function GoalEditorModal({
   const [scope, setScope] = useState<GoalScope>(defaultScope);
   const [lineName, setLineName] = useState(lines[0]?.name ?? "");
   const [targetRank, setTargetRank] = useState(7);
+  const selectedLine = lines.find((l) => l.name === lineName);
+  const cap = selectedLine?.maxRank ?? null;
+  useEffect(() => {
+    if (cap != null && targetRank > cap) setTargetRank(cap);
+  }, [cap, targetRank]);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -171,14 +176,18 @@ function GoalEditorModal({
         )}
         <label className="block text-xs text-fg-subtle">
           Target rank
-          <input
-            type="number"
-            min={1}
-            max={50}
-            value={targetRank}
-            onChange={(e) => setTargetRank(Number(e.target.value))}
-            className="mt-1 w-24 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
-          />
+          <span className="mt-1 flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={cap ?? 1}
+              disabled={cap == null}
+              value={targetRank}
+              onChange={(e) => setTargetRank(Number(e.target.value))}
+              className="w-24 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none disabled:opacity-50"
+            />
+            <span>{cap != null ? `/ ${cap}` : "No confirmed rank cap for this line."}</span>
+          </span>
         </label>
         <label className="block text-xs text-fg-subtle">
           Reason <span className="text-fg-subtle/70">(optional)</span>
@@ -192,7 +201,7 @@ function GoalEditorModal({
         </label>
         <button
           type="submit"
-          disabled={busy || !lineName.trim()}
+          disabled={busy || !lineName.trim() || cap == null || targetRank < 1 || targetRank > cap}
           className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-accent-soft px-2.5 py-1.5 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> Save goal

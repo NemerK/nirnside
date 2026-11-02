@@ -148,8 +148,10 @@ export function scriptProgress(subject: GoalSubject, scriptName: string): LinePr
 /** Progress of any goal for one character, dispatched by domain. */
 export function goalProgress(goal: Goal, subject: GoalSubject, indexes?: GoalIndexes): LineProgress {
   switch (goal.domain) {
-    case "skillline":
-      return skillLineProgress(subject, goal.target, goal.targetRank, indexes);
+    case "skillline": {
+      const need = goal.targetRank > 0 ? goal.targetRank : goal.extraRank;
+      return skillLineProgress(subject, goal.target, need, indexes);
+    }
     case "ability":
       return abilityProgress(subject, goal.target, indexes);
     case "script":
@@ -160,14 +162,21 @@ export function goalProgress(goal: Goal, subject: GoalSubject, indexes?: GoalInd
 /** Human label for any progress state, per goal domain. */
 export function progressLabel(
   p: LineProgress,
-  opts: { targetRank?: number; domain?: "skillline" | "ability" | "script" } = {},
+  opts: { targetRank?: number; extraRank?: number; domain?: "skillline" | "ability" | "script" } = {},
 ): string {
   const kind = opts.domain ?? "skillline";
   if (p.state === "notapplicable") return p.reason ?? "Not applicable";
   if (p.state === "unknown") return "Not scanned yet";
   if (p.state === "undiscovered") return kind === "skillline" ? "Not discovered" : "Not learned yet";
   if (kind === "skillline") {
-    const target = opts.targetRank ?? 0;
+    const mandatory = opts.targetRank ?? 0;
+    const extra = opts.extraRank ?? 0;
+    if (mandatory > 0 && extra > mandatory) {
+      if (p.rank >= extra) return `Rank ${p.rank} / ${extra}`;
+      if (p.rank >= mandatory) return `Rank ${p.rank} · mandatory ${mandatory}, extra ${extra}`;
+      return `Rank ${p.rank} / ${mandatory} · extra ${extra}`;
+    }
+    const target = mandatory > 0 ? mandatory : extra;
     return `Rank ${p.rank} / ${target}`;
   }
   return p.state === "done" ? "Learned" : "Not learned yet";
@@ -253,14 +262,19 @@ export function toGoalSubject(
 
 export function mergeSkillLineChoices(
   catalog: SkillLineChoice[],
-  fromCharacters: { name: string; category: string }[],
+  fromCharacters: { name: string; category: string; maxRank?: number | null }[],
 ): SkillLineChoice[] {
   const byName = new Map<string, SkillLineChoice>();
   for (const c of [...catalog, ...fromCharacters]) {
     const name = normalizeLineName(c.name);
     if (!name) continue;
     const key = name.toLowerCase();
-    if (!byName.has(key)) byName.set(key, { name, category: c.category || "Skill" });
+    const prev = byName.get(key);
+    if (!prev) {
+      byName.set(key, { name, category: c.category || "Skill", maxRank: c.maxRank ?? null });
+    } else if (prev.maxRank == null && c.maxRank != null) {
+      prev.maxRank = c.maxRank;
+    }
   }
   return Array.from(byName.values()).sort(
     (a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name),

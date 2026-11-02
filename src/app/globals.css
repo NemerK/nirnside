@@ -22,6 +22,8 @@
   --accent-soft: #c8a35a22;
   --danger: #e0574b;
   --ok: #4ba36a;
+  --rank-mandatory: #c8a35a;
+  --rank-extra: #6ea8e8;
 }
 
 .theme-light {
@@ -39,6 +41,8 @@
   --accent-soft: #9a6b1f1a;
   --danger: #b23a2c;
   --ok: #2f7a4a;
+  --rank-mandatory: #9a6b1f;
+  --rank-extra: #2c6fad;
 }
 
 @theme inline {

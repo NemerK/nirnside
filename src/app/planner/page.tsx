@@ -60,14 +60,19 @@ export default function PlannerPage() {
     abilities: data.abilities,
     roles: data.roles,
     classes: data.classes,
-    characters: data.subjects.map((s) => ({ id: s.id, name: s.name, className: s.className })),
+    characters: data.subjects.map((s) => ({
+      id: s.id,
+      name: s.name,
+      className: s.className,
+      ranks: s.skillLines.map((l) => ({ name: l.name, rank: l.rank })),
+    })),
   };
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Planner"
-        subtitle="Search what you want your account, a role, a class, or one character to have — pick how much it matters, and the planner tracks the rest from your snapshots."
+        subtitle="Every skill line is listed with its own cap. Press M for mandatory, E for extra — extra only moves above mandatory, and it saves as you go."
       />
       <PlannerBoard choices={choices} cards={cards} />
     </div>
