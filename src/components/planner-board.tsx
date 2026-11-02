@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Loader2,
   Plus,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { Modal } from "./modal";
@@ -18,16 +17,12 @@ import { TIERS, TIER_LABEL } from "@/lib/goals/types";
 import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
 import { Badge, Card, ProgressBar } from "./ui";
 import { GoalMark } from "./goal-mark";
+import { skillLineTitle } from "@/lib/goals/types";
+import { SkillLinePlanner } from "./skill-line-planner";
 
 /**
- * The Planner, built around what you want to do rather than the data model:
- *
- * - One search box adds anything (a line, an ability, a script). Pick who it
- *   applies to and how much it matters, done.
- * - Presets do the common bulk intents in one click.
- * - "Next up" answers the real question: what's left on the toon I'm playing?
- * - Targets are grouped by tier — Essential first — as compact rows with
- *   inline progress; per-character detail only expands when asked for.
+ * Skill lines are set in place (mandatory + extra). Abilities and scripts stay
+ * a picker, because those are individual unlocks rather than a rank.
  */
 
 export interface PlannerChoices {
@@ -36,7 +31,7 @@ export interface PlannerChoices {
   abilities: { name: string; lineName: string; className: string | null }[];
   roles: { id: string; name: string }[];
   classes: string[];
-  characters: { id: string; name: string; className: string }[];
+  characters: { id: string; name: string; className: string; ranks?: { name: string; rank: number }[] }[];
 }
 
 const TIER_TONE: Record<GoalTier, "accent" | "muted" | "ok"> = {
@@ -87,7 +82,6 @@ export function PlannerBoard({
     setScope("account");
     setScopeKey("");
     setTier("essential");
-    setRankByLine({});
     setError(null);
   }
 
@@ -99,39 +93,6 @@ export function PlannerBoard({
       return next;
     });
   }
-
-  /** Skill lines: shared lines by category, class lines after, under their class. */
-  const lineGroups = useMemo(() => {
-    const shared = choices.lines.filter((l) => l.category.toLowerCase() !== "class");
-    const cls = choices.lines.filter((l) => l.category.toLowerCase() === "class");
-    const byKey = new Map<string, typeof shared>();
-    for (const l of [...shared, ...cls]) {
-      const key = l.category.toLowerCase() === "class" ? `${l.className} — class` : l.category;
-      const arr = byKey.get(key);
-      if (arr) arr.push(l);
-      else byKey.set(key, [l]);
-    }
-    return [...byKey.entries()].map(([key, entries]) => ({ key, entries }));
-  }, [choices]);
-
-  const lineByName = useMemo(() => {
-    const m = new Map<string, PlannerChoices["lines"][number]>();
-    for (const l of choices.lines) m.set(l.name.toLowerCase(), l);
-    return m;
-  }, [choices]);
-
-  /** Per-line target ranks. Each bar matches its own line's cap — a line
-   * picked for the first time defaults to its cap. */
-  const [rankByLine, setRankByLine] = useState<Record<string, number>>({});
-  const capFor = (name: string): number =>
-    lineByName.get(name.toLowerCase())?.maxRank ?? 50;
-  const rankFor = (name: string): number => {
-    const cap = capFor(name);
-    const saved = rankByLine[name];
-    return saved == null ? cap : Math.min(Math.max(saved, 1), cap);
-  };
-  const pickRank = (name: string, n: number) =>
-    setRankByLine((prev) => ({ ...prev, [name]: n }));
 
   const scriptGroups = useMemo(() => {
     const bySlot = new Map<string, typeof choices.scripts>();
@@ -208,82 +169,20 @@ export function PlannerBoard({
   }
 
   async function addSelected() {
-    if (!composer || selected.size === 0) return;
-    if (composer !== "skillline") {
-      await post(
-        {
-          domain: composer,
-          tier,
-          scope,
-          characterId: scope === "character" ? scopeKey : null,
-          scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
-          targets: [...selected],
-          targetRank: 0,
-        },
-        () => setComposer(null),
-      );
-      return;
-    }
-    // Each line carries its own rank (its bar matched its own cap), so one
-    // request per distinct rank keeps every target viable.
-    const byRank = new Map<number, string[]>();
-    for (const name of selected) {
-      const rank = rankFor(name);
-      const arr = byRank.get(rank);
-      if (arr) arr.push(name);
-      else byRank.set(rank, [name]);
-    }
-    let lastOk = true;
-    for (const [rank, targets] of byRank) {
-      const ok = await post(
-        {
-          domain: composer,
-          tier,
-          scope,
-          characterId: scope === "character" ? scopeKey : null,
-          scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
-          targets,
-          targetRank: rank,
-        },
-        undefined,
-      );
-      if (!ok) lastOk = false;
-    }
-    if (lastOk) setComposer(null);
+    if (!composer || composer === "skillline" || selected.size === 0) return;
+    await post(
+      {
+        domain: composer,
+        tier,
+        scope,
+        characterId: scope === "character" ? scopeKey : null,
+        scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
+        targets: [...selected],
+        targetRank: 0,
+      },
+      () => setComposer(null),
+    );
   }
-
-  async function preset(domain: Goal["domain"], presetTier: GoalTier, entries: { name: string; rank?: number }[], label: string) {
-    if (busy || entries.length === 0) return;
-    // One request per distinct rank so capped lines (Assault 10, Mages Guild 10…)
-    // never get a rank they cannot reach.
-    const byRank = new Map<number, string[]>();
-    for (const e of entries) {
-      const rank = e.rank ?? 0;
-      const arr = byRank.get(rank);
-      if (arr) arr.push(e.name);
-      else byRank.set(rank, [e.name]);
-    }
-    for (const [rank, targets] of byRank) {
-      await post({ domain, tier: presetTier, scope: "account", targets, targetRank: rank, note: label });
-    }
-  }
-
-  /** Shared-line presets target each line's own cap, not a blanket 50. */
-  const lineCap = (l: PlannerChoices["lines"][number]) => l.maxRank ?? 50;
-  const weaponArmor = useMemo(
-    () =>
-      choices.lines
-        .filter((l) => ["weapon", "armor"].includes(l.category.toLowerCase()))
-        .map((l) => ({ name: l.name, rank: lineCap(l) })),
-    [choices.lines],
-  );
-  const sharedLines = useMemo(
-    () =>
-      choices.lines
-        .filter((l) => l.category.toLowerCase() !== "class")
-        .map((l) => ({ name: l.name, rank: lineCap(l) })),
-    [choices.lines],
-  );
 
   // ---- The character view: what's left on this toon ----
   const nextUp = useMemo(() => {
@@ -306,8 +205,8 @@ export function PlannerBoard({
   }, [cards, charFilter]);
 
   function visibleCards(list: GoalCardView[]): GoalCardView[] {
-    let out = list;
-    if (domainFilter !== "all") out = out.filter((c) => c.goal.domain === domainFilter);
+    let out = list.filter((c) => c.goal.domain !== "skillline");
+    if (domainFilter === "ability" || domainFilter === "script") out = out.filter((c) => c.goal.domain === domainFilter);
     if (charFilter) out = out.filter((c) => c.rows.some((r) => r.id === charFilter));
     return out;
   }
@@ -336,43 +235,23 @@ export function PlannerBoard({
     }
   }
 
+  const otherCards = cards.filter((c) => c.goal.domain !== "skillline");
+
   return (
     <div className="space-y-4">
-      {/* ---------- Composer: three buttons, each opens a picker modal ---------- */}
+      <SkillLinePlanner
+        lines={choices.lines}
+        roles={choices.roles}
+        classes={choices.classes}
+        characters={choices.characters.map((c) => ({ ...c, ranks: c.ranks ?? [] }))}
+        cards={cards}
+      />
+
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <DomainButton label="Skill lines" hint="Line ranks — Assault 7, Heavy Armor 50…" onClick={() => openComposer("skillline")} />
+          <span className="text-xs text-fg-subtle">Also</span>
           <DomainButton label="Abilities" hint="Exact abilities and morphs" onClick={() => openComposer("ability")} />
           <DomainButton label="Scribing scripts" hint="Focus, signature, affix" onClick={() => openComposer("script")} />
-        </div>
-
-        {/* Presets: the common intents, one click each */}
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-3">
-          <span className="mr-1 inline-flex items-center gap-1 text-xs text-fg-subtle">
-            <Sparkles className="h-3.5 w-3.5 text-accent" /> Quick add:
-          </span>
-          <PresetButton
-            label={`Weapon + armor to their caps · everyone · mandatory`}
-            title="Every weapon and armor line to its max rank for every character"
-            onClick={() => preset("skillline", "essential", weaponArmor, "weapon + armor to their caps")}
-          />
-          <PresetButton
-            label={`Every shared line to its cap · completionist`}
-            title="All non-class lines to their max rank for every character (Assault caps at 10, Mages Guild at 10, and so on)"
-            onClick={() => preset("skillline", "completionist", sharedLines, "every shared line to its cap")}
-          />
-          <PresetButton
-            label={`All scribing scripts · completionist`}
-            title="Every known catalog script for every character"
-            onClick={() =>
-              preset(
-                "script",
-                "completionist",
-                choices.scripts.map((s) => ({ name: s.name })),
-                "all scribing scripts",
-              )
-            }
-          />
           {cards.length > 0 &&
             (confirmClear ? (
               <button
@@ -410,7 +289,7 @@ export function PlannerBoard({
       {/* ---------- The picker modal ---------- */}
       {composer && (
         <Modal
-          title={`Add ${composer === "skillline" ? "skill line" : composer === "ability" ? "ability" : "scribing"} targets`}
+          title={`Add ${composer === "ability" ? "ability" : "scribing"} targets`}
           onClose={() => setComposer(null)}
           maxWidthClass="max-w-xl"
         >
@@ -442,26 +321,6 @@ export function PlannerBoard({
                 ))}
               </div>
             </div>
-            {composer === "skillline" && selected.size > 0 && (
-              <div className="mt-3 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface/40">
-                <div className="sticky top-0 bg-surface/95 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-                  Each line gets its own target — the bar matches the line
-                </div>
-                {[...selected].map((name) => {
-                  const line = lineByName.get(name.toLowerCase());
-                  return (
-                    <LineRankRow
-                      key={name}
-                      name={name}
-                      hint={(line?.category ?? "") + (line?.className ? ` · ${line.className}` : "")}
-                      cap={capFor(name)}
-                      rank={rankFor(name)}
-                      onPick={(n) => pickRank(name, n)}
-                    />
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           {composer === "ability" && (
@@ -478,31 +337,17 @@ export function PlannerBoard({
             />
           )}
 
-          {composer !== "ability" && (
+          {composer === "script" && (
             <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface/40 p-2">
-              {composer === "skillline" &&
-                lineGroups.map((group) => (
-                  <GroupBlock
-                    key={group.key}
-                    title={group.key}
-                    selected={selected}
-                    entries={group.entries.map((l) => ({
-                      name: l.name,
-                      hint: l.category + (l.className ? ` · ${l.className}` : ""),
-                    }))}
-                    onToggle={toggleSelected}
-                  />
-                ))}
-              {composer === "script" &&
-                scriptGroups.map((group) => (
-                  <GroupBlock
-                    key={group.key}
-                    title={`${group.key} scripts`}
-                    selected={selected}
-                    entries={group.entries.map((s) => ({ name: s.name, hint: s.slot }))}
-                    onToggle={toggleSelected}
-                  />
-                ))}
+              {scriptGroups.map((group) => (
+                <GroupBlock
+                  key={group.key}
+                  title={`${group.key} scripts`}
+                  selected={selected}
+                  entries={group.entries.map((s) => ({ name: s.name, hint: s.slot }))}
+                  onToggle={toggleSelected}
+                />
+              ))}
             </div>
           )}
 
@@ -560,7 +405,7 @@ export function PlannerBoard({
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs"
               >
                 <Badge tone={TIER_TONE[goal.tier]}>{DOMAIN_SHORT[goal.domain]}</Badge>
-                <span className="text-fg">{goal.domain === "skillline" ? `${goal.target} ${goal.targetRank}` : goal.target}</span>
+                <span className="text-fg">{goal.domain === "skillline" ? skillLineTitle(goal) : goal.target}</span>
                 <span className="text-fg-subtle">{mark.label}</span>
               </li>
             ))}
@@ -570,15 +415,10 @@ export function PlannerBoard({
       </Card>
 
       {/* ---------- Targets, organized by tier ---------- */}
-      {cards.length === 0 ? (
-        <Card className="px-5 py-8 text-center text-sm text-fg-muted">
-          Nothing planned yet. Use a Quick add above (weapon + armor to 50 for everyone is the usual start), or search
-          for any line, ability, or script.
-        </Card>
-      ) : (
+      {otherCards.length === 0 ? null : (
         <>
           <div className="flex flex-wrap items-center gap-1.5">
-            {(["all", "skillline", "ability", "script"] as const).map((d) => (
+            {(["all", "ability", "script"] as const).map((d) => (
               <button
                 key={d}
                 type="button"
@@ -590,7 +430,7 @@ export function PlannerBoard({
                     : "border-border text-fg-muted hover:text-fg"
                 }`}
               >
-                {d === "all" ? "All targets" : d === "skillline" ? "Skill lines" : d === "ability" ? "Abilities" : "Scripts"}
+                {d === "all" ? "Abilities & scripts" : d === "ability" ? "Abilities" : "Scripts"}
               </button>
             ))}
             {charFilter && (
@@ -671,7 +511,7 @@ function TargetRow({
   onTier: (tier: GoalTier) => void;
 }) {
   const { goal } = card;
-  const title = goal.domain === "skillline" ? `${goal.target} ${goal.targetRank}` : goal.target;
+  const title = goal.domain === "skillline" ? skillLineTitle(goal) : goal.target;
   const charRow = charFilter ? card.rows.find((r) => r.id === charFilter) : undefined;
 
   return (
@@ -806,19 +646,6 @@ function ScopePicker({
         </optgroup>
       </select>
     </div>
-  );
-}
-
-function PresetButton({ label, title, onClick }: { label: string; title: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      className="rounded-full border border-accent/40 bg-accent-soft px-3 py-1 text-xs font-medium text-accent transition hover:bg-accent hover:text-accent-fg"
-    >
-      {label}
-    </button>
   );
 }
 
@@ -998,82 +825,6 @@ function NavRow({ title, hint, onClick }: { title: string; hint: string; onClick
       </span>
       <ChevronRight className="h-4 w-4 shrink-0 text-fg-subtle" />
     </button>
-  );
-}
-
-/**
- * One selected skill line with its own target. The bar matches THIS line: its
- * max is the line's own live cap, the number sits beside it, and typing works
- * too. Newly picked lines start at their cap.
- */
-function LineRankRow({
-  name,
-  hint,
-  cap,
-  rank,
-  onPick,
-}: {
-  name: string;
-  hint: string;
-  cap: number;
-  rank: number;
-  onPick: (rank: number) => void;
-}) {
-  const effective = Math.min(Math.max(rank, 1), cap);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState(String(effective));
-
-  // Follow external changes (cap shifts from a different selection) unless the
-  // user is mid-typing in the number box.
-  useEffect(() => {
-    if (inputRef.current && document.activeElement !== inputRef.current) {
-      setText(String(effective));
-    }
-  }, [effective]);
-
-  function commit(raw: string) {
-    const n = Number.parseInt(raw.replace(/[^0-9]/g, ""), 10);
-    if (Number.isFinite(n) && n >= 1 && n <= cap) onPick(n);
-  }
-
-  const fill = cap > 1 ? ((effective - 1) / (cap - 1)) * 100 : 100;
-
-  return (
-    <div className="border-t border-border/60 px-2.5 py-2 first:border-t-0">
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-sm text-fg">
-          {name} <span className="text-xs text-fg-subtle">{hint}</span>
-        </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          <input
-            ref={inputRef}
-            value={text}
-            inputMode="numeric"
-            aria-label={`Target rank for ${name}`}
-            onChange={(e) => {
-              setText(e.target.value);
-              commit(e.target.value);
-            }}
-            onBlur={() => setText(String(effective))}
-            className="w-12 rounded-md border border-border bg-surface px-1.5 py-0.5 text-center text-sm font-medium tabular-nums text-fg focus:border-accent focus:outline-none"
-          />
-          <span className="text-xs tabular-nums text-fg-subtle">/ {cap}</span>
-        </span>
-      </div>
-      <input
-        type="range"
-        min={1}
-        max={cap}
-        step={1}
-        value={effective}
-        aria-label={`Target rank for ${name}`}
-        onChange={(e) => onPick(Number(e.target.value))}
-        className="range-gold mt-1.5 w-full"
-        style={{
-          background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${fill}%, var(--surface-2) ${fill}%, var(--surface-2) 100%)`,
-        }}
-      />
-    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { skillLineCap } from "../skills/line-cap";
 
 /**
  * Local SQLite database. Lives on the user's own disk only (see the privacy
@@ -156,12 +157,15 @@ function migrate(db: Database.Database) {
       scopeKey    TEXT,
       target      TEXT NOT NULL,
       targetRank  INTEGER NOT NULL DEFAULT 0,
+      extraRank   INTEGER NOT NULL DEFAULT 0,
       note        TEXT NOT NULL DEFAULT '',
       createdAt   INTEGER NOT NULL
     );
   `);
   migrateCharacterRolesToMany(db);
   migrateGoalsTable(db);
+  ensureGoalExtraRank(db);
+  clampGoalRanks(db);
 }
 
 /** Old DBs keyed assignments by character id only (one role). Keep existing rows. */
@@ -207,6 +211,7 @@ function migrateGoalsTable(db: Database.Database) {
       scopeKey    TEXT,
       target      TEXT NOT NULL,
       targetRank  INTEGER NOT NULL DEFAULT 0,
+      extraRank   INTEGER NOT NULL DEFAULT 0,
       note        TEXT NOT NULL DEFAULT '',
       createdAt   INTEGER NOT NULL
     );
@@ -218,6 +223,35 @@ function migrateGoalsTable(db: Database.Database) {
     DROP TABLE goals;
     ALTER TABLE goals_new RENAME TO goals;
   `);
+}
+
+/** Planner-shaped databases from before extra ranks. */
+function ensureGoalExtraRank(db: Database.Database) {
+  const cols = db.prepare("PRAGMA table_info(goals)").all() as { name: string }[];
+  if (cols.length === 0 || cols.some((c) => c.name === "extraRank")) return;
+  db.exec("ALTER TABLE goals ADD COLUMN extraRank INTEGER NOT NULL DEFAULT 0");
+}
+
+/** A stored rank past the line's own cap can never be finished. Pull it back. */
+function clampGoalRanks(db: Database.Database) {
+  const cols = db.prepare("PRAGMA table_info(goals)").all() as { name: string }[];
+  if (!cols.some((c) => c.name === "extraRank") || !cols.some((c) => c.name === "target")) return;
+  const rows = db
+    .prepare(
+      `SELECT id, target, targetRank, extraRank FROM goals WHERE domain = 'skillline' OR domain IS NULL`,
+    )
+    .all() as { id: string; target: string; targetRank: number; extraRank: number }[];
+  const update = db.prepare("UPDATE goals SET targetRank = ?, extraRank = ? WHERE id = ?");
+  for (const row of rows) {
+    const cap = skillLineCap(row.target);
+    if (cap == null) continue;
+    const mandatory = Math.min(Math.max(0, row.targetRank), cap);
+    let extra = Math.min(Math.max(0, row.extraRank ?? 0), cap);
+    if (extra <= mandatory) extra = 0;
+    if (mandatory === row.targetRank && extra === (row.extraRank ?? 0)) continue;
+    if (mandatory === 0 && extra === 0) continue;
+    update.run(mandatory, extra, row.id);
+  }
 }
 
 export function getMeta<T = unknown>(key: string): T | null {

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Trash2 } from "lucide-react";
 import type { GoalCardView } from "@/lib/goals/views";
+import { skillLineTitle } from "@/lib/goals/types";
 import { Badge, Card, ProgressBar } from "./ui";
 import { GoalMark } from "./goal-mark";
 
@@ -26,7 +27,7 @@ export function GoalCard({
   const roleName = useMemo(() => new Map(roles.map((r) => [r.id, r.name])), [roles]);
   const charName = useMemo(() => new Map(card.rows.map((r) => [r.id, r.name])), [card.rows]);
 
-  const title = goal.domain === "skillline" ? `${goal.target} ${goal.targetRank}` : goal.target;
+  const title = goal.domain === "skillline" ? skillLineTitle(goal) : goal.target;
   const scopeLabel =
     goal.scope === "account"
       ? "Every character"

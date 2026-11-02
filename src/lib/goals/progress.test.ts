@@ -194,6 +194,7 @@ describe("goalAppliesTo", () => {
       target: "Assault",
       targetRank: 7,
       note: "",
+      extraRank: 0,
       createdAt: 1,
     };
     assert.equal(goalAppliesTo(goal, subject), true);
@@ -211,6 +212,7 @@ describe("goalAppliesTo", () => {
       target: "Pierce Armor",
       targetRank: 0,
       note: "",
+      extraRank: 0,
       createdAt: 1,
     };
     assert.equal(goalAppliesTo(goal, subject), true);
@@ -228,6 +230,7 @@ describe("goalAppliesTo", () => {
       target: "Grave Lord",
       targetRank: 50,
       note: "",
+      extraRank: 0,
       createdAt: 1,
     };
     assert.equal(goalAppliesTo(goal, toon("n", "Bones")), true);
@@ -245,6 +248,7 @@ describe("goalAppliesTo", () => {
       target: "Soul Sap",
       targetRank: 0,
       note: "",
+      extraRank: 0,
       createdAt: 1,
     };
     assert.equal(goalAppliesTo(goal, subject), true);
@@ -264,6 +268,7 @@ describe("summarizeGoal", () => {
       target: "Assault",
       targetRank: 7,
       note: "",
+      extraRank: 0,
       createdAt: 1,
     };
     const subjects = [
@@ -289,6 +294,7 @@ describe("summarizeGoal", () => {
       target: "Grave Lord",
       targetRank: 50,
       note: "",
+      extraRank: 0,
       createdAt: 1,
     };
     const s = summarizeGoal(goal, [toon("n", "Bones"), toon("dk", "Knight", { className: "Dragonknight" })], indexes);
@@ -307,11 +313,33 @@ describe("summarizeGoal", () => {
       target: "Assault",
       targetRank: 7,
       note: "",
+      extraRank: 0,
       createdAt: 1,
     };
     const scriptGoal: Goal = { ...lineGoal, id: "g2", domain: "script", target: "Soul Sap", targetRank: 0 };
     const subject = toon("a", "Scribe", { lines: [{ name: "Assault", rank: 9 }], scripts: ["Soul Sap"] });
     assert.equal(goalProgress(lineGoal, subject, indexes).state, "done");
     assert.equal(goalProgress(scriptGoal, subject).state, "done");
+  });
+
+  it("treats mandatory as the rank that finishes a line, with extra above it", () => {
+    const goal: Goal = {
+      id: "g",
+      domain: "skillline",
+      tier: "essential",
+      scope: "account",
+      characterId: null,
+      scopeKey: null,
+      target: "Assault",
+      targetRank: 7,
+      extraRank: 10,
+      note: "",
+      createdAt: 1,
+    };
+    assert.equal(goalProgress(goal, toon("a", "Short", { lines: [{ name: "Assault", rank: 6 }] }), indexes).state, "short");
+    assert.equal(goalProgress(goal, toon("b", "Met", { lines: [{ name: "Assault", rank: 8 }] }), indexes).state, "done");
+    const onlyExtra: Goal = { ...goal, targetRank: 0, extraRank: 10, tier: "optional" };
+    assert.equal(goalProgress(onlyExtra, toon("c", "Almost", { lines: [{ name: "Assault", rank: 9 }] }), indexes).state, "short");
+    assert.equal(goalProgress(onlyExtra, toon("d", "Done", { lines: [{ name: "Assault", rank: 10 }] }), indexes).state, "done");
   });
 });

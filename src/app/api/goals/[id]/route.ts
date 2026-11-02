@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  let body: { targetRank?: number; note?: string; tier?: string } = {};
+  let body: { targetRank?: number; extraRank?: number; note?: string; tier?: string } = {};
   try {
     body = (await req.json()) as typeof body;
   } catch {

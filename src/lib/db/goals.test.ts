@@ -47,6 +47,7 @@ describe("goal table migration", () => {
     assert.equal(account.scope, "account");
     assert.equal(account.target, "Assault");
     assert.equal(account.targetRank, 7);
+    assert.equal(account.extraRank, 0);
     assert.equal(account.note, "pvp");
     const personal = list.find((g) => g.id === "old-c");
     assert.ok(personal);
@@ -126,5 +127,42 @@ describe("goal CRUD", () => {
     assert.throws(() => goals.updateGoal(g.id, { targetRank: 0 }));
     goals.deleteGoal(g.id);
     assert.equal(goals.getGoal(g.id), null);
+  });
+
+  it("keeps each skill line inside its own cap and stores extra above mandatory", () => {
+    assert.throws(() =>
+      goals.createGoal({ domain: "skillline", scope: "account", target: "Soul Magic", targetRank: 7 }),
+    );
+    const soul = goals.createGoal({
+      domain: "skillline",
+      scope: "account",
+      target: "Soul Magic",
+      targetRank: 6,
+    });
+    assert.equal(soul.targetRank, 6);
+    assert.equal(soul.extraRank, 0);
+
+    const assault = goals.createGoal({
+      domain: "skillline",
+      scope: "character",
+      characterId: "char-extra",
+      target: "Assault",
+      targetRank: 7,
+      extraRank: 10,
+    });
+    assert.equal(assault.extraRank, 10);
+    assert.throws(() => goals.updateGoal(assault.id, { extraRank: 11 }));
+    const covered = goals.updateGoal(assault.id, { extraRank: 7 });
+    assert.equal(covered.extraRank, 0, "extra does not sit on or below mandatory");
+    const raised = goals.updateGoal(assault.id, { targetRank: 4, extraRank: 9 });
+    assert.equal(raised.targetRank, 4);
+    assert.equal(raised.extraRank, 9);
+
+    assert.throws(() =>
+      goals.createGoal({ domain: "skillline", scope: "account", target: "Class Mastery", targetRank: 1 }),
+    );
+    assert.throws(() =>
+      goals.createGoal({ domain: "skillline", scope: "account", target: "Not A Line", targetRank: 5 }),
+    );
   });
 });
