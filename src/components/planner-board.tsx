@@ -194,7 +194,12 @@ export function PlannerBoard({
   function visibleCards(list: GoalCardView[]): GoalCardView[] {
     let out = list.filter((c) => c.goal.domain !== "skillline");
     if (domainFilter === "ability" || domainFilter === "script") out = out.filter((c) => c.goal.domain === domainFilter);
-    if (charFilter) out = out.filter((c) => c.rows.some((r) => r.id === charFilter));
+    if (charFilter) {
+      out = out.filter((c) => {
+        const row = c.rows.find((r) => r.id === charFilter);
+        return !!row && row.mark.state !== "notapplicable";
+      });
+    }
     return out;
   }
 
