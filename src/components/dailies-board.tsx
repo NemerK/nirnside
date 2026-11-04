@@ -100,16 +100,20 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
 }
 
 function ResetCountdown({ resetAt, label }: { resetAt: number; label?: string }) {
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  // Date.now() during the first render disagrees between the server HTML and
+  // the browser, which fails hydration. Stay blank until the client ticks.
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    const tick = () => setNow(Math.floor(Date.now() / 1000));
+    tick();
+    const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, []);
-  const remaining = Math.max(0, resetAt - now);
+  const text = now == null ? "\u2013:\u2013\u2013" : formatRemainingSeconds(Math.max(0, resetAt - now));
   return (
     <div className="text-sm text-fg-muted">
       Time until reset{" "}
-      <span className="font-mono tabular-nums text-fg">{formatRemainingSeconds(remaining)}</span>
+      <span className="font-mono tabular-nums text-fg">{text}</span>
       {label ? <span className="ml-1 text-xs text-fg-subtle">({label})</span> : null}
     </div>
   );
