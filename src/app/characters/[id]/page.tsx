@@ -88,7 +88,19 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   } catch {
     lore = new Map();
   }
-  const skillBook = presentSkillBook(c.skillLines, lore, (name) => skillLineHref(name, c.class), c.class);
+  const skillBook = presentSkillBook(
+    c.skillLines,
+    lore,
+    (name) => skillLineHref(name, c.class),
+    c.class,
+    (name) => {
+      try {
+        return getSkillLineByName(name)?.entry.className ?? null;
+      } catch {
+        return null;
+      }
+    },
+  );
   const goals = safeList(() => listGoals());
   const lines = safeList(() => skillLineChoices());
   const hrefForLine: Record<string, string> = {};
@@ -236,10 +248,30 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         </p>
       )}
 
-      <CharacterGoals rows={goalRows} lines={lines} subjectId={c.id} subjectName={c.name} />
+      <CharacterGoals
+        rows={goalRows}
+        lines={lines}
+        subjectId={c.id}
+        subjectName={c.name}
+        characterClass={c.class}
+        catalog={{
+          lines: goalIndexes.lineIndex.map(([name, meta]) => ({
+            name,
+            category: meta.category,
+            className: meta.className,
+            classNames: meta.classNames,
+          })),
+          abilities: goalIndexes.abilityIndex.map(([name, meta]) => ({
+            name,
+            lineName: meta.lineName,
+            className: meta.className,
+            category: meta.category,
+          })),
+        }}
+      />
 
       <div className="mt-6">
-        <SkillBook categories={skillBook} lastSeen={c.lastSeen} />
+        <SkillBook categories={skillBook} lastSeen={c.lastSeen} characterClass={c.class} />
       </div>
 
       {c.wardrobe && (c.wardrobe.zones?.length ?? 0) > 0 && (

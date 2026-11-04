@@ -59,6 +59,8 @@ export type SkillLineView = {
   rank: number;
   subclassed: boolean;
   classMastery: boolean;
+  /** Catalog class for this line. A subclassed line keeps the class that owns it. */
+  owningClass: string | null;
   href: string | null;
   abilities: AbilityView[];
 };
@@ -185,6 +187,7 @@ export function presentSkillBook(
   lore: LoreIndex,
   hrefFor: (lineName: string) => string | null,
   characterClass?: string | null,
+  lineClass?: (lineName: string) => string | null,
 ): SkillCategoryView[] {
   const filtered = keepClassMasteryForCharacter(lines, characterClass).filter((l) => !isExcludedSkillLine(l));
   const byCat = new Map<string, SkillLineView[]>();
@@ -192,6 +195,9 @@ export function presentSkillBook(
     const cat = line.category || "Skill";
     const list = byCat.get(cat) ?? [];
     const classMastery = line.classMastery === true || isClassMasteryLineName(line.name);
+    const lookedUp = lineClass?.(line.name)?.trim() || null;
+    const nativeClass = cat.trim().toLowerCase() === "class" ? characterClass?.trim() || line.className?.trim() || null : null;
+    const owningClass = line.subclassed ? line.className?.trim() || lookedUp : nativeClass;
     list.push({
       id: skillLineViewId(line, index, characterClass),
       name: line.name,
@@ -199,6 +205,7 @@ export function presentSkillBook(
       rank: line.rank,
       subclassed: line.subclassed,
       classMastery,
+      owningClass: owningClass || null,
       href: hrefFor(line.name),
       abilities: line.abilities.map((a) => presentAbility(a, lore)),
     });

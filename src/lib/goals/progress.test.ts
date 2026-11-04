@@ -89,12 +89,14 @@ describe("skillLineProgress", () => {
     assert.equal(skillLineProgress(necro, "Grave Lord", 50, indexes).state, "undiscovered");
   });
 
-  it("levels a borrowed (subclassed) line when the character actually has it", () => {
+  it("does not apply a subclassed line to a class that does not own it", () => {
     const dk = toon("dk", "Knight", {
       className: "Dragonknight",
       lines: [{ name: "Grave Lord", rank: 12 }],
     });
-    assert.deepEqual(skillLineProgress(dk, "Grave Lord", 10, indexes), { state: "done", rank: 12 });
+    const p = skillLineProgress(dk, "Grave Lord", 10, indexes);
+    assert.equal(p.state, "notapplicable");
+    assert.match(p.reason ?? "", /Necromancer/);
   });
 
   it("marks curse lines not applicable for characters without the curse", () => {
@@ -320,6 +322,22 @@ describe("abilityProgress", () => {
 
   it("never flags another class's ability as missing", () => {
     const dk = toon("dk", "Knight", { className: "Dragonknight" });
+    const p = abilityProgress(dk, "Death Stroke", indexes);
+    assert.equal(p.state, "notapplicable");
+    assert.match(p.reason ?? "", /Nightblade/);
+  });
+
+  it("does not apply another class's ability even when this character has it", () => {
+    const dk = toon("dk", "Knight", {
+      className: "Dragonknight",
+      lines: [
+        {
+          name: "Ardeur",
+          rank: 50,
+          abilities: [{ name: "Death Stroke", purchased: true, rank: 4, morphs: [], morphNames: [], morphPurchased: [] }],
+        },
+      ],
+    });
     const p = abilityProgress(dk, "Death Stroke", indexes);
     assert.equal(p.state, "notapplicable");
     assert.match(p.reason ?? "", /Nightblade/);

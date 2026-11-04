@@ -14,6 +14,8 @@ import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
 import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
 import { abilitiesOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey } from "@/lib/planner/skill-groups";
+import { groupPlacedGoals } from "@/lib/planner/goal-groups";
+import { GroupedTargets } from "./goal-groups";
 import { isExcludedSkillLine } from "@/lib/catalog/excluded";
 
 /**
@@ -441,35 +443,44 @@ export function PlannerBoard({
           {TIERS.map((t) => {
             const tierCards = visibleCards(cards.filter((c) => c.goal.tier === t));
             if (tierCards.length === 0) return null;
+            const characterClass = charFilter
+              ? choices.characters.find((character) => character.id === charFilter)?.className
+              : null;
+            const groups = groupPlacedGoals(
+              tierCards.map((card) => ({ ...card.goal, card })),
+              { lines: choices.lines, abilities: choices.abilities, scripts: choices.scripts },
+              characterClass,
+            );
             return (
               <section key={t}>
                 <div className="mb-1.5 flex items-center gap-2">
                   <Badge tone={TIER_TONE[t]}>{TIER_LABEL[t]}</Badge>
                   <span className="text-xs text-fg-subtle">{tierCards.length}</span>
                 </div>
-                <Card className="divide-y divide-border overflow-hidden">
-                  {tierCards.map((card) => (
+                <GroupedTargets
+                  groups={groups}
+                  getKey={(item) => item.id}
+                  renderItem={(item) => (
                     <TargetRow
-                      key={card.goal.id}
-                      card={card}
+                      card={item.card}
                       charFilter={charFilter}
                       choices={choices}
-                      expanded={expanded.has(card.goal.id)}
+                      expanded={expanded.has(item.id)}
                       onToggle={() =>
                         setExpanded((prev) => {
                           const next = new Set(prev);
-                          if (next.has(card.goal.id)) next.delete(card.goal.id);
-                          else next.add(card.goal.id);
+                          if (next.has(item.id)) next.delete(item.id);
+                          else next.add(item.id);
                           return next;
                         })
                       }
                       scopeLabel={scopeLabel}
-                      onRemove={() => removeGoal(card.goal.id)}
-                      onTier={(nt) => changeTier(card.goal, nt)}
-                      onAbilityRank={(rank) => changeAbilityRank(card.goal, rank)}
+                      onRemove={() => removeGoal(item.id)}
+                      onTier={(nt) => changeTier(item.card.goal, nt)}
+                      onAbilityRank={(rank) => changeAbilityRank(item.card.goal, rank)}
                     />
-                  ))}
-                </Card>
+                  )}
+                />
               </section>
             );
           })}

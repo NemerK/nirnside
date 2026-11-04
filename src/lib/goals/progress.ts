@@ -97,9 +97,9 @@ export function goalAppliesTo(goal: Goal, subject: GoalSubject): boolean {
 
 /**
  * Current skill-line rank vs a target, using only the snapshot. Never invents a
- * rank. Another class's line is not applicable even when the goal is mandatory
- * and even when that character has not been scanned. A line they actually have
- * (including a subclassed one) uses their rank. No logout otherwise → unknown.
+ * rank. Another class's line is not applicable, even when the goal is mandatory,
+ * the character has not been scanned, or they subclassed the line. No logout
+ * otherwise → unknown.
  */
 export function skillLineProgress(
   subject: GoalSubject,
@@ -108,20 +108,13 @@ export function skillLineProgress(
   indexes?: GoalIndexes,
 ): LineProgress {
   const meta = indexes?.lines?.get(normalizeLineName(lineName).toLowerCase());
-  // Class ownership does not wait for a snapshot. A mandatory Ardent Flame
-  // target is still a Dragonknight line on a character who has never logged out.
-  if (!subject.lastSeen) {
-    if (wrongClass(meta, subject)) return { state: "notapplicable", reason: classReason(meta, "line") };
-    return { state: "unknown" };
-  }
+  // Owning class wins over a snapshot, a subclass, and a mandatory account goal.
+  if (wrongClass(meta, subject)) return { state: "notapplicable", reason: classReason(meta, "line") };
+  if (!subject.lastSeen) return { state: "unknown" };
   const line = subject.skillLines.find((l) => lineNamesMatch(l.name, lineName));
-  // A subclassed line is really on this character, so their own rank counts.
   if (line) {
     if (line.rank >= targetRank) return { state: "done", rank: line.rank };
     return { state: "short", rank: line.rank };
-  }
-  if (wrongClass(meta, subject)) {
-    return { state: "notapplicable", reason: classReason(meta, "line") };
   }
   if (isVampireLine(lineName) && !subject.isVampire) {
     return { state: "notapplicable", reason: "Not a vampire" };
@@ -240,10 +233,8 @@ export function abilityProgress(
 ): LineProgress {
   const target = normalizeLineName(abilityName).toLowerCase();
   const meta = indexes?.abilities?.get(target);
-  if (!subject.lastSeen) {
-    if (wrongClass(meta, subject)) return { state: "notapplicable", reason: classReason(meta, "ability") };
-    return { state: "unknown" };
-  }
+  if (wrongClass(meta, subject)) return { state: "notapplicable", reason: classReason(meta, "ability") };
+  if (!subject.lastSeen) return { state: "unknown" };
   let hit: AbilityHit | null = null;
   for (const line of subject.skillLines) {
     for (const ability of line.abilities) {
@@ -253,14 +244,8 @@ export function abilityProgress(
   }
   if (hit) return rankProgress(hit, goalRank, meta);
   // No ability data at all (roster row) — unknown, never "missing".
-  if (!subject.full) {
-    if (wrongClass(meta, subject)) return { state: "notapplicable", reason: classReason(meta, "ability") };
-    return { state: "unknown" };
-  }
+  if (!subject.full) return { state: "unknown" };
   if (meta) {
-    if (wrongClass(meta, subject)) {
-      return { state: "notapplicable", reason: classReason(meta, "ability") };
-    }
     if (subject.skillLines.some((l) => lineNamesMatch(l.name, meta.lineName))) {
       const targetRank = abilityGoalRank(goalRank, meta.passive, meta.crafted, meta.maxRank);
       return targetRank != null ? { state: "short", rank: 0, targetRank } : { state: "short", rank: 0 };

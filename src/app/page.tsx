@@ -146,7 +146,17 @@ export default function HomePage() {
               g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined,
             )
           : [];
-        return <GoalsBoard cards={cards} roles={planner?.roles ?? []} />;
+        return (
+          <GoalsBoard
+            cards={cards}
+            roles={planner?.roles ?? []}
+            catalog={
+              planner
+                ? { lines: planner.lines, abilities: planner.abilities, scripts: planner.scripts }
+                : undefined
+            }
+          />
+        );
       })()}
 
       {account.guilds?.length > 0 && (

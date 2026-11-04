@@ -11,6 +11,7 @@ import type { AbilitySlotView, AbilityView, SkillCategoryView, SkillLineView } f
 import { romanRank } from "@/lib/skills/ability";
 import { CLASS_MASTERY_POINTS } from "@/lib/skills/class-mastery";
 import type { CatalogSource } from "@/lib/catalog/schema";
+import { classIcon, ESO_CLASSES } from "@/lib/classes";
 
 function RankPips({ rank, max = 4 }: { rank: number | null; max?: number }) {
   const filled = rank ?? 0;
@@ -185,12 +186,51 @@ function TabButton({
   );
 }
 
+function classRank(name: string): number {
+  const index = ESO_CLASSES.findIndex((cls) => cls.toLowerCase() === name.toLowerCase());
+  return index < 0 ? 90 : index;
+}
+
+/** Class lines sit under the class that owns them. A subclass stays with its own class. */
+function lineGroups(lines: SkillLineView[], categoryName: string, characterClass?: string | null) {
+  const isClass = categoryName.trim().toLowerCase() === "class";
+  if (!isClass) return [{ title: null as string | null, lines }];
+  const mine = (characterClass ?? "").trim().toLowerCase();
+  const buckets = new Map<string, { title: string; lines: SkillLineView[] }>();
+  for (const line of lines) {
+    const owner = (line.owningClass || (line.subclassed ? "" : characterClass) || "").trim();
+    const title = owner || (line.subclassed ? "Subclassed" : characterClass || "Class");
+    const key = title.toLowerCase();
+    const bucket = buckets.get(key) ?? { title, lines: [] };
+    bucket.lines.push(line);
+    buckets.set(key, bucket);
+  }
+  return [...buckets.values()].sort((a, b) => {
+    const aMine = a.title.toLowerCase() === mine ? -1 : classRank(a.title);
+    const bMine = b.title.toLowerCase() === mine ? -1 : classRank(b.title);
+    if (aMine !== bMine) return aMine - bMine;
+    return a.title.localeCompare(b.title);
+  });
+}
+
+function abilityGroups(abilities: AbilityView[]) {
+  const rows = abilities.map((ability, index) => ({ ability, index }));
+  const groups = [
+    { title: "Active", rows: rows.filter((row) => !row.ability.passive && !row.ability.crafted) },
+    { title: "Passive", rows: rows.filter((row) => row.ability.passive) },
+    { title: "Scribing", rows: rows.filter((row) => row.ability.crafted) },
+  ].filter((group) => group.rows.length > 0);
+  return groups.length > 1 ? groups : [{ title: null as string | null, rows }];
+}
+
 export function SkillBook({
   categories,
   lastSeen,
+  characterClass,
 }: {
   categories: SkillCategoryView[];
   lastSeen: number | null;
+  characterClass?: string | null;
 }) {
   const [catName, setCatName] = useState(categories[0]?.name ?? "");
   const category = categories.find((c) => c.name === catName) ?? categories[0];
@@ -242,34 +282,48 @@ export function SkillBook({
             className="flex min-h-0 min-w-0 gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-y-auto lg:pr-1"
             aria-label="Skill line"
           >
-            {category?.lines.map((l) => {
-              const known = l.abilities.filter((a) => a.purchased).length;
-              const active = l.id === line?.id;
-              return (
-                <li key={l.id} className="shrink-0 lg:shrink">
-                  <button
-                    type="button"
-                    onClick={() => pickLine(l.id)}
-                    className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${
-                      active ? "bg-accent-soft text-fg" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
-                    }`}
-                  >
-                    <span className="min-w-0 truncate">
-                      {l.name}
-                      {l.subclassed ? <span className="text-accent"> ·</span> : null}
-                    </span>
-                    <span className="shrink-0 text-xs tabular-nums text-fg-subtle">{l.rank}</span>
-                  </button>
-                  {active && l.abilities.length > 0 && (
-                    <p className="px-2.5 pb-1 text-[11px] text-fg-subtle">
-                      {l.classMastery
-                        ? `${known}/${CLASS_MASTERY_POINTS} Class Mastery Points · ${known}/${l.abilities.length} purchased`
-                        : `${known}/${l.abilities.length} purchased`}
-                    </p>
-                  )}
-                </li>
-              );
-            })}
+            {lineGroups(category?.lines ?? [], category?.name ?? "", characterClass).map((group) => (
+              <li key={group.title ?? "lines"} className="min-w-[10rem] shrink-0 lg:min-w-0 lg:shrink">
+                {group.title ? (
+                  <div className="mb-1 flex items-center gap-1.5 px-2 pt-1 text-[11px] font-medium uppercase tracking-wider text-fg-subtle">
+                    {classIcon(group.title) ? (
+                      <GameIcon name={group.title} icon={classIcon(group.title)} size={16} bare />
+                    ) : null}
+                    {group.title}
+                  </div>
+                ) : null}
+                <ul className="space-y-0.5">
+                  {group.lines.map((l) => {
+                    const known = l.abilities.filter((a) => a.purchased).length;
+                    const active = l.id === line?.id;
+                    return (
+                      <li key={l.id}>
+                        <button
+                          type="button"
+                          onClick={() => pickLine(l.id)}
+                          className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${
+                            active ? "bg-accent-soft text-fg" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                          }`}
+                        >
+                          <span className="min-w-0 truncate">
+                            {l.name}
+                            {l.subclassed ? <span className="text-accent"> · subclass</span> : null}
+                          </span>
+                          <span className="shrink-0 text-xs tabular-nums text-fg-subtle">{l.rank}</span>
+                        </button>
+                        {active && l.abilities.length > 0 && (
+                          <p className="px-2.5 pb-1 text-[11px] text-fg-subtle">
+                            {l.classMastery
+                              ? `${known}/${CLASS_MASTERY_POINTS} Class Mastery Points · ${known}/${l.abilities.length} purchased`
+                              : `${known}/${l.abilities.length} purchased`}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
           </ul>
 
           <div className="min-h-0 min-w-0 lg:overflow-y-auto lg:pr-1">
@@ -277,63 +331,74 @@ export function SkillBook({
               <p className="text-sm text-fg-muted">No abilities captured for this line.</p>
             )}
             {line && line.abilities.length > 0 && (
-              <ul className="divide-y divide-border/70 overflow-hidden rounded-lg border border-border">
-                {line.abilities.map((a, i) => {
-                  const selected = i === Math.min(abilityIndex, line.abilities.length - 1);
-                  const face =
-                    a.morphs.find((s) => s.current) ??
-                    a.morphs.find((s) => s.purchased) ??
-                    a.morphs.find((s) => (s.rank ?? 0) >= 1) ??
-                    a.morphs[0];
-                  const label = face?.name ?? a.name;
-                  const icon = face?.icon || a.icon || a.morphs.find((m) => m.icon)?.icon;
-                  const rank = face?.rank ?? a.rank;
-                  return (
-                    <li key={`${a.name}-${i}`}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAbilityIndex(i);
-                          setMorphSlot(null);
-                        }}
-                        className={`flex w-full items-center gap-3 px-3 py-2 text-left ${
-                          selected ? "bg-accent-soft" : "hover:bg-surface-2/60"
-                        }`}
-                      >
-                        <span className={a.purchased ? "" : "opacity-40 grayscale"}>
-                          <GameIcon name={label} icon={icon} size={36} />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className={`block truncate text-sm ${a.purchased ? "text-fg" : "text-fg-subtle"}`}>
-                            {label}
-                          </span>
-                          <span className="text-[11px] text-fg-subtle">
-                            {a.crafted
-                              ? a.scribed
-                                ? "Scribed"
-                                : a.purchased
-                                  ? "Unlocked"
-                                  : "Locked"
-                              : a.passive
-                                ? "Passive"
-                                : face && face.slot > 0
-                                  ? "Morph"
-                                  : "Base"}
-                            {!a.purchased && !a.crafted ? " · not purchased" : ""}
-                          </span>
-                        </span>
-                        {a.crafted ? (
-                          <span className="text-[11px] text-fg-subtle">{a.scripts.length > 0 ? `${a.scripts.length} scripts` : ""}</span>
-                        ) : a.passive ? (
-                          <span className="text-xs tabular-nums text-fg-muted">{a.rank}</span>
-                        ) : (
-                          <RankPips rank={rank} />
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="space-y-3">
+                {abilityGroups(line.abilities).map((group) => (
+                  <section key={group.title ?? "abilities"}>
+                    {group.title ? (
+                      <h4 className="mb-1 px-1 text-[11px] font-medium uppercase tracking-wider text-fg-subtle">{group.title}</h4>
+                    ) : null}
+                    <ul className="divide-y divide-border/70 overflow-hidden rounded-lg border border-border">
+                      {group.rows.map(({ ability: a, index }) => {
+                        const selected = index === Math.min(abilityIndex, line.abilities.length - 1);
+                        const face =
+                          a.morphs.find((s) => s.current) ??
+                          a.morphs.find((s) => s.purchased) ??
+                          a.morphs.find((s) => (s.rank ?? 0) >= 1) ??
+                          a.morphs[0];
+                        const label = face?.name ?? a.name;
+                        const icon = face?.icon || a.icon || a.morphs.find((m) => m.icon)?.icon;
+                        const rank = face?.rank ?? a.rank;
+                        return (
+                          <li key={`${a.name}-${index}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAbilityIndex(index);
+                                setMorphSlot(null);
+                              }}
+                              className={`flex w-full items-center gap-3 px-3 py-2 text-left ${
+                                selected ? "bg-accent-soft" : "hover:bg-surface-2/60"
+                              }`}
+                            >
+                              <span className={a.purchased ? "" : "opacity-40 grayscale"}>
+                                <GameIcon name={label} icon={icon} size={36} />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className={`block truncate text-sm ${a.purchased ? "text-fg" : "text-fg-subtle"}`}>
+                                  {label}
+                                </span>
+                                <span className="text-[11px] text-fg-subtle">
+                                  {a.crafted
+                                    ? a.scribed
+                                      ? "Scribed"
+                                      : a.purchased
+                                        ? "Unlocked"
+                                        : "Locked"
+                                    : a.passive
+                                      ? "Passive"
+                                      : face && face.slot > 0
+                                        ? "Morph"
+                                        : "Base"}
+                                  {!a.purchased && !a.crafted ? " · not purchased" : ""}
+                                </span>
+                              </span>
+                              {a.crafted ? (
+                                <span className="text-[11px] text-fg-subtle">
+                                  {a.scripts.length > 0 ? `${a.scripts.length} scripts` : ""}
+                                </span>
+                              ) : a.passive ? (
+                                <span className="text-xs tabular-nums text-fg-muted">{a.rank}</span>
+                              ) : (
+                                <RankPips rank={rank} />
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             )}
           </div>
 
