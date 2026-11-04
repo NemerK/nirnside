@@ -12,7 +12,6 @@ import {
   BookMarked,
   BookOpen,
   CalendarDays,
-  Crosshair,
   FolderCog,
   Home,
   Landmark,
@@ -39,7 +38,6 @@ export interface ShellAccount {
 const NAV = [
   { href: "/", label: "Home", icon: Home, exact: true },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/focus", label: "Focus", icon: Crosshair },
   { href: "/planner", label: "Planner", icon: ListChecks },
   { href: "/characters", label: "Characters", icon: Users },
   { href: "/inventory", label: "Inventory", icon: Backpack },

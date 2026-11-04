@@ -10,9 +10,8 @@ import {
 } from "@/lib/knowledge/present";
 
 /**
- * Server-side panels of the Focus dashboard. Each one renders one "what I care
- * about" area for the focused character, straight from the last snapshot —
- * nothing is guessed, nothing is recomputed from outside the game data.
+ * One slice of a character's snapshot, opened from the Dashboard.
+ * Nothing is guessed, and nothing is recomputed from outside the game data.
  */
 
 /** ESO craft skill lines, in the game's own crafting-window order. */
