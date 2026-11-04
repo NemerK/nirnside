@@ -4,9 +4,11 @@ import {
   abilityProgress,
   goalAppliesTo,
   goalProgress,
+  progressLabel,
   scriptProgress,
   skillLineProgress,
   summarizeGoal,
+  toGoalSubject,
 } from "./progress";
 import type { Goal, GoalIndexes, GoalSubject } from "./types";
 
@@ -109,36 +111,194 @@ describe("abilityProgress", () => {
         name: "Grave Lord",
         rank: 20,
         abilities: [
-          { name: "Render Soul", purchased: true, morphNames: ["Render Flesh"], morphPurchased: [] },
-          { name: "Blastbones", purchased: false, morphNames: ["Blighted Blastbones"], morphPurchased: [] },
+          {
+            name: "Render Soul",
+            purchased: true,
+            rank: 4,
+            morphNames: ["Render Flesh"],
+            morphPurchased: [],
+            morphs: [{ name: "Render Flesh", purchased: false, rank: null }],
+          },
+          {
+            name: "Blastbones",
+            purchased: false,
+            rank: null,
+            morphNames: ["Blighted Blastbones"],
+            morphPurchased: [],
+            morphs: [{ name: "Blighted Blastbones", purchased: false, rank: null }],
+          },
         ],
       },
     ],
   });
 
-  it("is done when the base is purchased", () => {
-    assert.equal(abilityProgress(withAbilities, "Render Soul", indexes).state, "done");
+  it("is done when the base is purchased at the live cap", () => {
+    const p = abilityProgress(withAbilities, "Render Soul", indexes);
+    assert.equal(p.state, "done");
+    assert.equal(p.state === "done" ? p.rank : 0, 4);
+    assert.equal(progressLabel(p, { domain: "ability" }), "Rank IV / IV");
   });
 
-  it("is done when the exact morph is owned", () => {
-    const morphOwner = {
-      ...withAbilities,
-      skillLines: [
+  it("is short when the purchased ability is below the cap", () => {
+    const partial = toon("n", "Bones", {
+      lines: [
         {
           name: "Grave Lord",
           rank: 20,
           abilities: [
             {
               name: "Render Soul",
-              purchased: false,
-              morphNames: ["Render Flesh"],
-              morphPurchased: ["Render Flesh"],
+              purchased: true,
+              rank: 1,
+              morphNames: [],
+              morphPurchased: [],
             },
           ],
         },
       ],
-    };
-    assert.equal(abilityProgress(morphOwner, "Render Flesh", indexes).state, "done");
+    });
+    const p = abilityProgress(partial, "Render Soul", indexes);
+    assert.equal(p.state, "short");
+    assert.equal(progressLabel(p, { domain: "ability" }), "Rank I / IV");
+  });
+
+  it("is done when the exact morph is owned at the asked rank", () => {
+    const morphOwner = toon("n", "Bones", {
+      lines: [
+        {
+          name: "Grave Lord",
+          rank: 20,
+          abilities: [
+            {
+              name: "Render Flesh",
+              purchased: true,
+              rank: 2,
+              morphNames: ["Render Flesh"],
+              morphPurchased: ["Render Flesh"],
+              morphs: [
+                { name: "Render Soul", purchased: false, rank: 4 },
+                { name: "Render Flesh", purchased: true, rank: 2 },
+                { name: "Reusable Parts", purchased: false, rank: 1 },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    // The base's remembered IV does not finish the morph, and the other morph's rank stays its own.
+    assert.equal(abilityProgress(morphOwner, "Render Flesh", indexes).state, "short");
+    assert.equal(progressLabel(abilityProgress(morphOwner, "Render Flesh", indexes, 2), { domain: "ability" }), "Rank II / II");
+    assert.equal(abilityProgress(morphOwner, "Render Flesh", indexes, 2).state, "done");
+    const other = abilityProgress(morphOwner, "Reusable Parts", indexes);
+    assert.equal(other.state, "short");
+    assert.equal(progressLabel(other, { domain: "ability" }), "Rank I / IV · not purchased");
+    const base = abilityProgress(morphOwner, "Render Soul", indexes);
+    assert.equal(base.state, "short");
+    assert.equal(progressLabel(base, { domain: "ability" }), "Rank IV · not purchased");
+  });
+
+  it("is done when a passive reaches its own cap, not IV", () => {
+    const passive = toon("n", "Bones", {
+      lines: [
+        {
+          name: "Grave Lord",
+          rank: 20,
+          abilities: [
+            {
+              name: "Reusable Parts",
+              purchased: true,
+              rank: 2,
+              passive: true,
+              maxRank: 2,
+              morphNames: [],
+              morphPurchased: [],
+            },
+          ],
+        },
+      ],
+    });
+    const atCap = abilityProgress(passive, "Reusable Parts", indexes, 4);
+    assert.equal(atCap.state, "done");
+    assert.equal(progressLabel(atCap, { domain: "ability" }), "Rank II / II");
+    const low = toon("n", "Bones", {
+      lines: [
+        {
+          name: "Grave Lord",
+          rank: 20,
+          abilities: [
+            {
+              name: "Reusable Parts",
+              purchased: true,
+              rank: 1,
+              passive: true,
+              maxRank: 2,
+              morphNames: [],
+              morphPurchased: [],
+            },
+          ],
+        },
+      ],
+    });
+    assert.equal(progressLabel(abilityProgress(low, "Reusable Parts", indexes), { domain: "ability" }), "Rank I / II");
+  });
+
+  it("treats a grimoire as unlocked, with no rank", () => {
+    const scribe = toon("n", "Bones", {
+      lines: [
+        {
+          name: "Soul Magic",
+          rank: 6,
+          abilities: [
+            {
+              name: "Soul Burst",
+              purchased: true,
+              rank: 0,
+              crafted: true,
+              morphNames: [],
+              morphPurchased: [],
+            },
+          ],
+        },
+      ],
+    });
+    assert.equal(abilityProgress(scribe, "Soul Burst", indexes).state, "done");
+    assert.equal(progressLabel(abilityProgress(scribe, "Soul Burst", indexes), { domain: "ability" }), "Learned");
+  });
+
+  it("reads ranks off the snapshot, including a morphed headline name", () => {
+    const subject = toGoalSubject(
+      {
+        id: "a",
+        name: "Bones",
+        class: "Necromancer",
+        lastSeen: 1,
+        skillLines: [
+          {
+            name: "Grave Lord",
+            rank: 20,
+            abilities: [
+              {
+                name: "Render Flesh",
+                rank: 2,
+                purchased: true,
+                morphs: [
+                  { name: "Render Soul", purchased: false, rank: 4 },
+                  { name: "Render Flesh", purchased: true, rank: 2 },
+                  { name: "Reusable Parts", purchased: false, rank: null },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      [],
+      true,
+    );
+    assert.equal(abilityProgress(subject, "Render Flesh", indexes, 2).state, "done");
+    assert.equal(abilityProgress(subject, "Render Soul").state, "short");
+    const unseenMorph = abilityProgress(subject, "Reusable Parts");
+    assert.equal(unseenMorph.state, "short");
+    assert.equal(progressLabel(unseenMorph, { domain: "ability" }), "Not learned · IV");
   });
 
   it("is short when the ability exists but is not purchased", () => {
@@ -147,6 +307,7 @@ describe("abilityProgress", () => {
 
   it("is short when a morph exists but was not taken", () => {
     assert.equal(abilityProgress(withAbilities, "Render Flesh", indexes).state, "short");
+    assert.equal(progressLabel(abilityProgress(withAbilities, "Render Flesh", indexes), { domain: "ability" }), "Not learned · IV");
   });
 
   it("never flags another class's ability as missing", () => {

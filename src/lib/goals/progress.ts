@@ -1,7 +1,10 @@
+import { MAX_ABILITY_RANK, morphSlotPurchased, romanRank } from "../skills/ability";
 import type {
+  AbilityMeta,
   Goal,
   GoalIndexes,
   GoalSubject,
+  GoalSubjectAbility,
   LineProgress,
   SkillLineChoice,
 } from "./types";
@@ -81,36 +84,121 @@ export function skillLineProgress(
   return { state: "undiscovered" };
 }
 
+interface AbilityHit {
+  purchased: boolean;
+  /** null when this form's rank was never captured. */
+  rank: number | null;
+  passive: boolean;
+  crafted: boolean;
+  maxRank: number | null;
+}
+
 /**
- * Ability (or morph) ownership. A target is "done" when the base is purchased
- * or that exact morph is owned, "short" when the ability exists on this
- * character but is not purchased, "undiscovered" when the owning line exists
- * but the ability was never seen, and notapplicable when the ability belongs
- * to another class's line.
+ * The rank a goal is asking for. 0 means the live cap. Passives use the cap
+ * the snapshot reported. Actives and morphs cap at IV. A grimoire has no rank.
+ * Never invents a passive cap the game didn't report.
+ */
+export function abilityGoalRank(
+  goalRank: number,
+  passive?: boolean,
+  crafted?: boolean,
+  maxRank?: number | null,
+): number | null {
+  if (crafted) return null;
+  const cap = passive ? (maxRank != null && maxRank > 0 ? maxRank : null) : MAX_ABILITY_RANK;
+  if (!Number.isInteger(goalRank) || goalRank <= 0) return cap;
+  if (cap == null) return goalRank;
+  return Math.min(goalRank, cap);
+}
+
+function recordedRank(rank: number | null | undefined): number | null {
+  if (typeof rank !== "number" || !Number.isFinite(rank)) return null;
+  return rank;
+}
+
+function preferHit(current: AbilityHit, next: AbilityHit): AbilityHit {
+  if (current.purchased !== next.purchased) return current.purchased ? current : next;
+  return (current.rank ?? -1) >= (next.rank ?? -1) ? current : next;
+}
+
+/** Match one ability record. A morph is judged by that slot's rank, never a sibling's. */
+function matchAbility(ability: GoalSubjectAbility, target: string): AbilityHit | null {
+  const morphs = ability.morphs ?? [];
+  const headline = normalizeLineName(ability.name).toLowerCase() === target;
+  const morph = morphs.find((m) => normalizeLineName(m.name).toLowerCase() === target);
+  if (morph) {
+    // Slot rank wins. If an older snapshot only stored the current form's rank
+    // on the headline, use that when this slot is the current form.
+    const slotRank = recordedRank(morph.rank);
+    return {
+      purchased: morph.purchased,
+      rank: slotRank ?? (headline ? recordedRank(ability.rank) : null),
+      passive: false,
+      crafted: false,
+      maxRank: null,
+    };
+  }
+  // Older snapshots stored morph names without per-slot ranks.
+  const legacyName = ability.morphNames.some((m) => m.trim().toLowerCase() === target);
+  if (legacyName) {
+    return {
+      purchased: ability.morphPurchased.some((m) => m.trim().toLowerCase() === target),
+      rank: headline ? recordedRank(ability.rank) : null,
+      passive: false,
+      crafted: false,
+      maxRank: null,
+    };
+  }
+  if (!headline) return null;
+  return {
+    purchased: ability.purchased,
+    rank: recordedRank(ability.rank),
+    passive: ability.passive === true,
+    crafted: ability.crafted === true,
+    maxRank: ability.maxRank ?? null,
+  };
+}
+
+function rankProgress(hit: AbilityHit, goalRank: number, meta?: AbilityMeta): LineProgress {
+  const passive = hit.passive || meta?.passive === true;
+  const crafted = hit.crafted || meta?.crafted === true;
+  const maxRank = hit.maxRank ?? meta?.maxRank ?? null;
+  const target = abilityGoalRank(goalRank, passive, crafted, maxRank);
+  const rank = hit.rank != null && hit.rank > 0 ? hit.rank : 0;
+  if (target == null) {
+    if (hit.purchased) return { state: "done", rank };
+    if (rank > 0) return { state: "short", rank, unpurchased: true };
+    return { state: "short", rank: 0 };
+  }
+  if (hit.purchased && rank >= target) return { state: "done", rank, targetRank: target };
+  if (hit.purchased && rank === 0) return { state: "short", rank: 0, targetRank: target, rankUnknown: true };
+  if (!hit.purchased && rank > 0) return { state: "short", rank, targetRank: target, unpurchased: true };
+  return { state: "short", rank, targetRank: target };
+}
+
+/**
+ * Ability or morph progress from the snapshot. Done when that exact form is
+ * purchased and its in-game rank reaches the target. A remembered rank on a
+ * morph the character respecced out of stays visible and is not "done".
+ * Another class's ability is not applicable. A line the character has, with
+ * the ability never seen, is short — never invented as rank 0 complete.
  */
 export function abilityProgress(
   subject: GoalSubject,
   abilityName: string,
   indexes?: GoalIndexes,
+  goalRank = 0,
 ): LineProgress {
   if (!subject.lastSeen) return { state: "unknown" };
   const target = normalizeLineName(abilityName).toLowerCase();
-  let seen = false;
-  let known = false;
+  let hit: AbilityHit | null = null;
   for (const line of subject.skillLines) {
     for (const ability of line.abilities) {
-      const baseHit = normalizeLineName(ability.name).toLowerCase() === target;
-      // Owning the base is not owning the morph — each is checked by its own name.
-      const morphSeen = ability.morphNames.some((m) => m.trim().toLowerCase() === target);
-      const morphOwned = ability.morphPurchased.some((m) => m.trim().toLowerCase() === target);
-      if (baseHit || morphSeen || morphOwned) {
-        seen = true;
-        if ((baseHit && ability.purchased) || morphOwned) known = true;
-      }
+      const found = matchAbility(ability, target);
+      if (found) hit = hit ? preferHit(hit, found) : found;
     }
   }
-  if (known) return { state: "done", rank: 0 };
-  if (seen) return { state: "short", rank: 0 };
+  if (hit) return rankProgress(hit, goalRank, indexes?.abilities?.get(target));
   // No ability data at all (roster row) — unknown, never "missing".
   if (!subject.full) return { state: "unknown" };
   const meta = indexes?.abilities?.get(target);
@@ -123,7 +211,8 @@ export function abilityProgress(
       return { state: "notapplicable", reason: `${meta.className} ability` };
     }
     if (subject.skillLines.some((l) => lineNamesMatch(l.name, meta.lineName))) {
-      return { state: "short", rank: 0 };
+      const targetRank = abilityGoalRank(goalRank, meta.passive, meta.crafted, meta.maxRank);
+      return targetRank != null ? { state: "short", rank: 0, targetRank } : { state: "short", rank: 0 };
     }
     if (isVampireLine(meta.lineName) && !subject.isVampire) {
       return { state: "notapplicable", reason: "Not a vampire" };
@@ -153,7 +242,7 @@ export function goalProgress(goal: Goal, subject: GoalSubject, indexes?: GoalInd
       return skillLineProgress(subject, goal.target, need, indexes);
     }
     case "ability":
-      return abilityProgress(subject, goal.target, indexes);
+      return abilityProgress(subject, goal.target, indexes, goal.targetRank);
     case "script":
       return scriptProgress(subject, goal.target);
   }
@@ -178,6 +267,19 @@ export function progressLabel(
     }
     const target = mandatory > 0 ? mandatory : extra;
     return `Rank ${p.rank} / ${target}`;
+  }
+  if (kind === "ability" && (p.state === "done" || p.state === "short")) {
+    const target = p.targetRank;
+    if (p.state === "short" && p.rankUnknown) return "Rank unknown";
+    if (p.state === "short" && p.unpurchased && p.rank > 0) {
+      if (target != null && p.rank >= target) return `Rank ${romanRank(p.rank)} · not purchased`;
+      if (target != null) return `Rank ${romanRank(p.rank)} / ${romanRank(target)} · not purchased`;
+      return `Rank ${romanRank(p.rank)} · not purchased`;
+    }
+    if (p.rank > 0 && target != null) return `Rank ${romanRank(p.rank)} / ${romanRank(target)}`;
+    if (p.rank > 0) return `Rank ${romanRank(p.rank)}`;
+    if (p.state === "short" && target != null) return `Not learned · ${romanRank(target)}`;
+    return p.state === "done" ? "Learned" : "Not learned yet";
   }
   return p.state === "done" ? "Learned" : "Not learned yet";
 }
@@ -224,8 +326,12 @@ export function toGoalSubject(
       rank: number;
       abilities?: {
         name: string;
+        rank?: number | null;
         purchased?: boolean;
-        morphs?: { name?: string; purchased?: boolean }[];
+        passive?: boolean;
+        crafted?: boolean;
+        maxRank?: number | null;
+        morphs?: { name?: string; purchased?: boolean; rank?: number | null }[];
       }[];
     }[];
     scribingScripts?: string[];
@@ -243,14 +349,40 @@ export function toGoalSubject(
     skillLines: (c.skillLines ?? []).map((l) => ({
       name: l.name,
       rank: l.rank,
-      abilities: (l.abilities ?? []).map((a) => ({
-        name: a.name,
-        purchased: a.purchased ?? false,
-        morphNames: (a.morphs ?? []).map((m) => m.name).filter((m): m is string => !!m),
-        morphPurchased: (a.morphs ?? [])
-          .filter((m) => m.purchased && m.name)
-          .map((m) => m.name as string),
-      })),
+      abilities: (l.abilities ?? []).map((a) => {
+        const passive = a.passive === true;
+        const crafted = a.crafted === true;
+        const morphs = (a.morphs ?? []).flatMap((m) => {
+          if (!m.name) return [];
+          return [
+            {
+              name: m.name,
+              purchased: morphSlotPurchased(m),
+              rank: recordedRank(m.rank),
+            },
+          ];
+        });
+        const rank = recordedRank(a.rank);
+        // Passives and grimoires trust the purchased flag. An active is owned
+        // only when a slot (or, on older snapshots, the headline) is rank I+.
+        const purchased =
+          crafted || passive
+            ? a.purchased === true
+            : morphs.length > 0
+              ? morphs.some((m) => m.purchased)
+              : a.purchased === true && (rank ?? 0) >= 1;
+        return {
+          name: a.name,
+          purchased,
+          rank,
+          passive,
+          crafted,
+          maxRank: passive ? (a.maxRank ?? null) : null,
+          morphs,
+          morphNames: morphs.map((m) => m.name),
+          morphPurchased: morphs.filter((m) => m.purchased).map((m) => m.name),
+        };
+      }),
     })),
     scribingScripts: c.scribingScripts ?? [],
     isVampire: c.vampire?.isVampire ?? false,

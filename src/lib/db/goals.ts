@@ -8,6 +8,7 @@ import { normalizeLineName } from "../goals/progress";
 import { isExcludedLineName } from "../catalog/excluded";
 import { isClassMasteryLineName } from "../skills/class-mastery";
 import { skillLineCap } from "../skills/line-cap";
+import { MAX_ABILITY_RANK } from "../skills/ability";
 
 export function ensureGoalTables() {
   getDb().exec(`
@@ -199,6 +200,12 @@ export function createGoal(input: {
     const ranks = assertSkillLineRanks(target, Number(input.targetRank), Number(input.extraRank ?? 0));
     targetRank = ranks.targetRank;
     extraRank = ranks.extraRank;
+  } else if (domain === "ability") {
+    const rank = Number(input.targetRank ?? 0);
+    if (!Number.isInteger(rank) || rank < 0 || rank > MAX_ABILITY_RANK) {
+      throw new Error(`An ability rank is 0 (its live cap) through ${MAX_ABILITY_RANK}.`);
+    }
+    targetRank = rank;
   }
 
   const dup = duplicate(domain, scope, characterId, scopeKey, target);
@@ -236,14 +243,24 @@ export function updateGoal(
   if (!existing) throw new Error("That target is gone.");
   let { targetRank, extraRank } = existing;
   if (patch.targetRank != null || patch.extraRank != null) {
-    if (existing.domain !== "skillline") throw new Error("Only skill-line targets have a rank.");
-    const ranks = assertSkillLineRanks(
-      existing.target,
-      patch.targetRank != null ? Number(patch.targetRank) : targetRank,
-      patch.extraRank != null ? Number(patch.extraRank) : extraRank,
-    );
-    targetRank = ranks.targetRank;
-    extraRank = ranks.extraRank;
+    if (existing.domain === "ability") {
+      const rank = Number(patch.targetRank ?? targetRank);
+      if (!Number.isInteger(rank) || rank < 0 || rank > MAX_ABILITY_RANK) {
+        throw new Error(`An ability rank is 0 (its live cap) through ${MAX_ABILITY_RANK}.`);
+      }
+      targetRank = rank;
+      extraRank = 0;
+    } else if (existing.domain === "skillline") {
+      const ranks = assertSkillLineRanks(
+        existing.target,
+        patch.targetRank != null ? Number(patch.targetRank) : targetRank,
+        patch.extraRank != null ? Number(patch.extraRank) : extraRank,
+      );
+      targetRank = ranks.targetRank;
+      extraRank = ranks.extraRank;
+    } else {
+      throw new Error("Only skill-line and ability targets have a rank.");
+    }
   }
   const note = patch.note != null ? patch.note.trim().slice(0, 120) : existing.note;
   const tier = patch.tier != null ? assertTier(patch.tier) : existing.tier;

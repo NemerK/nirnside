@@ -72,7 +72,7 @@ export default function PlannerPage() {
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Planner"
-        subtitle="Every skill line is listed with its own cap. Press M for mandatory, E for extra — extra only moves above mandatory, and it saves as you go."
+        subtitle="Choose Skills, Abilities, or Scribing first. Categories stay closed until you open them."
       />
       <PlannerBoard choices={choices} cards={cards} />
     </div>

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import type { Goal, GoalTier } from "@/lib/goals/types";
 import type { GoalCardView } from "@/lib/goals/views";
 import { isExcludedLineName } from "@/lib/catalog/excluded";
 import { isClassMasteryLineName } from "@/lib/skills/class-mastery";
 import { editSkillLineRanks } from "@/lib/skills/line-cap";
+import { groupPlannerLines } from "@/lib/planner/skill-groups";
 import { Card } from "./ui";
 
 type Scope = "account" | "role" | "class" | "character";
@@ -35,8 +37,6 @@ interface Draft {
   id: string | null;
   dirty: boolean;
 }
-
-const GROUP_REST = ["guild", "world", "alliance war", "craft", "racial"];
 
 function scopeValue(scope: Scope, key: string): string {
   if (scope === "account") return "account";
@@ -71,19 +71,6 @@ function storedRanks(goal: Goal | undefined): { mandatory: number; extra: number
   return { mandatory: goal.targetRank, extra: 0, id: goal.id };
 }
 
-function groupSort(key: string, classes: string[]): number {
-  if (key.startsWith("class:")) {
-    const name = key.slice("class:".length);
-    const i = classes.findIndex((c) => c.toLowerCase() === name.toLowerCase());
-    return 20 + (i < 0 ? 40 : i);
-  }
-  const cat = key.slice("cat:".length).toLowerCase();
-  if (cat === "weapon") return 0;
-  if (cat === "armor") return 10;
-  const rest = GROUP_REST.indexOf(cat);
-  return rest < 0 ? 90 : 40 + rest;
-}
-
 /**
  * Every skill line, with its expectation beside it. M paints mandatory, E paints
  * extra (only from the mandatory rank upward). Both save on their own.
@@ -108,6 +95,8 @@ export function SkillLinePlanner({
   const [scopeKey, setScopeKey] = useState("");
   const [watchId, setWatchId] = useState("");
   const [focused, setFocused] = useState("");
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+  const [openLines, setOpenLines] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Map<string, Draft>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -175,7 +164,7 @@ export function SkillLinePlanner({
   const characterClass =
     scope === "character" ? (characters.find((c) => c.id === scopeKey)?.className ?? null) : null;
 
-  const groups = useMemo(() => {
+  const categories = useMemo(() => {
     const visible = lines.filter((line) => {
       if (isClassMasteryLineName(line.name) || isExcludedLineName(line.name)) return false;
       if (line.maxRank == null || line.maxRank < 1) return false;
@@ -186,24 +175,27 @@ export function SkillLinePlanner({
       }
       return true;
     });
-    const byKey = new Map<string, SkillLinePlannerLine[]>();
-    for (const line of visible) {
-      const key =
-        line.category.toLowerCase() === "class"
-          ? `class:${line.className ?? "Class"}`
-          : `cat:${line.category}`;
-      const arr = byKey.get(key);
-      if (arr) arr.push(line);
-      else byKey.set(key, [line]);
-    }
-    return [...byKey.entries()]
-      .sort((a, b) => groupSort(a[0], classes) - groupSort(b[0], classes) || a[0].localeCompare(b[0]))
-      .map(([key, entries]) => ({
-        key,
-        title: key.startsWith("class:") ? key.slice("class:".length) : key.slice("cat:".length),
-        entries: entries.sort((a, b) => a.name.localeCompare(b.name)),
-      }));
+    return groupPlannerLines(visible, classes);
   }, [lines, classes, scope, scopeKey, characterClass]);
+
+  function toggleCategory(key: string) {
+    setOpenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function toggleLine(name: string) {
+    setOpenLines((prev) => {
+      const next = new Set(prev);
+      const key = name.toLowerCase();
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   const unknown = useMemo(
     () =>
@@ -385,6 +377,64 @@ export function SkillLinePlanner({
 
   const saving = [...drafts.values()].some((d) => d.dirty);
 
+  function renderBar(line: SkillLinePlannerLine) {
+    const cap = line.maxRank ?? 0;
+    const draft = shown(line);
+    const key = lineKey(scope, scopeKey, line.name);
+    const current = watched?.ranks.find((r) => r.name.toLowerCase() === line.name.toLowerCase())?.rank;
+    return (
+      <LineBar
+        line={line}
+        cap={cap}
+        mandatory={draft.mandatory}
+        extra={draft.extra}
+        focused={focused === key}
+        current={current}
+        mode={mode}
+        onFocus={() => {
+          digits.current = "";
+          setFocused(key);
+        }}
+        onPaint={(raw) => applyRaw(line, raw)}
+        onKeyDown={(e) => {
+          const currentEdge =
+            modeRef.current === "mandatory"
+              ? draft.mandatory
+              : draft.extra > draft.mandatory
+                ? draft.extra
+                : draft.mandatory;
+          if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+            e.preventDefault();
+            applyRaw(line, currentEdge - 1);
+          } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+            e.preventDefault();
+            applyRaw(line, currentEdge + 1);
+          } else if (e.key === "Home") {
+            e.preventDefault();
+            applyRaw(line, modeRef.current === "extra" ? draft.mandatory : 0);
+          } else if (e.key === "End") {
+            e.preventDefault();
+            applyRaw(line, cap);
+          } else if (e.key === "Backspace") {
+            digits.current = digits.current.slice(0, -1);
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            flushDigits(line);
+          } else if (/^\d$/.test(e.key)) {
+            e.preventDefault();
+            digits.current += e.key;
+            const n = Number.parseInt(digits.current, 10);
+            if (n * 10 > cap) flushDigits(line);
+            else {
+              window.clearTimeout(digitTimer.current);
+              digitTimer.current = window.setTimeout(() => flushDigits(line), 700);
+            }
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <Card>
       <div className="sticky top-0 z-10 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur-sm">
@@ -469,75 +519,58 @@ export function SkillLinePlanner({
       </div>
 
       <div>
-        {groups.map((group) => (
-          <section key={group.key}>
-            <h3 className="bg-surface/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-              {group.title}
-            </h3>
-            <ul>
-              {group.entries.map((line) => {
-                const cap = line.maxRank ?? 0;
-                const draft = shown(line);
-                const key = lineKey(scope, scopeKey, line.name);
-                const current = watched?.ranks.find((r) => r.name.toLowerCase() === line.name.toLowerCase())?.rank;
-                return (
-                  <li key={line.name} className="border-t border-border/50">
-                    <LineBar
-                      line={line}
-                      cap={cap}
-                      mandatory={draft.mandatory}
-                      extra={draft.extra}
-                      focused={focused === key}
-                      current={current}
-                      mode={mode}
-                      onFocus={() => {
-                        digits.current = "";
-                        setFocused(key);
-                      }}
-                      onPaint={(raw) => applyRaw(line, raw)}
-                      onKeyDown={(e) => {
-                        const currentEdge =
-                          modeRef.current === "mandatory"
-                            ? draft.mandatory
-                            : draft.extra > draft.mandatory
-                              ? draft.extra
-                              : draft.mandatory;
-                        if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
-                          e.preventDefault();
-                          applyRaw(line, currentEdge - 1);
-                        } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
-                          e.preventDefault();
-                          applyRaw(line, currentEdge + 1);
-                        } else if (e.key === "Home") {
-                          e.preventDefault();
-                          applyRaw(line, modeRef.current === "extra" ? draft.mandatory : 0);
-                        } else if (e.key === "End") {
-                          e.preventDefault();
-                          applyRaw(line, cap);
-                        } else if (e.key === "Backspace") {
-                          digits.current = digits.current.slice(0, -1);
-                        } else if (e.key === "Enter") {
-                          e.preventDefault();
-                          flushDigits(line);
-                        } else if (/^\d$/.test(e.key)) {
-                          e.preventDefault();
-                          digits.current += e.key;
-                          const n = Number.parseInt(digits.current, 10);
-                          if (n * 10 > cap) flushDigits(line);
-                          else {
-                            window.clearTimeout(digitTimer.current);
-                            digitTimer.current = window.setTimeout(() => flushDigits(line), 700);
-                          }
-                        }
-                      }}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
-        {groups.length === 0 && (
+        {categories.map((category) => {
+          const open = openCategories.has(category.key);
+          const count = category.classes
+            ? category.classes.reduce((n, c) => n + c.lines.length, 0)
+            : category.lines.length;
+          return (
+            <section key={category.key} className="border-t border-border/60">
+              <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => toggleCategory(category.key)}
+                className="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-surface/60"
+              >
+                <ChevronDown className={`h-4 w-4 shrink-0 text-accent transition-transform ${open ? "" : "-rotate-90"}`} />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{category.title}</span>
+                <span className="text-[11px] text-fg-subtle">{count}</span>
+              </button>
+              {open && (
+                <div className="space-y-3 px-4 pb-3">
+                  {category.classes
+                    ? category.classes.map((klass) => (
+                        <ClassLines
+                          key={klass.name}
+                          className={klass.name}
+                          lines={klass.lines}
+                          openLines={openLines}
+                          onToggle={toggleLine}
+                          renderBar={(line) => renderBar(line)}
+                          isSet={(line) => {
+                            const draft = shown(line);
+                            return draft.mandatory > 0 || draft.extra > 0;
+                          }}
+                        />
+                      ))
+                    : (
+                      <ClassLines
+                        lines={category.lines}
+                        openLines={openLines}
+                        onToggle={toggleLine}
+                        renderBar={(line) => renderBar(line)}
+                        isSet={(line) => {
+                          const draft = shown(line);
+                          return draft.mandatory > 0 || draft.extra > 0;
+                        }}
+                      />
+                    )}
+                </div>
+              )}
+            </section>
+          );
+        })}
+        {categories.length === 0 && (
           <p className="px-4 py-6 text-sm text-fg-muted">No rankable skill lines for this choice.</p>
         )}
         <p className="border-t border-border/60 px-4 py-2 text-xs text-fg-subtle">
@@ -548,6 +581,55 @@ export function SkillLinePlanner({
         </p>
       </div>
     </Card>
+  );
+}
+
+function ClassLines({
+  className,
+  lines,
+  openLines,
+  onToggle,
+  renderBar,
+  isSet,
+}: {
+  className?: string;
+  lines: SkillLinePlannerLine[];
+  openLines: Set<string>;
+  onToggle: (name: string) => void;
+  renderBar: (line: SkillLinePlannerLine) => ReactNode;
+  isSet: (line: SkillLinePlannerLine) => boolean;
+}) {
+  const open = lines.filter((line) => openLines.has(line.name.toLowerCase()));
+  return (
+    <div>
+      {className ? <div className="mb-1.5 text-sm text-fg">{className}</div> : null}
+      <div className="flex flex-wrap gap-1.5">
+        {lines.map((line) => {
+          const expanded = openLines.has(line.name.toLowerCase());
+          return (
+            <button
+              key={line.name}
+              type="button"
+              aria-expanded={expanded}
+              onClick={() => onToggle(line.name)}
+              className={`rounded-full border px-2.5 py-1 text-xs ${
+                expanded
+                  ? "border-accent/60 bg-accent-soft font-medium text-accent"
+                  : "border-border text-fg-muted hover:text-fg"
+              }`}
+            >
+              {isSet(line) ? <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ background: "var(--rank-mandatory)" }} /> : null}
+              {line.name}
+            </button>
+          );
+        })}
+      </div>
+      {open.map((line) => (
+        <div key={line.name} className="mt-1 rounded-lg border border-border/70">
+          {renderBar(line)}
+        </div>
+      ))}
+    </div>
   );
 }
 

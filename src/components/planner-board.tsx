@@ -2,27 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { Modal } from "./modal";
+import { Check, ChevronDown, Loader2, Plus, Trash2 } from "lucide-react";
 import type { Goal, GoalTier } from "@/lib/goals/types";
 import { TIERS, TIER_LABEL } from "@/lib/goals/types";
 import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
 import { Badge, Card, ProgressBar } from "./ui";
 import { GoalMark } from "./goal-mark";
-import { skillLineTitle } from "@/lib/goals/types";
+import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
+import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
+import { groupPlannerLines } from "@/lib/planner/skill-groups";
+import { isExcludedLineName } from "@/lib/catalog/excluded";
 
 /**
- * Skill lines are set in place (mandatory + extra). Abilities and scripts stay
- * a picker, because those are individual unlocks rather than a rank.
+ * The planner starts with the kind of thing you are planning. Skills, abilities,
+ * and scribing each open their own categories, and those stay closed until chosen.
  */
 
 export interface PlannerChoices {
@@ -46,6 +40,12 @@ const DOMAIN_SHORT: Record<Goal["domain"], string> = {
   script: "script",
 };
 
+function goalTitle(goal: Goal): string {
+  if (goal.domain === "skillline") return skillLineTitle(goal);
+  if (goal.domain === "ability") return abilityTitle(goal);
+  return goal.target;
+}
+
 export function PlannerBoard({
   choices,
   cards,
@@ -55,17 +55,13 @@ export function PlannerBoard({
 }) {
   const router = useRouter();
 
-  // ---- Composer state: three buttons, each opens a picker modal ----
-  const [composer, setComposer] = useState<Goal["domain"] | null>(null);
+  const [kind, setKind] = useState<"skills" | "abilities" | "scribing" | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // Abilities browse like the game: (class →) skill line → abilities.
-  const [abilityNav, setAbilityNav] = useState<{ className: string | null; lineName: string | null }>({
-    className: null,
-    lineName: null,
-  });
   const [scope, setScope] = useState<"account" | "role" | "class" | "character">("account");
   const [scopeKey, setScopeKey] = useState("");
   const [tier, setTier] = useState<GoalTier>("essential");
+  /** 0 = the live cap (IV, or the passive's own cap). 1–4 = that rank. */
+  const [abilityRank, setAbilityRank] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,13 +71,9 @@ export function PlannerBoard({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [confirmClear, setConfirmClear] = useState(false);
 
-  function openComposer(domain: Goal["domain"]) {
-    setComposer(domain);
+  function chooseKind(next: "skills" | "abilities" | "scribing") {
+    setKind(next);
     setSelected(new Set());
-    setAbilityNav({ className: null, lineName: null });
-    setScope("account");
-    setScopeKey("");
-    setTier("essential");
     setError(null);
   }
 
@@ -103,36 +95,6 @@ export function PlannerBoard({
     }
     return [...bySlot.entries()].map(([key, entries]) => ({ key, entries }));
   }, [choices]);
-
-  /** Abilities browsed like the game: class lines under their class, shared lines after. */
-  const classLineMap = useMemo(() => {
-    const m = new Map<string, PlannerChoices["lines"]>();
-    for (const l of choices.lines) {
-      if (l.category.toLowerCase() !== "class") continue;
-      const key = l.className ?? "Class";
-      const arr = m.get(key);
-      if (arr) arr.push(l);
-      else m.set(key, [l]);
-    }
-    return m;
-  }, [choices]);
-
-  const sharedLineList = useMemo(
-    () => choices.lines.filter((l) => l.category.toLowerCase() !== "class"),
-    [choices],
-  );
-
-  const lineAbilityCounts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const a of choices.abilities) {
-      const key = a.lineName.toLowerCase();
-      m.set(key, (m.get(key) ?? 0) + 1);
-    }
-    return m;
-  }, [choices.abilities]);
-
-  const abilitiesForLine = (lineName: string) =>
-    choices.abilities.filter((a) => a.lineName.toLowerCase() === lineName.toLowerCase());
 
   const scopeLabel = (goal: Goal): string => {
     if (goal.scope === "account") return "Everyone";
@@ -169,18 +131,19 @@ export function PlannerBoard({
   }
 
   async function addSelected() {
-    if (!composer || composer === "skillline" || selected.size === 0) return;
+    if (kind !== "abilities" && kind !== "scribing") return;
+    if (selected.size === 0) return;
     await post(
       {
-        domain: composer,
+        domain: kind === "abilities" ? "ability" : "script",
         tier,
         scope,
         characterId: scope === "character" ? scopeKey : null,
         scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
         targets: [...selected],
-        targetRank: 0,
+        targetRank: kind === "abilities" ? abilityRank : 0,
       },
-      () => setComposer(null),
+      () => setSelected(new Set()),
     );
   }
 
@@ -221,6 +184,20 @@ export function PlannerBoard({
     }
   }
 
+  async function changeAbilityRank(goal: Goal, rank: number) {
+    setBusy(true);
+    try {
+      await fetch(`/api/goals/${encodeURIComponent(goal.id)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ targetRank: rank }),
+      });
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function changeTier(goal: Goal, next: GoalTier) {
     setBusy(true);
     try {
@@ -239,19 +216,30 @@ export function PlannerBoard({
 
   return (
     <div className="space-y-4">
-      <SkillLinePlanner
-        lines={choices.lines}
-        roles={choices.roles}
-        classes={choices.classes}
-        characters={choices.characters.map((c) => ({ ...c, ranks: c.ranks ?? [] }))}
-        cards={cards}
-      />
-
       <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-fg-subtle">Also</span>
-          <DomainButton label="Abilities" hint="Exact abilities and morphs" onClick={() => openComposer("ability")} />
-          <DomainButton label="Scribing scripts" hint="Focus, signature, affix" onClick={() => openComposer("script")} />
+        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="What to plan">
+          {(
+            [
+              ["skills", "Skills"],
+              ["abilities", "Abilities"],
+              ["scribing", "Scribing"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={kind === id}
+              onClick={() => chooseKind(id)}
+              className={`rounded-full border px-3 py-1.5 text-sm ${
+                kind === id
+                  ? "border-accent/60 bg-accent-soft font-medium text-accent"
+                  : "border-border text-fg-muted hover:text-fg"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
           {cards.length > 0 &&
             (confirmClear ? (
               <button
@@ -266,7 +254,7 @@ export function PlannerBoard({
                     router.refresh();
                   }
                 }}
-                className="rounded-full border border-danger/50 px-3 py-1 text-xs text-danger"
+                className="ml-auto rounded-full border border-danger/50 px-3 py-1 text-xs text-danger"
               >
                 Really remove everything? Click again
               </button>
@@ -277,98 +265,67 @@ export function PlannerBoard({
                   setConfirmClear(true);
                   setTimeout(() => setConfirmClear(false), 4000);
                 }}
-                className="rounded-full border border-border px-3 py-1 text-xs text-fg-subtle hover:text-fg"
+                className="ml-auto rounded-full border border-border px-3 py-1 text-xs text-fg-subtle hover:text-fg"
               >
                 Clear all targets
               </button>
             ))}
         </div>
-        {error && !composer && <p className="mt-2 text-sm text-danger">{error}</p>}
       </Card>
 
-      {/* ---------- The picker modal ---------- */}
-      {composer && (
-        <Modal
-          title={`Add ${composer === "ability" ? "ability" : "scribing"} targets`}
-          onClose={() => setComposer(null)}
-          maxWidthClass="max-w-xl"
-        >
-          {/* Who + how much, decided once, applies to every selection below */}
-          <div className="border-b border-border pb-3">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <ScopePicker
-                choices={choices}
-                scope={scope}
-                scopeKey={scopeKey}
-                onScope={(s, k) => {
-                  setScope(s);
-                  setScopeKey(k);
-                }}
-              />
-              <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
-                {TIERS.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    aria-pressed={tier === t}
-                    onClick={() => setTier(t)}
-                    className={`rounded-md px-2 py-1 text-xs ${
-                      tier === t ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
-                    }`}
-                  >
-                    {TIER_LABEL[t]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+      {kind === "skills" && (
+        <SkillLinePlanner
+          lines={choices.lines}
+          roles={choices.roles}
+          classes={choices.classes}
+          characters={choices.characters.map((c) => ({ ...c, ranks: c.ranks ?? [] }))}
+          cards={cards}
+        />
+      )}
 
-          {composer === "ability" && (
-            <AbilityDrilldown
-              choices={choices}
-              nav={abilityNav}
-              onNav={setAbilityNav}
-              selected={selected}
-              onToggle={toggleSelected}
-              classLineMap={classLineMap}
-              sharedLineList={sharedLineList}
-              lineAbilityCounts={lineAbilityCounts}
-              abilitiesForLine={abilitiesForLine}
-            />
-          )}
-
-          {composer === "script" && (
-            <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface/40 p-2">
-              {scriptGroups.map((group) => (
-                <GroupBlock
-                  key={group.key}
-                  title={`${group.key} scripts`}
-                  selected={selected}
-                  entries={group.entries.map((s) => ({ name: s.name, hint: s.slot }))}
-                  onToggle={toggleSelected}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs text-fg-subtle">
-              {selected.size === 0
-                ? "Pick anything from the list"
-                : `${selected.size} target${selected.size === 1 ? "" : "s"} selected`}
-            </span>
-            <button
-              type="button"
-              disabled={busy || selected.size === 0 || !scopeOk(scope, scopeKey)}
-              onClick={addSelected}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-50"
-            >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Add {selected.size > 0 ? `${selected.size} target${selected.size === 1 ? "" : "s"}` : ""}
-            </button>
-          </div>
+      {kind === "abilities" && (
+        <Card className="p-4">
+          <ComposerBar
+            choices={choices}
+            scope={scope}
+            scopeKey={scopeKey}
+            onScope={(s, k) => {
+              setScope(s);
+              setScopeKey(k);
+            }}
+            tier={tier}
+            onTier={setTier}
+            abilityRank={abilityRank}
+            onAbilityRank={setAbilityRank}
+            showRank
+          />
+          <AbilityCategories
+            choices={choices}
+            selected={selected}
+            onToggle={toggleSelected}
+          />
+          <AddBar busy={busy} count={selected.size} enabled={scopeOk(scope, scopeKey)} onAdd={addSelected} />
           {error && <p className="mt-2 text-sm text-danger">{error}</p>}
-        </Modal>
+        </Card>
+      )}
+
+      {kind === "scribing" && (
+        <Card className="p-4">
+          <ComposerBar
+            choices={choices}
+            scope={scope}
+            scopeKey={scopeKey}
+            onScope={(s, k) => {
+              setScope(s);
+              setScopeKey(k);
+            }}
+            tier={tier}
+            onTier={setTier}
+          />
+          <ScriptCategories groups={scriptGroups} selected={selected} onToggle={toggleSelected} />
+          <AddBar busy={busy} count={selected.size} enabled={scopeOk(scope, scopeKey)} onAdd={addSelected} />
+          {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+        </Card>
       )}
 
       {/* ---------- Next up: the toon I'm playing ---------- */}
@@ -405,7 +362,7 @@ export function PlannerBoard({
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs"
               >
                 <Badge tone={TIER_TONE[goal.tier]}>{DOMAIN_SHORT[goal.domain]}</Badge>
-                <span className="text-fg">{goal.domain === "skillline" ? skillLineTitle(goal) : goal.target}</span>
+                <span className="text-fg">{goalTitle(goal)}</span>
                 <span className="text-fg-subtle">{mark.label}</span>
               </li>
             ))}
@@ -472,6 +429,7 @@ export function PlannerBoard({
                       scopeLabel={scopeLabel}
                       onRemove={() => removeGoal(card.goal.id)}
                       onTier={(nt) => changeTier(card.goal, nt)}
+                      onAbilityRank={(rank) => changeAbilityRank(card.goal, rank)}
                     />
                   ))}
                 </Card>
@@ -500,6 +458,7 @@ function TargetRow({
   scopeLabel,
   onRemove,
   onTier,
+  onAbilityRank,
 }: {
   card: GoalCardView;
   charFilter: string;
@@ -509,9 +468,10 @@ function TargetRow({
   scopeLabel: (goal: Goal) => string;
   onRemove: () => void;
   onTier: (tier: GoalTier) => void;
+  onAbilityRank: (rank: number) => void;
 }) {
   const { goal } = card;
-  const title = goal.domain === "skillline" ? skillLineTitle(goal) : goal.target;
+  const title = goalTitle(goal);
   const charRow = charFilter ? card.rows.find((r) => r.id === charFilter) : undefined;
 
   return (
@@ -538,6 +498,20 @@ function TargetRow({
           {charRow ? "" : `${card.done}/${card.total}`}
         </span>
 
+        {goal.domain === "ability" && (
+          <select
+            value={goal.targetRank}
+            onChange={(e) => onAbilityRank(Number(e.target.value))}
+            className="shrink-0 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-fg-muted"
+            aria-label="Ability rank"
+          >
+            <option value={0}>Cap</option>
+            <option value={1}>I</option>
+            <option value={2}>II</option>
+            <option value={3}>III</option>
+            <option value={4}>IV</option>
+          </select>
+        )}
         <select
           value={goal.tier}
           onChange={(e) => onTier(e.target.value as GoalTier)}
@@ -649,201 +623,302 @@ function ScopePicker({
   );
 }
 
-/**
- * Abilities, browsed like the game browses them: shared lines directly, class
- * abilities one drill-down deeper (class → one of its skill lines → abilities).
- * Selections accumulate across navigation until Add.
- */
-function AbilityDrilldown({
-  choices,
-  nav,
-  onNav,
-  selected,
-  onToggle,
-  classLineMap,
-  sharedLineList,
-  lineAbilityCounts,
-  abilitiesForLine,
-}: {
-  choices: PlannerChoices;
-  nav: { className: string | null; lineName: string | null };
-  onNav: (nav: { className: string | null; lineName: string | null }) => void;
-  selected: Set<string>;
-  onToggle: (name: string) => void;
-  classLineMap: Map<string, PlannerChoices["lines"]>;
-  sharedLineList: PlannerChoices["lines"];
-  lineAbilityCounts: Map<string, number>;
-  abilitiesForLine: (lineName: string) => PlannerChoices["abilities"];
-}) {
-  const list = useMemo(() => {
-    if (nav.lineName) return abilitiesForLine(nav.lineName);
-    if (nav.className) return classLineMap.get(nav.className) ?? [];
-    return sharedLineList;
-  }, [nav, abilitiesForLine, classLineMap, sharedLineList]);
-
-  const countFor = (lineName: string) => lineAbilityCounts.get(lineName.toLowerCase()) ?? 0;
-
-  return (
-    <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface/40 p-2">
-      {/* Breadcrumb */}
-      <div className="mb-2 flex items-center gap-2 px-1">
-        {nav.lineName || nav.className ? (
-          <button
-            type="button"
-            onClick={() =>
-              onNav(nav.lineName ? { className: nav.className, lineName: null } : { className: null, lineName: null })
-            }
-            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-fg-muted hover:text-fg"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            {nav.lineName ? `${nav.className} lines` : "All abilities"}
-          </button>
-        ) : (
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-            Browse like the game — pick a skill line{choices.classes.length > 1 ? " or a class" : ""}
-          </span>
-        )}
-        {(nav.lineName || nav.className) && (
-          <span className="text-xs text-fg-subtle">
-            {nav.className ? nav.className : ""}
-            {nav.lineName ? ` · ${nav.lineName}` : ""}
-          </span>
-        )}
-      </div>
-
-      {/* Level: a class's skill lines */}
-      {nav.className && !nav.lineName && (
-        <div className="mb-2">
-          <div className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-            {nav.className} skill lines
-          </div>
-          <div className="space-y-0.5">
-            {list.length === 0 && (
-              <p className="px-2.5 py-2 text-sm text-fg-subtle">No lines known for this class yet.</p>
-            )}
-            {(list as PlannerChoices["lines"]).map((l) => (
-              <NavRow
-                key={l.name}
-                title={l.name}
-                hint={countFor(l.name) > 0 ? `${countFor(l.name)} abilities` : "no abilities known yet"}
-                onClick={() => onNav({ className: nav.className, lineName: l.name })}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Level: top — class buttons + shared lines */}
-      {!nav.className && !nav.lineName && (
-        <>
-          <div className="mb-2">
-            <div className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-              Class abilities
-            </div>
-            <div className="flex flex-wrap gap-1.5 px-2 pb-1 pt-1">
-              {choices.classes.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => onNav({ className: c, lineName: null })}
-                  className="rounded-full border border-accent/40 bg-accent-soft px-3 py-1 text-xs font-medium text-accent transition hover:bg-accent hover:text-accent-fg"
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="mb-1">
-            <div className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-              Shared skill lines — every class can level these
-            </div>
-            <div className="space-y-0.5">
-              {(list as PlannerChoices["lines"]).map((l) => (
-                <NavRow
-                  key={l.name}
-                  title={l.name}
-                  hint={l.category + (countFor(l.name) > 0 ? ` · ${countFor(l.name)} abilities` : "")}
-                  onClick={() => onNav({ className: null, lineName: l.name })}
-                />
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Level: abilities of a line */}
-      {nav.lineName && (
-        <div>
-          <div className="flex items-center justify-between px-2.5 py-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-              {nav.lineName} abilities
-            </span>
-            {list.length > 0 && (
-              <button
-                type="button"
-                onClick={() => (list as PlannerChoices["abilities"]).forEach((a) => onToggle(a.name))}
-                className="text-[11px] text-fg-subtle transition hover:text-accent"
-              >
-                {list.every((a) => selected.has(a.name)) ? "Deselect all" : "Select all"}
-              </button>
-            )}
-          </div>
-          <div className="space-y-0.5">
-            {list.length === 0 ? (
-              <p className="px-2.5 py-2 text-sm text-fg-subtle">
-                No abilities known for this line yet. They appear as your characters log out with the addon.
-              </p>
-            ) : (
-              (list as PlannerChoices["abilities"]).map((a) => (
-                <PickerRow
-                  key={a.name}
-                  name={a.name}
-                  hint={a.className ?? "shared"}
-                  checked={selected.has(a.name)}
-                  onToggle={() => onToggle(a.name)}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** A clickable navigation row in a drill-down. */
-function NavRow({ title, hint, onClick }: { title: string; hint: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-surface-2"
-    >
-      <span className="min-w-0">
-        <span className="block truncate text-fg">{title}</span>
-        <span className="block truncate text-xs text-fg-subtle">{hint}</span>
-      </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-fg-subtle" />
-    </button>
-  );
-}
-
 function scopeOk(scope: "account" | "role" | "class" | "character", scopeKey: string): boolean {
   if (scope === "account") return true;
   return scopeKey.trim().length > 0;
 }
 
-/** One of the three composer entry points. */
-function DomainButton({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) {  return (
+const SCRIPT_SLOT_ORDER = ["focus", "signature", "affix"];
+
+function ComposerBar({
+  choices,
+  scope,
+  scopeKey,
+  onScope,
+  tier,
+  onTier,
+  abilityRank,
+  onAbilityRank,
+  showRank = false,
+}: {
+  choices: PlannerChoices;
+  scope: "account" | "role" | "class" | "character";
+  scopeKey: string;
+  onScope: (scope: "account" | "role" | "class" | "character", key: string) => void;
+  tier: GoalTier;
+  onTier: (tier: GoalTier) => void;
+  abilityRank?: number;
+  onAbilityRank?: (rank: number) => void;
+  showRank?: boolean;
+}) {
+  return (
+    <div className="border-b border-border pb-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <ScopePicker choices={choices} scope={scope} scopeKey={scopeKey} onScope={onScope} />
+        {showRank && onAbilityRank && (
+          <div className="inline-flex items-center gap-1">
+            <span className="text-xs text-fg-subtle">Rank</span>
+            <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5" role="group" aria-label="Ability rank">
+              {([0, 1, 2, 3, 4] as const).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  aria-pressed={abilityRank === n}
+                  onClick={() => onAbilityRank(n)}
+                  className={`rounded-md px-2 py-1 text-xs ${
+                    abilityRank === n ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+                  }`}
+                >
+                  {n === 0 ? "Cap" : romanRank(n)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
+          {TIERS.map((t) => (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={tier === t}
+              onClick={() => onTier(t)}
+              className={`rounded-md px-2 py-1 text-xs ${
+                tier === t ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+              }`}
+            >
+              {TIER_LABEL[t]}
+            </button>
+          ))}
+        </div>
+      </div>
+      {showRank && (
+        <p className="mt-2 text-xs text-fg-subtle">
+          Cap is each skill&apos;s own maximum from the game: IV for an ability or morph, or the passive&apos;s upgrade cap.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AddBar({
+  busy,
+  count,
+  enabled,
+  onAdd,
+}: {
+  busy: boolean;
+  count: number;
+  enabled: boolean;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+      <span className="text-xs text-fg-subtle">
+        {count === 0 ? "Open a category, then pick from a skill line" : `${count} target${count === 1 ? "" : "s"} selected`}
+      </span>
+      <button
+        type="button"
+        disabled={busy || count === 0 || !enabled}
+        onClick={onAdd}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        Add {count > 0 ? `${count} target${count === 1 ? "" : "s"}` : ""}
+      </button>
+    </div>
+  );
+}
+
+function CategoryToggle({
+  title,
+  count,
+  open,
+  onToggle,
+}: {
+  title: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
     <button
       type="button"
-      onClick={onClick}
-      title={hint}
-      className="inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent-soft px-3.5 py-2 text-sm font-medium text-accent transition hover:bg-accent hover:text-accent-fg"
+      aria-expanded={open}
+      onClick={onToggle}
+      className="flex w-full items-center gap-2 py-1.5 text-left"
     >
-      <Plus className="h-4 w-4" />
-      {label}
+      <ChevronDown className={`h-4 w-4 shrink-0 text-accent transition-transform ${open ? "" : "-rotate-90"}`} />
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{title}</span>
+      <span className="text-[11px] text-fg-subtle">{count}</span>
     </button>
+  );
+}
+
+function AbilityCategories({
+  choices,
+  selected,
+  onToggle,
+}: {
+  choices: PlannerChoices;
+  selected: Set<string>;
+  onToggle: (name: string) => void;
+}) {
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+  const [openLines, setOpenLines] = useState<Set<string>>(new Set());
+  const categories = useMemo(
+    () => groupPlannerLines(choices.lines.filter((l) => !isExcludedLineName(l.name)), choices.classes),
+    [choices.lines, choices.classes],
+  );
+  const abilitiesFor = (lineName: string) =>
+    choices.abilities.filter((a) => a.lineName.toLowerCase() === lineName.toLowerCase());
+
+  function toggleSet(setter: (value: Set<string>) => void, current: Set<string>, key: string) {
+    const next = new Set(current);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setter(next);
+  }
+
+  function lineBlock(lines: PlannerChoices["lines"]) {
+    return (
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-1.5">
+          {lines.map((line) => {
+            const expanded = openLines.has(line.name.toLowerCase());
+            return (
+              <button
+                key={line.name}
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => toggleSet(setOpenLines, openLines, line.name.toLowerCase())}
+                className={`rounded-full border px-2.5 py-1 text-xs ${
+                  expanded ? "border-accent/60 bg-accent-soft font-medium text-accent" : "border-border text-fg-muted hover:text-fg"
+                }`}
+              >
+                {line.name}
+              </button>
+            );
+          })}
+        </div>
+        {lines
+          .filter((line) => openLines.has(line.name.toLowerCase()))
+          .map((line) => {
+            const abilities = abilitiesFor(line.name);
+            return (
+              <div key={line.name} className="rounded-lg border border-border/70 p-2">
+                <div className="mb-1 flex items-center justify-between px-1">
+                  <span className="text-xs text-fg-subtle">{line.name}</span>
+                  {abilities.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => abilities.forEach((a) => onToggle(a.name))}
+                      className="text-[11px] text-fg-subtle hover:text-accent"
+                    >
+                      {abilities.every((a) => selected.has(a.name)) ? "Deselect all" : "Select all"}
+                    </button>
+                  )}
+                </div>
+                {abilities.length === 0 ? (
+                  <p className="px-1 py-1 text-xs text-fg-subtle">No abilities known for this line yet.</p>
+                ) : (
+                  abilities.map((a) => (
+                    <PickerRow
+                      key={a.name}
+                      name={a.name}
+                      hint={a.className ?? line.name}
+                      checked={selected.has(a.name)}
+                      onToggle={() => onToggle(a.name)}
+                    />
+                  ))
+                )}
+              </div>
+            );
+          })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      {categories.map((category) => {
+        const open = openCategories.has(category.key);
+        const count = category.classes ? category.classes.reduce((n, c) => n + c.lines.length, 0) : category.lines.length;
+        return (
+          <section key={category.key} className="border-t border-border/60">
+            <CategoryToggle
+              title={category.title}
+              count={count}
+              open={open}
+              onToggle={() => toggleSet(setOpenCategories, openCategories, category.key)}
+            />
+            {open && (
+              <div className="space-y-3 pb-3 pl-6">
+                {category.classes
+                  ? category.classes.map((klass) => (
+                      <div key={klass.name}>
+                        <div className="mb-1.5 text-sm text-fg">{klass.name}</div>
+                        {lineBlock(klass.lines)}
+                      </div>
+                    ))
+                  : lineBlock(category.lines)}
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function ScriptCategories({
+  groups,
+  selected,
+  onToggle,
+}: {
+  groups: { key: string; entries: { name: string; slot: string }[] }[];
+  selected: Set<string>;
+  onToggle: (name: string) => void;
+}) {
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const ordered = [...groups].sort((a, b) => {
+    const ia = SCRIPT_SLOT_ORDER.indexOf(a.key.toLowerCase());
+    const ib = SCRIPT_SLOT_ORDER.indexOf(b.key.toLowerCase());
+    return (ia < 0 ? 90 : ia) - (ib < 0 ? 90 : ib) || a.key.localeCompare(b.key);
+  });
+  return (
+    <div className="mt-2">
+      {ordered.map((group) => {
+        const expanded = open.has(group.key);
+        const title = group.key.charAt(0).toUpperCase() + group.key.slice(1);
+        return (
+          <section key={group.key} className="border-t border-border/60">
+            <CategoryToggle
+              title={title}
+              count={group.entries.length}
+              open={expanded}
+              onToggle={() =>
+                setOpen((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(group.key)) next.delete(group.key);
+                  else next.add(group.key);
+                  return next;
+                })
+              }
+            />
+            {expanded && (
+              <div className="pb-2 pl-6">
+                <GroupBlock
+                  title={`${title} scripts`}
+                  selected={selected}
+                  entries={group.entries.map((s) => ({ name: s.name, hint: s.slot }))}
+                  onToggle={onToggle}
+                />
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </div>
   );
 }
 
