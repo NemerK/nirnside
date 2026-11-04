@@ -372,43 +372,62 @@ local function gatherCraftedAbility(skillType, lineIndex, skillIndex)
   }
 end
 
+-- A script the scribing UI would list as collected. Disabled scripts are hidden
+-- by the game; a missing unlock API must not be treated as "everything is known".
+local function craftedScriptCollected(scriptId)
+  if not scriptId or scriptId == 0 then return false end
+  if IsCraftedAbilityScriptDisabled and IsCraftedAbilityScriptDisabled(scriptId) == true then
+    return false
+  end
+  if not IsCraftedAbilityScriptUnlocked then return false end
+  return IsCraftedAbilityScriptUnlocked(scriptId) == true
+end
+
+-- Every script this character has unlocked. The live API has no single
+-- "all scripts" list: each grimoire owns three slots, and each slot lists
+-- every script that can go there. GetCraftedAbilityActiveScriptIds is only
+-- the three scripts currently scribed onto that grimoire, so it is not the
+-- unlock list.
 local function gatherScribingScripts()
   local out, seen = {}, {}
   local function add(name)
-    if name and name ~= "" and not seen[name] then
-      seen[name] = true
-      out[#out + 1] = name
-    end
+    if not name or name == "" then return end
+    local key = zo_strlower(name)
+    if seen[key] then return end
+    seen[key] = true
+    out[#out + 1] = name
   end
   safe(function()
-    if not GetNumCraftedAbilityScripts or not GetCraftedAbilityScriptIdAtIndex then return end
-    for i = 1, GetNumCraftedAbilityScripts() do
-      local id = GetCraftedAbilityScriptIdAtIndex(i)
-      if id and id ~= 0 then
-        local unlocked = true
-        if IsCraftedAbilityScriptUnlocked then
-          unlocked = IsCraftedAbilityScriptUnlocked(id) == true
-        else
-          unlocked = false
+    if not GetNumCraftedAbilities or not GetCraftedAbilityIdAtIndex then return end
+    if not GetNumScriptsInSlotForCraftedAbility or not GetScriptIdAtSlotIndexForCraftedAbility then return end
+    local slotBegin = SCRIBING_SLOT_ITERATION_BEGIN or SCRIBING_SLOT_PRIMARY or 1
+    local slotEnd = SCRIBING_SLOT_ITERATION_END or SCRIBING_SLOT_TERTIARY or 3
+    for i = 1, GetNumCraftedAbilities() do
+      local craftedId = GetCraftedAbilityIdAtIndex(i)
+      if craftedId and craftedId ~= 0 then
+        for slot = slotBegin, slotEnd do
+          local count = GetNumScriptsInSlotForCraftedAbility(craftedId, slot) or 0
+          for index = 1, count do
+            local scriptId = GetScriptIdAtSlotIndexForCraftedAbility(craftedId, slot, index)
+            if craftedScriptCollected(scriptId) then add(craftedScriptName(scriptId)) end
+          end
         end
-        if unlocked then add(craftedScriptName(id)) end
       end
     end
   end)
-  if #out == 0 then
-    safe(function()
-      if not GetNumCraftedAbilities or not GetCraftedAbilityIdAtIndex then return end
-      for i = 1, GetNumCraftedAbilities() do
-        local cid = GetCraftedAbilityIdAtIndex(i)
-        if cid and GetCraftedAbilityActiveScriptIds then
-          local primary, signature, affix = GetCraftedAbilityActiveScriptIds(cid)
-          add(craftedScriptName(primary))
-          add(craftedScriptName(signature))
-          add(craftedScriptName(affix))
-        end
+  -- A script sitting on a grimoire is unlocked even if the slot walk missed it.
+  safe(function()
+    if not GetNumCraftedAbilities or not GetCraftedAbilityIdAtIndex or not GetCraftedAbilityActiveScriptIds then return end
+    for i = 1, GetNumCraftedAbilities() do
+      local craftedId = GetCraftedAbilityIdAtIndex(i)
+      if craftedId and craftedId ~= 0 then
+        local primary, signature, affix = GetCraftedAbilityActiveScriptIds(craftedId)
+        add(craftedScriptName(primary))
+        add(craftedScriptName(signature))
+        add(craftedScriptName(affix))
       end
-    end)
-  end
+    end
+  end)
   return out
 end
 

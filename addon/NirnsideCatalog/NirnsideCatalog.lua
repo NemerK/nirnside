@@ -261,32 +261,56 @@ end
 local function gatherScribing()
   local grimoires, scripts = {}, {}
   safe(function()
-    if not GetNumCraftedAbilityScripts or not GetCraftedAbilityScriptIdAtIndex then return end
-    for i = 1, GetNumCraftedAbilityScripts() do
-      local id = GetCraftedAbilityScriptIdAtIndex(i)
-      if id and id ~= 0 then
-        local name = safe(function()
-          return GetCraftedAbilityScriptDisplayName and zo_strformat("<<1>>", GetCraftedAbilityScriptDisplayName(id)) or nil
-        end, nil)
-        if name and name ~= "" then
-          local slotName = safe(function()
-            local slot = GetCraftedAbilityScriptScribingSlot and GetCraftedAbilityScriptScribingSlot(id)
-            if slot == SCRIBING_SLOT_PRIMARY or slot == 1 then return "focus" end
-            if slot == SCRIBING_SLOT_SECONDARY or slot == 2 then return "signature" end
-            if slot == SCRIBING_SLOT_TERTIARY or slot == 3 then return "affix" end
-            return "focus"
-          end, "focus")
-          scripts[#scripts + 1] = {
-            id = "scr-" .. slug(name),
-            name = name,
-            slot = slotName,
-            effect = safe(function()
-              return GetCraftedAbilityScriptDescription
-                and zo_strformat("<<1>>", GetCraftedAbilityScriptDescription(id))
-                or ""
-            end, ""),
-            source = "ingame",
-          }
+    -- Same walk as the snapshot: every grimoire slot, not a function the
+    -- live API does not have. One script is shared by many grimoires.
+    if not GetNumCraftedAbilities or not GetCraftedAbilityIdAtIndex then return end
+    if not GetNumScriptsInSlotForCraftedAbility or not GetScriptIdAtSlotIndexForCraftedAbility then return end
+    local seen = {}
+    local slotBegin = SCRIBING_SLOT_ITERATION_BEGIN or SCRIBING_SLOT_PRIMARY or 1
+    local slotEnd = SCRIBING_SLOT_ITERATION_END or SCRIBING_SLOT_TERTIARY or 3
+    for i = 1, GetNumCraftedAbilities() do
+      local craftedId = GetCraftedAbilityIdAtIndex(i)
+      if craftedId and craftedId ~= 0 then
+        for slot = slotBegin, slotEnd do
+          local count = GetNumScriptsInSlotForCraftedAbility(craftedId, slot) or 0
+          for index = 1, count do
+            local id = GetScriptIdAtSlotIndexForCraftedAbility(craftedId, slot, index)
+            if id and id ~= 0 and not seen[id] then
+              seen[id] = true
+              local name = safe(function()
+                return GetCraftedAbilityScriptDisplayName and zo_strformat("<<1>>", GetCraftedAbilityScriptDisplayName(id)) or nil
+              end, nil)
+              if name and name ~= "" and not seen[zo_strlower(name)] then
+                seen[zo_strlower(name)] = true
+                local slotName = safe(function()
+                  local scriptSlot = GetCraftedAbilityScriptScribingSlot and GetCraftedAbilityScriptScribingSlot(id)
+                  if scriptSlot == SCRIBING_SLOT_PRIMARY or scriptSlot == 1 then return "focus" end
+                  if scriptSlot == SCRIBING_SLOT_SECONDARY or scriptSlot == 2 then return "signature" end
+                  if scriptSlot == SCRIBING_SLOT_TERTIARY or scriptSlot == 3 then return "affix" end
+                  return nil
+                end, nil)
+                if slotName then
+                  scripts[#scripts + 1] = {
+                    id = "scr-" .. slug(name),
+                    name = name,
+                    slot = slotName,
+                    effect = safe(function()
+                      if GetCraftedAbilityScriptGeneralDescription then
+                        local text = GetCraftedAbilityScriptGeneralDescription(id)
+                        if text and text ~= "" then return zo_strformat("<<1>>", text) end
+                      end
+                      if GetCraftedAbilityScriptDescription then
+                        local text = GetCraftedAbilityScriptDescription(craftedId, id)
+                        if text and text ~= "" then return zo_strformat("<<1>>", text) end
+                      end
+                      return ""
+                    end, ""),
+                    source = "ingame",
+                  }
+                end
+              end
+            end
+          end
         end
       end
     end

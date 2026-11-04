@@ -49,4 +49,20 @@ describe("scribing seed", () => {
       assert.deepEqual(grim.affixScripts, []);
     }
   });
+
+  it("collects unlocked scripts from every grimoire slot, not only the scribed ones", () => {
+    const lua = readFileSync("addon/NirnsideSnapshot/NirnsideSnapshot.lua", "utf8");
+    const start = lua.indexOf("local function craftedScriptCollected(");
+    const end = lua.indexOf("local function skillDataPurchased(");
+    assert.ok(start >= 0 && end > start);
+    const body = lua.slice(start, end);
+    assert.match(body, /GetNumScriptsInSlotForCraftedAbility/);
+    assert.match(body, /GetScriptIdAtSlotIndexForCraftedAbility/);
+    assert.match(body, /IsCraftedAbilityScriptUnlocked/);
+    assert.doesNotMatch(body, /GetNumCraftedAbilityScripts/);
+    assert.match(body, /GetCraftedAbilityActiveScriptIds/);
+    const catalog = readFileSync("addon/NirnsideCatalog/NirnsideCatalog.lua", "utf8");
+    assert.match(catalog, /GetNumScriptsInSlotForCraftedAbility/);
+    assert.doesNotMatch(catalog, /GetNumCraftedAbilityScripts/);
+  });
 });
