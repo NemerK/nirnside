@@ -5,10 +5,14 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import type { GoalCardView, GoalRowItem } from "@/lib/goals/views";
 import { TIERS, TIER_LABEL, skillLineTitle, type SkillLineChoice } from "@/lib/goals/types";
+import { groupPlacedGoals, type GoalCatalog } from "@/lib/planner/goal-groups";
 import { Badge, Card, SectionTitle } from "./ui";
 import { AddGoalButton } from "./goal-editor";
 import { GoalCard } from "./goal-card";
 import { GoalMark } from "./goal-mark";
+import { GroupedTargets } from "./goal-groups";
+import { classIcon } from "@/lib/classes";
+import { GameIcon } from "./game-icon";
 
 const TIER_TONE: Record<string, "accent" | "muted" | "ok"> = {
   essential: "accent",
@@ -20,9 +24,11 @@ const TIER_TONE: Record<string, "accent" | "muted" | "ok"> = {
 export function GoalsBoard({
   cards,
   roles,
+  catalog,
 }: {
   cards: GoalCardView[];
   roles: { id: string; name: string }[];
+  catalog?: GoalCatalog;
 }) {
   const router = useRouter();
 
@@ -62,17 +68,46 @@ export function GoalsBoard({
                   {tierCards.length} target{tierCards.length === 1 ? "" : "s"}
                 </span>
               </div>
-              <div className="space-y-3">
-                {tierCards.map((card) => (
-                  <GoalCard
-                    key={card.goal.id}
-                    card={card}
-                    roles={roles}
-                    onDelete={async (id) => {
-                      await fetch(`/api/goals/${encodeURIComponent(id)}`, { method: "DELETE" });
-                      router.refresh();
-                    }}
-                  />
+              <div className="space-y-4">
+                {(catalog
+                  ? groupPlacedGoals(
+                      tierCards.map((card) => ({ ...card.goal, card })),
+                      catalog,
+                    )
+                  : [{ key: "all", title: "", className: null, sections: [{ key: "all", title: "", items: tierCards.map((card) => ({ ...card.goal, card })) }] }]
+                ).map((group) => (
+                  <div key={group.key}>
+                    {group.title ? (
+                      <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-fg">
+                        {group.className && classIcon(group.className) ? (
+                          <GameIcon name={group.title} icon={classIcon(group.className)} size={18} bare />
+                        ) : null}
+                        {group.title}
+                      </h3>
+                    ) : null}
+                    <div className="space-y-3">
+                      {group.sections.map((section) => (
+                        <div key={section.key}>
+                          {section.title ? (
+                            <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-fg-subtle">{section.title}</p>
+                          ) : null}
+                          <div className="space-y-3">
+                            {section.items.map((item) => (
+                              <GoalCard
+                                key={item.id}
+                                card={item.card}
+                                roles={roles}
+                                onDelete={async (id) => {
+                                  await fetch(`/api/goals/${encodeURIComponent(id)}`, { method: "DELETE" });
+                                  router.refresh();
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -89,11 +124,15 @@ export function CharacterGoals({
   lines,
   subjectId,
   subjectName,
+  catalog,
+  characterClass,
 }: {
   rows: GoalRowItem[];
   lines: SkillLineChoice[];
   subjectId: string;
   subjectName: string;
+  catalog?: GoalCatalog;
+  characterClass?: string | null;
 }) {
   const router = useRouter();
 
@@ -123,18 +162,23 @@ export function CharacterGoals({
           to set them.
         </Card>
       ) : (
-        <Card className="divide-y divide-border overflow-hidden">
-          {rows.map((row) => (
+        <GroupedTargets
+          groups={groupPlacedGoals(
+            rows.map((row) => ({ ...row.goal, row })),
+            catalog ?? { lines: [], abilities: [] },
+            characterClass,
+          )}
+          getKey={(item) => item.id}
+          renderItem={(item) => (
             <GoalRow
-              key={row.goal.id}
-              row={row}
+              row={item.row}
               onDelete={async () => {
-                await fetch(`/api/goals/${encodeURIComponent(row.goal.id)}`, { method: "DELETE" });
+                await fetch(`/api/goals/${encodeURIComponent(item.id)}`, { method: "DELETE" });
                 router.refresh();
               }}
             />
-          ))}
-        </Card>
+          )}
+        />
       )}
     </section>
   );

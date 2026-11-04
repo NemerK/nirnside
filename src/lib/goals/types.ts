@@ -123,7 +123,13 @@ export interface GoalSubject {
 /** Catalog line metadata for class-validity guards, keyed by lowercase name. */
 export interface LineMeta {
   category: string;
+  /** First class this line name was seen on. Null for lines every class can train. */
   className: string | null;
+  /**
+   * Every class that owns a line of this name. Class Mastery is one name on
+   * every class, so a single className is not enough to decide who it fits.
+   */
+  classNames?: string[];
 }
 
 /** Catalog ability metadata for class-validity guards, keyed by lowercase name. */

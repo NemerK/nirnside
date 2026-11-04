@@ -50,6 +50,28 @@ describe("skill book presentation", () => {
     );
   });
 
+  it("keeps a subclassed line with the class that owns it", () => {
+    const book = presentSkillBook(
+      [
+        SkillLine.parse({ name: "Assassination", category: "Class", rank: 50, abilities: [] }),
+        SkillLine.parse({
+          name: "Herald of the Tome",
+          category: "Class",
+          rank: 38,
+          subclassed: true,
+          abilities: [],
+        }),
+      ],
+      new Map(),
+      () => null,
+      "Nightblade",
+      (name) => (name === "Herald of the Tome" ? "Arcanist" : "Nightblade"),
+    );
+    const lines = book.find((c) => c.name === "Class")?.lines ?? [];
+    assert.equal(lines.find((line) => line.name === "Assassination")?.owningClass, "Nightblade");
+    assert.equal(lines.find((line) => line.name === "Herald of the Tome")?.owningClass, "Arcanist");
+  });
+
   it("leaves Alliance War and drops every Vengeance line", () => {
     const book = presentSkillBook(
       [

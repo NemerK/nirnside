@@ -4,6 +4,7 @@ import {
   abilityProgress,
   goalAppliesTo,
   goalProgress,
+  mergeLineMeta,
   progressLabel,
   scriptProgress,
   skillLineProgress,
@@ -76,17 +77,26 @@ describe("skillLineProgress", () => {
     assert.match(p.reason ?? "", /Nightblade/);
   });
 
+  it("keeps a mandatory class line off a class that has not been scanned", () => {
+    const unseen = toon("a", "Unseen", { className: "Dragonknight", lastSeen: null });
+    const p = skillLineProgress(unseen, "Ardeur", 50, indexes);
+    assert.equal(p.state, "notapplicable");
+    assert.match(p.reason ?? "", /Nightblade/);
+  });
+
   it("treats a missing own-class line as undiscovered, not missing", () => {
     const necro = toon("n", "Bones", { className: "Necromancer" });
     assert.equal(skillLineProgress(necro, "Grave Lord", 50, indexes).state, "undiscovered");
   });
 
-  it("levels a borrowed (subclassed) line when the character actually has it", () => {
+  it("does not apply a subclassed line to a class that does not own it", () => {
     const dk = toon("dk", "Knight", {
       className: "Dragonknight",
       lines: [{ name: "Grave Lord", rank: 12 }],
     });
-    assert.deepEqual(skillLineProgress(dk, "Grave Lord", 10, indexes), { state: "done", rank: 12 });
+    const p = skillLineProgress(dk, "Grave Lord", 10, indexes);
+    assert.equal(p.state, "notapplicable");
+    assert.match(p.reason ?? "", /Necromancer/);
   });
 
   it("marks curse lines not applicable for characters without the curse", () => {
@@ -317,6 +327,29 @@ describe("abilityProgress", () => {
     assert.match(p.reason ?? "", /Nightblade/);
   });
 
+  it("does not apply another class's ability even when this character has it", () => {
+    const dk = toon("dk", "Knight", {
+      className: "Dragonknight",
+      lines: [
+        {
+          name: "Ardeur",
+          rank: 50,
+          abilities: [{ name: "Death Stroke", purchased: true, rank: 4, morphs: [], morphNames: [], morphPurchased: [] }],
+        },
+      ],
+    });
+    const p = abilityProgress(dk, "Death Stroke", indexes);
+    assert.equal(p.state, "notapplicable");
+    assert.match(p.reason ?? "", /Nightblade/);
+  });
+
+  it("keeps a mandatory class ability off an unscanned character of another class", () => {
+    const unseen = toon("a", "Unseen", { className: "Arcanist", lastSeen: null });
+    const p = abilityProgress(unseen, "Death Stroke", indexes);
+    assert.equal(p.state, "notapplicable");
+    assert.match(p.reason ?? "", /Nightblade/);
+  });
+
   it("reads unknown on roster subjects without ability data", () => {
     const roster = toon("r", "Thin", { full: false, lines: [{ name: "Grave Lord", rank: 10 }] });
     assert.equal(abilityProgress(roster, "Render Soul", indexes).state, "unknown");
@@ -338,6 +371,23 @@ describe("scriptProgress", () => {
   it("reads unknown for roster rows and unscanned characters", () => {
     assert.equal(scriptProgress(toon("r", "Thin", { full: false }), "Soul Sap").state, "unknown");
     assert.equal(scriptProgress(toon("u", "Unseen", { lastSeen: null }), "Soul Sap").state, "unknown");
+  });
+});
+
+describe("mergeLineMeta", () => {
+  it("keeps every class that owns a shared line name", () => {
+    const merged = mergeLineMeta(
+      { category: "Class", className: "Dragonknight", classNames: ["Dragonknight"] },
+      { category: "Class", className: "Nightblade" },
+    );
+    assert.deepEqual(merged.classNames, ["Dragonknight", "Nightblade"]);
+    const dk = toon("dk", "Knight", { className: "Dragonknight", lines: [{ name: "Class Mastery", rank: 1 }] });
+    const nb = toon("nb", "Shade", { className: "Nightblade" });
+    const warden = toon("w", "Grove", { className: "Warden" });
+    const lines = new Map([["class mastery", merged]]);
+    assert.equal(skillLineProgress(dk, "Class Mastery", 2, { lines }).state, "short");
+    assert.equal(skillLineProgress(nb, "Class Mastery", 2, { lines }).state, "undiscovered");
+    assert.equal(skillLineProgress(warden, "Class Mastery", 2, { lines }).state, "notapplicable");
   });
 });
 

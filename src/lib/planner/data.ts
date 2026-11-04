@@ -8,6 +8,7 @@ import { isExcludedSkillLine } from "../catalog/excluded";
 import {
   goalAppliesTo,
   goalProgress,
+  mergeLineMeta,
   mergeSkillLineChoices,
   progressLabel,
   summarizeGoal,
@@ -74,7 +75,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
     const key = entry.name.trim().toLowerCase();
     if (!key) continue;
     const meta: LineMeta = { category: entry.category, className: entry.className ?? null };
-    if (!lineMeta.has(key)) lineMeta.set(key, meta);
+    lineMeta.set(key, mergeLineMeta(lineMeta.get(key), meta));
     const choice: PlannerLineChoice = {
       name: entry.name,
       category: entry.category,
@@ -285,11 +286,13 @@ export function goalCardsForClient(
       total: summary.total,
       unknown: summary.unknown,
       notApplicable: summary.notApplicable,
-      rows: summary.rows.map((r) => ({
-        id: r.character.id,
-        name: r.character.name,
-        mark: toMark(goalProgress(goal, r.character, indexes), goal),
-      })),
+      rows: summary.rows
+        .filter((r) => r.progress.state !== "notapplicable")
+        .map((r) => ({
+          id: r.character.id,
+          name: r.character.name,
+          mark: toMark(r.progress, goal),
+        })),
       href: hrefFor?.(goal),
     };
   });
@@ -308,12 +311,19 @@ export function characterGoalRows(
   };
   return goals
     .filter((g) => goalAppliesTo(g, subject))
-    .map((goal) => ({
-      goal,
-      mark: toMark(goalProgress(goal, subject, built), goal),
-      deletable: goal.scope === "character",
-      href: hrefFor?.(goal),
-    }));
+    .flatMap((goal) => {
+      const mark = toMark(goalProgress(goal, subject, built), goal);
+      // A mandatory Nightblade ability is not a Dragonknight target.
+      if (mark.state === "notapplicable") return [];
+      return [
+        {
+          goal,
+          mark,
+          deletable: goal.scope === "character",
+          href: hrefFor?.(goal),
+        },
+      ];
+    });
 }
 
 /** Catalog lines plus any names already on the account (in-game snapshot wins for extras). */

@@ -242,7 +242,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
             overall: selectedCard.overall,
           }}
         >
-          {progressPanel(selected, section, requestedDomain)}
+          {progressPanel(selected, section, requestedDomain, data)}
         </DashboardDetail>
       )}
 
@@ -304,7 +304,28 @@ function skillLineHref(name: string, className?: string | null): string | null {
   }
 }
 
-function progressPanel(character: Character, section: DashboardSection, domain: "skillline" | "ability" | "script" | null): ReactNode {
+function lineOwningClass(lines: { name: string; className: string | null }[]) {
+  const owners = new Map<string, Set<string>>();
+  for (const line of lines) {
+    if (!line.className) continue;
+    const key = line.name.trim().toLowerCase();
+    const set = owners.get(key) ?? new Set<string>();
+    set.add(line.className);
+    owners.set(key, set);
+  }
+  return (name: string) => {
+    const set = owners.get(name.trim().toLowerCase());
+    if (!set || set.size !== 1) return null;
+    return [...set][0] ?? null;
+  };
+}
+
+function progressPanel(
+  character: Character,
+  section: DashboardSection,
+  domain: "skillline" | "ability" | "script" | null,
+  data: NonNullable<ReturnType<typeof loadPlannerData>>,
+): ReactNode {
   switch (section) {
     case "skills": {
       const names = character.skillLines.flatMap((line) =>
@@ -318,8 +339,10 @@ function progressPanel(character: Character, section: DashboardSection, domain: 
             lore ?? new Map(),
             (name) => skillLineHref(name, character.class),
             character.class,
+            lineOwningClass(data.lines),
           )}
           lastSeen={character.lastSeen ?? null}
+          characterClass={character.class}
         />
       );
     }
@@ -356,7 +379,16 @@ function progressPanel(character: Character, section: DashboardSection, domain: 
       const rows = characterGoalRows(goals, toGoalSubject(character, roleIds, true), goalIndexes, (goal) =>
         goal.domain === "skillline" ? hrefForLine[goal.target.toLowerCase()] : undefined,
       ).filter((row) => !domain || row.goal.domain === domain);
-      return <CharacterGoals rows={rows} lines={lines} subjectId={character.id} subjectName={character.name} />;
+      return (
+        <CharacterGoals
+          rows={rows}
+          lines={lines}
+          subjectId={character.id}
+          subjectName={character.name}
+          characterClass={character.class}
+          catalog={{ lines: data.lines, abilities: data.abilities, scripts: data.scripts }}
+        />
+      );
     }
   }
 }
