@@ -80,8 +80,24 @@ describe("goal CRUD", () => {
       scope: "role",
       scopeKey: "r1",
       target: "Pierce Armor",
+      targetRank: 4,
     });
     assert.equal(g2.scopeKey, "r1");
+    assert.equal(g2.targetRank, 4);
+    const capped = goals.createGoal({
+      domain: "ability",
+      tier: "optional",
+      scope: "account",
+      target: "Puncturing Strikes",
+    });
+    assert.equal(capped.targetRank, 0, "0 means the live cap");
+    assert.throws(
+      () => goals.createGoal({ domain: "ability", scope: "account", target: "Puncturing Strikes", targetRank: 5 }),
+      /ability rank/i,
+    );
+    const lowered = goals.updateGoal(capped.id, { targetRank: 2 });
+    assert.equal(lowered.targetRank, 2);
+    assert.equal(lowered.extraRank, 0);
 
     const g3 = goals.createGoal({
       domain: "skillline",

@@ -72,7 +72,7 @@ export default function PlannerPage() {
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Planner"
-        subtitle="Every skill line is listed with its own cap. Press M for mandatory, E for extra — extra only moves above mandatory, and it saves as you go."
+        subtitle="Skill lines use each character's line rank. Ability and morph targets use that character's in-game rank for the exact form. Press M for mandatory, E for extra."
       />
       <PlannerBoard choices={choices} cards={cards} />
     </div>

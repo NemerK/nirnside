@@ -99,33 +99,56 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   const lineNameById = new Map(catalogLines.map(({ entry }) => [entry.id, entry]));
   function rememberAbility(name: string, meta: AbilityMeta) {
     const key = name.trim().toLowerCase();
-    if (!key || abilityMeta.has(key)) return;
-    abilityMeta.set(key, meta);
-    abilities.push({ name, lineName: meta.lineName, className: meta.className });
+    if (!key) return;
+    const prev = abilityMeta.get(key);
+    if (!prev) {
+      abilityMeta.set(key, meta);
+      abilities.push({ name, lineName: meta.lineName, className: meta.className });
+      return;
+    }
+    // A later snapshot can fill a passive cap the catalog doesn't carry.
+    if (prev.maxRank == null && meta.maxRank != null) prev.maxRank = meta.maxRank;
+    if (!prev.passive && meta.passive) prev.passive = true;
+    if (!prev.crafted && meta.crafted) prev.crafted = true;
   }
   for (const { entry } of safe(getSkills) ?? []) {
     const line = lineNameById.get(entry.lineId);
     if (!line) continue;
-    const meta: AbilityMeta = {
+    const shared = {
       lineName: line.name,
       category: line.category,
       className: line.className ?? null,
     };
-    rememberAbility(entry.name, meta);
-    for (const m of entry.morphs) rememberAbility(m.name, meta);
+    rememberAbility(entry.name, { ...shared, passive: entry.type === "passive", crafted: false, maxRank: null });
+    for (const m of entry.morphs) {
+      rememberAbility(m.name, { ...shared, passive: false, crafted: false, maxRank: null });
+    }
   }
   for (const c of live) {
     for (const line of c.skillLines) {
       if (isExcludedLineName(line.name)) continue;
-      const meta: AbilityMeta = {
+      const shared = {
         lineName: line.name,
         category: line.category || "Skill",
         className: isClassCategory(line.category) ? c.class : null,
       };
       for (const ability of line.abilities) {
-        rememberAbility(ability.name, meta);
-        for (const m of ability.morphs ?? []) {
-          if (m.name) rememberAbility(m.name, meta);
+        const slots = ability.morphs ?? [];
+        const slotNames = new Set(
+          slots.map((m) => m.name?.trim().toLowerCase()).filter((n): n is string => !!n),
+        );
+        // A morphed ability's headline name is the current morph, not a passive.
+        const headlineIsSlot = slotNames.has(ability.name.trim().toLowerCase());
+        const passive = ability.passive === true && !headlineIsSlot;
+        rememberAbility(ability.name, {
+          ...shared,
+          passive,
+          crafted: ability.crafted === true,
+          maxRank: passive ? (ability.maxRank ?? null) : null,
+        });
+        for (const m of slots) {
+          if (!m.name) continue;
+          rememberAbility(m.name, { ...shared, passive: false, crafted: false, maxRank: null });
         }
       }
     }

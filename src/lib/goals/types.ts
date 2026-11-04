@@ -1,3 +1,5 @@
+import { romanRank } from "../skills/ability";
+
 /** Player-authored planning targets. Not game data; stored only locally. */
 
 export type GoalDomain = "skillline" | "ability" | "script";
@@ -17,8 +19,10 @@ export interface Goal {
   /** Skill line name, ability (or morph) name, or scribing script name. */
   target: string;
   /**
-   * Mandatory skill-line rank. 0 when the line has only an extra rank.
-   * 0 for ability and script goals.
+   * Skill-line mandatory rank, or the ability/morph rank to reach.
+   * 0 on a skill line means "mandatory unset" (extra may still be set).
+   * 0 on an ability means the live cap: IV for an active or morph, or the
+   * passive's own cap from the snapshot. Scripts stay 0.
    */
   targetRank: number;
   /**
@@ -55,9 +59,36 @@ export function skillLineTitle(goal: {
   return goal.target;
 }
 
+/** How an ability target reads: "Render Flesh IV", or the name when the target is the live cap. */
+export function abilityTitle(goal: { target: string; targetRank: number }): string {
+  if (goal.targetRank > 0) return `${goal.target} ${romanRank(goal.targetRank)}`;
+  return goal.target;
+}
+
+/** One morph slot as the snapshot recorded it. Rank is that slot's own remembered rank. */
+export interface GoalSubjectMorph {
+  name: string;
+  purchased: boolean;
+  /** null when the game never reported a rank for this slot. 0 means reported unranked. */
+  rank: number | null;
+}
+
 export interface GoalSubjectAbility {
   name: string;
   purchased: boolean;
+  /**
+   * Rank of this record's current form. null when the snapshot didn't carry one.
+   * A morph's rank lives on `morphs`, not here — the headline rank is only the
+   * form the name refers to.
+   */
+  rank: number | null;
+  passive?: boolean;
+  /** Scribing grimoire: unlocked or not. No morph rank. */
+  crafted?: boolean;
+  /** Passive upgrade cap from the snapshot. null when the game didn't report one. */
+  maxRank?: number | null;
+  /** Per-slot base + morphs. Empty on older snapshots that only stored the current name. */
+  morphs?: GoalSubjectMorph[];
   /** Morph names this ability has (any morph slot). */
   morphNames: string[];
   /** Morph names the character actually owns. */
@@ -100,6 +131,12 @@ export interface AbilityMeta {
   lineName: string;
   category: string;
   className: string | null;
+  /** True for a passive. Morphs are never passive. */
+  passive?: boolean;
+  /** Scribing grimoire unlocked by purchase, with no rank. */
+  crafted?: boolean;
+  /** Passive upgrade cap, when some snapshot reported it. */
+  maxRank?: number | null;
 }
 
 export interface GoalIndexes {
@@ -110,8 +147,8 @@ export interface GoalIndexes {
 }
 
 export type LineProgress =
-  | { state: "done"; rank: number }
-  | { state: "short"; rank: number }
+  | { state: "done"; rank: number; targetRank?: number }
+  | { state: "short"; rank: number; targetRank?: number; unpurchased?: boolean; rankUnknown?: boolean }
   | { state: "undiscovered" }
   | { state: "unknown" }
   | { state: "notapplicable"; reason?: string };

@@ -17,12 +17,14 @@ import { TIERS, TIER_LABEL } from "@/lib/goals/types";
 import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
 import { Badge, Card, ProgressBar } from "./ui";
 import { GoalMark } from "./goal-mark";
-import { skillLineTitle } from "@/lib/goals/types";
+import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
+import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
 
 /**
- * Skill lines are set in place (mandatory + extra). Abilities and scripts stay
- * a picker, because those are individual unlocks rather than a rank.
+ * Skill lines are set in place (mandatory + extra). Abilities are picked by
+ * name, then judged against each character's in-game rank for that exact
+ * ability or morph. Scripts stay unlocks.
  */
 
 export interface PlannerChoices {
@@ -46,6 +48,12 @@ const DOMAIN_SHORT: Record<Goal["domain"], string> = {
   script: "script",
 };
 
+function goalTitle(goal: Goal): string {
+  if (goal.domain === "skillline") return skillLineTitle(goal);
+  if (goal.domain === "ability") return abilityTitle(goal);
+  return goal.target;
+}
+
 export function PlannerBoard({
   choices,
   cards,
@@ -66,6 +74,8 @@ export function PlannerBoard({
   const [scope, setScope] = useState<"account" | "role" | "class" | "character">("account");
   const [scopeKey, setScopeKey] = useState("");
   const [tier, setTier] = useState<GoalTier>("essential");
+  /** 0 = the live cap (IV, or the passive's own cap). 1–4 = that rank. */
+  const [abilityRank, setAbilityRank] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,6 +92,7 @@ export function PlannerBoard({
     setScope("account");
     setScopeKey("");
     setTier("essential");
+    setAbilityRank(0);
     setError(null);
   }
 
@@ -178,7 +189,7 @@ export function PlannerBoard({
         characterId: scope === "character" ? scopeKey : null,
         scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
         targets: [...selected],
-        targetRank: 0,
+        targetRank: composer === "ability" ? abilityRank : 0,
       },
       () => setComposer(null),
     );
@@ -221,6 +232,20 @@ export function PlannerBoard({
     }
   }
 
+  async function changeAbilityRank(goal: Goal, rank: number) {
+    setBusy(true);
+    try {
+      await fetch(`/api/goals/${encodeURIComponent(goal.id)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ targetRank: rank }),
+      });
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function changeTier(goal: Goal, next: GoalTier) {
     setBusy(true);
     try {
@@ -250,7 +275,11 @@ export function PlannerBoard({
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-fg-subtle">Also</span>
-          <DomainButton label="Abilities" hint="Exact abilities and morphs" onClick={() => openComposer("ability")} />
+          <DomainButton
+            label="Abilities"
+            hint="In-game rank of each ability and morph"
+            onClick={() => openComposer("ability")}
+          />
           <DomainButton label="Scribing scripts" hint="Focus, signature, affix" onClick={() => openComposer("script")} />
           {cards.length > 0 &&
             (confirmClear ? (
@@ -305,6 +334,26 @@ export function PlannerBoard({
                   setScopeKey(k);
                 }}
               />
+              {composer === "ability" && (
+                <div className="inline-flex items-center gap-1">
+                  <span className="text-xs text-fg-subtle">Rank</span>
+                  <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5" role="group" aria-label="Ability rank">
+                    {([0, 1, 2, 3, 4] as const).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        aria-pressed={abilityRank === n}
+                        onClick={() => setAbilityRank(n)}
+                        className={`rounded-md px-2 py-1 text-xs ${
+                          abilityRank === n ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+                        }`}
+                      >
+                        {n === 0 ? "Cap" : romanRank(n)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
                 {TIERS.map((t) => (
                   <button
@@ -321,6 +370,12 @@ export function PlannerBoard({
                 ))}
               </div>
             </div>
+            {composer === "ability" && (
+              <p className="mt-2 text-xs text-fg-subtle">
+                Cap is each skill&apos;s own maximum from the game: IV for an ability or morph, or the passive&apos;s
+                upgrade cap. A character is done when their snapshot rank reaches it.
+              </p>
+            )}
           </div>
 
           {composer === "ability" && (
@@ -405,7 +460,7 @@ export function PlannerBoard({
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs"
               >
                 <Badge tone={TIER_TONE[goal.tier]}>{DOMAIN_SHORT[goal.domain]}</Badge>
-                <span className="text-fg">{goal.domain === "skillline" ? skillLineTitle(goal) : goal.target}</span>
+                <span className="text-fg">{goalTitle(goal)}</span>
                 <span className="text-fg-subtle">{mark.label}</span>
               </li>
             ))}
@@ -472,6 +527,7 @@ export function PlannerBoard({
                       scopeLabel={scopeLabel}
                       onRemove={() => removeGoal(card.goal.id)}
                       onTier={(nt) => changeTier(card.goal, nt)}
+                      onAbilityRank={(rank) => changeAbilityRank(card.goal, rank)}
                     />
                   ))}
                 </Card>
@@ -500,6 +556,7 @@ function TargetRow({
   scopeLabel,
   onRemove,
   onTier,
+  onAbilityRank,
 }: {
   card: GoalCardView;
   charFilter: string;
@@ -509,9 +566,10 @@ function TargetRow({
   scopeLabel: (goal: Goal) => string;
   onRemove: () => void;
   onTier: (tier: GoalTier) => void;
+  onAbilityRank: (rank: number) => void;
 }) {
   const { goal } = card;
-  const title = goal.domain === "skillline" ? skillLineTitle(goal) : goal.target;
+  const title = goalTitle(goal);
   const charRow = charFilter ? card.rows.find((r) => r.id === charFilter) : undefined;
 
   return (
@@ -538,6 +596,20 @@ function TargetRow({
           {charRow ? "" : `${card.done}/${card.total}`}
         </span>
 
+        {goal.domain === "ability" && (
+          <select
+            value={goal.targetRank}
+            onChange={(e) => onAbilityRank(Number(e.target.value))}
+            className="shrink-0 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-fg-muted"
+            aria-label="Ability rank"
+          >
+            <option value={0}>Cap</option>
+            <option value={1}>I</option>
+            <option value={2}>II</option>
+            <option value={3}>III</option>
+            <option value={4}>IV</option>
+          </select>
+        )}
         <select
           value={goal.tier}
           onChange={(e) => onTier(e.target.value as GoalTier)}
