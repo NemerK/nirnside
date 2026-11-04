@@ -16,6 +16,8 @@ import {
 import type { Goal, GoalIndexes } from "../goals/types";
 import type { GoalCardView, GoalMarkView, GoalRowItem } from "../goals/views";
 import { ESO_CLASSES } from "../classes";
+import { plannerAbilityIcon, plannerLineIcon, plannerScriptIcon } from "../icons/planner-icons";
+import { plannerLineKey } from "./skill-groups";
 import { skillLineCap } from "../skills/line-cap";
 import type { AbilityMeta, GoalSubject, LineMeta, SkillLineChoice } from "../goals/types";
 
@@ -33,12 +35,15 @@ export interface PlannerLineChoice {
   className: string | null;
   /** Live rank cap for this line, when known (most are 50; guild/PvP/curse lines cap lower). */
   maxRank: number | null;
+  /** ESO texture path, or null when no confirmed art exists for this line. */
+  icon: string | null;
 }
 
 export interface PlannerAbilityChoice {
   name: string;
   lineName: string;
   className: string | null;
+  icon: string | null;
 }
 
 export interface GoalIndexArrays {
@@ -51,7 +56,7 @@ export interface PlannerData extends GoalIndexArrays {
   roles: { id: string; name: string }[];
   classes: string[];
   lines: PlannerLineChoice[];
-  scripts: { name: string; slot: string }[];
+  scripts: { name: string; slot: string; icon: string | null }[];
   abilities: PlannerAbilityChoice[];
 }
 
@@ -63,18 +68,23 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   const catalogLines = safe(getSkillLines) ?? [];
   const lineMeta = new Map<string, LineMeta>();
   const lines: PlannerLineChoice[] = [];
+  const catalogLineIcons = new Map<string, string>();
   for (const { entry } of catalogLines) {
     if (isExcludedSkillLine(entry)) continue;
     const key = entry.name.trim().toLowerCase();
     if (!key) continue;
     const meta: LineMeta = { category: entry.category, className: entry.className ?? null };
     if (!lineMeta.has(key)) lineMeta.set(key, meta);
-    lines.push({
+    const choice: PlannerLineChoice = {
       name: entry.name,
       category: entry.category,
       className: entry.className ?? null,
       maxRank: entry.maxRank ?? skillLineCap(entry.name),
-    });
+      icon: null,
+    };
+    lines.push(choice);
+    const scanned = entry.icon?.trim();
+    if (scanned) catalogLineIcons.set(plannerLineKey(choice), scanned);
   }
   for (const c of live) {
     for (const line of c.skillLines) {
@@ -91,6 +101,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         category: meta.category,
         className: meta.className,
         maxRank: skillLineCap(line.name),
+        icon: null,
       });
     }
   }
@@ -100,19 +111,23 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   const lineNameById = new Map(
     catalogLines.filter(({ entry }) => !isExcludedSkillLine(entry)).map(({ entry }) => [entry.id, entry]),
   );
-  function rememberAbility(name: string, meta: AbilityMeta) {
+  function rememberAbility(name: string, meta: AbilityMeta, icon: string | null) {
     const key = name.trim().toLowerCase();
     if (!key) return;
     const prev = abilityMeta.get(key);
     if (!prev) {
       abilityMeta.set(key, meta);
-      abilities.push({ name, lineName: meta.lineName, className: meta.className });
+      abilities.push({ name, lineName: meta.lineName, className: meta.className, icon });
       return;
     }
     // A later snapshot can fill a passive cap the catalog doesn't carry.
     if (prev.maxRank == null && meta.maxRank != null) prev.maxRank = meta.maxRank;
     if (!prev.passive && meta.passive) prev.passive = true;
     if (!prev.crafted && meta.crafted) prev.crafted = true;
+    if (icon) {
+      const row = abilities.find((ability) => ability.name.trim().toLowerCase() === key);
+      if (row && !row.icon) row.icon = icon;
+    }
   }
   for (const { entry } of safe(getSkills) ?? []) {
     const line = lineNameById.get(entry.lineId);
@@ -122,9 +137,29 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
       category: line.category,
       className: line.className ?? null,
     };
-    rememberAbility(entry.name, { ...shared, passive: entry.type === "passive", crafted: false, maxRank: null });
+    const morphNames = entry.morphs.map((m) => m.name);
+    rememberAbility(
+      entry.name,
+      { ...shared, passive: entry.type === "passive", crafted: false, maxRank: null },
+      plannerAbilityIcon({
+        name: entry.name,
+        morphNames,
+        catalogIcon: entry.icon,
+        lineName: line.name,
+        className: line.className,
+      }),
+    );
     for (const m of entry.morphs) {
-      rememberAbility(m.name, { ...shared, passive: false, crafted: false, maxRank: null });
+      rememberAbility(
+        m.name,
+        { ...shared, passive: false, crafted: false, maxRank: null },
+        plannerAbilityIcon({
+          name: m.name,
+          catalogIcon: m.icon ?? entry.icon,
+          lineName: line.name,
+          className: line.className,
+        }),
+      );
     }
   }
   for (const c of live) {
@@ -143,18 +178,52 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         // A morphed ability's headline name is the current morph, not a passive.
         const headlineIsSlot = slotNames.has(ability.name.trim().toLowerCase());
         const passive = ability.passive === true && !headlineIsSlot;
-        rememberAbility(ability.name, {
-          ...shared,
-          passive,
-          crafted: ability.crafted === true,
-          maxRank: passive ? (ability.maxRank ?? null) : null,
-        });
+        const slotNamesList = slots.map((m) => m.name);
+        rememberAbility(
+          ability.name,
+          {
+            ...shared,
+            passive,
+            crafted: ability.crafted === true,
+            maxRank: passive ? (ability.maxRank ?? null) : null,
+          },
+          plannerAbilityIcon({
+            name: ability.name,
+            morphNames: slotNamesList,
+            lineName: line.name,
+            className: shared.className,
+          }),
+        );
         for (const m of slots) {
           if (!m.name) continue;
-          rememberAbility(m.name, { ...shared, passive: false, crafted: false, maxRank: null });
+          rememberAbility(
+            m.name,
+            { ...shared, passive: false, crafted: false, maxRank: null },
+            plannerAbilityIcon({
+              name: m.name,
+              lineName: line.name,
+              className: shared.className,
+            }),
+          );
         }
       }
     }
+  }
+
+  const abilityFace = new Map<string, string>();
+  for (const ability of abilities) {
+    if (!ability.icon) continue;
+    const key = plannerLineKey({ name: ability.lineName, className: ability.className });
+    if (!abilityFace.has(key)) abilityFace.set(key, ability.icon);
+  }
+  for (const line of lines) {
+    const key = plannerLineKey(line);
+    line.icon = plannerLineIcon({
+      name: line.name,
+      className: line.className,
+      catalogIcon: catalogLineIcons.get(key) ?? null,
+      abilityIcon: abilityFace.get(key) ?? null,
+    });
   }
 
   return {
@@ -289,7 +358,11 @@ export const loadPlannerData = cache(function loadPlannerData(): PlannerData {
   );
 
   const { lines, abilities, lineIndex, abilityIndex } = collectLineAbilityData(live);
-  const scripts = (safe(getScripts) ?? []).map(({ entry }) => ({ name: entry.name, slot: entry.slot }));
+  const scripts = (safe(getScripts) ?? []).map(({ entry }) => ({
+    name: entry.name,
+    slot: entry.slot,
+    icon: plannerScriptIcon(entry.name),
+  }));
 
   return {
     subjects,

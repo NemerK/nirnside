@@ -10,6 +10,8 @@ import { isClassMasteryLineName } from "@/lib/skills/class-mastery";
 import { editSkillLineRanks } from "@/lib/skills/line-cap";
 import { groupPlannerLines, plannerClassScopeAllows } from "@/lib/planner/skill-groups";
 import { Card } from "./ui";
+import { GameIcon } from "./game-icon";
+import { classIcon } from "@/lib/classes";
 
 type Scope = "account" | "role" | "class" | "character";
 type Mode = "mandatory" | "extra";
@@ -19,6 +21,12 @@ export interface SkillLinePlannerLine {
   category: string;
   className: string | null;
   maxRank: number | null;
+  icon: string | null;
+}
+
+function EsoMark({ name, icon, size }: { name: string; icon?: string | null; size: number }) {
+  if (!icon) return null;
+  return <GameIcon name={name} icon={icon} size={size} bare />;
 }
 
 export interface SkillLinePlannerCharacter {
@@ -598,7 +606,12 @@ function ClassLines({
   const open = lines.filter((line) => openLines.has(line.name.toLowerCase()));
   return (
     <div>
-      {className ? <div className="mb-1.5 text-sm text-fg">{className}</div> : null}
+      {className ? (
+        <div className="mb-1.5 flex items-center gap-2 text-sm text-fg">
+          <EsoMark name={className} icon={classIcon(className)} size={18} />
+          {className}
+        </div>
+      ) : null}
       <div className="flex flex-wrap gap-1.5">
         {lines.map((line) => {
           const expanded = openLines.has(line.name.toLowerCase());
@@ -608,13 +621,14 @@ function ClassLines({
               type="button"
               aria-expanded={expanded}
               onClick={() => onToggle(line.name)}
-              className={`rounded-full border px-2.5 py-1 text-xs ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
                 expanded
                   ? "border-accent/60 bg-accent-soft font-medium text-accent"
                   : "border-border text-fg-muted hover:text-fg"
               }`}
             >
-              {isSet(line) ? <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ background: "var(--rank-mandatory)" }} /> : null}
+              <EsoMark name={line.name} icon={line.icon} size={16} />
+              {isSet(line) ? <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--rank-mandatory)" }} /> : null}
               {line.name}
             </button>
           );
@@ -694,13 +708,16 @@ function LineBar({
 
   return (
     <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 ${focused ? "bg-surface/80" : ""}`}>
-      <div className="min-w-0 w-full sm:w-44">
-        <div className="truncate text-sm text-fg">{line.name}</div>
-        {current != null ? (
-          <div className="text-[11px] tabular-nums text-fg-subtle">Now {current}</div>
-        ) : line.className ? (
-          <div className="truncate text-[11px] text-fg-subtle">{line.className}</div>
-        ) : null}
+      <div className="flex min-w-0 w-full items-center gap-2 sm:w-52">
+        <EsoMark name={line.name} icon={line.icon} size={22} />
+        <div className="min-w-0">
+          <div className="truncate text-sm text-fg">{line.name}</div>
+          {current != null ? (
+            <div className="text-[11px] tabular-nums text-fg-subtle">Now {current}</div>
+          ) : line.className ? (
+            <div className="truncate text-[11px] text-fg-subtle">{line.className}</div>
+          ) : null}
+        </div>
       </div>
       <div
         role="slider"
