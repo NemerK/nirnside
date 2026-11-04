@@ -9,7 +9,7 @@ import { groupPlacedGoals, type GoalCatalog } from "@/lib/planner/goal-groups";
 import { Badge, Card, SectionTitle } from "./ui";
 import { AddGoalButton } from "./goal-editor";
 import { GoalCard } from "./goal-card";
-import { GoalMark } from "./goal-mark";
+import { GoalRankBar } from "./goal-mark";
 import { GroupedTargets } from "./goal-groups";
 import { classIcon } from "@/lib/classes";
 import { GameIcon } from "./game-icon";
@@ -188,33 +188,31 @@ function GoalRow({ row, onDelete }: { row: GoalRowItem; onDelete: () => void }) 
   const { goal } = row;
   const title = goal.domain === "skillline" ? skillLineTitle(goal) : goal.target;
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="px-4 py-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {row.href ? (
-            <Link href={row.href} className="text-sm font-medium text-fg hover:text-accent hover:underline">
+            <Link href={row.href} className="truncate text-sm font-medium text-fg hover:text-accent hover:underline">
               {title}
             </Link>
           ) : (
-            <span className="text-sm font-medium text-fg">{title}</span>
+            <span className="truncate text-sm font-medium text-fg">{title}</span>
           )}
           <Badge tone={TIER_TONE[goal.tier]}>{TIER_LABEL[goal.tier]}</Badge>
         </div>
-        {goal.note ? <p className="mt-0.5 text-xs text-fg-subtle">{goal.note}</p> : null}
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <GoalMark mark={row.mark} />
         {row.deletable && (
           <button
             type="button"
             aria-label={`Delete ${title}`}
             onClick={onDelete}
-            className="rounded p-1 text-fg-subtle hover:text-danger"
+            className="shrink-0 rounded p-1 text-fg-subtle hover:text-danger"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         )}
       </div>
+      <GoalRankBar mark={row.mark} />
+      {goal.note ? <p className="mt-1.5 text-xs text-fg-subtle">{goal.note}</p> : null}
     </div>
   );
 }

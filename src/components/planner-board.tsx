@@ -6,9 +6,9 @@ import { Check, ChevronDown, Loader2, Plus, Trash2 } from "lucide-react";
 import type { Goal, GoalTier } from "@/lib/goals/types";
 import { TIERS, TIER_LABEL } from "@/lib/goals/types";
 import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
-import { Badge, Card, ProgressBar } from "./ui";
+import { Badge, Card } from "./ui";
 import { GameIcon } from "./game-icon";
-import { GoalMark } from "./goal-mark";
+import { GoalRankBar } from "./goal-mark";
 import { classIcon } from "@/lib/classes";
 import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
 import { romanRank } from "@/lib/skills/ability";
@@ -536,16 +536,11 @@ function TargetRow({
           </span>
         </button>
 
-        {charRow ? (
-          <GoalMark mark={charRow.mark} />
-        ) : (
-          <span className="w-24 shrink-0">
-            <ProgressBar value={card.done} max={card.total || 1} />
+        {!charRow && (
+          <span className="shrink-0 text-xs tabular-nums text-fg-muted">
+            {card.done}/{card.total}
           </span>
         )}
-        <span className="w-14 shrink-0 text-right text-xs tabular-nums text-fg-muted">
-          {charRow ? "" : `${card.done}/${card.total}`}
-        </span>
 
         {goal.domain === "ability" && (
           <select
@@ -582,6 +577,28 @@ function TargetRow({
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
+      <div className="px-4 pb-3">
+        {charRow ? (
+          <GoalRankBar mark={charRow.mark} />
+        ) : (
+          <div
+            className="relative h-6 overflow-hidden rounded-full bg-surface-2 ring-1 ring-inset ring-border"
+            role="meter"
+            aria-label={`${card.done} of ${card.total} characters`}
+            aria-valuemin={0}
+            aria-valuemax={card.total || 1}
+            aria-valuenow={card.done}
+          >
+            <div
+              className="absolute inset-y-0 left-0"
+              style={{
+                width: `${card.total > 0 ? (card.done / card.total) * 100 : 0}%`,
+                background: "var(--rank-mandatory)",
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       {expanded && (
         <div className="border-t border-border/60 bg-surface/40 px-4 py-2">
@@ -590,18 +607,16 @@ function TargetRow({
           ) : (
             <ul className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
               {card.rows.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-2 py-1 text-sm">
-                  <span className="min-w-0 truncate text-fg-muted">
+                <li key={r.id} className="py-1.5 text-sm">
+                  <div className="mb-1 min-w-0 truncate text-fg-muted">
                     {r.name}
                     {choices.characters.find((c) => c.id === r.id)?.className ? (
                       <span className="ml-1 text-xs text-fg-subtle">
                         {choices.characters.find((c) => c.id === r.id)?.className}
                       </span>
                     ) : null}
-                  </span>
-                  <span className="shrink-0">
-                    <GoalMark mark={r.mark} />
-                  </span>
+                  </div>
+                  <GoalRankBar mark={r.mark} compact />
                 </li>
               ))}
             </ul>
