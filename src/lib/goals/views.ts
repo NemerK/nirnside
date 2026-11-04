@@ -10,6 +10,14 @@ export interface GoalMarkView {
   state: "done" | "short" | "undiscovered" | "unknown" | "notapplicable";
   label: string;
   reason?: string;
+  /** Snapshot rank. Null when this character has not been scanned, or the rank was not recorded. */
+  rank: number | null;
+  /** End of the progress bar. Null when there is nothing to measure. */
+  scale: number | null;
+  /** Gold reaches this rank. 0 when the bar is extra-only. */
+  mandatory: number;
+  /** Blue ends at this rank when it is above mandatory. 0 when unset. */
+  extra: number;
 }
 
 /** One character's row in a goal matrix. */

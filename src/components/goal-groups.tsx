@@ -26,12 +26,14 @@ export function GroupedTargets<T>({
               {crest ? <GameIcon name={group.title} icon={crest} size={18} bare /> : null}
               <h3 className="text-sm font-medium text-fg">{group.title}</h3>
             </div>
-            <div className="space-y-2">
+            <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
               {group.sections.map((section) => (
-                <div key={section.key} className="overflow-hidden rounded-xl border border-border bg-surface">
-                  <div className="border-b border-border bg-surface-2/70 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-fg-subtle">
-                    {section.title}
-                  </div>
+                <div key={section.key}>
+                  {section.items.length > 1 ? (
+                    <div className="border-b border-border bg-surface-2/70 px-4 py-1.5 text-[11px] font-medium uppercase tracking-wider text-fg-subtle">
+                      {section.title}
+                    </div>
+                  ) : null}
                   <div className="divide-y divide-border">{section.items.map((item) => <div key={getKey(item)}>{renderItem(item)}</div>)}</div>
                 </div>
               ))}

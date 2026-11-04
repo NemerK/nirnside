@@ -5,6 +5,7 @@ import { liveCharacters } from "../snapshot/roster";
 import { listRoles, listAssignments } from "../db/roles";
 import { getSkillLines, getScripts, getSkills } from "../db/catalog-queries";
 import { isExcludedSkillLine } from "../catalog/excluded";
+import { goalMarkMeasures } from "../goals/bar";
 import {
   goalAppliesTo,
   goalProgress,
@@ -262,6 +263,7 @@ function toMark(
       domain: goal.domain,
     }),
     reason: progress.state === "notapplicable" ? progress.reason : undefined,
+    ...goalMarkMeasures(progress, goal),
   };
 }
 
