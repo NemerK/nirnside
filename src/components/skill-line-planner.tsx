@@ -8,7 +8,7 @@ import type { GoalCardView } from "@/lib/goals/views";
 import { isExcludedSkillLine } from "@/lib/catalog/excluded";
 import { isClassMasteryLineName } from "@/lib/skills/class-mastery";
 import { editSkillLineRanks } from "@/lib/skills/line-cap";
-import { groupPlannerLines } from "@/lib/planner/skill-groups";
+import { groupPlannerLines, plannerClassScopeAllows } from "@/lib/planner/skill-groups";
 import { Card } from "./ui";
 
 type Scope = "account" | "role" | "class" | "character";
@@ -168,12 +168,8 @@ export function SkillLinePlanner({
     const visible = lines.filter((line) => {
       if (isClassMasteryLineName(line.name) || isExcludedSkillLine(line)) return false;
       if (line.maxRank == null || line.maxRank < 1) return false;
-      if (line.category.toLowerCase() !== "class") return true;
-      if (scope === "class") return (line.className ?? "").toLowerCase() === scopeKey.toLowerCase();
-      if (scope === "character" && characterClass) {
-        return (line.className ?? "").toLowerCase() === characterClass.toLowerCase();
-      }
-      return true;
+      const selectedClass = scope === "class" ? scopeKey : scope === "character" ? characterClass : null;
+      return plannerClassScopeAllows(line, selectedClass);
     });
     return groupPlannerLines(visible, classes);
   }, [lines, classes, scope, scopeKey, characterClass]);
