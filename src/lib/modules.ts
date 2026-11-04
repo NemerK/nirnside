@@ -24,13 +24,7 @@ export const TOGGLEABLE_MODULES: ModuleDef[] = [
     id: "dashboard",
     label: "Dashboard",
     href: "/dashboard",
-    description: "Per-character progress against your targets — skills, scribing, research, completion at a glance.",
-  },
-  {
-    id: "focus",
-    label: "Focus",
-    href: "/focus",
-    description: "Pick a character and what you care about right now — skills, crafting, scribing, knowledge, goals.",
+    description: "Every character at a glance. Select one to open skills, crafting, scribing, knowledge, champion points, and targets.",
   },
   {
     id: "planner",

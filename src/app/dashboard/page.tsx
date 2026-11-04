@@ -1,16 +1,31 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { LayoutDashboard } from "lucide-react";
 import { getCharactersFull, getAccount } from "@/lib/db/queries";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { listRoles, listAssignments } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
-import { loadPlannerData } from "@/lib/planner/data";
-import { goalAppliesTo, goalProgress } from "@/lib/goals/progress";
+import { catalogAbilityLoreFor, getScripts, getSkillLineByName } from "@/lib/db/catalog-queries";
+import { buildGoalIndexes, characterGoalRows, loadPlannerData, skillLineChoices } from "@/lib/planner/data";
+import { goalAppliesTo, goalProgress, toGoalSubject } from "@/lib/goals/progress";
 import type { Goal, GoalSubject } from "@/lib/goals/types";
-import { presentResearch } from "@/lib/knowledge/present";
+import { presentMotifs, presentResearch } from "@/lib/knowledge/present";
+import { presentSkillBook } from "@/lib/skills/present";
+import type { Character } from "@/lib/snapshot/schema";
+import { dashboardHref, isDashboardSection, isTargetDomain, type DashboardSection } from "@/lib/dashboard/href";
 import { EmptyState, Card, PageHeader } from "@/components/ui";
 import { LoadDemoButton } from "@/components/demo-controls";
 import { DashboardCard, type DashboardCardData, type DashboardRow } from "@/components/dashboard-card";
+import { DashboardDetail } from "@/components/dashboard-detail";
+import { SkillBook } from "@/components/skill-book";
+import { CharacterGoals } from "@/components/goals-board";
+import {
+  ChampionPanel,
+  CraftingPanel,
+  KnowledgePanel,
+  ScribingPanel,
+  type FocusScript,
+} from "@/components/focus-panels";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +59,12 @@ const pct = (done: number, total: number) => (total > 0 ? Math.round((done / tot
 export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   const sp = await searchParams;
   const sort = sp.sort === "roster" ? "roster" : "progress";
+  const requestedChar = typeof sp.char === "string" ? sp.char : "";
+  const sectionParam = typeof sp.section === "string" ? sp.section : undefined;
+  const domainParam = typeof sp.domain === "string" ? sp.domain : undefined;
+  const requestedSection: DashboardSection = isDashboardSection(sectionParam) ? sectionParam : "skills";
+  const requestedDomain =
+    requestedSection === "targets" && isTargetDomain(domainParam) ? domainParam : null;
   const account = safe(getAccount);
   const data = safe(loadPlannerData);
 
@@ -52,7 +73,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       <div className="mx-auto w-full max-w-3xl">
         <PageHeader
           title="Dashboard"
-          subtitle="Every character's progress against your targets — completion at a glance."
+          subtitle="Every character at a glance. Select a name or a bar to open that progress."
         />
         <EmptyState title="No characters yet" icon={<LayoutDashboard className="h-8 w-8" />}>
           <p className="mb-4">
@@ -96,7 +117,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         label: domain === "skillline" ? "Skill line targets" : domain === "ability" ? "Ability targets" : "Script targets",
         pct: pct(t.done, t.total),
         detail: `${t.done}/${t.total}`,
-        href: "/planner",
+        section: "targets",
+        domain,
       });
     }
 
@@ -106,7 +128,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         label: "Scribing scripts known",
         pct: pct(subject.scribingScripts.length, data.scripts.length),
         detail: `${subject.scribingScripts.length}/${data.scripts.length}`,
-        href: `/focus?char=${encodeURIComponent(subject.id)}`,
+        section: "scribing",
       });
     }
     if (fullChar) {
@@ -116,7 +138,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
           label: "Trait research",
           pct: pct(research.known, research.total),
           detail: `${research.known}/${research.total}`,
-          href: `/focus?char=${encodeURIComponent(subject.id)}`,
+          section: "crafting",
         });
       }
     }
@@ -134,7 +156,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         label: "Skill levels (vs caps)",
         pct: pct(rankSum, capSum),
         detail: `${Math.round(pct(rankSum, capSum))}% of cap`,
-        href: `/focus?char=${encodeURIComponent(subject.id)}`,
+        section: "skills",
       });
     }
 
@@ -165,12 +187,15 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   );
 
   const accountTotal = goals.length;
+  const selected = full.find((c) => c.id === requestedChar) ?? null;
+  const selectedCard = selected ? cards.find((c) => c.id === selected.id) ?? null : null;
+  const section: DashboardSection = requestedSection;
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Dashboard"
-        subtitle="Every character's progress against your targets — skills, scribing, research, completion at a glance."
+        subtitle="Every character at a glance. Select a name or a bar to open that progress."
         action={
           <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
             {(
@@ -181,7 +206,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
             ).map(([key, label]) => (
               <Link
                 key={key}
-                href={`/dashboard?sort=${key}`}
+                href={dashboardHref({
+                  sort: key,
+                  char: selected?.id,
+                  section: selected ? section : null,
+                  domain: requestedDomain,
+                })}
                 className={`rounded-md px-2.5 py-1.5 text-xs ${
                   sort === key ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
                 }`}
@@ -192,6 +222,29 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
           </div>
         }
       />
+
+      {selected && selectedCard && (
+        <DashboardDetail
+          sort={sort}
+          section={section}
+          domain={requestedDomain}
+          scanned={!!selected.lastSeen}
+          summaries={sectionSummaries(selected, selectedCard, data.scripts.length)}
+          character={{
+            id: selected.id,
+            name: selected.name,
+            className: selected.class,
+            race: selected.race,
+            alliance: selected.alliance,
+            levelLabel: selectedCard.levelLabel,
+            levelCaption: selectedCard.levelCaption,
+            roles: selectedCard.roles,
+            overall: selectedCard.overall,
+          }}
+        >
+          {progressPanel(selected, section, requestedDomain)}
+        </DashboardDetail>
+      )}
 
       {accountTotal === 0 && (
         <Card className="mb-4 px-4 py-3 text-sm text-fg-muted">
@@ -205,11 +258,107 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((char) => (
-          <DashboardCard key={char.id} char={char} />
+          <DashboardCard
+            key={char.id}
+            char={char}
+            sort={sort}
+            selected={char.id === selected?.id}
+            activeSection={selected ? section : null}
+            activeDomain={requestedDomain}
+          />
         ))}
       </div>
     </div>
   );
+}
+
+function sectionSummaries(
+  character: Character,
+  card: DashboardCardData,
+  scriptTotal: number,
+): Record<DashboardSection, string> {
+  const lines = character.skillLines.length;
+  const at50 = character.skillLines.filter((l) => l.rank >= 50).length;
+  const skillRow = card.rows.find((row) => row.section === "skills");
+  const research = presentResearch(character.research);
+  const motifs = presentMotifs(character.motifs);
+  const invested = character.champion.reduce((sum, d) => sum + d.stars.reduce((s, star) => s + star.points, 0), 0);
+  const slotted = character.champion.flatMap((d) => d.stars.filter((s) => s.slotted)).length;
+  const targets = card.overall;
+  return {
+    skills: skillRow?.detail ?? (lines ? `${at50} of ${lines} lines at 50` : "No lines yet"),
+    crafting: research.total ? `${research.known}/${research.total} traits` : "No research yet",
+    scribing: scriptTotal > 0 ? `${character.scribingScripts.length}/${scriptTotal} scripts` : "No catalog yet",
+    knowledge: motifs.total ? `${motifs.known}/${motifs.total} chapters` : "No motifs yet",
+    champion: character.champion.length ? `${invested.toLocaleString("en-US")} CP · ${slotted} slotted` : "No stars yet",
+    targets: targets ? `${targets.done}/${targets.total} done` : "None yet",
+  };
+}
+
+function skillLineHref(name: string, className?: string | null): string | null {
+  try {
+    const row = getSkillLineByName(name, className);
+    return row ? `/encyclopedia/skills/${encodeURIComponent(row.entry.id)}` : null;
+  } catch {
+    return null;
+  }
+}
+
+function progressPanel(character: Character, section: DashboardSection, domain: "skillline" | "ability" | "script" | null): ReactNode {
+  switch (section) {
+    case "skills": {
+      const names = character.skillLines.flatMap((line) =>
+        line.abilities.flatMap((a) => [a.name, ...(a.morphs ?? []).map((m) => m.name)]),
+      );
+      const lore = safe(() => catalogAbilityLoreFor(names));
+      return (
+        <SkillBook
+          categories={presentSkillBook(
+            character.skillLines,
+            lore ?? new Map(),
+            (name) => skillLineHref(name, character.class),
+            character.class,
+          )}
+          lastSeen={character.lastSeen ?? null}
+        />
+      );
+    }
+    case "crafting":
+      return <CraftingPanel character={character} />;
+    case "scribing": {
+      const scripts: FocusScript[] = (safe(() => getScripts()) ?? []).map(({ entry }) => ({
+        id: entry.id,
+        name: entry.name,
+        slot: entry.slot,
+        effect: entry.effect,
+      }));
+      return <ScribingPanel character={character} scripts={scripts} />;
+    }
+    case "knowledge":
+      return <KnowledgePanel character={character} />;
+    case "champion":
+      return <ChampionPanel character={character} />;
+    case "targets": {
+      const goals = safe(() => listGoals()) ?? [];
+      const lines = safe(() => skillLineChoices()) ?? [];
+      const hrefForLine: Record<string, string> = {};
+      for (const goal of goals) {
+        if (goal.domain !== "skillline") continue;
+        const key = goal.target.toLowerCase();
+        if (hrefForLine[key]) continue;
+        const dest = skillLineHref(goal.target, character.class);
+        if (dest) hrefForLine[key] = dest;
+      }
+      const goalIndexes = safe(buildGoalIndexes) ?? { lineIndex: [], abilityIndex: [] };
+      const roleIds = (safe(() => listAssignments()[character.id] ?? []) ?? []).filter(
+        (id): id is string => typeof id === "string",
+      );
+      const rows = characterGoalRows(goals, toGoalSubject(character, roleIds, true), goalIndexes, (goal) =>
+        goal.domain === "skillline" ? hrefForLine[goal.target.toLowerCase()] : undefined,
+      ).filter((row) => !domain || row.goal.domain === domain);
+      return <CharacterGoals rows={rows} lines={lines} subjectId={character.id} subjectName={character.name} />;
+    }
+  }
 }
 
 function safe<T>(fn: () => T): T | null {
