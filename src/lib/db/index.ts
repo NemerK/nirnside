@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { deleteExcludedCatalogAndGoals, stripVengeanceFromCharacter } from "../catalog/excluded";
 import { skillLineCap } from "../skills/line-cap";
 
 /**
@@ -166,6 +167,26 @@ function migrate(db: Database.Database) {
   migrateGoalsTable(db);
   ensureGoalExtraRank(db);
   clampGoalRanks(db);
+  deleteExcludedCatalogAndGoals(db);
+  stripStoredVengeance(db);
+}
+
+/** Older snapshots recorded Vengeance lines. Take them off the stored characters. */
+function stripStoredVengeance(db: Database.Database) {
+  const rows = db.prepare("SELECT id, json FROM characters").all() as { id: string; json: string }[];
+  const update = db.prepare("UPDATE characters SET json = ? WHERE id = ?");
+  for (const row of rows) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.json);
+    } catch {
+      continue;
+    }
+    if (!parsed || typeof parsed !== "object") continue;
+    const next = stripVengeanceFromCharacter(parsed as { skillLines?: { name?: string; category?: string }[]; classMasteries?: string[] });
+    if (next === parsed) continue;
+    update.run(JSON.stringify(next), row.id);
+  }
 }
 
 /** Old DBs keyed assignments by character id only (one role). Keep existing rows. */

@@ -12,7 +12,7 @@ import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
 import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
 import { groupPlannerLines } from "@/lib/planner/skill-groups";
-import { isExcludedLineName } from "@/lib/catalog/excluded";
+import { isExcludedSkillLine } from "@/lib/catalog/excluded";
 
 /**
  * The planner starts with the kind of thing you are planning. Skills, abilities,
@@ -766,7 +766,7 @@ function AbilityCategories({
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [openLines, setOpenLines] = useState<Set<string>>(new Set());
   const categories = useMemo(
-    () => groupPlannerLines(choices.lines.filter((l) => !isExcludedLineName(l.name)), choices.classes),
+    () => groupPlannerLines(choices.lines.filter((l) => !isExcludedSkillLine(l)), choices.classes),
     [choices.lines, choices.classes],
   );
   const abilitiesFor = (lineName: string) =>

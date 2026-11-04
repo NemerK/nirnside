@@ -23,6 +23,8 @@ describe("skillLineCap", () => {
   it("does not invent a cap", () => {
     assert.equal(skillLineCap("Volendrung"), null);
     assert.equal(skillLineCap("Vengeance"), null);
+    assert.equal(skillLineCap("Vengeance Ardent Flame"), null);
+    assert.equal(skillLineCap("Vengeance Bow"), null);
     assert.equal(skillLineCap(""), null);
   });
 });

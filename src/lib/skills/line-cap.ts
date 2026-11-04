@@ -1,4 +1,5 @@
 import catalog from "../../../data/catalog/skills.json";
+import { isExcludedLineName } from "../catalog/excluded";
 
 /**
  * Live rank cap for a skill line.
@@ -28,7 +29,7 @@ for (const [name, cap] of Object.entries(UNLISTED)) {
 
 export function skillLineCap(name: string): number | null {
   const key = name.trim().toLowerCase();
-  if (!key || key === "class mastery" || key === "vengeance") return null;
+  if (!key || key === "class mastery" || isExcludedLineName(name)) return null;
   if (!CAPS.has(key)) return null;
   return CAPS.get(key) ?? null;
 }

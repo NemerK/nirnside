@@ -80,6 +80,28 @@ end
 ----------------------------------------------------------------------
 -- Skill lines + abilities (names, descriptions, morphs)
 ----------------------------------------------------------------------
+-- Vengeance is a separate Cyrodiil ruleset. Those lines are not the live catalog.
+local function isVengeanceLine(skillType, lineIndex, lineName)
+  local n = zo_strlower(lineName or "")
+  if n == "vengeance" or n:find("^vengeance ") == 1 then return true end
+  local category = safe(function()
+    return zo_strlower(zo_strformat("<<1>>", GetString("SI_SKILLTYPE", skillType)))
+  end, "")
+  if category == "vengeance" then return true end
+  local flagged = safe(function()
+    if type(IsSkillLineVengeance) == "function" then
+      return IsSkillLineVengeance(skillType, lineIndex) == true
+    end
+    if not SKILLS_DATA_MANAGER or not SKILLS_DATA_MANAGER.GetSkillLineDataByIndices then return false end
+    local data = SKILLS_DATA_MANAGER:GetSkillLineDataByIndices(skillType, lineIndex)
+    if data and type(data.IsVengeanceSkillLine) == "function" then
+      return data:IsVengeanceSkillLine() == true
+    end
+    return false
+  end, false)
+  return flagged == true
+end
+
 local function gatherSkills()
   local lines, skills = {}, {}
   safe(function()
@@ -88,7 +110,7 @@ local function gatherSkills()
       local numLines = GetNumSkillLines(skillType)
       for lineIndex = 1, numLines do
         local lineName = zo_strformat("<<1>>", GetSkillLineInfo(skillType, lineIndex))
-        if lineName and lineName ~= "" then
+        if lineName and lineName ~= "" and not isVengeanceLine(skillType, lineIndex, lineName) then
           local lineId = "line-" .. slug(lineName)
           local line = {
             id = lineId,

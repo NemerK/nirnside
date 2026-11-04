@@ -50,6 +50,23 @@ describe("skill book presentation", () => {
     );
   });
 
+  it("leaves Alliance War and drops every Vengeance line", () => {
+    const book = presentSkillBook(
+      [
+        SkillLine.parse({ name: "Assault", category: "Alliance War", rank: 8, abilities: [] }),
+        SkillLine.parse({ name: "Vengeance", category: "Alliance War", rank: 1, abilities: [] }),
+        SkillLine.parse({ name: "Vengeance Ardent Flame", category: "Class", rank: 50, abilities: [] }),
+        SkillLine.parse({ name: "Bow", category: "Vengeance", rank: 50, abilities: [] }),
+      ],
+      new Map(),
+      () => null,
+    );
+    assert.deepEqual(
+      book.map((c) => ({ name: c.name, lines: c.lines.map((l) => l.name) })),
+      [{ name: "Alliance War", lines: ["Assault"] }],
+    );
+  });
+
   it("attaches catalog tooltip text to the slotted morph", () => {
     const lore = new Map([
       [

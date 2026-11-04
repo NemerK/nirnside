@@ -6,6 +6,7 @@ import { annotateStickerbookSets, collectedPieceKeys, type StickerbookSetView } 
 import { stickerbookSeenIds } from "../stickerbook/seen-store";
 import { archivedCharacters, archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
 import { unionCompletedAchievementIds } from "../achievements/pithka";
+import { isExcludedSkillLine, stripVengeanceFromCharacter } from "../catalog/excluded";
 
 export type AccountMeta = Pick<
   AccountSnapshot,
@@ -176,7 +177,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
             classMastery?: number | boolean;
           }[];
           lines = parsed
-            .filter((l) => l && l.name)
+            .filter((l) => l && l.name && !isExcludedSkillLine({ name: l.name, category: l.category }))
             .map((l) => ({
               name: l.name as string,
               category: l.category || "Skill",
@@ -230,7 +231,7 @@ const loadRoster = cache(function loadRoster(): Character[] {
       const c = JSON.parse(r.json) as Character;
       return {
         ...c,
-        skillLines: c.skillLines.map((l) => ({ ...l, abilities: [] })),
+        skillLines: c.skillLines.filter((l) => !isExcludedSkillLine(l)).map((l) => ({ ...l, abilities: [] })),
         champion: [],
         equipped: [],
         companions: [],
@@ -251,7 +252,7 @@ export const getCharactersFull = cache(function getCharactersFull(): Character[]
   const rows = getDb()
     .prepare("SELECT json FROM characters ORDER BY sortOrder ASC")
     .all() as { json: string }[];
-  return rows.map((r) => JSON.parse(r.json) as Character);
+  return rows.map((r) => stripVengeanceFromCharacter(JSON.parse(r.json) as Character));
 });
 
 /** Live ESO roster only. Deleted characters are in getArchivedCharacters(). */
@@ -284,7 +285,7 @@ export function getCharacter(id: string): Character | null {
   const row = getDb().prepare("SELECT json FROM characters WHERE id = ?").get(id) as
     | { json: string }
     | undefined;
-  return row ? (JSON.parse(row.json) as Character) : null;
+  return row ? stripVengeanceFromCharacter(JSON.parse(row.json) as Character) : null;
 }
 
 export interface ItemFilters {

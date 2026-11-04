@@ -1,6 +1,6 @@
 import { getDb, setMeta } from "../db";
 import { CatalogBundle, SOURCE_RANK, type CatalogDomain, type CatalogSource } from "./schema";
-import { excludedLineIds, isExcludedLineName } from "./excluded";
+import { isExcludedCatalogLineId, isExcludedSkillLine } from "./excluded";
 
 type CatalogSourceKey = CatalogSource;
 
@@ -51,16 +51,18 @@ export function importCatalogBundle(raw: unknown): Record<string, number> {
     subcategory: string | null,
   ) => rows.push({ domain, id: e.id, name: e.name, category, subcategory, source: e.source, patch: e.patch, json: JSON.stringify(e) });
 
-  // Never store excluded lines (the unlevelable PvP "Vengeance" line an
-  // in-game scan reports), nor any ability that belongs to one.
-  const excludedIds = new Set(excludedLineIds());
+  // Vengeance lines never enter the catalog, nor do abilities filed under them.
+  const excludedIds = new Set<string>();
   for (const s of bundle.sets) push("set", s, s.category, s.dlc);
   for (const l of bundle.skillLines) {
-    if (isExcludedLineName(l.name)) continue;
+    if (isExcludedSkillLine(l)) {
+      excludedIds.add(l.id.toLowerCase());
+      continue;
+    }
     push("skillline", l, l.category, l.className);
   }
   for (const s of bundle.skills) {
-    if (excludedIds.has(s.lineId.toLowerCase())) continue;
+    if (isExcludedCatalogLineId(s.lineId) || excludedIds.has(s.lineId.toLowerCase())) continue;
     push("skill", s, s.lineId, s.type);
   }
   for (const c of bundle.cp) push("cp", c, c.category, c.type);

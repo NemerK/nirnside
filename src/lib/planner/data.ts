@@ -4,7 +4,7 @@ import { getCharacters, getCharactersFull } from "../db/queries";
 import { liveCharacters } from "../snapshot/roster";
 import { listRoles, listAssignments } from "../db/roles";
 import { getSkillLines, getScripts, getSkills } from "../db/catalog-queries";
-import { isExcludedLineName } from "../catalog/excluded";
+import { isExcludedSkillLine } from "../catalog/excluded";
 import {
   goalAppliesTo,
   goalProgress,
@@ -64,6 +64,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   const lineMeta = new Map<string, LineMeta>();
   const lines: PlannerLineChoice[] = [];
   for (const { entry } of catalogLines) {
+    if (isExcludedSkillLine(entry)) continue;
     const key = entry.name.trim().toLowerCase();
     if (!key) continue;
     const meta: LineMeta = { category: entry.category, className: entry.className ?? null };
@@ -77,7 +78,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   }
   for (const c of live) {
     for (const line of c.skillLines) {
-      if (isExcludedLineName(line.name)) continue; // e.g. the unlevelable PvP "Vengeance" line
+      if (isExcludedSkillLine(line)) continue;
       const key = line.name.trim().toLowerCase();
       if (!key || lineMeta.has(key)) continue;
       const meta: LineMeta = {
@@ -96,7 +97,9 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
 
   const abilityMeta = new Map<string, AbilityMeta>();
   const abilities: PlannerAbilityChoice[] = [];
-  const lineNameById = new Map(catalogLines.map(({ entry }) => [entry.id, entry]));
+  const lineNameById = new Map(
+    catalogLines.filter(({ entry }) => !isExcludedSkillLine(entry)).map(({ entry }) => [entry.id, entry]),
+  );
   function rememberAbility(name: string, meta: AbilityMeta) {
     const key = name.trim().toLowerCase();
     if (!key) return;
@@ -113,7 +116,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   }
   for (const { entry } of safe(getSkills) ?? []) {
     const line = lineNameById.get(entry.lineId);
-    if (!line) continue;
+    if (!line || isExcludedSkillLine(line)) continue;
     const shared = {
       lineName: line.name,
       category: line.category,
@@ -126,7 +129,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
   }
   for (const c of live) {
     for (const line of c.skillLines) {
-      if (isExcludedLineName(line.name)) continue;
+      if (isExcludedSkillLine(line)) continue;
       const shared = {
         lineName: line.name,
         category: line.category || "Skill",
@@ -248,11 +251,13 @@ export function characterGoalRows(
 export const skillLineChoices = cache(function skillLineChoices(): SkillLineChoice[] {
   let catalog: SkillLineChoice[] = [];
   try {
-    catalog = getSkillLines().map(({ entry }) => ({
-      name: entry.name,
-      category: entry.category,
-      maxRank: entry.maxRank ?? skillLineCap(entry.name),
-    }));
+    catalog = getSkillLines()
+      .filter(({ entry }) => !isExcludedSkillLine(entry))
+      .map(({ entry }) => ({
+        name: entry.name,
+        category: entry.category,
+        maxRank: entry.maxRank ?? skillLineCap(entry.name),
+      }));
   } catch {
     catalog = [];
   }
@@ -260,7 +265,7 @@ export const skillLineChoices = cache(function skillLineChoices(): SkillLineChoi
   try {
     for (const c of getCharacters()) {
       for (const l of c.skillLines) {
-        if (isExcludedLineName(l.name)) continue;
+        if (isExcludedSkillLine(l)) continue;
         fromChars.push({ name: l.name, category: l.category, maxRank: skillLineCap(l.name) });
       }
     }

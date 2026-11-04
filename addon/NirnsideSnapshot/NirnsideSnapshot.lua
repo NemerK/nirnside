@@ -626,6 +626,28 @@ local function isClassMasteryLineName(name)
   return zo_strlower(name) == "class mastery"
 end
 
+-- Vengeance is a separate Cyrodiil ruleset. Those lines are not this account's skills.
+local function isVengeanceLine(skillType, lineIndex, lineName)
+  local n = zo_strlower(lineName or "")
+  if n == "vengeance" or n:find("^vengeance ") == 1 then return true end
+  local category = safe(function()
+    return zo_strlower(zo_strformat("<<1>>", GetString("SI_SKILLTYPE", skillType)))
+  end, "")
+  if category == "vengeance" then return true end
+  local flagged = safe(function()
+    if type(IsSkillLineVengeance) == "function" then
+      return IsSkillLineVengeance(skillType, lineIndex) == true
+    end
+    if not SKILLS_DATA_MANAGER or not SKILLS_DATA_MANAGER.GetSkillLineDataByIndices then return false end
+    local data = SKILLS_DATA_MANAGER:GetSkillLineDataByIndices(skillType, lineIndex)
+    if data and type(data.IsVengeanceSkillLine) == "function" then
+      return data:IsVengeanceSkillLine() == true
+    end
+    return false
+  end, false)
+  return flagged == true
+end
+
 -- Subclassing (U46+): a class skill line active on this character that is not
 -- one of the character's own class lines is "subclassed" (borrowed). A class
 -- line leveled to 50 becomes "mastered" and unlocks account-wide. We read this
@@ -669,7 +691,7 @@ local function gatherSkills(masteriesOut, classMasteryOut, playerClass)
         -- Class Mastery is greyed-out (still listed) until unlocked, and hidden
         -- while subclassing. Dump this character's line when the game still
         -- lists it so purchased passives can show; skip only when omitted.
-        if (discovered or classMasteryLine) and not otherClassMastery then
+        if (discovered or classMasteryLine) and not otherClassMastery and not isVengeanceLine(skillType, lineIndex, lineName) then
           local abilities = {}
           local numAbilities = GetNumSkillAbilities(skillType, lineIndex)
           for a = 1, numAbilities do

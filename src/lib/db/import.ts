@@ -8,6 +8,7 @@ import {
   collectCompletedAchievementIdsFromSnapshot,
   unionCompletedAchievementIds,
 } from "../achievements/pithka";
+import { stripVengeanceFromCharacter } from "../catalog/excluded";
 
 /**
  * Replace the entire local DB with a fresh snapshot. Because Nirnside only ever
@@ -101,11 +102,13 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
               @isVampire, @vampireStage, @isWerewolf, @lastSeen, @sortOrder, @json)
     `);
     const allChars = [
-      ...snap.characters.map((c) => ({ ...c, archivedAt: c.archivedAt ?? null })),
-      ...snap.archivedCharacters.map((c) => ({
-        ...c,
-        archivedAt: c.archivedAt ?? snap.lastSnapshot ?? 1,
-      })),
+      ...snap.characters.map((c) => stripVengeanceFromCharacter({ ...c, archivedAt: c.archivedAt ?? null })),
+      ...snap.archivedCharacters.map((c) =>
+        stripVengeanceFromCharacter({
+          ...c,
+          archivedAt: c.archivedAt ?? snap.lastSnapshot ?? 1,
+        }),
+      ),
     ];
     allChars.forEach((c, i) => {
       insChar.run({
