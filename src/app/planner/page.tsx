@@ -72,7 +72,7 @@ export default function PlannerPage() {
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Planner"
-        subtitle="Skill lines use each character's line rank. Ability and morph targets use that character's in-game rank for the exact form. Press M for mandatory, E for extra."
+        subtitle="Choose Skills, Abilities, or Scribing first. Categories stay closed until you open them."
       />
       <PlannerBoard choices={choices} cards={cards} />
     </div>
