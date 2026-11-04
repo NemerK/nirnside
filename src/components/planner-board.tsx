@@ -7,7 +7,9 @@ import type { Goal, GoalTier } from "@/lib/goals/types";
 import { TIERS, TIER_LABEL } from "@/lib/goals/types";
 import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
 import { Badge, Card, ProgressBar } from "./ui";
+import { GameIcon } from "./game-icon";
 import { GoalMark } from "./goal-mark";
+import { classIcon } from "@/lib/classes";
 import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
 import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
@@ -20,9 +22,9 @@ import { isExcludedSkillLine } from "@/lib/catalog/excluded";
  */
 
 export interface PlannerChoices {
-  lines: { name: string; category: string; className: string | null; maxRank: number | null }[];
-  scripts: { name: string; slot: string }[];
-  abilities: { name: string; lineName: string; className: string | null }[];
+  lines: { name: string; category: string; className: string | null; maxRank: number | null; icon: string | null }[];
+  scripts: { name: string; slot: string; icon: string | null }[];
+  abilities: { name: string; lineName: string; className: string | null; icon: string | null }[];
   roles: { id: string; name: string }[];
   classes: string[];
   characters: { id: string; name: string; className: string; ranks?: { name: string; rank: number }[] }[];
@@ -44,6 +46,28 @@ function goalTitle(goal: Goal): string {
   if (goal.domain === "skillline") return skillLineTitle(goal);
   if (goal.domain === "ability") return abilityTitle(goal);
   return goal.target;
+}
+
+function iconForGoal(goal: Goal, choices: PlannerChoices): string | null {
+  const name = goal.target.trim().toLowerCase();
+  if (goal.domain === "ability") {
+    return choices.abilities.find((ability) => ability.name.trim().toLowerCase() === name)?.icon ?? null;
+  }
+  if (goal.domain === "script") {
+    return choices.scripts.find((script) => script.name.trim().toLowerCase() === name)?.icon ?? null;
+  }
+  const lines = choices.lines.filter((line) => line.name.trim().toLowerCase() === name);
+  if (goal.scope === "class" && goal.scopeKey) {
+    const wanted = goal.scopeKey.trim().toLowerCase();
+    const scoped = lines.find((line) => (line.className ?? "").trim().toLowerCase() === wanted);
+    if (scoped?.icon) return scoped.icon;
+  }
+  return lines.find((line) => line.icon)?.icon ?? null;
+}
+
+function EsoMark({ name, icon, size }: { name: string; icon?: string | null; size: number }) {
+  if (!icon) return null;
+  return <GameIcon name={name} icon={icon} size={size} bare />;
 }
 
 export function PlannerBoard({
@@ -369,6 +393,7 @@ export function PlannerBoard({
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs"
               >
                 <Badge tone={TIER_TONE[goal.tier]}>{DOMAIN_SHORT[goal.domain]}</Badge>
+                <EsoMark name={goalTitle(goal)} icon={iconForGoal(goal, choices)} size={16} />
                 <span className="text-fg">{goalTitle(goal)}</span>
                 <span className="text-fg-subtle">{mark.label}</span>
               </li>
@@ -486,6 +511,7 @@ function TargetRow({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5">
         <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <ChevronDown className={`h-4 w-4 shrink-0 text-accent transition-transform ${expanded ? "" : "-rotate-90"}`} />
+          <EsoMark name={title} icon={iconForGoal(goal, choices)} size={22} />
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium text-fg">
               {title} <span className="font-normal text-fg-subtle">· {scopeLabel(goal)}</span>
@@ -804,10 +830,11 @@ function AbilityCategories({
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => toggleSet(setOpenLines, openLines, key)}
-                className={`rounded-full border px-2.5 py-1 text-xs ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
                   expanded ? "border-accent/60 bg-accent-soft font-medium text-accent" : "border-border text-fg-muted hover:text-fg"
                 }`}
               >
+                <EsoMark name={line.name} icon={line.icon} size={16} />
                 {line.name}
               </button>
             );
@@ -820,7 +847,10 @@ function AbilityCategories({
             return (
               <div key={plannerLineKey(line)} className="rounded-lg border border-border/70 p-2">
                 <div className="mb-1 flex items-center justify-between px-1">
-                  <span className="text-xs text-fg-subtle">{line.name}</span>
+                  <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-fg-subtle">
+                    <EsoMark name={line.name} icon={line.icon} size={16} />
+                    <span className="truncate">{line.name}</span>
+                  </span>
                   {abilities.length > 0 && (
                     <button
                       type="button"
@@ -839,6 +869,7 @@ function AbilityCategories({
                       key={a.name}
                       name={a.name}
                       hint={a.className ?? line.name}
+                      icon={a.icon}
                       checked={selected.has(a.name)}
                       onToggle={() => onToggle(a.name)}
                     />
@@ -869,7 +900,10 @@ function AbilityCategories({
                 {category.classes
                   ? category.classes.map((klass) => (
                       <div key={klass.name}>
-                        <div className="mb-1.5 text-sm text-fg">{klass.name}</div>
+                        <div className="mb-1.5 flex items-center gap-2 text-sm text-fg">
+                          <EsoMark name={klass.name} icon={classIcon(klass.name)} size={18} />
+                          {klass.name}
+                        </div>
                         {lineBlock(klass.lines)}
                       </div>
                     ))
@@ -888,7 +922,7 @@ function ScriptCategories({
   selected,
   onToggle,
 }: {
-  groups: { key: string; entries: { name: string; slot: string }[] }[];
+  groups: { key: string; entries: { name: string; slot: string; icon: string | null }[] }[];
   selected: Set<string>;
   onToggle: (name: string) => void;
 }) {
@@ -923,7 +957,7 @@ function ScriptCategories({
                 <GroupBlock
                   title={`${title} scripts`}
                   selected={selected}
-                  entries={group.entries.map((s) => ({ name: s.name, hint: s.slot }))}
+                  entries={group.entries.map((s) => ({ name: s.name, hint: s.slot, icon: s.icon }))}
                   onToggle={onToggle}
                 />
               </div>
@@ -936,7 +970,19 @@ function ScriptCategories({
 }
 
 /** A clickable item in a picker modal. */
-function PickerRow({ name, hint, checked, onToggle }: { name: string; hint: string; checked: boolean; onToggle: () => void }) {
+function PickerRow({
+  name,
+  hint,
+  icon,
+  checked,
+  onToggle,
+}: {
+  name: string;
+  hint: string;
+  icon?: string | null;
+  checked: boolean;
+  onToggle: () => void;
+}) {
   return (
     <button
       type="button"
@@ -953,6 +999,7 @@ function PickerRow({ name, hint, checked, onToggle }: { name: string; hint: stri
       >
         <Check className="h-3 w-3" />
       </span>
+      <EsoMark name={name} icon={icon} size={22} />
       <span className="min-w-0 flex-1">
         <span className={`block truncate ${checked ? "font-medium text-fg" : "text-fg"}`}>{name}</span>
         <span className="block truncate text-xs text-fg-subtle">{hint}</span>
@@ -970,7 +1017,7 @@ function GroupBlock({
 }: {
   title: string;
   selected: Set<string>;
-  entries: { name: string; hint: string }[];
+  entries: { name: string; hint: string; icon?: string | null }[];
   onToggle: (name: string) => void;
 }) {
   const all = entries.length > 0 && entries.every((e) => selected.has(e.name));
@@ -988,7 +1035,14 @@ function GroupBlock({
       </div>
       <div className="space-y-0.5">
         {entries.map((e) => (
-          <PickerRow key={e.name} name={e.name} hint={e.hint} checked={selected.has(e.name)} onToggle={() => onToggle(e.name)} />
+          <PickerRow
+            key={e.name}
+            name={e.name}
+            hint={e.hint}
+            icon={e.icon}
+            checked={selected.has(e.name)}
+            onToggle={() => onToggle(e.name)}
+          />
         ))}
       </div>
     </div>
