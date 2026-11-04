@@ -13,10 +13,13 @@ export const dynamic = "force-dynamic";
 
 export default function ScribingPage() {
   const meta = safe(() => getCatalogMeta());
-  const scriptMap = new Map<string, ScriptLite>();
-  for (const { entry } of safe(() => getScripts()) ?? []) {
-    scriptMap.set(entry.id, { id: entry.id, name: entry.name, effect: entry.effect });
-  }
+  const book: ScriptLite[] = (safe(() => getScripts()) ?? []).map(({ entry }) => ({
+    id: entry.id,
+    name: entry.name,
+    effect: entry.effect,
+    slot: entry.slot,
+  }));
+  const scriptMap = new Map(book.map((s) => [s.id, s]));
   const resolve = (ids: string[]) => ids.map((id) => scriptMap.get(id)).filter((x): x is ScriptLite => !!x);
 
   const grimoires: GrimoireLite[] = (safe(() => getGrimoires()) ?? []).map(({ entry }) => ({
@@ -38,14 +41,14 @@ export default function ScribingPage() {
       </Link>
       <PageHeader
         title="Scribing"
-        subtitle="Every grimoire and its full Focus × Signature × Affix combination matrix. Scripts your account knows are marked."
+        subtitle="The live script book, grouped by slot. Scripts your account knows are marked. A grimoire lists only the scripts it is known to accept."
         action={meta ? <SourceBadge source={meta.source as CatalogSource} /> : undefined}
       />
       <CatalogScanCallout source={meta?.source as CatalogSource | undefined} />
       {grimoires.length === 0 ? (
         <p className="text-sm text-fg-muted">No grimoires in the catalog yet.</p>
       ) : (
-        <ScribingMatrix grimoires={grimoires} knownScripts={known} />
+        <ScribingMatrix grimoires={grimoires} knownScripts={known} book={book} />
       )}
     </PageFrame>
   );

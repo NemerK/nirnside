@@ -130,7 +130,7 @@ describe("skill book presentation", () => {
         purchased: true,
         crafted: true,
         scribed: true,
-        scripts: ["Magic Damage", "Class Mastery", "Minor Berserk"],
+        scripts: ["Magic Damage", "Class Flourish", "Berserk"],
         description: "Conjure a soul-bound weapon.",
         morphs: [],
       }),
@@ -139,7 +139,7 @@ describe("skill book presentation", () => {
     assert.equal(view.crafted, true);
     assert.equal(view.scribed, true);
     assert.equal(view.purchased, true);
-    assert.deepEqual(view.scripts, ["Magic Damage", "Class Mastery", "Minor Berserk"]);
+    assert.deepEqual(view.scripts, ["Magic Damage", "Class Flourish", "Berserk"]);
     assert.equal(view.morphs.length, 0);
     assert.equal(view.description, "Conjure a soul-bound weapon.");
   });

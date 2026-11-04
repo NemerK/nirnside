@@ -23,6 +23,10 @@ function pruneExcludedCatalogRows(): void {
     // Skill rows store their line id in the `category` column (see importCatalogBundle).
     `DELETE FROM catalog WHERE domain = 'skill' AND lower(category) IN (${idHolders})`,
   ).run(...excludedLineIds());
+  // Earlier seeds invented script names such as "Ranged". Drop every
+  // non-ingame script and grimoire so a replaced seed cannot leave those
+  // rows behind. An in-game catalog scan is kept.
+  db.prepare(`DELETE FROM catalog WHERE domain IN ('script', 'grimoire') AND source != 'ingame'`).run();
 }
 
 /**

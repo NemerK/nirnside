@@ -8,6 +8,7 @@ export interface ScriptLite {
   id: string;
   name: string;
   effect: string;
+  slot?: "focus" | "signature" | "affix";
 }
 export interface GrimoireLite {
   id: string;
@@ -22,9 +23,12 @@ export interface GrimoireLite {
 export function ScribingMatrix({
   grimoires,
   knownScripts,
+  book = [],
 }: {
   grimoires: GrimoireLite[];
   knownScripts: string[];
+  /** Every script in the catalog. Used when a grimoire has no recorded compatibility. */
+  book?: ScriptLite[];
 }) {
   const known = useMemo(() => new Set(knownScripts.map((s) => s.toLowerCase())), [knownScripts]);
   const [grimId, setGrimId] = useState(grimoires[0]?.id ?? "");
@@ -35,8 +39,15 @@ export function ScribingMatrix({
   const [affix, setAffix] = useState<string>("");
   const [knownOnly, setKnownOnly] = useState(false);
 
+  const linked = !!grim && (grim.focus.length > 0 || grim.signature.length > 0 || grim.affix.length > 0);
+  const ofSlot = (slot: "focus" | "signature" | "affix", linkedList: ScriptLite[]) =>
+    linked ? linkedList : book.filter((s) => s.slot === slot);
+  const focusList = grim ? ofSlot("focus", grim.focus) : [];
+  const sigList = grim ? ofSlot("signature", grim.signature) : [];
+  const affixList = grim ? ofSlot("affix", grim.affix) : [];
+
   const combos = useMemo(() => {
-    if (!grim) return [];
+    if (!grim || !linked) return [];
     const out: { focus: ScriptLite; sig: ScriptLite; affix: ScriptLite; known: boolean }[] = [];
     for (const f of grim.focus) {
       for (const s of grim.signature) {
@@ -48,15 +59,15 @@ export function ScribingMatrix({
       }
     }
     return out;
-  }, [grim, known, knownOnly]);
+  }, [grim, known, knownOnly, linked]);
 
-  const totalCombos = grim ? grim.focus.length * grim.signature.length * grim.affix.length : 0;
+  const totalCombos = linked && grim ? grim.focus.length * grim.signature.length * grim.affix.length : 0;
 
   if (!grim) return <p className="text-sm text-fg-muted">No grimoires in the catalog yet.</p>;
 
-  const selF = grim.focus.find((x) => x.id === focus);
-  const selS = grim.signature.find((x) => x.id === sig);
-  const selA = grim.affix.find((x) => x.id === affix);
+  const selF = focusList.find((x) => x.id === focus);
+  const selS = sigList.find((x) => x.id === sig);
+  const selA = affixList.find((x) => x.id === affix);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -77,7 +88,9 @@ export function ScribingMatrix({
             </option>
           ))}
         </select>
-        <span className="text-sm text-fg-muted">{totalCombos.toLocaleString("en-US")} possible combinations</span>
+        <span className="text-sm text-fg-muted">
+          {linked ? `${totalCombos.toLocaleString("en-US")} possible combinations` : "Script book · combinations not scanned"}
+        </span>
         <button
           onClick={() => setKnownOnly((v) => !v)}
           className={`ml-auto rounded-lg border px-2.5 py-2 text-sm transition-colors ${
@@ -96,13 +109,18 @@ export function ScribingMatrix({
           <span className="text-sm text-fg-muted">· {grim.skillLine}</span>
         </div>
         <p className="mt-1 text-sm text-fg-muted">{grim.description}</p>
+        {!linked && (
+          <p className="mt-2 text-xs text-fg-subtle">
+            These are the live scripts. This grimoire does not yet list which of them it accepts.
+          </p>
+        )}
       </div>
 
       {/* Builder */}
       <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
-        <ScriptPicker title="Focus Script" scripts={grim.focus} value={focus} onChange={setFocus} known={known} />
-        <ScriptPicker title="Signature Script" scripts={grim.signature} value={sig} onChange={setSig} known={known} />
-        <ScriptPicker title="Affix Script" scripts={grim.affix} value={affix} onChange={setAffix} known={known} />
+        <ScriptPicker title="Focus Script" scripts={focusList} value={focus} onChange={setFocus} known={known} />
+        <ScriptPicker title="Signature Script" scripts={sigList} value={sig} onChange={setSig} known={known} />
+        <ScriptPicker title="Affix Script" scripts={affixList} value={affix} onChange={setAffix} known={known} />
       </div>
 
       {(selF || selS || selA) && (
@@ -121,11 +139,11 @@ export function ScribingMatrix({
         </div>
       )}
 
-      {/* Full matrix */}
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+      {/* Full matrix — only when this grimoire has a recorded compatibility list. */}
+      {linked && <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
         All combinations ({combos.length})
-      </h3>
-      <div className="max-h-[520px] overflow-y-auto rounded-xl border border-border">
+      </h3>}
+      {linked && <div className="max-h-[520px] overflow-y-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-bg-elev">
             <tr className="text-left text-xs uppercase tracking-wider text-fg-subtle">
@@ -148,7 +166,7 @@ export function ScribingMatrix({
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
       </PageScroll>
     </div>
   );

@@ -211,7 +211,7 @@ describe("sample snapshot morph ranks", () => {
     assert.equal(wieldSoul.crafted, true);
     assert.equal(wieldSoul.scribed, true);
     assert.equal(abilityIsKnown(wieldSoul), true);
-    assert.deepEqual(wieldSoul.scripts, ["Magic Damage", "Class Mastery", "Minor Berserk"]);
+    assert.deepEqual(wieldSoul.scripts, ["Magic Damage", "Class Flourish", "Berserk"]);
 
     const soulBurst = sings.skillLines
       .flatMap((l) => l.abilities)
@@ -228,7 +228,7 @@ describe("sample snapshot morph ranks", () => {
       purchased: true,
       crafted: true,
       scribed: true,
-      scripts: ["Magic Damage", "Class Mastery", "Minor Berserk"],
+      scripts: ["Magic Damage", "Class Flourish", "Berserk"],
       morphs: [],
     });
     assert.equal(abilityIsKnown(ability), true);

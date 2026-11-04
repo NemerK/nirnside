@@ -276,7 +276,7 @@ NirnsideData =
                                         ["purchased"] = true,
                                         ["crafted"] = true,
                                         ["scribed"] = true,
-                                        ["scripts"] = { "Physical Damage", "Ranged", "Minor Force" },
+                                        ["scripts"] = { "Physical Damage", "Lingering Torment", "Force" },
                                         ["icon"] = "/esoui/art/icons/ability_grimoire_dualwield.dds",
                                         ["description"] = "|cffffffThrow a knife that can be recalled, striking enemies on the way out and back.|r",
                                         ["morphs"] = {},
@@ -330,7 +330,7 @@ NirnsideData =
                                         ["purchased"] = true,
                                         ["crafted"] = true,
                                         ["scribed"] = true,
-                                        ["scripts"] = { "Magic Damage", "Class Mastery", "Minor Berserk" },
+                                        ["scripts"] = { "Magic Damage", "Class Flourish", "Berserk" },
                                         ["icon"] = "/esoui/art/icons/ability_grimoire_soulmagic1.dds",
                                         ["description"] = "|cffffffConjure a soul-bound weapon to strike an enemy and apply an effect.|r",
                                         ["morphs"] = {},
@@ -361,7 +361,7 @@ NirnsideData =
                                         ["purchased"] = true,
                                         ["crafted"] = true,
                                         ["scribed"] = true,
-                                        ["scripts"] = { "Flame Damage", "Anchorite's Cruelty", "Minor Vulnerability" },
+                                        ["scripts"] = { "Flame Damage", "Warrior's Opportunity", "Vulnerability" },
                                         ["icon"] = "/esoui/art/icons/ability_grimoire_magesguild.dds",
                                         ["description"] = "|cffffffPlace a rune that stores your next abilities and detonates them for area damage.|r",
                                         ["morphs"] = {},
@@ -435,14 +435,14 @@ NirnsideData =
                         ["scribingScripts"] =
                         {
                             "Physical Damage",
-                            "Ranged",
-                            "Minor Force",
+                            "Pull",
+                            "Force",
                             "Magic Damage",
-                            "Class Mastery",
-                            "Minor Berserk",
+                            "Class Flourish",
+                            "Berserk",
                             "Flame Damage",
-                            "Anchorite's Cruelty",
-                            "Minor Vulnerability",
+                            "Lingering Torment",
+                            "Vulnerability",
                         },
                         ["research"] =
                         {
@@ -774,7 +774,7 @@ NirnsideData =
                             { ["slot"] = "Main Hand", ["bar"] = "front", ["name"] = "Lucent Echoes Sword", ["quality"] = "legendary", ["setName"] = "Lucent Echoes", ["trait"] = "Charged", ["enchant"] = "Crusher" },
                         },
                         ["companions"] = {},
-                        ["scribingScripts"] = { "Class Mastery: Draconic", "Vault" },
+                        ["scribingScripts"] = { "Pull", "Stun" },
                         ["research"] =
                         {
                             ["crafts"] =
