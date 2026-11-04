@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import type { Goal, GoalTier } from "@/lib/goals/types";
 import type { GoalCardView } from "@/lib/goals/views";
-import { isExcludedLineName } from "@/lib/catalog/excluded";
+import { isExcludedSkillLine } from "@/lib/catalog/excluded";
 import { isClassMasteryLineName } from "@/lib/skills/class-mastery";
 import { editSkillLineRanks } from "@/lib/skills/line-cap";
-import { groupPlannerLines } from "@/lib/planner/skill-groups";
+import { groupPlannerLines, plannerClassScopeAllows } from "@/lib/planner/skill-groups";
 import { Card } from "./ui";
 
 type Scope = "account" | "role" | "class" | "character";
@@ -166,14 +166,10 @@ export function SkillLinePlanner({
 
   const categories = useMemo(() => {
     const visible = lines.filter((line) => {
-      if (isClassMasteryLineName(line.name) || isExcludedLineName(line.name)) return false;
+      if (isClassMasteryLineName(line.name) || isExcludedSkillLine(line)) return false;
       if (line.maxRank == null || line.maxRank < 1) return false;
-      if (line.category.toLowerCase() !== "class") return true;
-      if (scope === "class") return (line.className ?? "").toLowerCase() === scopeKey.toLowerCase();
-      if (scope === "character" && characterClass) {
-        return (line.className ?? "").toLowerCase() === characterClass.toLowerCase();
-      }
-      return true;
+      const selectedClass = scope === "class" ? scopeKey : scope === "character" ? characterClass : null;
+      return plannerClassScopeAllows(line, selectedClass);
     });
     return groupPlannerLines(visible, classes);
   }, [lines, classes, scope, scopeKey, characterClass]);
@@ -202,7 +198,7 @@ export function SkillLinePlanner({
       lines.filter(
         (line) =>
           !isClassMasteryLineName(line.name) &&
-          !isExcludedLineName(line.name) &&
+          !isExcludedSkillLine(line) &&
           (line.maxRank == null || line.maxRank < 1),
       ),
     [lines],

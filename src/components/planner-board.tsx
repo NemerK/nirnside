@@ -11,8 +11,8 @@ import { GoalMark } from "./goal-mark";
 import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
 import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
-import { groupPlannerLines } from "@/lib/planner/skill-groups";
-import { isExcludedLineName } from "@/lib/catalog/excluded";
+import { abilitiesOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey } from "@/lib/planner/skill-groups";
+import { isExcludedSkillLine } from "@/lib/catalog/excluded";
 
 /**
  * The planner starts with the kind of thing you are planning. Skills, abilities,
@@ -302,6 +302,13 @@ export function PlannerBoard({
           <AbilityCategories
             choices={choices}
             selected={selected}
+            selectedClass={
+              scope === "class"
+                ? scopeKey
+                : scope === "character"
+                  ? (choices.characters.find((c) => c.id === scopeKey)?.className ?? null)
+                  : null
+            }
             onToggle={toggleSelected}
           />
           <AddBar busy={busy} count={selected.size} enabled={scopeOk(scope, scopeKey)} onAdd={addSelected} />
@@ -757,20 +764,25 @@ function CategoryToggle({
 function AbilityCategories({
   choices,
   selected,
+  selectedClass,
   onToggle,
 }: {
   choices: PlannerChoices;
   selected: Set<string>;
+  selectedClass: string | null;
   onToggle: (name: string) => void;
 }) {
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [openLines, setOpenLines] = useState<Set<string>>(new Set());
   const categories = useMemo(
-    () => groupPlannerLines(choices.lines.filter((l) => !isExcludedLineName(l.name)), choices.classes),
-    [choices.lines, choices.classes],
+    () =>
+      groupPlannerLines(
+        choices.lines.filter((l) => !isExcludedSkillLine(l) && plannerClassScopeAllows(l, selectedClass)),
+        choices.classes,
+      ),
+    [choices.lines, choices.classes, selectedClass],
   );
-  const abilitiesFor = (lineName: string) =>
-    choices.abilities.filter((a) => a.lineName.toLowerCase() === lineName.toLowerCase());
+  const abilitiesFor = (line: PlannerChoices["lines"][number]) => abilitiesOnPlannerLine(choices.abilities, line);
 
   function toggleSet(setter: (value: Set<string>) => void, current: Set<string>, key: string) {
     const next = new Set(current);
@@ -784,13 +796,14 @@ function AbilityCategories({
       <div className="space-y-2">
         <div className="flex flex-wrap gap-1.5">
           {lines.map((line) => {
-            const expanded = openLines.has(line.name.toLowerCase());
+            const key = plannerLineKey(line);
+            const expanded = openLines.has(key);
             return (
               <button
-                key={line.name}
+                key={key}
                 type="button"
                 aria-expanded={expanded}
-                onClick={() => toggleSet(setOpenLines, openLines, line.name.toLowerCase())}
+                onClick={() => toggleSet(setOpenLines, openLines, key)}
                 className={`rounded-full border px-2.5 py-1 text-xs ${
                   expanded ? "border-accent/60 bg-accent-soft font-medium text-accent" : "border-border text-fg-muted hover:text-fg"
                 }`}
@@ -801,11 +814,11 @@ function AbilityCategories({
           })}
         </div>
         {lines
-          .filter((line) => openLines.has(line.name.toLowerCase()))
+          .filter((line) => openLines.has(plannerLineKey(line)))
           .map((line) => {
-            const abilities = abilitiesFor(line.name);
+            const abilities = abilitiesFor(line);
             return (
-              <div key={line.name} className="rounded-lg border border-border/70 p-2">
+              <div key={plannerLineKey(line)} className="rounded-lg border border-border/70 p-2">
                 <div className="mb-1 flex items-center justify-between px-1">
                   <span className="text-xs text-fg-subtle">{line.name}</span>
                   {abilities.length > 0 && (

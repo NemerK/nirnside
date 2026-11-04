@@ -1,3 +1,5 @@
+import { classMasteryPassivesFor, isClassMasteryLineName } from "../skills/class-mastery";
+
 /**
  * How the planner nests skill lines: a category, and for Class a class name
  * under that, then the lines themselves. Order follows the in-game skill window.
@@ -41,6 +43,50 @@ function categoryRank(key: string): number {
 function classRank(name: string, classOrder: string[]): number {
   const i = classOrder.findIndex((c) => c.toLowerCase() === name.toLowerCase());
   return i < 0 ? 90 : i;
+}
+
+/** A chosen class keeps that class's lines, including its own Class Mastery. */
+export function plannerClassScopeAllows(
+  line: { category: string; className: string | null },
+  selectedClass: string | null | undefined,
+): boolean {
+  const wanted = selectedClass?.trim().toLowerCase() ?? "";
+  if (!wanted) return true;
+  if (line.category.trim().toLowerCase() !== "class") return true;
+  return (line.className ?? "").trim().toLowerCase() === wanted;
+}
+
+/**
+ * Class Mastery is one display name for every class. A Dragonknight line only
+ * lists Dragonknight passives; the same for each other class.
+ */
+export function abilitiesOnPlannerLine<T extends { name: string; lineName: string; className: string | null }>(
+  abilities: readonly T[],
+  line: { name: string; className: string | null },
+): T[] {
+  const lineName = line.name.trim().toLowerCase();
+  const mastery = isClassMasteryLineName(line.name);
+  const lineClass = (line.className ?? "").trim().toLowerCase();
+  const passiveNames = mastery
+    ? new Set(classMasteryPassivesFor(line.className).map((name) => name.toLowerCase()))
+    : null;
+  return abilities.filter((ability) => {
+    if (ability.lineName.trim().toLowerCase() !== lineName) return false;
+    if (!mastery) return true;
+    const abilityClass = (ability.className ?? "").trim().toLowerCase();
+    if (lineClass && abilityClass) return abilityClass === lineClass;
+    if (lineClass && passiveNames && passiveNames.size > 0) {
+      return passiveNames.has(ability.name.trim().toLowerCase());
+    }
+    return !lineClass && !abilityClass;
+  });
+}
+
+/** Open/selected state for a line. Class Mastery keys include the class. */
+export function plannerLineKey(line: { name: string; className: string | null }): string {
+  const name = line.name.trim().toLowerCase();
+  if (!isClassMasteryLineName(line.name)) return name;
+  return `${(line.className ?? "").trim().toLowerCase()}::${name}`;
 }
 
 export function groupPlannerLines<T extends PlannerLineRef>(

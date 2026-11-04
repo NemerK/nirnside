@@ -1,3 +1,4 @@
+import { isExcludedSkillLine } from "../catalog/excluded";
 import { MAX_ABILITY_RANK, morphSlotPurchased, romanRank } from "../skills/ability";
 import type {
   AbilityMeta,
@@ -323,6 +324,7 @@ export function toGoalSubject(
     lastSeen?: number | null;
     skillLines: {
       name: string;
+      category?: string;
       rank: number;
       abilities?: {
         name: string;
@@ -346,7 +348,7 @@ export function toGoalSubject(
     name: c.name,
     className: c.class,
     lastSeen: c.lastSeen ?? null,
-    skillLines: (c.skillLines ?? []).map((l) => ({
+    skillLines: (c.skillLines ?? []).filter((l) => !isExcludedSkillLine(l)).map((l) => ({
       name: l.name,
       rank: l.rank,
       abilities: (l.abilities ?? []).map((a) => {

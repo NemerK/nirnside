@@ -1,4 +1,5 @@
 import "server-only";
+import { isExcludedCatalogLineId, isExcludedLineName, isExcludedSkillLine } from "../catalog/excluded";
 import { getDb } from "./index";
 import type {
   CatalogGrimoire,
@@ -87,10 +88,18 @@ export function setHref(opts: { name?: string | null; setId?: number | null }): 
   return `/encyclopedia/sets?search=${encodeURIComponent(opts.name ?? "")}`;
 }
 
-export const getSkills = (f?: Filters) => query<CatalogSkill>("skill", f);
-export const getSkillLines = (f?: Filters) => query<CatalogSkillLine>("skillline", f);
-export const getSkillLine = (id: string) => one<CatalogSkillLine>("skillline", id);
+export const getSkills = (f?: Filters) =>
+  query<CatalogSkill>("skill", f).filter((row) => !isExcludedCatalogLineId(row.entry.lineId));
+export const getSkillLines = (f?: Filters) =>
+  query<CatalogSkillLine>("skillline", f).filter((row) => !isExcludedSkillLine(row.entry));
+export function getSkillLine(id: string): CatalogRow<CatalogSkillLine> | null {
+  if (isExcludedCatalogLineId(id)) return null;
+  const row = one<CatalogSkillLine>("skillline", id);
+  if (!row || isExcludedSkillLine(row.entry)) return null;
+  return row;
+}
 export function getSkillLineByName(name: string, className?: string | null): CatalogRow<CatalogSkillLine> | null {
+  if (isExcludedLineName(name)) return null;
   if (className) {
     const rows = getDb()
       .prepare(
@@ -99,13 +108,20 @@ export function getSkillLineByName(name: string, className?: string | null): Cat
       .all("skillline", name) as { json: string; source: CatalogSource }[];
     const parsed = rows.map((r) => ({ entry: JSON.parse(r.json) as CatalogSkillLine, source: r.source }));
     const match = parsed.find((r) => (r.entry.className ?? "").toLowerCase() === className.toLowerCase());
-    if (match) return match;
+    if (match && !isExcludedSkillLine(match.entry)) return match;
   }
-  return byName<CatalogSkillLine>("skillline", name);
+  const named = byName<CatalogSkillLine>("skillline", name);
+  if (!named || isExcludedSkillLine(named.entry)) return null;
+  return named;
 }
-export const skillLineCategories = () => categories("skillline");
-export const getSkillsForLine = (lineId: string) => query<CatalogSkill>("skill", { category: lineId });
-export const getSkillByName = (name: string) => byName<CatalogSkill>("skill", name);
+export const skillLineCategories = () => categories("skillline").filter((category) => !isExcludedSkillLine({ category }));
+export const getSkillsForLine = (lineId: string) =>
+  isExcludedCatalogLineId(lineId) ? [] : query<CatalogSkill>("skill", { category: lineId });
+export function getSkillByName(name: string): CatalogRow<CatalogSkill> | null {
+  const row = byName<CatalogSkill>("skill", name);
+  if (!row || isExcludedCatalogLineId(row.entry.lineId)) return null;
+  return row;
+}
 
 type LoreHit = { icon: string | null; description: string; source: CatalogSource };
 
@@ -148,7 +164,9 @@ export function catalogAbilityLoreFor(names: Iterable<string>): Map<string, Lore
       )
       .all(...slice) as { json: string; source: CatalogSource }[];
     for (const row of rows) {
-      rememberSkill(map, JSON.parse(row.json) as CatalogSkill, row.source);
+      const entry = JSON.parse(row.json) as CatalogSkill;
+      if (isExcludedCatalogLineId(entry.lineId)) continue;
+      rememberSkill(map, entry, row.source);
     }
   }
   return map;

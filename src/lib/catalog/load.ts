@@ -1,28 +1,20 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { importCatalogBundle } from "./import";
-import { EXCLUDED_SKILL_LINES, excludedLineIds } from "./excluded";
+import { deleteExcludedCatalogAndGoals } from "./excluded";
 import { getDb } from "../db";
 import { parseLua, type LuaValue } from "../snapshot/lua-parser";
 
 const CATALOG_DIR = join(process.cwd(), "data", "catalog");
 
 /**
- * Remove excluded content an earlier in-game catalog scan may have stored
- * (the unlevelable PvP "Vengeance" line and its abilities). Safe to run on
- * every startup: deleting what is deliberately not tracked is idempotent.
+ * Remove Vengeance skill lines an earlier in-game catalog scan may have
+ * stored, plus any planner targets aimed at them. Safe to run on every
+ * startup: deleting what is deliberately not tracked is idempotent.
  */
 function pruneExcludedCatalogRows(): void {
   const db = getDb();
-  const placeholders = EXCLUDED_SKILL_LINES.map(() => "?").join(", ");
-  db.prepare(`DELETE FROM catalog WHERE domain = 'skillline' AND lower(name) IN (${placeholders})`).run(
-    ...EXCLUDED_SKILL_LINES,
-  );
-  const idHolders = excludedLineIds().map(() => "?").join(", ");
-  db.prepare(
-    // Skill rows store their line id in the `category` column (see importCatalogBundle).
-    `DELETE FROM catalog WHERE domain = 'skill' AND lower(category) IN (${idHolders})`,
-  ).run(...excludedLineIds());
+  deleteExcludedCatalogAndGoals(db);
   // Earlier seeds invented script names such as "Ranged". Drop every
   // non-ingame script and grimoire so a replaced seed cannot leave those
   // rows behind. An in-game catalog scan is kept.
