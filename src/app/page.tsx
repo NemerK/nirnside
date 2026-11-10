@@ -1,6 +1,17 @@
 import Link from "next/link";
 import { Download, MonitorSmartphone, Users } from "lucide-react";
-import { getAccount, getArchivedCharacters, getAutoSetup, getCharacters, getCharactersFull, getHouses, getItemCount, getOutfitStyles, getStickerbookStats } from "@/lib/db/queries";
+import {
+  getAccount,
+  getArchivedCharacters,
+  getAutoSetup,
+  getCharacters,
+  getCharactersFull,
+  getCompletedAchievementIds,
+  getHouses,
+  getItemCount,
+  getOutfitStyles,
+  getStickerbookStats,
+} from "@/lib/db/queries";
 import { listGoals } from "@/lib/db/goals";
 import { getSkillLineByName } from "@/lib/db/catalog-queries";
 import { loadPlannerData, goalCardsForClient } from "@/lib/planner/data";
@@ -11,6 +22,9 @@ import { Card, PageHeader, Stat, EmptyState, Badge, SectionTitle } from "@/compo
 import { LoadDemoButton } from "@/components/demo-controls";
 import { GoalsBoard } from "@/components/goals-board";
 import { AccountWallet } from "@/components/account-wallet";
+import { LookSwitch } from "@/components/look-switch";
+import { AtlasHome } from "@/components/atlas/home";
+import { presentAchievements } from "@/lib/achievements/present";
 
 import type { Goal } from "@/lib/goals/types";
 import { presentOutfitStyles, summarizeAccountKnowledge } from "@/lib/knowledge/present";
@@ -57,12 +71,38 @@ export default function HomePage() {
   const houses = safe(() => getHouses()) ?? [];
   const knowledge = summarizeAccountKnowledge(liveCharacters(safe(() => getCharactersFull()) ?? []));
   const styles = presentOutfitStyles(safe(() => getOutfitStyles()) ?? []);
+  const pithka = presentAchievements({
+    completedIds: safe(() => getCompletedAchievementIds()) ?? [],
+  }).pithka;
   // Setup can turn modules off (e.g. a finished stickerbook). A turned-off
   // module keeps working at its URL — it just stops taking space on Home.
   const off = safe(() => disabledModuleSet()) ?? new Set<string>();
   const show = (module: string) => !off.has(module);
 
-  return (
+  const walletRows = dashboardWallet({
+    gold: gold.total,
+    telVar,
+    currencies: { ...(account.currencies ?? {}), alliancePoints },
+    breakdowns: {
+      gold: characterWalletBreakdown(characters, "gold", [{ name: "Bank", amount: gold.bank }]),
+      telVar: characterWalletBreakdown(characters, "telVar"),
+      alliancePoints: characterWalletBreakdown(characters, "alliancePoints"),
+    },
+  });
+
+  // Progress is computed here on the server; the board only gets compact rows.
+  const hrefForLine = lineHrefs(goals);
+  const goalCards = planner
+    ? goalCardsForClient(goals, planner, (g) =>
+        g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined,
+      )
+    : [];
+  const goalCatalog = planner
+    ? { lines: planner.lines, abilities: planner.abilities, scripts: planner.scripts }
+    : undefined;
+  const goalRoles = planner?.roles ?? [];
+
+  const classic = (
     <div className="mx-auto max-w-6xl">
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {show("characters") && (
@@ -122,42 +162,10 @@ export default function HomePage() {
             Full table
           </Link>
         </div>
-        <AccountWallet
-          rows={dashboardWallet({
-            gold: gold.total,
-            telVar,
-            currencies: { ...(account.currencies ?? {}), alliancePoints },
-            breakdowns: {
-              gold: characterWalletBreakdown(characters, "gold", [{ name: "Bank", amount: gold.bank }]),
-              telVar: characterWalletBreakdown(characters, "telVar"),
-              alliancePoints: characterWalletBreakdown(characters, "alliancePoints"),
-            },
-          })}
-          title=""
-          compact
-        />
+        <AccountWallet rows={walletRows} title="" compact />
       </section>
 
-      {(() => {
-        // Progress is computed here on the server; the board only gets compact rows.
-        const hrefForLine = lineHrefs(goals);
-        const cards = planner
-          ? goalCardsForClient(goals, planner, (g) =>
-              g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined,
-            )
-          : [];
-        return (
-          <GoalsBoard
-            cards={cards}
-            roles={planner?.roles ?? []}
-            catalog={
-              planner
-                ? { lines: planner.lines, abilities: planner.abilities, scripts: planner.scripts }
-                : undefined
-            }
-          />
-        );
-      })()}
+      <GoalsBoard cards={goalCards} roles={goalRoles} catalog={goalCatalog} />
 
       {account.guilds?.length > 0 && (
         <section className="mt-8">
@@ -174,6 +182,49 @@ export default function HomePage() {
         </section>
       )}
     </div>
+  );
+
+  return (
+    <LookSwitch
+      classic={classic}
+      atlas={
+        <AtlasHome
+          account={{
+            displayName: account.displayName,
+            region: account.region,
+            esoPlus: account.esoPlus,
+            lastSnapshot: account.lastSnapshot,
+            guilds: account.guilds ?? [],
+          }}
+          stats={{
+            characterCount: characters.length,
+            archivedCount: archived.length,
+            itemCount,
+            accountCP,
+            stickerPct,
+            stickerCollected: sticker.collected,
+            stickerTotal: sticker.total,
+            housesCount: houses.length,
+            knowledge,
+            stylesUnlocked: styles.unlocked,
+            stylesTotal: styles.total,
+            pithkaDone: pithka.done,
+            pithkaTotal: pithka.total,
+            showCharacters: show("characters"),
+            showInventory: show("inventory"),
+            showStickerbook: show("stickerbook"),
+            showStyles: show("styles"),
+            showHouses: show("houses"),
+            showKnowledge: show("knowledge"),
+            showAchievements: show("achievements"),
+            showDailies: show("dailies"),
+            showEncyclopedia: show("encyclopedia"),
+          }}
+          wallet={<AccountWallet rows={walletRows} title="" compact />}
+          goals={<GoalsBoard cards={goalCards} roles={goalRoles} catalog={goalCatalog} />}
+        />
+      }
+    />
   );
 }
 

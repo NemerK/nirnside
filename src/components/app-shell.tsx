@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { LookToggle } from "./look-toggle";
 import { timeAgo } from "@/lib/format";
 
 export interface ShellAccount {
@@ -141,6 +142,7 @@ export function AppShell({
         </div>
         <NavLinks hiddenModules={hiddenModules} />
         <div className="mt-auto space-y-3 px-1 pt-4">
+          <LookToggle compact />
           <div className="flex items-center justify-between gap-2">
             <ThemeToggle />
             <NirnsideSettings modules={modules ?? []} hiddenModules={hiddenModules ?? []} compact />
@@ -168,9 +170,12 @@ export function AppShell({
             <SearchBox onSubmit={() => setOpen(false)} />
           </div>
           <NavLinks hiddenModules={hiddenModules} onNavigate={() => setOpen(false)} />
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <ThemeToggle />
-            <NirnsideSettings modules={modules ?? []} hiddenModules={hiddenModules ?? []} />
+          <div className="mt-4 space-y-3">
+            <LookToggle />
+            <div className="flex flex-wrap items-center gap-3">
+              <ThemeToggle />
+              <NirnsideSettings modules={modules ?? []} hiddenModules={hiddenModules ?? []} />
+            </div>
           </div>
         </div>
       )}

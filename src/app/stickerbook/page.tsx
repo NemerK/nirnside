@@ -3,6 +3,9 @@ import { getStickerbook, getStickerbookStats } from "@/lib/db/queries";
 import { setHref } from "@/lib/db/catalog-queries";
 import { StickerbookGrid } from "@/components/stickerbook-grid";
 import { EmptyState, PageFrame, PageHeader, Stat } from "@/components/ui";
+import { LookSwitch } from "@/components/look-switch";
+import { AtlasSection } from "@/components/atlas/section";
+import { AtlasCollectionsLink } from "@/components/atlas/collections-link";
 
 export const dynamic = "force-dynamic";
 
@@ -20,35 +23,51 @@ export default function StickerbookPage() {
   const completeSets = sets.filter((s) => s.total > 0 && s.collected === s.total).length;
   const newPieces = sets.reduce((n, s) => n + s.newCount, 0);
 
-  return (
-    <PageFrame>
-      <PageHeader
-        title="Stickerbook"
-        subtitle="Your item set collection — what you've reconstructed and what's still missing. New pieces get a gold ! until you hover them."
-      />
-
-      {sets.length === 0 ? (
-        <EmptyState title="Stickerbook is empty" icon={<BookMarked className="h-8 w-8" />}>
-          Log out with the addon installed to capture your collection, or run{" "}
-          <code className="rounded bg-surface-2 px-1">npm run seed</code> for sample data.
-        </EmptyState>
-      ) : (
-        <>
-          <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Overall" value={`${pct}%`} hint={`${stats.collected}/${stats.total} pieces`} />
-            <Stat label="Sets tracked" value={stats.sets} />
-            <Stat label="Complete sets" value={completeSets} />
-            <Stat
-              label="Pieces missing"
-              value={stats.total - stats.collected}
-              hint={newPieces > 0 ? `${newPieces} new` : undefined}
-            />
-          </div>
-          <StickerbookGrid
-            sets={sets.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }))}
+  const body =
+    sets.length === 0 ? (
+      <EmptyState title="Stickerbook is empty" icon={<BookMarked className="h-8 w-8" />}>
+        Log out with the addon installed to capture your collection, or run{" "}
+        <code className="rounded bg-surface-2 px-1">npm run seed</code> for sample data.
+      </EmptyState>
+    ) : (
+      <>
+        <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Overall" value={`${pct}%`} hint={`${stats.collected}/${stats.total} pieces`} />
+          <Stat label="Sets tracked" value={stats.sets} />
+          <Stat label="Complete sets" value={completeSets} />
+          <Stat
+            label="Pieces missing"
+            value={stats.total - stats.collected}
+            hint={newPieces > 0 ? `${newPieces} new` : undefined}
           />
-        </>
-      )}
-    </PageFrame>
+        </div>
+        <StickerbookGrid
+          sets={sets.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }))}
+        />
+      </>
+    );
+
+  return (
+    <LookSwitch
+      classic={
+        <PageFrame>
+          <PageHeader
+            title="Stickerbook"
+            subtitle="Your item set collection — what you've reconstructed and what's still missing. New pieces get a gold ! until you hover them."
+          />
+          {body}
+        </PageFrame>
+      }
+      atlas={
+        <AtlasSection
+          grain="Account · Collections"
+          title="Stickerbook"
+          subtitle="Set piece reconstruction — collected vs missing, as the game tracks it."
+        >
+          <AtlasCollectionsLink current="sets" />
+          {body}
+        </AtlasSection>
+      }
+    />
   );
 }

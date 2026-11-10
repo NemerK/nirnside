@@ -5,6 +5,8 @@ import { catalogCount } from "@/lib/db/catalog-queries";
 import { getCatalogMeta } from "@/lib/catalog/import";
 import { SourceBadge } from "@/components/source-badge";
 import { CatalogScanCallout } from "@/components/catalog-scan-callout";
+import { LookSwitch } from "@/components/look-switch";
+import { AtlasEncyclopediaHub } from "@/components/atlas/encyclopedia";
 import type { CatalogSource } from "@/lib/catalog/schema";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +29,9 @@ export default function EncyclopediaPage() {
     { href: "/encyclopedia/scribing", title: "Scribing", desc: "Grimoires, scripts, full combinations.", icon: Feather, count: counts.grimoire, unit: "grimoires" },
   ];
 
-  return (
+  const totalsLine = `${counts.set} sets · ${counts.skillline} skill lines · ${counts.skill} abilities · ${counts.cp} CP stars · ${counts.grimoire} grimoires · ${counts.script} scripts in the catalog. More domains (items, collectibles, antiquities, quests) ingest per patch into this same database.`;
+
+  const classic = (
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Encyclopedia"
@@ -84,13 +88,23 @@ export default function EncyclopediaPage() {
 
       <Card className="mt-6 flex items-center gap-3 p-4 text-sm text-fg-muted">
         <Boxes className="h-5 w-5 shrink-0 text-fg-subtle" />
-        <p>
-          {counts.set} sets · {counts.skillline} skill lines · {counts.skill} abilities · {counts.cp} CP stars ·{" "}
-          {counts.grimoire} grimoires · {counts.script} scripts in the catalog. More domains (items, collectibles,
-          antiquities, quests) ingest per patch into this same database.
-        </p>
+        <p>{totalsLine}</p>
       </Card>
     </div>
+  );
+
+  return (
+    <LookSwitch
+      classic={classic}
+      atlas={
+        <AtlasEncyclopediaHub
+          domains={domains}
+          source={meta?.source as CatalogSource | undefined}
+          patch={meta?.patch}
+          totalsLine={totalsLine}
+        />
+      }
+    />
   );
 }
 

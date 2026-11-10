@@ -7,6 +7,8 @@ import { communityPledgesForUnix } from "@/lib/dailies/pledges";
 import { PageFrame, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { DailiesBoard } from "@/components/dailies-board";
+import { LookSwitch } from "@/components/look-switch";
+import { AtlasSection } from "@/components/atlas/section";
 
 export const dynamic = "force-dynamic";
 
@@ -21,81 +23,100 @@ export default function DailiesPage() {
   const rows = presentAccountDailies(characters, now, { treatAsFresh: isSample, todayPledges, region });
   const summary = summarizeDailies(rows);
   const resetAt = nextEsoResetAt(now, region);
-  const staleAddon = populated && !isSample && characters.some((c) => c.lastSeen != null) && !dailiesHaveAnyScan(characters);
+  const staleAddon =
+    populated && !isSample && characters.some((c) => c.lastSeen != null) && !dailiesHaveAnyScan(characters);
+
+  const summaryLine = populated && !staleAddon && (
+    <div className="flex flex-wrap items-center gap-x-3 text-xs text-fg-muted">
+      <span>
+        <span className="tabular-nums text-fg">
+          {summary.scanned}/{summary.total}
+        </span>{" "}
+        scanned
+      </span>
+      <span>
+        <span className="tabular-nums text-fg">
+          {summary.randomsTotal ? `${summary.randomsDone}/${summary.randomsTotal}` : "—"}
+        </span>{" "}
+        randoms
+      </span>
+      <span>
+        <span className="tabular-nums text-fg">
+          {summary.writsTotal ? `${summary.writsDone}/${summary.writsTotal}` : "—"}
+        </span>{" "}
+        writs
+      </span>
+      <span>
+        <span className="tabular-nums text-fg">
+          {summary.pledgesTotal ? `${summary.pledgesDone}/${summary.pledgesTotal}` : "—"}
+        </span>{" "}
+        pledges
+      </span>
+      <span>
+        <span className="tabular-nums text-fg">
+          {summary.zoneDailiesTotal ? `${summary.zoneDailiesDone}/${summary.zoneDailiesTotal}` : "—"}
+        </span>{" "}
+        zones
+      </span>
+    </div>
+  );
+
+  const body = !populated ? (
+    <EmptyState title="No account data yet" icon={<CalendarDays className="h-8 w-8" />}>
+      Log out or <code className="rounded bg-surface-2 px-1">/reloadui</code> in ESO with the Nirnside Snapshot
+      addon enabled. Random dungeon rewards, writs, and pledges are read from the game at logout — never
+      guessed. To preview with sample data, load the demo from the home page.
+    </EmptyState>
+  ) : staleAddon ? (
+    <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-500 dark:text-amber-400">
+        <RefreshCw className="h-5 w-5" />
+      </span>
+      <div className="text-sm text-fg-muted">
+        <p className="font-medium text-fg">One logout needed to fill this board.</p>
+        <p className="mt-1 max-w-3xl">
+          Your account is loaded, but this snapshot came from an older Snapshot addon that did not export
+          dailies. The current app already installed 0.9.27 for you — log each character out once (or{" "}
+          <code className="rounded bg-surface-2 px-1 text-fg">/reloadui</code> on that toon) and the row
+          fills with live journal and LFG state.
+        </p>
+      </div>
+    </div>
+  ) : (
+    <DailiesBoard
+      rows={rows}
+      resetAt={resetAt}
+      todayPledges={todayPledges}
+      resetLabel={`${region} ${String(dailyResetHourUtc(region)).padStart(2, "0")}:00 UTC`}
+    />
+  );
 
   return (
-    <PageFrame>
-      <div className="mb-2 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1">
-        <h1 className="text-lg font-semibold tracking-tight text-fg">Dailies</h1>
-        {populated && !staleAddon && (
-          <div className="flex flex-wrap items-center gap-x-3 text-xs text-fg-muted">
-            <span>
-              <span className="tabular-nums text-fg">
-                {summary.scanned}/{summary.total}
-              </span>{" "}
-              scanned
-            </span>
-            <span>
-              <span className="tabular-nums text-fg">
-                {summary.randomsTotal ? `${summary.randomsDone}/${summary.randomsTotal}` : "—"}
-              </span>{" "}
-              randoms
-            </span>
-            <span>
-              <span className="tabular-nums text-fg">
-                {summary.writsTotal ? `${summary.writsDone}/${summary.writsTotal}` : "—"}
-              </span>{" "}
-              writs
-            </span>
-            <span>
-              <span className="tabular-nums text-fg">
-                {summary.pledgesTotal ? `${summary.pledgesDone}/${summary.pledgesTotal}` : "—"}
-              </span>{" "}
-              pledges
-            </span>
-            <span>
-              <span className="tabular-nums text-fg">
-                {summary.zoneDailiesTotal ? `${summary.zoneDailiesDone}/${summary.zoneDailiesTotal}` : "—"}
-              </span>{" "}
-              zones
-            </span>
+    <LookSwitch
+      classic={
+        <PageFrame>
+          <div className="mb-2 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1">
+            <h1 className="text-lg font-semibold tracking-tight text-fg">Dailies</h1>
+            {summaryLine}
+            <div className="ml-auto">
+              <SourceBadge source={populated && !isSample ? "ingame" : "reference"} />
+            </div>
           </div>
-        )}
-        <div className="ml-auto">
-          <SourceBadge source={populated && !isSample ? "ingame" : "reference"} />
-        </div>
-      </div>
-
-      {!populated ? (
-        <EmptyState title="No account data yet" icon={<CalendarDays className="h-8 w-8" />}>
-          Log out or <code className="rounded bg-surface-2 px-1">/reloadui</code> in ESO with the Nirnside Snapshot
-          addon enabled. Random dungeon rewards, writs, and pledges are read from the game at logout — never
-          guessed. To preview with sample data, load the demo from the home page.
-        </EmptyState>
-      ) : staleAddon ? (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-500 dark:text-amber-400">
-            <RefreshCw className="h-5 w-5" />
-          </span>
-          <div className="text-sm text-fg-muted">
-            <p className="font-medium text-fg">One logout needed to fill this board.</p>
-            <p className="mt-1 max-w-3xl">
-              Your account is loaded, but this snapshot came from an older Snapshot addon that did not export
-              dailies. The current app already installed 0.9.27 for you — log each character out once (or{" "}
-              <code className="rounded bg-surface-2 px-1 text-fg">/reloadui</code> on that toon) and the row
-              fills with live journal and LFG state.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <DailiesBoard
-          rows={rows}
-          resetAt={resetAt}
-          todayPledges={todayPledges}
-          resetLabel={`${region} ${String(dailyResetHourUtc(region)).padStart(2, "0")}:00 UTC`}
-        />
-      )}
-    </PageFrame>
+          {body}
+        </PageFrame>
+      }
+      atlas={
+        <AtlasSection
+          grain="Account"
+          title="Dailies"
+          subtitle="Account board with one row per character — randoms, writs, pledges, and zone dailies against the daily reset."
+          action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
+        >
+          {summaryLine ? <div className="mb-4">{summaryLine}</div> : null}
+          {body}
+        </AtlasSection>
+      }
+    />
   );
 }
 
