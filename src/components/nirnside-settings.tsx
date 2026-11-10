@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Modal } from "./modal";
 import { NirnsideMark } from "./nirnside-mark";
+import { LookToggle } from "./look-toggle";
 import type { ModuleDef } from "@/lib/modules";
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
@@ -103,6 +104,13 @@ export function NirnsideSettings({
             <p className="text-sm text-fg-muted">
               Choose what Nirnside shows you. Hidden modules leave the sidebar and the Home dashboard — nothing is
               deleted, and the page still works if you open it directly.
+            </p>
+          </div>
+          <div className="mb-4 rounded-lg border border-border bg-surface-2/40 p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Look</p>
+            <LookToggle />
+            <p className="mt-2 text-xs text-fg-subtle">
+              Atlas regroups the app by account / characters / catalog / planning. Classic keeps the original layout.
             </p>
           </div>
           <ul className="divide-y divide-border/70">

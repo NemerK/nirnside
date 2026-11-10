@@ -9,6 +9,11 @@ import { getMeta, setMeta } from "./db";
  * This is presentation-level state only, stored locally like the rest of the
  * user's choices. It never touches game data: a hidden module keeps working if
  * you go to its URL directly.
+ *
+ * Atlas look regroups some of these (stickerbook + styles + houses → Collections
+ * hub at /collections) but the underlying module ids stay so Setup toggles and
+ * Classic URLs keep working. Dashboard progress is shown on the Atlas roster;
+ * the dashboard module itself remains for Classic and old bookmarks.
  */
 
 export interface ModuleDef {
@@ -24,7 +29,8 @@ export const TOGGLEABLE_MODULES: ModuleDef[] = [
     id: "dashboard",
     label: "Dashboard",
     href: "/dashboard",
-    description: "Every character at a glance. Select one to open skills, crafting, scribing, knowledge, champion points, and targets.",
+    description:
+      "Classic: every character at a glance. Atlas folds the same progress into the Characters roster.",
   },
   {
     id: "planner",
@@ -36,7 +42,7 @@ export const TOGGLEABLE_MODULES: ModuleDef[] = [
     id: "characters",
     label: "Characters",
     href: "/characters",
-    description: "The live roster and every character's sheet, gear, bars and skills.",
+    description: "The live roster and every character's sheet, gear, bars and skills — plus Atlas progress meters.",
   },
   {
     id: "inventory",
@@ -48,7 +54,7 @@ export const TOGGLEABLE_MODULES: ModuleDef[] = [
     id: "stickerbook",
     label: "Stickerbook",
     href: "/stickerbook",
-    description: "Collected vs missing set pieces, game-like, with seen tracking.",
+    description: "Collected vs missing set pieces. Atlas also lists this under Collections.",
   },
   {
     id: "knowledge",
@@ -60,7 +66,7 @@ export const TOGGLEABLE_MODULES: ModuleDef[] = [
     id: "styles",
     label: "Styles",
     href: "/styles",
-    description: "Outfit styles unlocked on the account.",
+    description: "Outfit styles unlocked on the account. Atlas also lists this under Collections.",
   },
   {
     id: "dailies",
@@ -72,7 +78,7 @@ export const TOGGLEABLE_MODULES: ModuleDef[] = [
     id: "houses",
     label: "Houses",
     href: "/houses",
-    description: "Houses owned on the account.",
+    description: "Houses owned on the account. Atlas also lists this under Collections.",
   },
   {
     id: "achievements",

@@ -26,6 +26,8 @@ import {
   ScribingPanel,
   type FocusScript,
 } from "@/components/focus-panels";
+import { LookSwitch } from "@/components/look-switch";
+import { AtlasSection } from "@/components/atlas/section";
 
 export const dynamic = "force-dynamic";
 
@@ -191,38 +193,34 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const selectedCard = selected ? cards.find((c) => c.id === selected.id) ?? null : null;
   const section: DashboardSection = requestedSection;
 
-  return (
-    <div className="mx-auto w-full max-w-6xl">
-      <PageHeader
-        title="Dashboard"
-        subtitle="Every character at a glance. Select a name or a bar to open that progress."
-        action={
-          <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
-            {(
-              [
-                ["progress", "Most progress"],
-                ["roster", "Roster order"],
-              ] as const
-            ).map(([key, label]) => (
-              <Link
-                key={key}
-                href={dashboardHref({
-                  sort: key,
-                  char: selected?.id,
-                  section: selected ? section : null,
-                  domain: requestedDomain,
-                })}
-                className={`rounded-md px-2.5 py-1.5 text-xs ${
-                  sort === key ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-        }
-      />
+  const sortToggle = (
+    <div className="inline-flex gap-0.5 rounded-lg border border-border bg-surface p-0.5">
+      {(
+        [
+          ["progress", "Most progress"],
+          ["roster", "Roster order"],
+        ] as const
+      ).map(([key, label]) => (
+        <Link
+          key={key}
+          href={dashboardHref({
+            sort: key,
+            char: selected?.id,
+            section: selected ? section : null,
+            domain: requestedDomain,
+          })}
+          className={`rounded-md px-2.5 py-1.5 text-xs ${
+            sort === key ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+          }`}
+        >
+          {label}
+        </Link>
+      ))}
+    </div>
+  );
 
+  const board = (
+    <>
       {selected && selectedCard && (
         <DashboardDetail
           sort={sort}
@@ -268,7 +266,39 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
           />
         ))}
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <LookSwitch
+      classic={
+        <div className="mx-auto w-full max-w-6xl">
+          <PageHeader
+            title="Dashboard"
+            subtitle="Every character at a glance. Select a name or a bar to open that progress."
+            action={sortToggle}
+          />
+          {board}
+        </div>
+      }
+      atlas={
+        <AtlasSection
+          grain="Characters"
+          title="Dashboard"
+          subtitle="Kept for bookmarks. Atlas puts the same progress meters on the Roster — open a character there for the workspace."
+          action={sortToggle}
+        >
+          <Card className="mb-4 px-4 py-3 text-sm text-fg-muted">
+            Prefer the regrouped view?{" "}
+            <Link href="/characters" className="text-accent hover:underline">
+              Open the Characters roster
+            </Link>
+            .
+          </Card>
+          {board}
+        </AtlasSection>
+      }
+    />
   );
 }
 

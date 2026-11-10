@@ -8,6 +8,8 @@ import type { Goal } from "@/lib/goals/types";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { LoadDemoButton } from "@/components/demo-controls";
 import { PlannerBoard, type PlannerChoices } from "@/components/planner-board";
+import { LookSwitch } from "@/components/look-switch";
+import { AtlasSection } from "@/components/atlas/section";
 
 export const dynamic = "force-dynamic";
 
@@ -26,33 +28,48 @@ export default function PlannerPage() {
   const data = safe(loadPlannerData);
 
   if (!account || !data || data.subjects.length === 0) {
+    const empty = (
+      <EmptyState title="No characters yet" icon={<ClipboardList className="h-8 w-8" />}>
+        <p className="mb-4">
+          The planner works from your ESO snapshots. Import your account first — point Nirnside at your ESO folder
+          and log out once in game.
+        </p>
+        <div className="flex flex-col items-center gap-2">
+          <Link
+            href="/setup"
+            className="inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg"
+          >
+            Open Setup
+          </Link>
+          <LoadDemoButton />
+        </div>
+      </EmptyState>
+    );
     return (
-      <div className="mx-auto w-full max-w-3xl">
-        <PageHeader
-          title="Planner"
-          subtitle="Set targets for the account, a role, a class, or one character — then track who is done."
-        />
-        <EmptyState title="No characters yet" icon={<ClipboardList className="h-8 w-8" />}>
-          <p className="mb-4">
-            The planner works from your ESO snapshots. Import your account first — point Nirnside at your ESO folder
-            and log out once in game.
-          </p>
-          <div className="flex flex-col items-center gap-2">
-            <Link
-              href="/setup"
-              className="inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent-soft px-4 py-2 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg"
-            >
-              Open Setup
-            </Link>
-            <LoadDemoButton />
+      <LookSwitch
+        classic={
+          <div className="mx-auto w-full max-w-3xl">
+            <PageHeader
+              title="Planner"
+              subtitle="Set targets for the account, a role, a class, or one character — then track who is done."
+            />
+            {empty}
           </div>
-        </EmptyState>
-      </div>
+        }
+        atlas={
+          <AtlasSection
+            grain="Planning"
+            title="Planner"
+            subtitle="Player-authored targets on top of the snapshot — the only place goals are created."
+          >
+            {empty}
+          </AtlasSection>
+        }
+      />
     );
   }
 
   const goals = safe(listGoals) ?? [];
-  // Progress is computed here, on the server: the browser only gets compact rows.
   const cards = goalCardsForClient(goals, data, lineHref);
   const choices: PlannerChoices = {
     lines: data.lines,
@@ -68,14 +85,29 @@ export default function PlannerPage() {
     })),
   };
 
+  const board = <PlannerBoard choices={choices} cards={cards} />;
+
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      <PageHeader
-        title="Planner"
-        subtitle="Choose Skills, Abilities, or Scribing first. Categories stay closed until you open them."
-      />
-      <PlannerBoard choices={choices} cards={cards} />
-    </div>
+    <LookSwitch
+      classic={
+        <div className="mx-auto w-full max-w-6xl">
+          <PageHeader
+            title="Planner"
+            subtitle="Choose Skills, Abilities, or Scribing first. Categories stay closed until you open them."
+          />
+          {board}
+        </div>
+      }
+      atlas={
+        <AtlasSection
+          grain="Planning"
+          title="Planner"
+          subtitle="Author essential, optional, and completionist targets. Home and the roster only show progress."
+        >
+          {board}
+        </AtlasSection>
+      }
+    />
   );
 }
 

@@ -6,12 +6,18 @@ import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryTabs } from "@/components/inventory-tabs";
 import { CurrencyTable } from "@/components/currency-table";
+import { LookSwitch } from "@/components/look-switch";
+import { AtlasInventoryChrome } from "@/components/atlas/inventory";
 import { Badge, Card, EmptyState, PageFrame, PageHeader, PageScroll, StickyMenu } from "@/components/ui";
 import { formatGold, formatNumber, locationLabel, qualityText } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function InventoryPage({ searchParams }: PageProps<"/inventory">) {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const sp = await searchParams;
   const view = str(sp.view) === "currency" ? "currency" : "items";
   const filters: ItemFilters = {
@@ -64,123 +70,188 @@ export default async function InventoryPage({ searchParams }: PageProps<"/invent
   const totalStacks = items.length;
   const totalCount = items.reduce((sum, it) => sum + it.count, 0);
 
-  return (
-    <PageFrame>
-      <PageHeader
-        title="Inventory"
-        subtitle={
-          view === "currency"
-            ? "Gold, Tel Var, and Alliance Points per character, plus account-wide currencies from the last snapshot."
-            : "Live bags only — worn gear, backpacks, bank, subscriber bank and craft bag. Deleted characters' last-known stacks live on their Archive page."
-        }
-      />
-
+  // Classic keeps InventoryTabs; Atlas uses chrome tabs — avoid doubling them.
+  const classicBody = (
+    <>
       <StickyMenu className="space-y-3">
         <InventoryTabs current={view} />
         {view === "items" ? <InventoryFilters facets={facets} /> : null}
       </StickyMenu>
-
       <PageScroll>
-      {view === "currency" ? <CurrencyView /> : (
-        <>
-          {ownerWallet && (
-            <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
-              <span className="text-fg">{ownerWallet.name}&apos;s wallet</span>
-              <span className="flex flex-wrap gap-4 tabular-nums">
-                <span className="text-yellow-200">
-                  {ownerWallet.lastSeen ? formatGold(ownerWallet.gold) : "—"}
-                  <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">Gold</span>
-                </span>
-                <span className="text-sky-300">
-                  {ownerWallet.lastSeen ? formatNumber(ownerWallet.telVar) : "—"}
-                  <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">Tel Var</span>
-                </span>
-                <span className="text-emerald-400">
-                  {ownerWallet.lastSeen ? formatNumber(ownerWallet.alliancePoints) : "—"}
-                  <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">AP</span>
-                </span>
-              </span>
-            </Card>
-          )}
-          {archivedOwner && (
-            <Card className="mb-4 px-4 py-3 text-sm text-fg-muted">
-              Showing last-known bags for a deleted character. These stacks are not part of the live inventory.
-            </Card>
-          )}
+        {view === "currency" ? (
+          <CurrencyView />
+        ) : (
+          <ItemsBody
+            items={items}
+            ownerWallet={ownerWallet}
+            archivedOwner={archivedOwner}
+            totalStacks={totalStacks}
+            totalCount={totalCount}
+          />
+        )}
+      </PageScroll>
+    </>
+  );
 
-          {items.length === 0 ? (
-            <EmptyState title="No items match" icon={<Backpack className="h-8 w-8" />}>
-              Try clearing filters, or import a snapshot (<code className="rounded bg-surface-2 px-1">npm run seed</code> for
-              sample data).
-            </EmptyState>
-          ) : (
-            <>
-              <div className="mb-3 text-sm text-fg-muted">
-                {totalStacks.toLocaleString("en-US")} stacks · {totalCount.toLocaleString("en-US")} items
-              </div>
-              <Card className="overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-subtle">
-                        <th className="px-4 py-2.5 font-medium">Item</th>
-                        <th className="px-3 py-2.5 font-medium text-right">Qty</th>
-                        <th className="px-3 py-2.5 font-medium">Location</th>
-                        <th className="px-3 py-2.5 font-medium">Owner</th>
-                        <th className="px-3 py-2.5 font-medium">Set</th>
-                        <th className="px-3 py-2.5 font-medium">Trait</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((it, i) => (
-                        <tr key={i} className="border-b border-border/60 last:border-0 hover:bg-surface-2/50">
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <span className={`font-medium ${qualityText(it.quality)}`}>{it.name}</span>
-                              {it.stolen && (
-                                <Badge tone="danger">
-                                  <Hand className="h-3 w-3" /> Stolen
-                                </Badge>
-                              )}
-                              {!it.obtainable && (
-                                <Badge tone="muted">
-                                  <Ban className="h-3 w-3" /> Unobtainable
-                                </Badge>
-                              )}
-                            </div>
-                            {it.level && <div className="text-xs text-fg-subtle">CP{it.level}</div>}
-                          </td>
-                          <td className="px-3 py-2.5 text-right tabular-nums text-fg-muted">
-                            {it.count.toLocaleString("en-US")}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <span className="rounded-md border border-border px-1.5 py-0.5 text-xs text-fg-muted">
-                              {locationLabel(it.location)}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2.5 text-fg-muted">{it.ownerCharacter ?? "—"}</td>
-                          <td className="px-3 py-2.5 text-fg-muted">
-                            {it.setName ? (
-                              <Link href={setHref({ name: it.setName })} className="text-accent hover:underline">
-                                {it.setName}
-                              </Link>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="px-3 py-2.5 text-fg-muted">{it.trait ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </>
-          )}
+  const atlasBody = (
+    <>
+      {view === "items" ? (
+        <StickyMenu className="mb-3 space-y-3">
+          <InventoryFilters facets={facets} />
+        </StickyMenu>
+      ) : null}
+      <PageScroll>
+        {view === "currency" ? (
+          <CurrencyView />
+        ) : (
+          <ItemsBody
+            items={items}
+            ownerWallet={ownerWallet}
+            archivedOwner={archivedOwner}
+            totalStacks={totalStacks}
+            totalCount={totalCount}
+          />
+        )}
+      </PageScroll>
+    </>
+  );
+
+  return (
+    <LookSwitch
+      classic={
+        <PageFrame>
+          <PageHeader
+            title="Inventory"
+            subtitle={
+              view === "currency"
+                ? "Gold, Tel Var, and Alliance Points per character, plus account-wide currencies from the last snapshot."
+                : "Live bags only — worn gear, backpacks, bank, subscriber bank and craft bag. Deleted characters' last-known stacks live on their Archive page."
+            }
+          />
+          {classicBody}
+        </PageFrame>
+      }
+      atlas={<AtlasInventoryChrome view={view}>{atlasBody}</AtlasInventoryChrome>}
+    />
+  );
+}
+
+function ItemsBody({
+  items,
+  ownerWallet,
+  archivedOwner,
+  totalStacks,
+  totalCount,
+}: {
+  items: ReturnType<typeof getItems>;
+  ownerWallet: {
+    name: string;
+    gold: number;
+    telVar: number;
+    alliancePoints: number;
+    lastSeen: number | null;
+  } | null;
+  archivedOwner: boolean;
+  totalStacks: number;
+  totalCount: number;
+}) {
+  return (
+    <>
+      {ownerWallet && (
+        <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+          <span className="text-fg">{ownerWallet.name}&apos;s wallet</span>
+          <span className="flex flex-wrap gap-4 tabular-nums">
+            <span className="text-yellow-200">
+              {ownerWallet.lastSeen ? formatGold(ownerWallet.gold) : "—"}
+              <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">Gold</span>
+            </span>
+            <span className="text-sky-300">
+              {ownerWallet.lastSeen ? formatNumber(ownerWallet.telVar) : "—"}
+              <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">Tel Var</span>
+            </span>
+            <span className="text-emerald-400">
+              {ownerWallet.lastSeen ? formatNumber(ownerWallet.alliancePoints) : "—"}
+              <span className="ml-1 text-xs uppercase tracking-wider text-fg-subtle">AP</span>
+            </span>
+          </span>
+        </Card>
+      )}
+      {archivedOwner && (
+        <Card className="mb-4 px-4 py-3 text-sm text-fg-muted">
+          Showing last-known bags for a deleted character. These stacks are not part of the live inventory.
+        </Card>
+      )}
+
+      {items.length === 0 ? (
+        <EmptyState title="No items match" icon={<Backpack className="h-8 w-8" />}>
+          Try clearing filters, or import a snapshot (<code className="rounded bg-surface-2 px-1">npm run seed</code> for
+          sample data).
+        </EmptyState>
+      ) : (
+        <>
+          <div className="mb-3 text-sm text-fg-muted">
+            {totalStacks.toLocaleString("en-US")} stacks · {totalCount.toLocaleString("en-US")} items
+          </div>
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-subtle">
+                    <th className="px-4 py-2.5 font-medium">Item</th>
+                    <th className="px-3 py-2.5 font-medium text-right">Qty</th>
+                    <th className="px-3 py-2.5 font-medium">Location</th>
+                    <th className="px-3 py-2.5 font-medium">Owner</th>
+                    <th className="px-3 py-2.5 font-medium">Set</th>
+                    <th className="px-3 py-2.5 font-medium">Trait</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((it, i) => (
+                    <tr key={i} className="border-b border-border/60 last:border-0 hover:bg-surface-2/50">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${qualityText(it.quality)}`}>{it.name}</span>
+                          {it.stolen && (
+                            <Badge tone="danger">
+                              <Hand className="h-3 w-3" /> Stolen
+                            </Badge>
+                          )}
+                          {!it.obtainable && (
+                            <Badge tone="muted">
+                              <Ban className="h-3 w-3" /> Unobtainable
+                            </Badge>
+                          )}
+                        </div>
+                        {it.level && <div className="text-xs text-fg-subtle">CP{it.level}</div>}
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-fg-muted">
+                        {it.count.toLocaleString("en-US")}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="rounded-md border border-border px-1.5 py-0.5 text-xs text-fg-muted">
+                          {locationLabel(it.location)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-fg-muted">{it.ownerCharacter ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-fg-muted">
+                        {it.setName ? (
+                          <Link href={setHref({ name: it.setName })} className="text-accent hover:underline">
+                            {it.setName}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-fg-muted">{it.trait ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </>
       )}
-      </PageScroll>
-    </PageFrame>
+    </>
   );
 }
 
