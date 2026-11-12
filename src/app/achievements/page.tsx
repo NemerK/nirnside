@@ -1,13 +1,13 @@
 import { RefreshCw, Trophy } from "lucide-react";
 import { getCompletedAchievementIds, getDataSource, hasData } from "@/lib/db/queries";
-import { PageFrame, PageHeader, Stat, EmptyState } from "@/components/ui";
+import { PageFrame, PageHeader, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { AchievementsBoard } from "@/components/achievements-board";
+import { AchievementsStrip } from "@/components/achievements-strip";
 import { LookSwitch } from "@/components/look-switch";
 import { AtlasSection } from "@/components/atlas/section";
-import { AtlasStat } from "@/components/atlas/ui";
 import { presentAchievements } from "@/lib/achievements/present";
-import { PITHKA_TABS, allTrackedIds } from "@/lib/achievements/pithka";
+import { PITHKA_TABS } from "@/lib/achievements/pithka";
 
 export const dynamic = "force-dynamic";
 
@@ -27,19 +27,47 @@ export default function AchievementsPage() {
     .filter((v): v is number => typeof v === "number");
   const trifectas = triIds.filter((id) => done.has(id)).length;
 
-  const allIds = PITHKA_TABS.flatMap((t) => allTrackedIds(t.rows));
-  const uniqueIds = Array.from(new Set(allIds));
-  const earned = uniqueIds.filter((id) => done.has(id)).length;
-
   const staleAddon = populated && !isSample && completed.length === 0;
+  const showBoard = populated && !staleAddon;
 
-  const body = !populated ? (
+  const strip = (
+    <AchievementsStrip
+      items={[
+        { label: "Cleared", done: present.pithka.done, total: present.pithka.total },
+        { label: "Trifectas", done: trifectas, total: triIds.length },
+        {
+          label: "Trials",
+          done: present.pithka.byTab.Trials.done,
+          total: present.pithka.byTab.Trials.total,
+        },
+        {
+          label: "Arenas",
+          done: present.pithka.byTab.Arenas.done,
+          total: present.pithka.byTab.Arenas.total,
+        },
+      ]}
+    />
+  );
+
+  const board = (
+    <>
+      {strip}
+      <p className="mb-2 shrink-0 text-xs text-fg-subtle">
+        {isSample
+          ? "Sample data. A logout with the Snapshot addon replaces this with your clears."
+          : "A check is account-wide, including Maelstrom Arena."}
+      </p>
+      <AchievementsBoard completedIds={completed} />
+    </>
+  );
+
+  const empty = !populated ? (
     <EmptyState title="No account data yet" icon={<Trophy className="h-8 w-8" />}>
       Log out or <code className="rounded bg-surface-2 px-1">/reloadui</code> in ESO with the Nirnside Snapshot
       addon enabled — your completed achievements are read straight from the game and light up the board. To
       preview with sample data, load the demo from the home page.
     </EmptyState>
-  ) : staleAddon ? (
+  ) : (
     <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
       <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-500 dark:text-amber-400">
         <RefreshCw className="h-5 w-5" />
@@ -54,41 +82,10 @@ export default function AchievementsPage() {
         </p>
       </div>
     </div>
-  ) : (
-    <>
-      <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Challenges done" value={`${earned}/${uniqueIds.length}`} />
-        <Stat label="Trifectas" value={`${trifectas}/${triIds.length}`} />
-        <Stat label="Trials" value={trials.length} />
-        <Stat label="Dungeons" value={triDungeons.length} />
-      </div>
-      <p className="mb-3 shrink-0 text-xs text-fg-subtle">
-        {isSample
-          ? "Showing sample data (demo). Log in with the Snapshot addon to replace this with your real, game-verified completion."
-          : "A check means done. If any of your characters earned it — including Maelstrom Arena — it stays checked for the whole account. Logging an alt will not uncheck it."}
-      </p>
-      <AchievementsBoard completedIds={completed} />
-    </>
   );
 
-  const atlasStats = (
-    <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
-      <AtlasStat
-        label="Tracked"
-        value={`${present.pithka.done}/${present.pithka.total}`}
-        hint="unique Pithka challenges"
-      />
-      <AtlasStat label="Trifectas" value={`${trifectas}/${triIds.length}`} hint="trial + trifecta dungeons" />
-      <AtlasStat
-        label="Trials"
-        value={`${present.pithka.byTab.Trials.done}/${present.pithka.byTab.Trials.total}`}
-      />
-      <AtlasStat
-        label="Arenas"
-        value={`${present.pithka.byTab.Arenas.done}/${present.pithka.byTab.Arenas.total}`}
-      />
-    </div>
-  );
+  const content = showBoard ? board : empty;
+  const badge = <SourceBadge source={populated && !isSample ? "ingame" : "reference"} />;
 
   return (
     <LookSwitch
@@ -97,20 +94,14 @@ export default function AchievementsPage() {
           <PageHeader
             title="Trial & Dungeon Achievements"
             subtitle="The Pithka tracker, out of game: every trial, dungeon and arena challenge — done or not done."
-            action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
+            action={badge}
           />
-          {body}
+          {content}
         </PageFrame>
       }
       atlas={
-        <AtlasSection
-          grain="Account"
-          title="Achievements"
-          subtitle="Trial, dungeon, and arena clears — completion is membership in the account's completed-id set, the same way Pithka decides."
-          action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
-        >
-          {populated && !staleAddon ? atlasStats : null}
-          {body}
+        <AtlasSection grain="Account" title="Achievements" action={badge} compact>
+          {content}
         </AtlasSection>
       }
     />
