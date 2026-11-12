@@ -114,7 +114,7 @@ function WorkspaceCard({ card }: { card: CharacterWorkspaceCard }) {
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="atlas-display truncate text-xl text-fg">{card.name}</h2>
+            <h2 className="truncate text-base font-semibold text-fg">{card.name}</h2>
             <p className="mt-0.5 text-sm text-fg-muted">
               {card.race} {card.className}
             </p>
