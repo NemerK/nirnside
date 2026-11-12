@@ -7,22 +7,31 @@ export function AtlasPage({
   title,
   subtitle,
   action,
+  compact,
   children,
 }: {
   grain: string;
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  /** Shorter header so a board underneath can start higher. */
+  compact?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="atlas-page mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col">
-      <header className="mb-6 shrink-0">
-        <p className="mb-1 text-xs font-medium text-fg-subtle">{grain}</p>
+      <header className={compact ? "mb-3 shrink-0" : "mb-6 shrink-0"}>
+        <p className="mb-0.5 text-xs font-medium text-fg-subtle">{grain}</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
-            {subtitle ? <p className="mt-2 max-w-2xl text-sm text-fg-muted">{subtitle}</p> : null}
+            <h1 className={compact ? "text-lg font-semibold tracking-tight text-fg" : "text-2xl font-semibold tracking-tight text-fg"}>
+              {title}
+            </h1>
+            {subtitle ? (
+              <p className={compact ? "mt-0.5 max-w-2xl text-xs text-fg-muted" : "mt-2 max-w-2xl text-sm text-fg-muted"}>
+                {subtitle}
+              </p>
+            ) : null}
           </div>
           {action}
         </div>

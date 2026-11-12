@@ -11,16 +11,18 @@ export function AtlasSection({
   title,
   subtitle,
   action,
+  compact,
   children,
 }: {
   grain: string;
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  compact?: boolean;
   children: ReactNode;
 }) {
   return (
-    <AtlasPage grain={grain} title={title} subtitle={subtitle} action={action}>
+    <AtlasPage grain={grain} title={title} subtitle={subtitle} action={action} compact={compact}>
       {children}
     </AtlasPage>
   );
