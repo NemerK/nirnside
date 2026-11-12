@@ -44,13 +44,10 @@ const ICONS: Record<string, LucideIcon> = {
 
 function AtlasWordmark() {
   return (
-    <Link href="/" className="group flex items-center gap-3">
-      <NirnsideMark className="h-9 w-9 shrink-0 transition-transform duration-500 group-hover:rotate-3" />
-      <span className="atlas-display text-xl tracking-tight text-fg">
+    <Link href="/" className="flex items-center gap-2.5">
+      <NirnsideMark className="h-8 w-8 shrink-0" />
+      <span className="text-base font-semibold tracking-tight text-fg">
         Nirn<span className="text-accent">side</span>
-        <span className="mt-0.5 block text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-fg-subtle">
-          Atlas
-        </span>
       </span>
     </Link>
   );
@@ -61,15 +58,13 @@ function AtlasNav({ hiddenModules, onNavigate }: { hiddenModules?: string[]; onN
   const hidden = new Set(hiddenModules ?? []);
 
   return (
-    <nav className="flex flex-col gap-6">
+    <nav className="flex flex-col gap-5">
       {ATLAS_NAV.map((group) => {
         const items = group.items.filter((item) => atlasItemVisible(item, hidden));
         if (items.length === 0) return null;
         return (
           <div key={`${group.id}-${group.label}`}>
-            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-fg-subtle">
-              {group.label}
-            </p>
+            <p className="mb-1 px-3 text-xs font-medium text-fg-subtle">{group.label}</p>
             <div className="flex flex-col gap-0.5">
               {items.map((item) => {
                 const Icon = ICONS[item.id] ?? Layers;
@@ -191,7 +186,7 @@ export function AtlasShell({
           <div className="flex min-w-0 items-center gap-3 text-sm">
             {account ? (
               <>
-                <span className="atlas-display truncate text-lg text-fg">{account.displayName}</span>
+                <span className="truncate font-medium text-fg">{account.displayName}</span>
                 <span className="rounded border border-border px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-fg-muted">
                   {account.region}
                 </span>

@@ -21,7 +21,7 @@ export const LOOKS: { id: Look; label: string; blurb: string }[] = [
   {
     id: "atlas",
     label: "Atlas",
-    blurb: "Grouped by how the data actually lives: account, characters, catalog, planning.",
+    blurb: "Same grouping — account, characters, catalog, planning — in a quieter interface.",
   },
 ];
 

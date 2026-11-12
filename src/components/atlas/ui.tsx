@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-/** Atlas page chrome — wider, grain-labeled, display-font titles. */
+/** Atlas page chrome — quiet headings, same type as the rest of the app. */
 export function AtlasPage({
   grain,
   title,
@@ -18,12 +18,10 @@ export function AtlasPage({
   return (
     <div className="atlas-page mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col">
       <header className="mb-6 shrink-0">
-        <p className="atlas-grain mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
-          {grain}
-        </p>
+        <p className="mb-1 text-xs font-medium text-fg-subtle">{grain}</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="atlas-display text-3xl font-medium tracking-tight text-fg md:text-4xl">{title}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
             {subtitle ? <p className="mt-2 max-w-2xl text-sm text-fg-muted">{subtitle}</p> : null}
           </div>
           {action}
@@ -59,8 +57,8 @@ export function AtlasStat({
 }) {
   const inner = (
     <>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">{label}</p>
-      <p className="atlas-display mt-2 text-2xl text-fg">{value}</p>
+      <p className="text-xs font-medium text-fg-subtle">{label}</p>
+      <p className="mt-1.5 text-xl font-semibold tracking-tight text-fg tabular-nums">{value}</p>
       {hint ? <p className="mt-1 text-xs text-fg-muted">{hint}</p> : null}
     </>
   );
@@ -94,7 +92,7 @@ export function AtlasMeter({
           {unknown ? "?" : total > 0 ? `${pct}%` : "—"}
         </span>
       </div>
-      <div className="h-1 overflow-hidden rounded-full bg-surface-2">
+      <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
         <div
           className={`h-full rounded-full transition-all ${unknown ? "bg-border-strong" : "bg-accent"}`}
           style={{ width: `${pct}%` }}
@@ -107,7 +105,7 @@ export function AtlasMeter({
 export function AtlasEmpty({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <AtlasPanel className="px-6 py-12 text-center">
-      <h2 className="atlas-display text-xl text-fg">{title}</h2>
+      <h2 className="text-lg font-semibold text-fg">{title}</h2>
       {children ? <div className="mx-auto mt-3 max-w-md text-sm text-fg-muted">{children}</div> : null}
     </AtlasPanel>
   );
