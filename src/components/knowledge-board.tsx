@@ -286,19 +286,6 @@ function ResearchPanel({
   }
 
   const selected = research.crafts.find((craft) => craft.craft === craftId) ?? research.crafts[0]!;
-  const timers = research.inProgress.filter((row) => row.craft === selected.craft);
-  const groups = selected.groups
-    .map((group, gi) => {
-      const lines = group.lines.filter((line) => {
-        if (query && !line.name.toLowerCase().includes(query) && !group.traits.some((t) => t.toLowerCase().includes(query))) {
-          return false;
-        }
-        if (filter === "all") return true;
-        return line.traits.some((t) => matchesFilter(t.known, filter) || (filter === "missing" && t.researching));
-      });
-      return { gi, group, lines };
-    })
-    .filter((entry) => entry.lines.length > 0);
 
   return (
     <div>
@@ -338,58 +325,85 @@ function ResearchPanel({
           {selected.maxSlots > 0 ? ` · ${selected.maxSlots} slots` : ""}
         </p>
       </div>
-      {timers.length > 0 ? (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {timers.map((row) => (
-            <span
-              key={`${row.craft}-${row.line}-${row.trait}`}
-              className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
+      {/* Every station stays in the layout, stacked, so the pane is as tall as the largest one. */}
+      <div className="grid">
+        {research.crafts.map((craft) => {
+          const active = craft.craft === selected.craft;
+          const timers = research.inProgress.filter((row) => row.craft === craft.craft);
+          const groups = craft.groups
+            .map((group, gi) => {
+              const lines = group.lines.filter((line) => {
+                if (query && !line.name.toLowerCase().includes(query) && !group.traits.some((t) => t.toLowerCase().includes(query))) {
+                  return false;
+                }
+                if (filter === "all") return true;
+                return line.traits.some((t) => matchesFilter(t.known, filter) || (filter === "missing" && t.researching));
+              });
+              return { gi, group, lines };
+            })
+            .filter((entry) => entry.lines.length > 0);
+          return (
+            <div
+              key={craft.craft}
+              className={`col-start-1 row-start-1 ${active ? "" : "invisible pointer-events-none"}`}
+              aria-hidden={active ? undefined : true}
             >
-              {row.line} · {row.trait}
-              {row.remainingSeconds != null ? ` · ${formatResearchRemaining(row.remainingSeconds)}` : ""}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {groups.length === 0 ? (
-        <Card className="p-4 text-sm text-fg-muted">Nothing in {selected.name} matches this filter.</Card>
-      ) : (
-        <div className="space-y-3">
-          {groups.map(({ gi, group, lines }) => (
-            <Card key={`${selected.craft}-${gi}`} className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] border-collapse text-left text-xs">
-                <thead>
-                  <tr className="border-b border-border text-fg-subtle">
-                    <th className="px-3 py-2 font-medium">Line</th>
-                    {group.traits.map((trait) => (
-                      <th key={trait} className="px-1 py-2 text-center font-medium">
-                        {trait}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line) => (
-                    <tr key={line.name} className="border-b border-border/70 last:border-0">
-                      <td className="px-3 py-1.5 font-medium text-fg">{line.name}</td>
-                      {line.traits.map((trait) => (
-                        <td key={trait.name} className="px-1 py-1.5 text-center">
-                          <TraitCell
-                            known={trait.known}
-                            researching={trait.researching}
-                            name={trait.name}
-                            remaining={trait.remainingSeconds}
-                          />
-                        </td>
-                      ))}
-                    </tr>
+              {timers.length > 0 ? (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {timers.map((row) => (
+                    <span
+                      key={`${row.craft}-${row.line}-${row.trait}`}
+                      className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
+                    >
+                      {row.line} · {row.trait}
+                      {row.remainingSeconds != null ? ` · ${formatResearchRemaining(row.remainingSeconds)}` : ""}
+                    </span>
                   ))}
-                </tbody>
-              </table>
-            </Card>
-          ))}
-        </div>
-      )}
+                </div>
+              ) : null}
+              {groups.length === 0 ? (
+                <Card className="p-4 text-sm text-fg-muted">Nothing in {craft.name} matches this filter.</Card>
+              ) : (
+                <div className="space-y-3">
+                  {groups.map(({ gi, group, lines }) => (
+                    <Card key={`${craft.craft}-${gi}`} className="overflow-x-auto">
+                      <table className="w-full min-w-[36rem] border-collapse text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-border text-fg-subtle">
+                            <th className="px-3 py-2 font-medium">Line</th>
+                            {group.traits.map((trait) => (
+                              <th key={trait} className="px-1 py-2 text-center font-medium">
+                                {trait}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lines.map((line) => (
+                            <tr key={line.name} className="border-b border-border/70 last:border-0">
+                              <td className="px-3 py-1.5 font-medium text-fg">{line.name}</td>
+                              {line.traits.map((trait) => (
+                                <td key={trait.name} className="px-1 py-1.5 text-center">
+                                  <TraitCell
+                                    known={trait.known}
+                                    researching={trait.researching}
+                                    name={trait.name}
+                                    remaining={trait.remainingSeconds}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
