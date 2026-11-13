@@ -121,6 +121,58 @@ export function activeAbilityRowsOnPlannerLine(
   return abilityRowsOnPlannerLine(rows, line).filter((row) => !row.passive);
 }
 
+/**
+ * The snapshot names an ability after the form the character currently has.
+ * Slot 0 is still the base, and slots 1 and 2 are the morphs.
+ */
+export function plannerProgressionNames(ability: {
+  name: string;
+  morphs?: readonly { slot?: number; name?: string | null }[];
+}): { base: string; morphs: string[] } {
+  const named = (ability.morphs ?? [])
+    .map((slot) => ({ slot: slot.slot, name: slot.name?.trim() ?? "" }))
+    .filter((slot) => slot.name);
+  const baseSlot = named.find((slot) => slot.slot === 0);
+  const morphSlots = named.filter((slot) => slot.slot === 1 || slot.slot === 2);
+  if (baseSlot && morphSlots.length > 0) {
+    const base = baseSlot.name;
+    return {
+      base,
+      morphs: morphSlots
+        .map((slot) => slot.name)
+        .filter((name) => name.toLowerCase() !== base.toLowerCase())
+        .slice(0, 2),
+    };
+  }
+  const headline = ability.name.trim();
+  return {
+    base: headline,
+    morphs: named
+      .map((slot) => slot.name)
+      .filter((name) => name.toLowerCase() !== headline.toLowerCase())
+      .slice(0, 2),
+  };
+}
+
+/**
+ * A morph is not its own ability. Drop a row whose name is already listed as
+ * a morph of another ability on the same line.
+ */
+export function withoutAbilityMorphDuplicates(rows: readonly PlannerAbilityRow[]): PlannerAbilityRow[] {
+  const morphNames = new Set<string>();
+  for (const row of rows) {
+    const line = plannerLineKey({ name: row.lineName, className: row.className });
+    const base = row.base.name.trim().toLowerCase();
+    for (const morph of row.morphs) {
+      const name = morph.name.trim().toLowerCase();
+      if (name && name !== base) morphNames.add(`${line}::${name}`);
+    }
+  }
+  return rows.filter(
+    (row) => !morphNames.has(`${plannerLineKey({ name: row.lineName, className: row.className })}::${row.base.name.trim().toLowerCase()}`),
+  );
+}
+
 /** Open/selected state for a line. Class Mastery keys include the class. */
 export function plannerLineKey(line: { name: string; className: string | null }): string {
   const name = line.name.trim().toLowerCase();

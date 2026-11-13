@@ -18,7 +18,7 @@ import type { Goal, GoalIndexes } from "../goals/types";
 import type { GoalCardView, GoalMarkView, GoalRowItem } from "../goals/views";
 import { ESO_CLASSES } from "../classes";
 import { plannerAbilityIcon, plannerLineIcon, plannerScriptIcon } from "../icons/planner-icons";
-import { plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
+import { plannerLineKey, plannerProgressionNames, withoutAbilityMorphDuplicates, type PlannerAbilityRow } from "./skill-groups";
 export type { PlannerAbilityRow };
 import { skillLineCap } from "../skills/line-cap";
 import type { AbilityMeta, GoalSubject, LineMeta, SkillLineChoice } from "../goals/types";
@@ -235,25 +235,28 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
             }),
           );
         }
-        const morphNames = slots
-          .map((m) => m.name?.trim() ?? "")
-          .filter((name) => name && name.toLowerCase() !== ability.name.trim().toLowerCase())
-          .slice(0, 2);
-        const known = [ability.name, ...morphNames].some((name) => alreadyClaimed(line.name, shared.className, name));
-        if (!known && ability.name.trim()) {
+        const progression = plannerProgressionNames(ability);
+        const known = [progression.base, ...progression.morphs].some((name) =>
+          alreadyClaimed(line.name, shared.className, name),
+        );
+        if (!known && progression.base) {
           abilityRows.push({
             lineName: line.name,
             className: shared.className,
             passive,
-            base: { name: ability.name, icon: null },
-            morphs: passive ? [] : morphNames.map((name) => ({ name, icon: null })),
+            base: { name: progression.base, icon: null },
+            morphs: passive ? [] : progression.morphs.map((name) => ({ name, icon: null })),
           });
-          claimAbility(line.name, shared.className, ability.name);
-          for (const name of morphNames) claimAbility(line.name, shared.className, name);
+          claimAbility(line.name, shared.className, progression.base);
+          for (const name of progression.morphs) claimAbility(line.name, shared.className, name);
         }
       }
     }
   }
+
+  const uniqueRows = withoutAbilityMorphDuplicates(abilityRows);
+  abilityRows.length = 0;
+  abilityRows.push(...uniqueRows);
 
   const iconByName = new Map(abilities.map((ability) => [ability.name.trim().toLowerCase(), ability.icon]));
   for (const row of abilityRows) {
