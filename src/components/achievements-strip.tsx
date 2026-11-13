@@ -24,8 +24,14 @@ export function AchievementsStrip({ items }: { items: AchievementStripItem[] }) 
                 {item.label}
               </span>
               <span className="shrink-0 text-sm font-semibold tabular-nums text-fg">
-                {item.done}
-                <span className="font-normal text-fg-subtle">/{item.total}</span>
+                {item.total > 0 ? (
+                  <>
+                    {item.done}
+                    <span className="font-normal text-fg-subtle">/{item.total}</span>
+                  </>
+                ) : (
+                  <span className="font-normal text-fg-subtle">—</span>
+                )}
               </span>
             </div>
             <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-2" aria-hidden>

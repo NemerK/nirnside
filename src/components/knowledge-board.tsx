@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Check, Minus, Search } from "lucide-react";
-import { Card, PageScroll, StickyMenu } from "@/components/ui";
+import { Card, PageScroll } from "@/components/ui";
+import { Modal } from "@/components/modal";
+import { GameIcon } from "@/components/game-icon";
+import { classIcon } from "@/lib/classes";
 import {
   formatResearchRemaining,
   motifKey,
+  presentMotifs,
   recipeQualityClass,
   type PresentedResearch,
 } from "@/lib/knowledge/present";
@@ -35,6 +39,9 @@ const TABS: { key: KnowledgeTab; label: string }[] = [
 
 type KnownFilter = "all" | "known" | "missing";
 
+const COLUMNS =
+  "grid-cols-[2.5rem_minmax(0,1fr)] sm:grid-cols-[2.5rem_minmax(7rem,1.15fr)_repeat(4,minmax(6.5rem,1fr))]";
+
 export function KnowledgeBoard({
   characters,
   initialCharId,
@@ -46,104 +53,123 @@ export function KnowledgeBoard({
   initialTab?: KnowledgeTab;
   initialQuery?: string;
 }) {
-  const fallback = characters[0]?.id ?? "";
-  const [charId, setCharId] = useState(
-    characters.some((c) => c.id === initialCharId) ? initialCharId! : fallback,
+  const [openId, setOpenId] = useState<string | null>(
+    characters.some((c) => c.id === initialCharId) ? initialCharId! : null,
   );
+  const close = useCallback(() => setOpenId(null), []);
+  const open = characters.find((c) => c.id === openId) ?? null;
+
+  if (characters.length === 0) return null;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PageScroll>
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          <div className={`hidden items-center gap-3 border-b border-border px-3 py-2 text-[11px] font-medium text-fg-subtle sm:grid ${COLUMNS}`}>
+            <span>Class</span>
+            <span>Name</span>
+            <span>Research</span>
+            <span>Motifs</span>
+            <span>Recipes</span>
+            <span>Plans</span>
+          </div>
+          <ul>
+            {characters.map((character) => (
+              <li key={character.id} className="border-b border-border last:border-b-0">
+                <button
+                  type="button"
+                  onClick={() => setOpenId(character.id)}
+                  className={`grid w-full items-center gap-x-3 gap-y-2 px-3 py-2 text-left hover:bg-surface-2 ${COLUMNS}`}
+                >
+                  <GameIcon name={character.className} icon={classIcon(character.className)} size={28} bare />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-fg">{character.name}</span>
+                    <span className="block truncate text-xs text-fg-subtle sm:hidden">{character.className}</span>
+                  </span>
+                  <ProgressCell label="Research" tally={researchTally(character)} />
+                  <ProgressCell label="Motifs" tally={motifTally(character)} />
+                  <ProgressCell label="Recipes" tally={listTally(character.scanned, character.recipes)} />
+                  <ProgressCell label="Plans" tally={listTally(character.scanned, character.plans)} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </PageScroll>
+      {open ? (
+        <Modal title={open.name} onClose={close} maxWidthClass="max-w-6xl">
+          <KnowledgeDetail character={open} initialTab={initialTab} initialQuery={initialQuery} />
+        </Modal>
+      ) : null}
+    </div>
+  );
+}
+
+function KnowledgeDetail({
+  character,
+  initialTab,
+  initialQuery,
+}: {
+  character: KnowledgeCharacterView;
+  initialTab?: KnowledgeTab;
+  initialQuery?: string;
+}) {
   const [tab, setTab] = useState<KnowledgeTab>(
     TABS.some((t) => t.key === initialTab) ? initialTab! : "research",
   );
   const [query, setQuery] = useState(initialQuery ?? "");
   const [filter, setFilter] = useState<KnownFilter>("all");
-
-  const character = characters.find((c) => c.id === charId) ?? characters[0];
   const q = query.trim().toLowerCase();
 
-  if (!character) return null;
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <StickyMenu>
-        <div className="flex flex-wrap gap-1.5">
-          {characters.map((c) => {
-            const active = c.id === character.id;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setCharId(c.id)}
-                className={`rounded-lg border px-2.5 py-1 text-sm ${
-                  active
-                    ? "border-accent/50 bg-accent-soft text-accent"
-                    : "border-border text-fg-muted hover:border-accent/30 hover:text-fg"
-                }`}
-              >
-                {c.name}
-              </button>
-            );
-          })}
+    <div>
+      <p className="mb-3 text-sm text-fg-muted">{character.className}</p>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-1">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
+                tab === t.key ? "bg-accent-soft text-accent" : "text-fg-subtle hover:text-fg"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap gap-1">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTab(t.key)}
-                className={`rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
-                  tab === t.key ? "bg-accent-soft text-accent" : "text-fg-subtle hover:text-fg"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <div className="relative min-w-[12rem] flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter this tab…"
-              className="w-full rounded-lg border border-border bg-surface py-1.5 pl-8 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
-            />
-          </div>
-          <div className="flex gap-1">
-            {(["all", "known", "missing"] as const).map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setFilter(key)}
-                className={`rounded-md border px-2 py-1 text-xs capitalize ${
-                  filter === key
-                    ? "border-accent/50 bg-accent-soft text-accent"
-                    : "border-border text-fg-subtle hover:text-fg"
-                }`}
-              >
-                {key}
-              </button>
-            ))}
-          </div>
+        <div className="relative min-w-[12rem] flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter this tab…"
+            className="w-full rounded-lg border border-border bg-surface py-1.5 pl-8 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+          />
         </div>
-        <p className="mt-2 text-xs text-fg-subtle">
-          {character.scribingCount > 0
-            ? `${character.scribingCount} scribing scripts already scanned — see `
-            : "Scribing scripts are already on the character sheet and in "}
-          <Link href="/encyclopedia/scribing" className="text-accent hover:underline">
-            Encyclopedia → Scribing
-          </Link>
-          . Outfit Styles are account-wide on{" "}
-          <Link href="/styles" className="text-accent hover:underline">
-            Styles
-          </Link>
-          .
-        </p>
-      </StickyMenu>
-
-      <PageScroll>
+        <div className="flex gap-1">
+          {(["all", "known", "missing"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFilter(key)}
+              className={`rounded-md border px-2 py-1 text-xs capitalize ${
+                filter === key
+                  ? "border-accent/50 bg-accent-soft text-accent"
+                  : "border-border text-fg-subtle hover:text-fg"
+              }`}
+            >
+              {key}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="max-h-[min(68vh,42rem)] overflow-y-auto pr-1">
         {!character.scanned ? (
           <Card className="p-4 text-sm text-fg-muted">
-            {character.name} has not been logged out with Snapshot 0.9.28 yet. Research, motifs, and
-            recipes stay unknown until that scan.
+            {character.name} has not been logged out with Snapshot 0.9.28 yet. Research, motifs, and recipes stay
+            unknown until that scan.
           </Card>
         ) : tab === "research" ? (
           <ResearchPanel research={character.research} query={q} filter={filter} />
@@ -157,7 +183,71 @@ export function KnowledgeBoard({
             empty={tab === "plans" ? "No furnishing plans in the last scan." : "No recipes in the last scan."}
           />
         )}
-      </PageScroll>
+      </div>
+      <p className="mt-3 text-xs text-fg-subtle">
+        {character.scribingCount > 0
+          ? `${character.scribingCount} scribing scripts already scanned — see `
+          : "Scribing scripts are already on the character sheet and in "}
+        <Link href="/encyclopedia/scribing" className="text-accent hover:underline">
+          Encyclopedia → Scribing
+        </Link>
+        . Outfit Styles are account-wide on{" "}
+        <Link href="/styles" className="text-accent hover:underline">
+          Styles
+        </Link>
+        .
+      </p>
+    </div>
+  );
+}
+
+function researchTally(character: KnowledgeCharacterView): CellTally {
+  if (!character.scanned) return { scanned: false, known: 0, total: 0 };
+  return { scanned: true, known: character.research.known, total: character.research.total };
+}
+
+function motifTally(character: KnowledgeCharacterView): CellTally {
+  if (!character.scanned) return { scanned: false, known: 0, total: 0 };
+  const motifs = presentMotifs(character.motifs);
+  return { scanned: true, known: motifs.known, total: motifs.total };
+}
+
+function listTally(scanned: boolean, lists: RecipeList[]): CellTally {
+  if (!scanned) return { scanned: false, known: 0, total: 0 };
+  let known = 0;
+  let total = 0;
+  for (const list of lists) {
+    known += list.known;
+    total += list.total;
+  }
+  return { scanned: true, known, total };
+}
+
+interface CellTally {
+  scanned: boolean;
+  known: number;
+  total: number;
+}
+
+function ProgressCell({ label, tally }: { label: string; tally: CellTally }) {
+  return (
+    <div className="col-span-2 min-w-0 pl-10 sm:col-span-1 sm:pl-0">
+      <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle sm:hidden">{label}</p>
+      <Bar tally={tally} />
+    </div>
+  );
+}
+
+function Bar({ tally }: { tally: CellTally }) {
+  if (!tally.scanned) return <span className="text-xs text-fg-subtle">?</span>;
+  if (tally.total <= 0) return <span className="text-xs text-fg-subtle">—</span>;
+  const pct = Math.round((tally.known / tally.total) * 100);
+  return (
+    <div className="flex min-w-0 items-center gap-2" title={`${tally.known}/${tally.total}`}>
+      <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-2">
+        <div className="h-full rounded-full bg-ok" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-9 shrink-0 text-right text-xs tabular-nums text-fg-muted">{pct}%</span>
     </div>
   );
 }
