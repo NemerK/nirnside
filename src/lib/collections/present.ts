@@ -46,7 +46,7 @@ export function presentCollections(input: {
 
   let total = input.stickerStats?.total ?? 0;
   let collected = input.stickerStats?.collected ?? 0;
-  let setCount = input.stickerStats?.sets ?? input.stickerbook.length;
+  const setCount = input.stickerStats?.sets ?? input.stickerbook.length;
   if (!input.stickerStats) {
     for (const set of input.stickerbook) {
       for (const piece of set.pieces) {
@@ -71,7 +71,7 @@ export function presentCollections(input: {
 
 export function collectionsSummaryLine(c: CollectionsPresent): string {
   const parts: string[] = [];
-  if (c.sets.total > 0) parts.push(`${c.sets.pct}% sets`);
+  if (c.sets.total > 0) parts.push(`${c.sets.pct}% stickerbook`);
   if (c.styles.total > 0) parts.push(`${c.styles.unlocked}/${c.styles.total} styles`);
   if (c.houses.total > 0) parts.push(`${c.houses.total} houses`);
   return parts.length > 0 ? parts.join(" · ") : "Nothing collected yet";
