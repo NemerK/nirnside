@@ -13,7 +13,6 @@ import {
   Library,
   ListChecks,
   Menu,
-  Search,
   Trophy,
   Users,
   X,
@@ -97,28 +96,6 @@ function AtlasNav({ hiddenModules, onNavigate }: { hiddenModules?: string[]; onN
   );
 }
 
-function SearchBox({ onSubmit }: { onSubmit?: () => void }) {
-  const [q, setQ] = useState("");
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (q.trim()) window.location.assign(`/search?q=${encodeURIComponent(q.trim())}`);
-        onSubmit?.();
-      }}
-      className="relative w-full max-w-md"
-    >
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search account and catalog…"
-        className="w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
-      />
-    </form>
-  );
-}
-
 export function AtlasShell({
   account,
   hiddenModules,
@@ -167,9 +144,6 @@ export function AtlasShell({
       </div>
       {open && (
         <div className="shrink-0 overflow-y-auto border-b border-border bg-bg-elev p-4 md:hidden">
-          <div className="mb-3">
-            <SearchBox onSubmit={() => setOpen(false)} />
-          </div>
           <AtlasNav hiddenModules={hiddenModules} onNavigate={() => setOpen(false)} />
           <div className="mt-4 space-y-3">
             <LookToggle />
@@ -199,9 +173,6 @@ export function AtlasShell({
             ) : (
               <span className="text-fg-muted">No account imported yet</span>
             )}
-          </div>
-          <div className="mx-6 flex-1">
-            <SearchBox />
           </div>
           {account && (
             <div className="flex items-center gap-2 text-xs text-fg-subtle">

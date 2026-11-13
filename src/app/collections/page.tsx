@@ -8,14 +8,7 @@ import { Card, PageFrame, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function CollectionsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const tab = typeof sp.tab === "string" ? sp.tab : undefined;
-
+export default async function CollectionsPage() {
   const stickerbook = safe(() => getStickerbook()) ?? [];
   const stickerStats = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
   const outfitStyles = safe(() => getOutfitStyles()) ?? [];
@@ -69,7 +62,7 @@ export default async function CollectionsPage({
           </div>
         </PageFrame>
       }
-      atlas={<AtlasCollectionsHub collections={collections} tab={tab} />}
+      atlas={<AtlasCollectionsHub collections={collections} />}
     />
   );
 }

@@ -420,12 +420,12 @@ NirnsideData =
                         },
                         ["equipped"] =
                         {
-                            { ["slot"] = "Head", ["bar"] = nil, ["name"] = "Slimecraw's Helm", ["quality"] = "legendary", ["setName"] = "Slimecraw", ["trait"] = "Divines", ["enchant"] = "Max Magicka" },
-                            { ["slot"] = "Chest", ["bar"] = nil, ["name"] = "Coral Riptide Jack", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Divines", ["enchant"] = "Max Stamina" },
-                            { ["slot"] = "Shoulders", ["bar"] = nil, ["name"] = "Slimecraw's Pauldron", ["quality"] = "legendary", ["setName"] = "Slimecraw", ["trait"] = "Divines", ["enchant"] = "Max Stamina" },
-                            { ["slot"] = "Main Hand", ["bar"] = "front", ["name"] = "Coral Riptide Dagger", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Nirnhoned", ["enchant"] = "Weapon Damage", ["scribing"] = {} },
-                            { ["slot"] = "Off Hand", ["bar"] = "front", ["name"] = "Coral Riptide Dagger", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Sharpened", ["enchant"] = "Flame Damage" },
-                            { ["slot"] = "Main Hand", ["bar"] = "back", ["name"] = "Sul-Xan's Bow", ["quality"] = "legendary", ["setName"] = "Sul-Xan's Torment", ["trait"] = "Infused", ["enchant"] = "Weakening", ["scribing"] = { "Ulfsild's Contingency" } },
+                            { ["slot"] = "Head", ["bar"] = nil, ["name"] = "Slimecraw's Helm", ["icon"] = "/esoui/art/icons/gear_undauntedcrocodile_head_a.dds", ["quality"] = "legendary", ["setName"] = "Slimecraw", ["trait"] = "Divines", ["enchant"] = "Max Magicka" },
+                            { ["slot"] = "Chest", ["bar"] = nil, ["name"] = "Coral Riptide Jack", ["icon"] = "/esoui/art/icons/gear_amenossea_med_chest_a.dds", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Divines", ["enchant"] = "Max Stamina" },
+                            { ["slot"] = "Shoulders", ["bar"] = nil, ["name"] = "Slimecraw's Pauldron", ["icon"] = "/esoui/art/icons/gear_undauntedcrocodile_shoulders_a.dds", ["quality"] = "legendary", ["setName"] = "Slimecraw", ["trait"] = "Divines", ["enchant"] = "Max Stamina" },
+                            { ["slot"] = "Main Hand", ["bar"] = "front", ["name"] = "Coral Riptide Dagger", ["icon"] = "/esoui/art/icons/gear_amenossea_dagger_a.dds", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Nirnhoned", ["enchant"] = "Weapon Damage", ["scribing"] = {} },
+                            { ["slot"] = "Off Hand", ["bar"] = "front", ["name"] = "Coral Riptide Dagger", ["icon"] = "/esoui/art/icons/gear_amenossea_dagger_a.dds", ["quality"] = "legendary", ["setName"] = "Coral Riptide", ["trait"] = "Sharpened", ["enchant"] = "Flame Damage" },
+                            { ["slot"] = "Main Hand", ["bar"] = "back", ["name"] = "Sul-Xan's Bow", ["icon"] = "/esoui/art/icons/gear_rockgrove_bow_a.dds", ["quality"] = "legendary", ["setName"] = "Sul-Xan's Torment", ["trait"] = "Infused", ["enchant"] = "Weakening", ["scribing"] = { "Ulfsild's Contingency" } },
                         },
                         ["companions"] =
                         {

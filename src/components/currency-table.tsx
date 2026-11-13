@@ -1,17 +1,23 @@
 import Link from "next/link";
-import { Coins } from "lucide-react";
 import type { Character } from "@/lib/snapshot/schema";
 import type { GoldBreakdown } from "@/lib/snapshot/roster";
 import { accountAlliancePoints, accountTelVar } from "@/lib/snapshot/roster";
 import { formatGold, formatNumber } from "@/lib/format";
 import { AccountWallet } from "./account-wallet";
-import { Card, SectionTitle } from "./ui";
+import { Card } from "./ui";
 
 function walletCell(lastSeen: number | null | undefined, amount: number): string {
   if (!lastSeen) return "—";
   return formatNumber(amount);
 }
 
+const COLS = "grid-cols-[minmax(8rem,1.6fr)_repeat(3,minmax(5.5rem,1fr))]";
+
+/**
+ * Account-wide currencies sit in a grid above the character table. The column
+ * titles stick while the page scrolls. The account total is the next row after
+ * the characters, so it sits tight when the roster is short.
+ */
 export function CurrencyTable({
   characters,
   bankGold = 0,
@@ -33,76 +39,56 @@ export function CurrencyTable({
   });
 
   return (
-    <div className="space-y-8">
-      <section>
-        <div className="mb-3 flex items-center gap-2">
-          <Coins className="h-4 w-4 text-fg-subtle" />
-          <SectionTitle className="mb-0">Per character</SectionTitle>
-        </div>
-        {gold.usedLegacy ? (
-          <Card className="px-4 py-3 text-sm text-fg-muted">
-            Account gold is {formatGold(gold.total)} from the last snapshot, but wallets are not split yet. Log each
-            character out (or ReloadUI) once to fill per-character gold, Tel Var, and Alliance Points the way Inventory Insight does.
-          </Card>
-        ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-subtle">
-                    <th className="px-4 py-2.5 font-medium">Character</th>
-                    <th className="px-3 py-2.5 font-medium text-right">Gold</th>
-                    <th className="px-3 py-2.5 font-medium text-right">Tel Var</th>
-                    <th className="px-3 py-2.5 font-medium text-right">Alliance Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {characters.map((c) => (
-                    <tr key={c.id} className="border-b border-border/60 hover:bg-surface-2/50">
-                      <td className="px-4 py-2">
-                        <Link href={`/characters/${encodeURIComponent(c.id)}`} className="text-fg hover:text-accent hover:underline">
-                          {c.name}
-                        </Link>
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-yellow-200">
-                        {c.lastSeen ? formatGold(c.gold ?? 0) : "—"}
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-sky-300">
-                        {walletCell(c.lastSeen, c.telVar ?? 0)}
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-emerald-400">
-                        {walletCell(c.lastSeen, c.alliancePoints ?? 0)}
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="border-b border-border/60">
-                    <td className="px-4 py-2 text-fg-muted">Bank</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-yellow-200">{formatGold(bankGold)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-fg-subtle">—</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-fg-subtle">—</td>
-                  </tr>
-                </tbody>
-                <tfoot>
-                  <tr className="bg-surface-2/40">
-                    <td className="px-4 py-2.5 font-medium text-fg">Account total</td>
-                    <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-yellow-200">
-                      {formatGold(gold.total)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-sky-300">
-                      {formatNumber(telVarTotal)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-emerald-400">
-                      {formatNumber(apTotal)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </Card>
-        )}
-      </section>
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="shrink-0">
+        <AccountWallet currencies={currencies} title="Account-wide" compact />
+      </div>
 
-      <AccountWallet currencies={currencies} title="Account-wide" />
+      {gold.usedLegacy ? (
+        <Card className="px-4 py-3 text-sm text-fg-muted">
+          Account gold is {formatGold(gold.total)} from the last snapshot, but wallets are not split yet. Log each
+          character out (or ReloadUI) once to fill per-character gold, Tel Var, and Alliance Points.
+        </Card>
+      ) : (
+        <div className="min-h-0 max-h-full overflow-y-auto">
+        <div className="rounded-lg border border-border bg-surface">
+          <div className={`sticky top-0 z-10 grid ${COLS} border-b border-border bg-surface text-xs uppercase tracking-wider text-fg-subtle`}>
+            <div className="px-3 py-2 font-medium">Character</div>
+            <div className="px-3 py-2 text-right font-medium">Gold</div>
+            <div className="px-3 py-2 text-right font-medium">Tel Var</div>
+            <div className="px-3 py-2 text-right font-medium">Alliance Points</div>
+          </div>
+          {characters.map((c) => (
+            <div key={c.id} className={`grid ${COLS} border-b border-border/60 text-sm hover:bg-surface-2/50`}>
+              <div className="min-w-0 px-3 py-1.5">
+                <Link href={`/characters/${encodeURIComponent(c.id)}`} className="block truncate text-fg hover:text-accent hover:underline">
+                  {c.name}
+                </Link>
+              </div>
+              <div className="px-3 py-1.5 text-right tabular-nums text-yellow-200">
+                {c.lastSeen ? formatGold(c.gold ?? 0) : "—"}
+              </div>
+              <div className="px-3 py-1.5 text-right tabular-nums text-sky-300">{walletCell(c.lastSeen, c.telVar ?? 0)}</div>
+              <div className="px-3 py-1.5 text-right tabular-nums text-emerald-400">
+                {walletCell(c.lastSeen, c.alliancePoints ?? 0)}
+              </div>
+            </div>
+          ))}
+          <div className={`grid ${COLS} border-b border-border/60 text-sm`}>
+            <div className="px-3 py-1.5 text-fg-muted">Bank</div>
+            <div className="px-3 py-1.5 text-right tabular-nums text-yellow-200">{formatGold(bankGold)}</div>
+            <div className="px-3 py-1.5 text-right tabular-nums text-fg-subtle">—</div>
+            <div className="px-3 py-1.5 text-right tabular-nums text-fg-subtle">—</div>
+          </div>
+          <div className={`grid ${COLS} bg-surface-2/40 text-sm`}>
+            <div className="px-3 py-2 font-medium text-fg">Account total</div>
+            <div className="px-3 py-2 text-right font-semibold tabular-nums text-yellow-200">{formatGold(gold.total)}</div>
+            <div className="px-3 py-2 text-right font-semibold tabular-nums text-sky-300">{formatNumber(telVarTotal)}</div>
+            <div className="px-3 py-2 text-right font-semibold tabular-nums text-emerald-400">{formatNumber(apTotal)}</div>
+          </div>
+        </div>
+        </div>
+      )}
     </div>
   );
 }

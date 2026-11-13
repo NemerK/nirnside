@@ -803,6 +803,7 @@ local function gatherEquipped()
         bar = e.bar,
         itemId = safe(function() return GetItemLinkItemId(link) end, 0),
         name = safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, "Unknown"),
+        icon = safe(function() return normIcon(GetItemLinkIcon(link)) end, nil),
         quality = qualityString(link),
         setName = hasSet and setName ~= "" and zo_strformat("<<1>>", setName) or nil,
         trait = traitString(link),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, HelpCircle, Minus, Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import { PageScroll, StickyMenu } from "@/components/ui";
 import { formatRemainingSeconds } from "@/lib/dailies/day";
 import {
@@ -33,68 +33,22 @@ function zoneRowOpen(row: PresentedCharacterDailies): boolean {
   return Object.values(row.zoneSlots).some((slot) => slot.status !== "done");
 }
 
-function ModeMark({ label, title, tone }: { label: string; title: string; tone: "hm" | "vet" | "norm" }) {
-  const cls =
-    tone === "hm"
-      ? "border-amber-400/50 bg-amber-400/15 text-amber-600 dark:text-amber-400"
-      : tone === "vet"
-        ? "border-rose-400/50 bg-rose-400/15 text-rose-600 dark:text-rose-300"
-        : "border-sky-400/50 bg-sky-400/15 text-sky-700 dark:text-sky-300";
+function DailyCellView({ cell }: { cell: DailyCell }) {
+  const done = cell.status === "done" || cell.status === "cooldown";
+  const held = cell.status === "accepted" || cell.status === "ready";
   return (
     <span
-      title={title}
-      className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-0.5 text-[9px] font-bold leading-none ${cls}`}
+      title={cell.title}
+      className={`inline-flex h-4 w-4 items-center justify-center rounded border ${
+        done
+          ? "border-ok/50 bg-ok/15 text-ok"
+          : held
+            ? "border-amber-500/70 bg-amber-500/10"
+            : "border-border bg-transparent"
+      }`}
     >
-      {label}
-    </span>
-  );
-}
-
-function DailyCellView({ cell }: { cell: DailyCell }) {
-  const finished = cell.status === "done" || cell.status === "ready" || cell.status === "accepted";
-  if (finished && cell.hardMode === true) {
-    return <ModeMark label="HM" title={cell.title} tone="hm" />;
-  }
-  if (finished && cell.difficulty === "veteran") {
-    return <ModeMark label="Vet" title={cell.title} tone="vet" />;
-  }
-  if (finished && (cell.difficulty === "normal" || cell.hardMode === false)) {
-    return <ModeMark label="N" title={cell.title} tone="norm" />;
-  }
-  if (cell.status === "done" || cell.status === "cooldown") {
-    return (
-      <span
-        title={cell.title}
-        className="inline-flex h-4 w-4 items-center justify-center rounded border border-ok/40 bg-ok/10 text-ok"
-      >
-        <Check className="h-3 w-3" />
-      </span>
-    );
-  }
-  if (cell.status === "accepted" || cell.status === "ready") {
-    return (
-      <span
-        title={cell.title}
-        className={`inline-flex items-center rounded border px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-          cell.status === "ready"
-            ? "border-accent/50 bg-accent-soft text-accent"
-            : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-        }`}
-      >
-        {cell.label}
-      </span>
-    );
-  }
-  if (cell.status === "unknown") {
-    return (
-      <span title={cell.title} className="inline-flex text-fg-subtle/70">
-        <HelpCircle className="h-3.5 w-3.5" />
-      </span>
-    );
-  }
-  return (
-    <span title={cell.title} className="inline-flex h-5 w-5 items-center justify-center text-fg-subtle/40">
-      <Minus className="h-3 w-3" />
+      {done ? <Check className="h-3 w-3" /> : null}
+      {held ? <span className="h-1.5 w-1.5 rounded-[2px] bg-amber-500" /> : null}
     </span>
   );
 }
@@ -286,8 +240,8 @@ export function DailiesBoard({
           </table>
         </div>
         <p className="mt-2 text-[11px] leading-relaxed text-fg-subtle">
-          Check = done today. N / Vet / HM = pledge difficulty. A dash is still available. A question
-          mark was not scanned. Zone dailies are on Zones.
+          Empty box = no quest. A mark in the box = the right quest is picked up and not finished.
+          Check = done for the day. These reset with the daily reset. Zone dailies are on Zones.
         </p>
         </>
         )}

@@ -98,33 +98,30 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <StickyMenu>
-      {/* Tabs — one per Pithka window. */}
-      <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-border">
-        {PITHKA_TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.id ? "border-accent text-fg" : "border-transparent text-fg-muted hover:text-fg"
-            }`}
-          >
-            {t.id}
-          </button>
-        ))}
-      </div>
-
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-1.5">
+        <div className="flex flex-wrap items-center gap-0.5">
+          {PITHKA_TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                tab === t.id ? "bg-accent-soft text-fg" : "text-fg-muted hover:text-fg"
+              }`}
+            >
+              {t.id}
+            </button>
+          ))}
+        </div>
+        <div className="relative min-w-[12rem] flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={`Search ${tab.toLowerCase()}…`}
-            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+            className="w-full rounded-md border border-border bg-bg py-1.5 pl-8 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
           />
         </div>
-        <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
+        <div className="inline-flex rounded-md border border-border bg-bg p-0.5">
           {(
             [
               ["all", "All"],
@@ -135,7 +132,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
             <button
               key={k}
               onClick={() => setFilter(k)}
-              className={`rounded-md px-2.5 py-1.5 text-sm transition-colors ${
+              className={`rounded px-2 py-1 text-sm transition-colors ${
                 filter === k ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg"
               }`}
             >
@@ -143,14 +140,9 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
             </button>
           ))}
         </div>
-        <div className="text-sm text-fg-muted">
-          {summary.earned}/{summary.total} done
-          {summary.triTotal > 0 && (
-            <>
-              {" · "}
-              {summary.triDone}/{summary.triTotal} trifectas
-            </>
-          )}
+        <div className="px-1 text-sm text-fg-muted">
+          {summary.earned}/{summary.total}
+          {summary.triTotal > 0 ? ` · ${summary.triDone}/${summary.triTotal} trifectas` : ""}
         </div>
       </div>
       </StickyMenu>

@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
 import { getSkillLine, getSkillsForLine } from "@/lib/db/catalog-queries";
 import { charactersKnowingSkill, charactersWithSkillLine } from "@/lib/db/overlay";
-import { Badge, Card, PageHeader } from "@/components/ui";
+import { Badge, Card } from "@/components/ui";
 import { GameIcon } from "@/components/game-icon";
 import { SourceBadge } from "@/components/source-badge";
+import { plannerLineIcon } from "@/lib/icons/planner-icons";
+import { resolveSkillIcon, skillIconByName } from "@/lib/icons/skill-icons";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,20 @@ export default async function SkillLinePage({ params }: PageProps<"/encyclopedia
       </Link>
 
       <Card className="mb-6 p-6">
+        <div className="flex items-start gap-3">
+          <GameIcon
+            name={line.name}
+            icon={plannerLineIcon({
+              name: line.name,
+              className: line.className,
+              catalogIcon: line.icon,
+              abilityIcon: skills
+                .map(({ entry: sk }) => sk.icon?.trim() || resolveSkillIcon(sk.name, sk.morphs.map((morph) => morph.name)))
+                .find(Boolean),
+            })}
+            size={48}
+          />
+          <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight text-fg">{line.name}</h1>
           <SourceBadge source={source} />
@@ -44,6 +60,8 @@ export default async function SkillLinePage({ params }: PageProps<"/encyclopedia
             ))}
           </div>
         )}
+          </div>
+        </div>
       </Card>
 
       {skills.length === 0 ? (
@@ -55,10 +73,11 @@ export default async function SkillLinePage({ params }: PageProps<"/encyclopedia
           {skills.map(({ entry: sk, source: ss }) => {
             const morphNames = sk.morphs.map((m) => m.name);
             const known = charactersKnowingSkill([sk.name, ...morphNames]);
+            const baseIcon = sk.icon?.trim() || resolveSkillIcon(sk.name, morphNames);
             return (
               <Card key={sk.id} className="p-4">
                 <div className="flex items-start gap-3">
-                  <GameIcon name={sk.name} icon={sk.icon} size={40} />
+                  <GameIcon name={sk.name} icon={baseIcon} size={40} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-fg">{sk.name}</span>
@@ -73,8 +92,9 @@ export default async function SkillLinePage({ params }: PageProps<"/encyclopedia
                       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {sk.morphs.map((m, i) => (
                           <div key={i} className="rounded-lg border border-border bg-surface-2/60 p-2.5">
-                            <div className="flex items-center gap-1.5 text-sm font-medium text-fg">
-                              <span className="text-accent">◆</span> {m.name}
+                            <div className="flex items-center gap-2 text-sm font-medium text-fg">
+                              <GameIcon name={m.name} icon={m.icon || skillIconByName(m.name) || baseIcon} size={28} />
+                              {m.name}
                             </div>
                             {m.description && <p className="mt-0.5 text-xs text-fg-muted">{m.description}</p>}
                           </div>

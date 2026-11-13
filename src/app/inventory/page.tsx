@@ -71,25 +71,29 @@ export default async function InventoryPage({
   const totalCount = items.reduce((sum, it) => sum + it.count, 0);
 
   // Classic keeps InventoryTabs; Atlas uses chrome tabs — avoid doubling them.
+  const itemList = (
+    <ItemsBody
+      items={items}
+      ownerWallet={ownerWallet}
+      archivedOwner={archivedOwner}
+      totalStacks={totalStacks}
+      totalCount={totalCount}
+    />
+  );
+
   const classicBody = (
     <>
       <StickyMenu className="space-y-3">
         <InventoryTabs current={view} />
         {view === "items" ? <InventoryFilters facets={facets} /> : null}
       </StickyMenu>
-      <PageScroll>
-        {view === "currency" ? (
+      {view === "currency" ? (
+        <div className="flex min-h-0 flex-1 flex-col">
           <CurrencyView />
-        ) : (
-          <ItemsBody
-            items={items}
-            ownerWallet={ownerWallet}
-            archivedOwner={archivedOwner}
-            totalStacks={totalStacks}
-            totalCount={totalCount}
-          />
-        )}
-      </PageScroll>
+        </div>
+      ) : (
+        <PageScroll>{itemList}</PageScroll>
+      )}
     </>
   );
 
@@ -100,19 +104,13 @@ export default async function InventoryPage({
           <InventoryFilters facets={facets} />
         </StickyMenu>
       ) : null}
-      <PageScroll>
-        {view === "currency" ? (
+      {view === "currency" ? (
+        <div className="flex min-h-0 flex-1 flex-col">
           <CurrencyView />
-        ) : (
-          <ItemsBody
-            items={items}
-            ownerWallet={ownerWallet}
-            archivedOwner={archivedOwner}
-            totalStacks={totalStacks}
-            totalCount={totalCount}
-          />
-        )}
-      </PageScroll>
+        </div>
+      ) : (
+        <PageScroll>{itemList}</PageScroll>
+      )}
     </>
   );
 
