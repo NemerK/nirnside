@@ -97,7 +97,7 @@ export function KnowledgeBoard({
         </div>
       </PageScroll>
       {open ? (
-        <Modal title={open.name} onClose={close} maxWidthClass="max-w-6xl">
+        <Modal title={open.name} subtitle={open.className} onClose={close} maxWidthClass="max-w-6xl" stable>
           <KnowledgeDetail character={open} initialTab={initialTab} initialQuery={initialQuery} />
         </Modal>
       ) : null}
@@ -122,9 +122,8 @@ function KnowledgeDetail({
   const q = query.trim().toLowerCase();
 
   return (
-    <div>
-      <p className="mb-3 text-sm text-fg-muted">{character.className}</p>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1">
           {TABS.map((t) => (
             <button
@@ -165,7 +164,7 @@ function KnowledgeDetail({
           ))}
         </div>
       </div>
-      <div className="max-h-[min(68vh,42rem)] overflow-y-auto pr-1">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {!character.scanned ? (
           <Card className="p-4 text-sm text-fg-muted">
             {character.name} has not been logged out with Snapshot 0.9.28 yet. Research, motifs, and recipes stay
@@ -173,18 +172,22 @@ function KnowledgeDetail({
           </Card>
         ) : tab === "research" ? (
           <ResearchPanel research={character.research} query={q} filter={filter} />
-        ) : tab === "motifs" ? (
-          <MotifPanel styles={character.motifs} query={q} filter={filter} />
         ) : (
-          <RecipePanel
-            lists={tab === "plans" ? character.plans : character.recipes}
-            query={q}
-            filter={filter}
-            empty={tab === "plans" ? "No furnishing plans in the last scan." : "No recipes in the last scan."}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {tab === "motifs" ? (
+              <MotifPanel styles={character.motifs} query={q} filter={filter} />
+            ) : (
+              <RecipePanel
+                lists={tab === "plans" ? character.plans : character.recipes}
+                query={q}
+                filter={filter}
+                empty={tab === "plans" ? "No furnishing plans in the last scan." : "No recipes in the last scan."}
+              />
+            )}
+          </div>
         )}
       </div>
-      <p className="mt-3 text-xs text-fg-subtle">
+      <p className="mt-3 shrink-0 text-xs text-fg-subtle">
         {character.scribingCount > 0
           ? `${character.scribingCount} scribing scripts already scanned — see `
           : "Scribing scripts are already on the character sheet and in "}
@@ -301,8 +304,8 @@ function ResearchPanel({
     .filter((entry) => entry.lines.length > 0);
 
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-3 flex shrink-0 flex-wrap items-center gap-1.5">
         {research.crafts.map((craft) => {
           const active = craft.craft === selected.craft;
           return (
@@ -338,23 +341,21 @@ function ResearchPanel({
           {selected.maxSlots > 0 ? ` · ${selected.maxSlots} slots` : ""}
         </p>
       </div>
-      {timers.length > 0 ? (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {timers.map((row) => (
-            <span
-              key={`${row.craft}-${row.line}-${row.trait}`}
-              className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
-            >
-              {row.line} · {row.trait}
-              {row.remainingSeconds != null ? ` · ${formatResearchRemaining(row.remainingSeconds)}` : ""}
-            </span>
-          ))}
-        </div>
-      ) : null}
+      <div className="mb-3 flex min-h-7 shrink-0 flex-wrap items-center gap-1.5">
+        {timers.map((row) => (
+          <span
+            key={`${row.craft}-${row.line}-${row.trait}`}
+            className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
+          >
+            {row.line} · {row.trait}
+            {row.remainingSeconds != null ? ` · ${formatResearchRemaining(row.remainingSeconds)}` : ""}
+          </span>
+        ))}
+      </div>
       {groups.length === 0 ? (
         <Card className="p-4 text-sm text-fg-muted">Nothing in {selected.name} matches this filter.</Card>
       ) : (
-        <div className="space-y-3">
+        <div key={selected.craft} className="min-h-0 flex-1 space-y-3 overflow-y-auto">
           {groups.map(({ gi, group, lines }) => (
             <Card key={`${selected.craft}-${gi}`} className="overflow-x-auto">
               <table className="w-full min-w-[36rem] border-collapse text-left text-xs">
