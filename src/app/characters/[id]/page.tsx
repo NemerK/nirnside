@@ -125,13 +125,18 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     goalIndexes,
     (g) => (g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined),
   );
-  const scriptByName = new Map(
-    safeList(() => getScripts()).map((row) => [row.entry.name.trim().toLowerCase(), row.entry]),
-  );
-  const scriptRows: CharacterScript[] = c.scribingScripts.map((name) => {
-    const entry = scriptByName.get(name.trim().toLowerCase());
-    return { name, slot: entry?.slot ?? null, effect: entry?.effect ?? "" };
-  });
+  const knownScripts = new Set(c.scribingScripts.map((name) => name.trim().toLowerCase()));
+  const scriptRows: CharacterScript[] = safeList(() => getScripts()).map((row) => ({
+    name: row.entry.name,
+    slot: row.entry.slot,
+    effect: row.entry.effect ?? "",
+    known: knownScripts.has(row.entry.name.trim().toLowerCase()),
+  }));
+  const listed = new Set(scriptRows.map((script) => script.name.trim().toLowerCase()));
+  for (const name of c.scribingScripts) {
+    if (listed.has(name.trim().toLowerCase())) continue;
+    scriptRows.push({ name, slot: null, effect: "", known: true });
+  }
 
   // Cross-link every set worn in a Wizard's Wardrobe setup back to its catalog page.
   const hrefForSet: Record<string, string> = {};
