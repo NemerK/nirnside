@@ -110,6 +110,17 @@ export function abilityRowsOnPlannerLine(
   );
 }
 
+/**
+ * Abilities the planner can target. Passives come with the skill-line rank,
+ * so they are not a separate IV / morph choice.
+ */
+export function activeAbilityRowsOnPlannerLine(
+  rows: readonly PlannerAbilityRow[],
+  line: { name: string; className: string | null },
+): PlannerAbilityRow[] {
+  return abilityRowsOnPlannerLine(rows, line).filter((row) => !row.passive);
+}
+
 /** Open/selected state for a line. Class Mastery keys include the class. */
 export function plannerLineKey(line: { name: string; className: string | null }): string {
   const name = line.name.trim().toLowerCase();

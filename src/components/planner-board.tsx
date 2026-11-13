@@ -13,7 +13,7 @@ import { classIcon } from "@/lib/classes";
 import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
 import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
-import { abilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "@/lib/planner/skill-groups";
+import { activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "@/lib/planner/skill-groups";
 import { groupPlacedGoals } from "@/lib/planner/goal-groups";
 import { GroupedTargets } from "./goal-groups";
 import { isExcludedSkillLine } from "@/lib/catalog/excluded";
@@ -87,7 +87,7 @@ export function PlannerBoard({
   const [scope, setScope] = useState<"account" | "role" | "class" | "character">("account");
   const [scopeKey, setScopeKey] = useState("");
   const [tier, setTier] = useState<GoalTier>("essential");
-  /** 0 = the live cap (IV, or the passive's own cap). 1–4 = that rank. */
+  /** 0 = the live cap (IV). 1–4 = that rank. */
   const [abilityRank, setAbilityRank] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -743,7 +743,7 @@ function ComposerBar({
       </div>
       {showRank && (
         <p className="mt-2 text-xs text-fg-subtle">
-          Cap is each skill&apos;s own maximum from the game: IV for an ability or morph, or the passive&apos;s upgrade cap.
+          Cap is IV, the rank an ability or morph reaches in the game. Passives come with the skill line.
         </p>
       )}
     </div>
@@ -817,16 +817,21 @@ function AbilityCategories({
 }) {
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [openLines, setOpenLines] = useState<Set<string>>(new Set());
+  const rowsFor = (line: PlannerChoices["lines"][number]) =>
+    activeAbilityRowsOnPlannerLine(choices.abilityRows ?? [], line);
   const categories = useMemo(
     () =>
       groupPlannerLines(
-        choices.lines.filter((l) => !isExcludedSkillLine(l) && plannerClassScopeAllows(l, selectedClass)),
+        choices.lines.filter(
+          (line) =>
+            !isExcludedSkillLine(line) &&
+            plannerClassScopeAllows(line, selectedClass) &&
+            activeAbilityRowsOnPlannerLine(choices.abilityRows ?? [], line).length > 0,
+        ),
         choices.classes,
       ),
-    [choices.lines, choices.classes, selectedClass],
+    [choices.lines, choices.abilityRows, choices.classes, selectedClass],
   );
-  const rowsFor = (line: PlannerChoices["lines"][number]) =>
-    abilityRowsOnPlannerLine(choices.abilityRows ?? [], line);
 
   function toggleSet(setter: (value: Set<string>) => void, current: Set<string>, key: string) {
     const next = new Set(current);
