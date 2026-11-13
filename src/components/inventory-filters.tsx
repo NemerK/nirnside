@@ -61,8 +61,6 @@ export function InventoryFilters({ facets }: { facets: FacetValues }) {
         options={facets.sets.map((s) => ({ value: s, label: s }))} />
       <FilterSelect label="Trait" value={params.get("trait") ?? ""} onChange={(v) => setParam("trait", v)}
         options={facets.traits.map((t) => ({ value: t, label: t }))} />
-      <FilterSelect label="Owner" value={params.get("owner") ?? ""} onChange={(v) => setParam("owner", v)}
-        options={facets.owners.map((o) => ({ value: o, label: o }))} />
 
       {hasFilters && (
         <button

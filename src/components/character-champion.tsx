@@ -1,5 +1,9 @@
 import Link from "next/link";
 import type { Character } from "@/lib/snapshot/schema";
+import { getCPStars } from "@/lib/db/catalog-queries";
+import { GameIcon } from "./game-icon";
+
+const SLOT_COUNT = 4;
 
 const ORDER = ["warfare", "fitness", "craft"];
 const EDGE: Record<string, string> = {
@@ -21,6 +25,7 @@ export function CharacterChampion({
 }) {
   const disciplines = [...champion].sort((a, b) => rank(a.name) - rank(b.name));
   const slotted = disciplines.flatMap((disc) => disc.stars.filter((star) => star.slotted));
+  const icons = cpIcons();
 
   if (disciplines.length === 0) {
     return <p className="text-sm text-fg-muted">No champion stars captured for this character yet.</p>;
@@ -49,18 +54,42 @@ export function CharacterChampion({
                 <h2 className="text-sm font-medium text-fg">{disc.name}</h2>
                 <span className="text-xs tabular-nums text-fg-subtle">{spent.toLocaleString("en-US")}</span>
               </div>
-              {onBar.length > 0 ? (
-                <ul className="divide-y divide-border">
-                  {onBar.map((star) => (
-                    <li key={star.name} className="flex items-center justify-between gap-2 px-3 py-1.5">
-                      <span className="min-w-0 truncate text-sm text-fg">{star.name}</span>
-                      <span className="shrink-0 text-xs tabular-nums text-fg-muted">{star.points}</span>
+              <div className="grid grid-cols-2 gap-1.5 p-2">
+                {Array.from({ length: SLOT_COUNT }, (_, index) => onBar[index] ?? null).map((star, index) => {
+                  const icon = star ? icons.get(star.name.trim().toLowerCase()) : null;
+                  return (
+                    <div
+                      key={star?.name ?? `empty-${index}`}
+                      className="flex min-w-0 items-center gap-1.5 rounded border border-border bg-bg px-1.5 py-1"
+                      title={star ? `${star.name} · ${star.points}` : "Empty slot"}
+                    >
+                      {icon ? (
+                        <GameIcon name={star?.name ?? ""} icon={icon} size={22} bare />
+                      ) : (
+                        <span
+                          className="h-5 w-5 shrink-0 rounded-full border-2"
+                          style={{ borderColor: star ? edge : "var(--border)" }}
+                          aria-hidden
+                        />
+                      )}
+                      <span className="min-w-0">
+                        <span className="block truncate text-[11px] text-fg">{star?.name ?? "Empty"}</span>
+                        {star ? <span className="block text-[10px] tabular-nums text-fg-subtle">{star.points}</span> : null}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {onBar.length > SLOT_COUNT ? (
+                <ul className="divide-y divide-border border-t border-border">
+                  {onBar.slice(SLOT_COUNT).map((star) => (
+                    <li key={star.name} className="flex items-center justify-between gap-2 px-3 py-1 text-xs">
+                      <span className="min-w-0 truncate text-fg">{star.name}</span>
+                      <span className="shrink-0 tabular-nums text-fg-muted">{star.points}</span>
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="px-3 py-2 text-xs text-fg-subtle">Nothing slotted</p>
-              )}
+              ) : null}
               {invested.length > 0 ? (
                 <ul className="border-t border-border">
                   {invested.map((star) => (
@@ -82,4 +111,17 @@ export function CharacterChampion({
 function rank(name: string): number {
   const index = ORDER.indexOf(name.trim().toLowerCase());
   return index < 0 ? ORDER.length : index;
+}
+
+function cpIcons(): Map<string, string> {
+  const map = new Map<string, string>();
+  try {
+    for (const row of getCPStars()) {
+      const icon = row.entry.icon?.trim();
+      if (icon) map.set(row.entry.name.trim().toLowerCase(), icon);
+    }
+  } catch {
+    // The catalog is optional; the four slots still render by name.
+  }
+  return map;
 }

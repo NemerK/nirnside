@@ -3,92 +3,60 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 import {
   collectionsSummaryLine,
-  type CollectionTab,
   type CollectionsPresent,
 } from "@/lib/collections/present";
+import type { PresentedOutfitCategory } from "@/lib/knowledge/present";
 import { AtlasEmpty, AtlasMeter, AtlasPage, AtlasPanel, AtlasStat } from "./ui";
 
-const TABS: { id: CollectionTab; label: string; href: string }[] = [
-  { id: "sets", label: "Sets", href: "/collections?tab=sets" },
-  { id: "styles", label: "Styles", href: "/collections?tab=styles" },
-  { id: "houses", label: "Houses", href: "/collections?tab=houses" },
-];
-
-function resolveTab(tab: string | undefined, fallback: CollectionTab): CollectionTab {
-  if (tab === "sets" || tab === "styles" || tab === "houses") return tab;
-  return fallback;
-}
-
 /**
- * Account → Collections hub. Classic still has stickerbook / styles / houses as
- * separate modules; Atlas folds them here. Optional panels can embed the full
- * Classic boards; otherwise we show summary + deep links.
+ * Account → Collections. Sets, outfit styles, and houses share one page.
+ * Classic still keeps each system on its own route; those stay linked from here.
  */
 export function AtlasCollectionsHub({
   collections,
-  tab,
   setsPanel,
   stylesPanel,
   housesPanel,
 }: {
   collections: CollectionsPresent;
-  tab?: string;
   setsPanel?: ReactNode;
   stylesPanel?: ReactNode;
   housesPanel?: ReactNode;
 }) {
-  const active = resolveTab(tab, collections.defaultTab);
   const stylesPct = collections.styles.total
     ? Math.round((collections.styles.unlocked / collections.styles.total) * 100)
     : 0;
 
   return (
-    <AtlasPage
-      title="Collections"
-      subtitle={collectionsSummaryLine(collections)}
-    >
-      <div className="mb-6 flex flex-wrap gap-1 border-b border-border pb-3">
-        {TABS.map((t) => {
-          const on = t.id === active;
-          return (
-            <Link
-              key={t.id}
-              href={t.href}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                on ? "bg-accent-soft text-accent" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
-              }`}
-            >
-              {t.label}
-            </Link>
-          );
-        })}
+    <AtlasPage title="Collections" subtitle={collectionsSummaryLine(collections)}>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section id="sets">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Sets</h2>
+          {setsPanel ?? (
+            <SetsSummary
+              pct={collections.sets.pct}
+              collected={collections.sets.collected}
+              total={collections.sets.total}
+              setCount={collections.sets.setCount}
+            />
+          )}
+        </section>
+        <section id="styles">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Styles</h2>
+          {stylesPanel ?? (
+            <StylesSummary
+              unlocked={collections.styles.unlocked}
+              total={collections.styles.total}
+              pct={stylesPct}
+              categories={collections.styles.categories}
+            />
+          )}
+        </section>
+        <section id="houses" className="lg:col-span-2">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Houses</h2>
+          {housesPanel ?? <HousesSummary collections={collections} />}
+        </section>
       </div>
-
-      {active === "sets" ? (
-        setsPanel ?? (
-          <SetsSummary
-            pct={collections.sets.pct}
-            collected={collections.sets.collected}
-            total={collections.sets.total}
-            setCount={collections.sets.setCount}
-          />
-        )
-      ) : null}
-
-      {active === "styles" ? (
-        stylesPanel ?? (
-          <StylesSummary
-            unlocked={collections.styles.unlocked}
-            total={collections.styles.total}
-            pct={stylesPct}
-            categories={collections.styles.categories.length}
-          />
-        )
-      ) : null}
-
-      {active === "houses" ? (
-        housesPanel ?? <HousesSummary collections={collections} />
-      ) : null}
     </AtlasPage>
   );
 }
@@ -145,7 +113,7 @@ function StylesSummary({
   unlocked: number;
   total: number;
   pct: number;
-  categories: number;
+  categories: PresentedOutfitCategory[];
 }) {
   if (total === 0) {
     return (
@@ -162,11 +130,23 @@ function StylesSummary({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <AtlasStat label="Unlocked" value={`${pct}%`} hint={`${unlocked}/${total} styles`} />
-        <AtlasStat label="Categories" value={categories} />
+        <AtlasStat label="Categories" value={categories.length} />
         <AtlasStat label="Still locked" value={Math.max(0, total - unlocked)} />
       </div>
       <AtlasPanel>
         <AtlasMeter label="Outfit styles" done={unlocked} total={total} />
+        {categories.length > 0 ? (
+          <ul className="mt-3 divide-y divide-border">
+            {categories.map((category) => (
+              <li key={category.name} className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
+                <span className="min-w-0 truncate text-fg">{category.name}</span>
+                <span className="shrink-0 tabular-nums text-fg-muted">
+                  {category.unlocked}/{category.total}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <p className="mt-4 text-sm text-fg-muted">
           Open{" "}
           <Link href="/styles" className="text-accent hover:underline">

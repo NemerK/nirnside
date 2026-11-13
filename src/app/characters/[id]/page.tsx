@@ -8,8 +8,6 @@ import {
   Moon,
   ShieldQuestion,
   Sparkles,
-  Swords,
-  Users,
 } from "lucide-react";
 import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
@@ -28,6 +26,7 @@ import { CharacterGoals } from "@/components/goals-board";
 import { CharacterTabs } from "@/components/character-tabs";
 import { CharacterChampion } from "@/components/character-champion";
 import { CharacterScripts, type CharacterScript } from "@/components/character-scripts";
+import { CharacterLoadout } from "@/components/character-loadout";
 import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
@@ -74,9 +73,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     roles = [];
   }
   const accent = ALLIANCE_ACCENT[c.alliance] ?? "var(--accent)";
-  const front = c.equipped.filter((e) => e.bar === "front");
-  const back = c.equipped.filter((e) => e.bar === "back");
-  const armorJewelry = c.equipped.filter((e) => e.bar === null);
   let lore = new Map() as ReturnType<typeof catalogAbilityLoreFor>;
   try {
     const names: string[] = [];
@@ -339,36 +335,8 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         </section>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Equipped gear */}
-          <section>
-            <SectionTitle>Equipped</SectionTitle>
-            {c.equipped.length === 0 ? (
-              <Card className="px-4 py-6 text-sm text-fg-muted">No gear captured for this character yet.</Card>
-            ) : (
-              <div className="space-y-4">
-                {armorJewelry.length > 0 && <GearGroup title="Armor & Jewelry" items={armorJewelry} icon={<Users className="h-4 w-4" />} />}
-                {front.length > 0 && <GearGroup title="Front Bar" items={front} icon={<Swords className="h-4 w-4" />} />}
-                {back.length > 0 && <GearGroup title="Back Bar" items={back} icon={<Swords className="h-4 w-4" />} />}
-              </div>
-            )}
-          </section>
-        </div>
-
-        <div className="space-y-6">
-          <section>
-            <SectionTitle>Attributes</SectionTitle>
-            <Card className="grid grid-cols-3 divide-x divide-border">
-              {(["magicka", "health", "stamina"] as const).map((k) => (
-                <div key={k} className="px-3 py-3 text-center">
-                  <div className="text-lg font-semibold text-fg">{c.attributes[k] ?? 0}</div>
-                  <div className="text-xs capitalize text-fg-subtle">{k}</div>
-                </div>
-              ))}
-            </Card>
-          </section>
-
+      {(c.companions.length > 0 || hasKnowledge) && (
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Companions */}
           {c.companions.length > 0 && (
             <section>
@@ -437,9 +405,12 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               </div>
             </section>
           )}
-        </div>
       </div>
+      )}
           </>
+        }
+        equipped={
+          <CharacterLoadout equipped={c.equipped} attributes={c.attributes} wardrobe={c.wardrobe} />
         }
         targets={
           <CharacterGoals
@@ -470,48 +441,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         champion={<CharacterChampion champion={c.champion} championPoints={c.championPoints} />}
       />
     </div>
-  );
-}
-
-function GearGroup({
-  title,
-  items,
-  icon,
-}: {
-  title: string;
-  items: Character["equipped"];
-  icon: React.ReactNode;
-}) {
-  return (
-    <Card className="p-4">
-      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-        {icon} {title}
-      </div>
-      <ul className="divide-y divide-border">
-        {items.map((e, i) => (
-          <li key={i} className="flex items-center justify-between gap-3 py-2">
-            <div className="min-w-0">
-              <div className={`truncate text-sm font-medium ${qualityText(e.quality)}`}>{e.name}</div>
-              <div className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-fg-subtle">
-                <span>{e.slot}</span>
-                {e.setName && (
-                  <Link href={setHref({ name: e.setName })} className="text-accent hover:underline">
-                    · {e.setName}
-                  </Link>
-                )}
-                {e.trait && <span>· {e.trait}</span>}
-                {e.enchant && <span>· {e.enchant}</span>}
-              </div>
-            </div>
-            {e.scribing.length > 0 && (
-              <Badge tone="accent" className="shrink-0">
-                <Sparkles className="h-3 w-3" /> {e.scribing[0]}
-              </Badge>
-            )}
-          </li>
-        ))}
-      </ul>
-    </Card>
   );
 }
 

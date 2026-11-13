@@ -97,24 +97,25 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <StickyMenu>
-      {/* Tabs — one per Pithka window. */}
-      <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-border">
-        {PITHKA_TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.id ? "border-accent text-fg" : "border-transparent text-fg-muted hover:text-fg"
-            }`}
-          >
-            {t.id}
-          </button>
-        ))}
+      <StickyMenu className="space-y-3">
+      {/* Tabs sit on their own surface so the strip above and the filters below read as separate. */}
+      <div className="rounded-lg border border-border bg-surface px-1 pt-1">
+        <div className="flex flex-wrap items-center gap-1 border-b border-border">
+          {PITHKA_TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`-mb-px rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                tab === t.id ? "border-accent bg-bg-elev text-fg" : "border-transparent text-fg-muted hover:text-fg"
+              }`}
+            >
+              {t.id}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-bg-elev/40 p-2">
         <div className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
           <input
