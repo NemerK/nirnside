@@ -13,10 +13,13 @@ export function OutfitStylesGrid({
   presented,
   motifKeys,
   initialQuery,
+  contained = false,
 }: {
   presented: PresentedOutfitStyles;
   motifKeys: string[];
   initialQuery?: string;
+  /** Grow with the page instead of taking over the pane's scroll. */
+  contained?: boolean;
 }) {
   const knownMotifs = useMemo(() => new Set(motifKeys), [motifKeys]);
   const [categoryName, setCategoryName] = useState(presented.categories[0]?.name ?? "");
@@ -45,8 +48,56 @@ export function OutfitStylesGrid({
     return <Card className="p-4 text-sm text-fg-muted">No Outfit Styles in the last scan.</Card>;
   }
 
+  const list = (
+    <>
+      {visibleGroups.map((group) => (
+            <section key={group.name}>
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-sm font-semibold text-fg">{group.name}</h3>
+                <p className="text-xs text-fg-subtle">
+                  {group.unlocked}/{group.total} unlocked
+                  {knownMotifs.has(group.motifKey) ? (
+                    <>
+                      {" "}
+                      ·{" "}
+                      <Link href={`/knowledge?tab=motifs&q=${encodeURIComponent(group.name)}`} className="text-accent hover:underline">
+                        Motif known
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                {group.styles.map((style) => (
+                  <li key={style.collectibleId}>
+                    <Card className={`flex items-start gap-2 p-2 ${style.unlocked ? "" : "opacity-70"}`}>
+                      <GameIcon name={style.name} icon={style.icon ?? undefined} size={40} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-fg">{style.name}</p>
+                        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-fg-subtle">
+                          {style.unlocked ? (
+                            <>
+                              <Check className="h-3 w-3 text-ok" /> Unlocked
+                            </>
+                          ) : (
+                            "Locked"
+                          )}
+                        </p>
+                      </div>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            </section>
+      ))}
+      {visibleGroups.length === 0 && (
+        <Card className="p-4 text-sm text-fg-muted">No styles in this category match the filter.</Card>
+      )}
+    </>
+  );
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className={contained ? "flex flex-col gap-4" : "flex min-h-0 flex-1 flex-col"}>
       <StickyMenu>
         <div className="flex flex-wrap gap-1.5">
           {presented.categories.map((c) => {
@@ -99,53 +150,7 @@ export function OutfitStylesGrid({
         </div>
       </StickyMenu>
 
-      <PageScroll>
-        <div className="space-y-5">
-          {visibleGroups.map((group) => (
-            <section key={group.name}>
-              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-sm font-semibold text-fg">{group.name}</h3>
-                <p className="text-xs text-fg-subtle">
-                  {group.unlocked}/{group.total} unlocked
-                  {knownMotifs.has(group.motifKey) ? (
-                    <>
-                      {" "}
-                      ·{" "}
-                      <Link href={`/knowledge?tab=motifs&q=${encodeURIComponent(group.name)}`} className="text-accent hover:underline">
-                        Motif known
-                      </Link>
-                    </>
-                  ) : null}
-                </p>
-              </div>
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                {group.styles.map((style) => (
-                  <li key={style.collectibleId}>
-                    <Card className={`flex items-start gap-2 p-2 ${style.unlocked ? "" : "opacity-70"}`}>
-                      <GameIcon name={style.name} icon={style.icon ?? undefined} size={40} />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-fg">{style.name}</p>
-                        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-fg-subtle">
-                          {style.unlocked ? (
-                            <>
-                              <Check className="h-3 w-3 text-ok" /> Unlocked
-                            </>
-                          ) : (
-                            "Locked"
-                          )}
-                        </p>
-                      </div>
-                    </Card>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-          {visibleGroups.length === 0 && (
-            <Card className="p-4 text-sm text-fg-muted">No styles in this category match the filter.</Card>
-          )}
-        </div>
-      </PageScroll>
+      {contained ? <div className="space-y-5">{list}</div> : <PageScroll><div className="space-y-5">{list}</div></PageScroll>}
     </div>
   );
 }

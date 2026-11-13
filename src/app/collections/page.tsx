@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { BookMarked, Home, Shirt } from "lucide-react";
-import { getHouses, getOutfitStyles, getStickerbook, getStickerbookStats } from "@/lib/db/queries";
+import { getCharactersFull, getHouses, getOutfitStyles, getStickerbook, getStickerbookStats } from "@/lib/db/queries";
 import { presentCollections } from "@/lib/collections/present";
+import { knownMotifKeys } from "@/lib/knowledge/present";
+import { liveCharacters } from "@/lib/snapshot/roster";
 import { LookSwitch } from "@/components/look-switch";
 import { AtlasCollectionsHub } from "@/components/atlas/collections-hub";
 import { Card, PageFrame, PageHeader } from "@/components/ui";
@@ -13,6 +15,11 @@ export default async function CollectionsPage() {
   const stickerStats = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
   const outfitStyles = safe(() => getOutfitStyles()) ?? [];
   const houses = safe(() => getHouses()) ?? [];
+  const motifKeys = [
+    ...new Set(
+      liveCharacters(safe(() => getCharactersFull()) ?? []).flatMap((character) => [...knownMotifKeys(character.motifs)]),
+    ),
+  ];
   const collections = presentCollections({
     stickerbook,
     stickerStats,
@@ -62,7 +69,7 @@ export default async function CollectionsPage() {
           </div>
         </PageFrame>
       }
-      atlas={<AtlasCollectionsHub collections={collections} />}
+      atlas={<AtlasCollectionsHub collections={collections} motifKeys={motifKeys} />}
     />
   );
 }
