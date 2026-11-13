@@ -7,6 +7,7 @@ export function AtlasPage({
   subtitle,
   action,
   compact,
+  fill,
   children,
 }: {
   title: string;
@@ -14,6 +15,8 @@ export function AtlasPage({
   action?: ReactNode;
   /** Shorter header so a board underneath can start higher. */
   compact?: boolean;
+  /** Pass remaining height to children so a list can scroll under a frozen header. */
+  fill?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -31,7 +34,7 @@ export function AtlasPage({
           </p>
         ) : null}
       </header>
-      <div className="min-h-0 flex-1">{children}</div>
+      <div className={`min-h-0 flex-1 ${fill ? "flex flex-col" : ""}`}>{children}</div>
     </div>
   );
 }

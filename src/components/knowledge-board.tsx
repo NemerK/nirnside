@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { Check, Minus, Search } from "lucide-react";
-import { Card, PageScroll } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { Modal } from "@/components/modal";
 import { GameIcon } from "@/components/game-icon";
 import { classIcon } from "@/lib/classes";
@@ -62,40 +62,38 @@ export function KnowledgeBoard({
   if (characters.length === 0) return null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <PageScroll>
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
-          <div className={`hidden items-center gap-3 border-b border-border px-3 py-2 text-[11px] font-medium text-fg-subtle sm:grid ${COLUMNS}`}>
-            <span>Class</span>
-            <span>Name</span>
-            <span>Research</span>
-            <span>Motifs</span>
-            <span>Recipes</span>
-            <span>Plans</span>
-          </div>
-          <ul>
-            {characters.map((character) => (
-              <li key={character.id} className="border-b border-border last:border-b-0">
-                <button
-                  type="button"
-                  onClick={() => setOpenId(character.id)}
-                  className={`grid w-full items-center gap-x-3 gap-y-2 px-3 py-2 text-left hover:bg-surface-2 ${COLUMNS}`}
-                >
-                  <GameIcon name={character.className} icon={classIcon(character.className)} size={28} bare />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-fg">{character.name}</span>
-                    <span className="block truncate text-xs text-fg-subtle sm:hidden">{character.className}</span>
-                  </span>
-                  <ProgressCell label="Research" tally={researchTally(character)} />
-                  <ProgressCell label="Motifs" tally={motifTally(character)} />
-                  <ProgressCell label="Recipes" tally={listTally(character.scanned, character.recipes)} />
-                  <ProgressCell label="Plans" tally={listTally(character.scanned, character.plans)} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </PageScroll>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+      <div className={`sticky top-0 z-10 hidden shrink-0 items-center gap-3 border-b border-border bg-surface px-3 py-2 text-[11px] font-medium text-fg-subtle sm:grid ${COLUMNS}`}>
+        <span>Class</span>
+        <span>Name</span>
+        <span>Research</span>
+        <span>Motifs</span>
+        <span>Recipes</span>
+        <span>Plans</span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <ul>
+          {characters.map((character) => (
+            <li key={character.id} className="border-b border-border last:border-b-0">
+              <button
+                type="button"
+                onClick={() => setOpenId(character.id)}
+                className={`grid w-full items-center gap-x-3 gap-y-2 px-3 py-2 text-left hover:bg-surface-2 ${COLUMNS}`}
+              >
+                <GameIcon name={character.className} icon={classIcon(character.className)} size={28} bare />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-fg">{character.name}</span>
+                  <span className="block truncate text-xs text-fg-subtle sm:hidden">{character.className}</span>
+                </span>
+                <ProgressCell label="Research" tally={researchTally(character)} />
+                <ProgressCell label="Motifs" tally={motifTally(character)} />
+                <ProgressCell label="Recipes" tally={listTally(character.scanned, character.recipes)} />
+                <ProgressCell label="Plans" tally={listTally(character.scanned, character.plans)} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
       {open ? (
         <Modal title={open.name} onClose={close} maxWidthClass="max-w-6xl">
           <KnowledgeDetail character={open} initialTab={initialTab} initialQuery={initialQuery} />
