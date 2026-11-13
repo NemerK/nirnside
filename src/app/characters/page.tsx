@@ -49,7 +49,7 @@ export default async function CharactersPage({
   };
   const full = liveCharacters(safe(() => getCharactersFull()) ?? []);
   const source = full.length > 0 ? full : characters;
-  const cards = presentCharacterWorkspaceCards(source, goals, indexes, assignments);
+  const cards = presentCharacterWorkspaceCards(source, goals, indexes, assignments, roles);
   const ordered = applyRosterOrder(cards, safe(() => getRosterOrder()) ?? []);
 
   const classic =

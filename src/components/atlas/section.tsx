@@ -7,14 +7,12 @@ import { AtlasPage } from "./ui";
  * page header with Atlas IA grains.
  */
 export function AtlasSection({
-  grain,
   title,
   subtitle,
   action,
   compact,
   children,
 }: {
-  grain: string;
   title: string;
   subtitle?: string;
   action?: ReactNode;
@@ -22,7 +20,7 @@ export function AtlasSection({
   children: ReactNode;
 }) {
   return (
-    <AtlasPage grain={grain} title={title} subtitle={subtitle} action={action} compact={compact}>
+    <AtlasPage title={title} subtitle={subtitle} action={action} compact={compact}>
       {children}
     </AtlasPage>
   );

@@ -146,7 +146,6 @@ export function AtlasHome({
 
   return (
     <AtlasPage
-      grain="Account overview"
       title={account.displayName}
       subtitle={`${account.region}${account.esoPlus ? " · ESO+" : ""} · snapshot ${timeAgo(account.lastSnapshot)}`}
     >

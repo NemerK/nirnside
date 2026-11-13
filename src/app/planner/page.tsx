@@ -58,7 +58,6 @@ export default function PlannerPage() {
         }
         atlas={
           <AtlasSection
-            grain="Planning"
             title="Planner"
             subtitle="Player-authored targets on top of the snapshot — the only place goals are created."
           >
@@ -100,7 +99,6 @@ export default function PlannerPage() {
       }
       atlas={
         <AtlasSection
-          grain="Planning"
           title="Planner"
           subtitle="Author essential, optional, and completionist targets. Home and the roster only show progress."
         >

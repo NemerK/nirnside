@@ -44,7 +44,6 @@ export function AtlasCollectionsHub({
 
   return (
     <AtlasPage
-      grain="Account"
       title="Collections"
       subtitle={collectionsSummaryLine(collections)}
     >

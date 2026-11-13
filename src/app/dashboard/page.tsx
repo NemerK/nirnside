@@ -283,7 +283,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       }
       atlas={
         <AtlasSection
-          grain="Characters"
           title="Dashboard"
           subtitle="Kept for bookmarks. Atlas puts the same progress meters on the Roster — open a character there for the workspace."
           action={sortToggle}

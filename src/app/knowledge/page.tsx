@@ -115,7 +115,6 @@ export default async function KnowledgePage({
       }
       atlas={
         <AtlasSection
-          grain="Characters"
           title="Craft knowledge"
           compact
           action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}

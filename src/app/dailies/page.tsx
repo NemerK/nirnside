@@ -107,7 +107,6 @@ export default function DailiesPage() {
       }
       atlas={
         <AtlasSection
-          grain="Account"
           title="Dailies"
           subtitle="Account board with one row per character — randoms, writs, pledges, and zone dailies against the daily reset."
           action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}

@@ -6,6 +6,7 @@ import { GripVertical } from "lucide-react";
 import { classIcon } from "@/lib/classes";
 import type { CharacterWorkspaceCard, ProgressTally } from "@/lib/characters/workspace";
 import { GameIcon } from "../game-icon";
+import { RoleBadge } from "../role-badge";
 
 function move<T>(items: T[], from: number, to: number): T[] {
   if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return items;
@@ -66,7 +67,7 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
   }
 
   const columns =
-    "grid-cols-[2rem_2.25rem_minmax(0,1fr)] gap-x-4 sm:grid-cols-[2rem_2.25rem_15rem_13rem_13rem] sm:justify-start sm:gap-x-6";
+    "grid-cols-[2rem_2.25rem_minmax(0,1fr)] gap-x-4 sm:grid-cols-[2rem_2.25rem_13rem_9rem_11.5rem_11.5rem] sm:justify-start sm:gap-x-5";
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
@@ -76,6 +77,7 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
         <span aria-hidden="true" />
         <span>Class</span>
         <span>Name</span>
+        <span>Role</span>
         <span>Targets</span>
         <span>Research</span>
       </div>
@@ -120,6 +122,18 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
               <span className="block truncate text-sm font-medium text-fg hover:text-accent">{card.name}</span>
               <span className="block truncate text-xs text-fg-subtle sm:hidden">{card.className}</span>
             </Link>
+            <div className="col-span-3 min-w-0 pl-11 sm:col-span-1 sm:pl-0">
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle sm:hidden">Role</p>
+              {card.roles.length === 0 ? (
+                <span className="text-xs text-fg-subtle">—</span>
+              ) : (
+                <span className="flex flex-wrap gap-1">
+                  {card.roles.map((role) => (
+                    <RoleBadge key={role.id} role={role} />
+                  ))}
+                </span>
+              )}
+            </div>
             <div className="col-span-3 min-w-0 pl-11 sm:col-span-1 sm:pl-0">
               <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle sm:hidden">Targets</p>
               <Bar tally={card.mandatoryTargets} unscanned={card.unknown} />

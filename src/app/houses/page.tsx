@@ -97,7 +97,6 @@ export default function HousesPage() {
       }
       atlas={
         <AtlasSection
-          grain="Account · Collections"
           title="Houses"
           subtitle="Owned residences only — house banks are never collected."
           action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}

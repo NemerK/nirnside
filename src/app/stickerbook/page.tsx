@@ -60,7 +60,6 @@ export default function StickerbookPage() {
       }
       atlas={
         <AtlasSection
-          grain="Account · Collections"
           title="Stickerbook"
           subtitle="Set piece reconstruction — collected vs missing, as the game tracks it."
         >
