@@ -9,11 +9,12 @@ import {
   summarizeAccountKnowledge,
 } from "@/lib/knowledge/present";
 import { KnowledgeBoard, type KnowledgeTab } from "@/components/knowledge-board";
-import { EmptyState, PageFrame, PageHeader, Stat } from "@/components/ui";
+import { EmptyState, PageFrame, PageHeader } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { LookSwitch } from "@/components/look-switch";
 import { AtlasSection } from "@/components/atlas/section";
-import { AtlasStat } from "@/components/atlas/ui";
+import { AchievementsStrip } from "@/components/achievements-strip";
+import { applyRosterOrder, getRosterOrder } from "@/lib/roster/order";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,10 @@ export default async function KnowledgePage({
   const populated = safe(() => hasData()) ?? false;
   const source = safe(() => getDataSource());
   const isSample = source?.kind === "sample";
-  const characters = liveCharacters(safe(() => getCharactersFull()) ?? []);
+  const characters = applyRosterOrder(
+    liveCharacters(safe(() => getCharactersFull()) ?? []),
+    safe(() => getRosterOrder()) ?? [],
+  );
   const staleAddon =
     populated && !isSample && characters.some((c) => c.lastSeen != null) && !knowledgeHasAnyScan(characters);
   const summary = summarizeAccountKnowledge(characters);
@@ -80,53 +84,19 @@ export default async function KnowledgePage({
     board
   );
 
-  const classicStats = populated && !staleAddon && (
-    <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
-      <Stat
-        label="Research"
-        value={summary.researchTotal ? `${pct(summary.researchKnown, summary.researchTotal)}%` : "—"}
-        hint={summary.researchTotal ? `${summary.researchKnown}/${summary.researchTotal} traits` : "not scanned"}
+  const strip = populated && !staleAddon && (
+    <div className="mb-3 shrink-0">
+      <AchievementsStrip
+        items={[
+          { label: "Research", done: summary.researchKnown, total: summary.researchTotal },
+          { label: "Motifs", done: summary.motifKnown, total: summary.motifTotal },
+          { label: "Recipes", done: summary.recipeKnown, total: summary.recipeTotal },
+          { label: "Plans", done: summary.planKnown, total: summary.planTotal },
+        ]}
       />
-      <Stat
-        label="Motifs"
-        value={summary.motifTotal ? `${pct(summary.motifKnown, summary.motifTotal)}%` : "—"}
-        hint={summary.motifTotal ? `${summary.motifKnown}/${summary.motifTotal} chapters` : "not scanned"}
-      />
-      <Stat
-        label="Recipes"
-        value={summary.recipeTotal ? `${pct(summary.recipeKnown, summary.recipeTotal)}%` : "—"}
-        hint={summary.recipeTotal ? `${summary.recipeKnown}/${summary.recipeTotal}` : "not scanned"}
-      />
-      <Stat
-        label="Plans"
-        value={summary.planTotal ? `${pct(summary.planKnown, summary.planTotal)}%` : "—"}
-        hint={summary.planTotal ? `${summary.planKnown}/${summary.planTotal}` : "not scanned"}
-      />
-    </div>
-  );
-
-  const atlasStats = populated && !staleAddon && (
-    <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
-      <AtlasStat
-        label="Research"
-        value={summary.researchTotal ? `${pct(summary.researchKnown, summary.researchTotal)}%` : "—"}
-        hint={summary.researchTotal ? `${summary.researchKnown}/${summary.researchTotal} traits` : "not scanned"}
-      />
-      <AtlasStat
-        label="Motifs"
-        value={summary.motifTotal ? `${pct(summary.motifKnown, summary.motifTotal)}%` : "—"}
-        hint={summary.motifTotal ? `${summary.motifKnown}/${summary.motifTotal} chapters` : "craft knowledge"}
-      />
-      <AtlasStat
-        label="Recipes"
-        value={summary.recipeTotal ? `${pct(summary.recipeKnown, summary.recipeTotal)}%` : "—"}
-        hint="provisioning"
-      />
-      <AtlasStat
-        label="Plans"
-        value={summary.planTotal ? `${pct(summary.planKnown, summary.planTotal)}%` : "—"}
-        hint="furnishing"
-      />
+      <p className="mt-1.5 text-xs text-fg-subtle">
+        Account totals. Open a character for the trait grid, chapters, recipes, and plans.
+      </p>
     </div>
   );
 
@@ -136,10 +106,10 @@ export default async function KnowledgePage({
         <PageFrame>
           <PageHeader
             title="Knowledge"
-            subtitle="Per-character research, Lore Library motifs, recipes, and furnishing plans — as the game reported them at last logout. Scribing is not duplicated here."
+            subtitle="Research, motifs, recipes, and furnishing plans from the last logout."
             action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
           />
-          {classicStats}
+          {strip}
           {body}
         </PageFrame>
       }
@@ -147,19 +117,15 @@ export default async function KnowledgePage({
         <AtlasSection
           grain="Characters"
           title="Craft knowledge"
-          subtitle="Research, motif chapters, recipes, and plans — per character. Outfit Styles live under Collections (cosmetics, not craft)."
+          compact
           action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
         >
-          {atlasStats}
+          {strip}
           {body}
         </AtlasSection>
       }
     />
   );
-}
-
-function pct(known: number, total: number): number {
-  return total ? Math.round((known / total) * 100) : 0;
 }
 
 function safe<T>(fn: () => T): T | null {
