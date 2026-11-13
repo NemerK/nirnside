@@ -111,7 +111,7 @@ export function AccountOverview({
   }
 
   return (
-    <section className="relative flex min-h-full flex-1 flex-col overflow-hidden rounded-lg border border-[color-mix(in_srgb,var(--home-trim)_55%,var(--border))] bg-surface shadow-[0_12px_40px_rgb(0_0_0/0.18)] [--home-trim:#c8a35a]">
+    <section className="relative overflow-hidden rounded-lg border border-[color-mix(in_srgb,var(--home-trim)_55%,var(--border))] bg-surface shadow-[0_12px_40px_rgb(0_0_0/0.18)] [--home-trim:#c8a35a]">
       <h1 className="sr-only">{account.displayName}</h1>
       <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--home-trim)] to-transparent" />
       <Corner className="left-1.5 top-1.5 border-l-2 border-t-2" />
@@ -172,7 +172,7 @@ export function AccountOverview({
           .
         </p>
       ) : (
-        <ul className="grid flex-1 gap-2 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-5">
+        <ul className="grid gap-2 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-5">
           {progress.map((row) => (
             <li key={row.label}>
               <ProgressCard {...row} />
@@ -182,7 +182,7 @@ export function AccountOverview({
       )}
 
       {account.guilds.length > 0 ? (
-        <div className="mt-auto border-t border-border px-4 py-3">
+        <div className="border-t border-border px-4 py-3">
           <p className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.22em] text-fg-subtle">Guilds</p>
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {account.guilds.map((guild) => (
@@ -218,7 +218,7 @@ export function AtlasHome({
   currencies: AtlasHomeCurrencies;
 }) {
   return (
-    <div className="atlas-page mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col">
+    <div className="atlas-page mx-auto w-full max-w-6xl">
       <AccountOverview account={account} stats={stats} currencies={currencies} />
     </div>
   );
@@ -282,14 +282,14 @@ function ProgressCard({
   return (
     <Link
       href={href}
-      className="flex h-full min-h-44 flex-col justify-between gap-4 rounded-md border border-border bg-bg/35 px-3.5 py-3.5 transition-colors hover:border-[color-mix(in_srgb,var(--slot)_50%,var(--border))]"
+      className="flex flex-col gap-2 rounded-md border border-border bg-bg/35 px-3 py-3 transition-colors hover:border-[color-mix(in_srgb,var(--slot)_50%,var(--border))]"
       style={{ ["--slot" as string]: tone }}
     >
       <span className="flex items-center gap-2.5">
         <Mark tone={tone}>{mark}</Mark>
         <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-fg-subtle">{label}</span>
       </span>
-      <span className="text-4xl font-semibold tabular-nums leading-none" style={{ color: tone }}>
+      <span className="text-3xl font-semibold tabular-nums leading-none" style={{ color: tone }}>
         {pct == null ? "—" : `${pct}%`}
       </span>
       <span>
