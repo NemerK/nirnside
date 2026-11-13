@@ -100,6 +100,13 @@ export default async function KnowledgePage({
     </div>
   );
 
+  const pane = (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {strip}
+      <div className="flex min-h-0 flex-1 flex-col">{body}</div>
+    </div>
+  );
+
   return (
     <LookSwitch
       classic={
@@ -109,18 +116,17 @@ export default async function KnowledgePage({
             subtitle="Research, motifs, recipes, and furnishing plans from the last logout."
             action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
           />
-          {strip}
-          {body}
+          {pane}
         </PageFrame>
       }
       atlas={
         <AtlasSection
           title="Craft knowledge"
           compact
+          fill
           action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
         >
-          {strip}
-          {body}
+          {pane}
         </AtlasSection>
       }
     />
