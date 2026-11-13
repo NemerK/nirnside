@@ -68,11 +68,3 @@ export function presentCollections(input: {
     defaultTab,
   };
 }
-
-export function collectionsSummaryLine(c: CollectionsPresent): string {
-  const parts: string[] = [];
-  if (c.sets.total > 0) parts.push(`${c.sets.pct}% stickerbook`);
-  if (c.styles.total > 0) parts.push(`${c.styles.unlocked}/${c.styles.total} styles`);
-  if (c.houses.total > 0) parts.push(`${c.houses.total} houses`);
-  return parts.length > 0 ? parts.join(" · ") : "Nothing collected yet";
-}

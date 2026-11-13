@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Star } from "lucide-react";
-import { collectionsSummaryLine, type CollectionTab, type CollectionsPresent } from "@/lib/collections/present";
+import type { CollectionTab, CollectionsPresent } from "@/lib/collections/present";
 import { setHref } from "@/lib/db/catalog-queries";
 import type { StickerbookSetView } from "@/lib/stickerbook/seen";
 import { StickerbookGrid } from "@/components/stickerbook-grid";
@@ -31,7 +31,7 @@ export function AtlasCollectionsHub({
   const housesCount = String(houses.total);
 
   return (
-    <AtlasPage title="Collections" subtitle={collectionsSummaryLine(collections)}>
+    <AtlasPage title="Collections">
       <CollectionsTabs
         initial={TAB_ID[collections.defaultTab]}
         counts={{ stickerbook: stickerCount, styles: stylesCount, houses: housesCount }}
