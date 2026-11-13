@@ -33,7 +33,7 @@ interface ParentNode {
   subs: SubNode[];
 }
 
-export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
+export function StickerbookGrid({ sets, contained = false }: { sets: SetWithTotals[]; contained?: boolean }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("all");
   const [parent, setParent] = useState<string | null>(null);
@@ -154,9 +154,15 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
     sub ?? parent ?? "All Sets";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+    <div className={contained ? "flex flex-col gap-4 lg:flex-row" : "flex min-h-0 flex-1 flex-col gap-4 lg:flex-row"}>
       {/* Category tree has its own scroll; it never overlays the set cards. */}
-      <aside className="max-h-[36vh] shrink-0 overflow-y-auto bg-bg pr-1 lg:max-h-none lg:min-h-0 lg:w-64 lg:self-stretch">
+      <aside
+        className={
+          contained
+            ? "shrink-0 bg-bg pr-1 lg:sticky lg:top-0 lg:max-h-[calc(100vh-6rem)] lg:w-64 lg:self-start lg:overflow-y-auto"
+            : "max-h-[36vh] shrink-0 overflow-y-auto bg-bg pr-1 lg:max-h-none lg:min-h-0 lg:w-64 lg:self-stretch"
+        }
+      >
           <button
             onClick={selectAll}
             className={`mb-1 flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
@@ -245,7 +251,7 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
       </aside>
 
       {/* Sets — search stays put; only the card list scrolls. */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className={contained ? "min-w-0 flex-1" : "flex min-h-0 min-w-0 flex-1 flex-col"}>
         <div className="flex shrink-0 flex-wrap items-center gap-2 bg-bg pb-3">
           <div className="relative min-w-[200px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
@@ -278,7 +284,7 @@ export function StickerbookGrid({ sets }: { sets: SetWithTotals[] }) {
           </span>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className={contained ? "" : "min-h-0 flex-1 overflow-y-auto"}>
           {filtered.length === 0 ? (
             <div className="rounded-xl border border-border bg-surface/70 px-6 py-12 text-center text-sm text-fg-muted">
               No sets match these filters.

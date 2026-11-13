@@ -5,7 +5,7 @@ export function AtlasCollectionsLink({ current }: { current: "sets" | "styles" |
   return (
     <p className="mb-4 text-sm text-fg-muted">
       Part of{" "}
-      <Link href={`/collections?tab=${current}`} className="text-accent hover:underline">
+      <Link href={`/collections#${current === "sets" ? "stickerbook" : current}`} className="text-accent hover:underline">
         Account → Collections
       </Link>
       {" — "}

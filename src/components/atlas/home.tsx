@@ -80,7 +80,7 @@ export function AccountOverview({
 
   const progress: ProgressCell[] = [];
   if (stats.showStickerbook) {
-    progress.push({ label: "Sets", done: stats.stickerCollected, total: stats.stickerTotal, href: "/collections#sets" });
+    progress.push({ label: "Stickerbook", done: stats.stickerCollected, total: stats.stickerTotal, href: "/collections#stickerbook" });
   }
   if (stats.showStyles) {
     progress.push({ label: "Styles", done: stats.stylesUnlocked, total: stats.stylesTotal, href: "/collections#styles" });

@@ -3,10 +3,15 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 import { collectionsSummaryLine, type CollectionsPresent } from "@/lib/collections/present";
 import type { PresentedOutfitCategory } from "@/lib/knowledge/present";
-import { AtlasEmpty, AtlasMeter, AtlasPage } from "./ui";
+import { setHref } from "@/lib/db/catalog-queries";
+import type { StickerbookSetView } from "@/lib/stickerbook/seen";
+import { StickerbookGrid } from "@/components/stickerbook-grid";
+import { AtlasEmpty, AtlasPage } from "./ui";
 
 /**
- * Sets, outfit styles, and houses as three matching panels on one page.
+ * Stickerbook, outfit styles, and houses as three sections on one page.
+ * The stickerbook is the real collection (category tree and piece cards),
+ * not a name-and-count summary.
  */
 export function AtlasCollectionsHub({
   collections,
@@ -26,12 +31,13 @@ export function AtlasCollectionsHub({
   return (
     <AtlasPage title="Collections" subtitle={collectionsSummaryLine(collections)}>
       <div className="space-y-3">
-        <section id="sets">
+        <section id="stickerbook">
           {setsPanel ?? (
-            <SetsPanel
+            <StickerbookPanel
               pct={collections.sets.pct}
               collected={collections.sets.collected}
               total={collections.sets.total}
+              setCount={collections.sets.setCount}
               rows={collections.sets.rows}
             />
           )}
@@ -83,18 +89,24 @@ function Panel({
   );
 }
 
-function SetsPanel({
+function isStickerbookView(rows: CollectionsPresent["sets"]["rows"]): rows is StickerbookSetView[] {
+  return rows.every((row) => "newCount" in row);
+}
+
+function StickerbookPanel({
   pct,
   collected,
   total,
+  setCount,
   rows,
 }: {
   pct: number;
   collected: number;
   total: number;
+  setCount: number;
   rows: CollectionsPresent["sets"]["rows"];
 }) {
-  if (total === 0) {
+  if (total === 0 || !isStickerbookView(rows)) {
     return (
       <AtlasEmpty title="Stickerbook is empty">
         Log out with the Snapshot addon to capture set pieces, or open the{" "}
@@ -105,37 +117,18 @@ function SetsPanel({
       </AtlasEmpty>
     );
   }
-  const groups = new Map<string, typeof rows>();
-  for (const set of rows) {
-    const key = set.category || "Sets";
-    const list = groups.get(key) ?? [];
-    list.push(set);
-    groups.set(key, list);
-  }
+  const complete = rows.filter((set) => set.total > 0 && set.collected === set.total).length;
   return (
-    <Panel title="Sets" meta={`${pct}% · ${collected}/${total} pieces`} href="/stickerbook" linkLabel="Stickerbook">
-      <AtlasMeter label="Collected pieces" done={collected} total={total} />
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        {[...groups.entries()].map(([category, sets]) => (
-          <div key={category}>
-            <h3 className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{category}</h3>
-            <ul className="divide-y divide-border rounded-md border border-border">
-              {sets.map((set) => {
-                const pieces = set.pieces.length;
-                const have = set.pieces.filter((piece) => piece.collected).length;
-                return (
-                  <li key={set.setId} className="flex items-baseline justify-between gap-3 px-2.5 py-1.5 text-sm">
-                    <span className="min-w-0 truncate text-fg">{set.name}</span>
-                    <span className="shrink-0 tabular-nums text-fg-muted">
-                      {have}/{pieces}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
+    <Panel
+      title="Stickerbook"
+      meta={`${pct}% · ${collected}/${total} pieces · ${complete}/${setCount} sets`}
+      href="/stickerbook"
+      linkLabel="Full page"
+    >
+      <StickerbookGrid
+        contained
+        sets={rows.map((set) => ({ ...set, href: setHref({ name: set.name, setId: set.setId }) }))}
+      />
     </Panel>
   );
 }
