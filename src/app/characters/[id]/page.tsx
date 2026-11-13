@@ -15,7 +15,7 @@ import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
 import { skillLineChoices } from "@/lib/planner/data";
-import { getSkillLineByName, getSkillsForLine, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
+import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { rolesForCharacter } from "@/lib/roles/filter";
@@ -27,6 +27,7 @@ import { RolePicker } from "@/components/role-picker";
 import { CharacterGoals } from "@/components/goals-board";
 import { CharacterTabs } from "@/components/character-tabs";
 import { CharacterChampion } from "@/components/character-champion";
+import { CharacterScripts, type CharacterScript } from "@/components/character-scripts";
 import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
@@ -124,6 +125,13 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     goalIndexes,
     (g) => (g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined),
   );
+  const scriptByName = new Map(
+    safeList(() => getScripts()).map((row) => [row.entry.name.trim().toLowerCase(), row.entry]),
+  );
+  const scriptRows: CharacterScript[] = c.scribingScripts.map((name) => {
+    const entry = scriptByName.get(name.trim().toLowerCase());
+    return { name, slot: entry?.slot ?? null, effect: entry?.effect ?? "" };
+  });
 
   // Cross-link every set worn in a Wizard's Wardrobe setup back to its catalog page.
   const hrefForSet: Record<string, string> = {};
@@ -374,25 +382,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             </section>
           )}
 
-          {/* Scribing */}
-          {c.scribingScripts.length > 0 && (
-            <section>
-              <div className="mb-3 flex items-center justify-between">
-                <SectionTitle className="mb-0">Scribing Scripts</SectionTitle>
-                <Link href="/encyclopedia/scribing" className="text-xs text-accent hover:underline">
-                  Combinations →
-                </Link>
-              </div>
-              <Card className="flex flex-wrap gap-1.5 p-4">
-                {c.scribingScripts.map((s, i) => (
-                  <Badge key={i} tone="default">
-                    {s}
-                  </Badge>
-                ))}
-              </Card>
-            </section>
-          )}
-
           {/* Knowledge — in-progress only here; the full grid lives on /knowledge */}
           {hasKnowledge && (
             <section>
@@ -472,6 +461,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
             }}
           />
         }
+        scripts={<CharacterScripts scripts={scriptRows} />}
         champion={<CharacterChampion champion={c.champion} championPoints={c.championPoints} />}
       />
     </div>
