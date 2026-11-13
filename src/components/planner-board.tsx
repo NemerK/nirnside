@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Loader2, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import type { Goal, GoalTier } from "@/lib/goals/types";
 import { TIERS, TIER_LABEL } from "@/lib/goals/types";
 import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
@@ -19,8 +19,8 @@ import { GroupedTargets } from "./goal-groups";
 import { isExcludedSkillLine } from "@/lib/catalog/excluded";
 
 /**
- * The planner starts with the kind of thing you are planning. Skills, abilities,
- * and scribing each open their own categories, and those stay closed until chosen.
+ * The planner starts with the kind of thing you are planning. Skills and abilities
+ * open their own categories. Scribing lists focus, signature, and affix together.
  */
 
 export interface PlannerChoices {
@@ -361,8 +361,28 @@ export function PlannerBoard({
             tier={tier}
             onTier={setTier}
           />
-          <ScriptCategories groups={scriptGroups} selected={selected} onToggle={toggleSelected} />
-          <AddBar busy={busy} count={selected.size} enabled={scopeOk(scope, scopeKey)} onAdd={addSelected} />
+          <ScriptCategories
+            groups={scriptGroups}
+            selected={selected}
+            onToggle={toggleSelected}
+            onSelectNames={(names, on) =>
+              setSelected((prev) => {
+                const next = new Set(prev);
+                for (const name of names) {
+                  if (on) next.add(name);
+                  else next.delete(name);
+                }
+                return next;
+              })
+            }
+          />
+          <AddBar
+            busy={busy}
+            count={selected.size}
+            enabled={scopeOk(scope, scopeKey)}
+            onAdd={addSelected}
+            emptyLabel="Pick the scripts to learn"
+          />
           {error && <p className="mt-2 text-sm text-danger">{error}</p>}
         </Card>
       )}
@@ -755,16 +775,18 @@ function AddBar({
   count,
   enabled,
   onAdd,
+  emptyLabel = "Open a category, then pick from a skill line",
 }: {
   busy: boolean;
   count: number;
   enabled: boolean;
   onAdd: () => void;
+  emptyLabel?: string;
 }) {
   return (
     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
       <span className="text-xs text-fg-subtle">
-        {count === 0 ? "Open a category, then pick from a skill line" : `${count} target${count === 1 ? "" : "s"} selected`}
+        {count === 0 ? emptyLabel : `${count} target${count === 1 ? "" : "s"} selected`}
       </span>
       <button
         type="button"
@@ -946,54 +968,143 @@ function AbilityCategories({
   );
 }
 
+type ScriptEntry = { name: string; slot: string; icon: string | null };
+
+function scriptColumns(groups: { key: string; entries: ScriptEntry[] }[]) {
+  const bySlot = new Map(groups.map((group) => [group.key.trim().toLowerCase(), group.entries]));
+  const extra = [...bySlot.keys()].filter((slot) => !SCRIPT_SLOT_ORDER.includes(slot)).sort();
+  return [...SCRIPT_SLOT_ORDER, ...extra].map((slot) => ({
+    id: slot,
+    label: slot.charAt(0).toUpperCase() + slot.slice(1),
+    entries: [...(bySlot.get(slot) ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
+  }));
+}
+
+function scriptQueryHits(name: string, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  return needle.length > 0 && name.toLowerCase().includes(needle);
+}
+
 function ScriptCategories({
   groups,
   selected,
   onToggle,
+  onSelectNames,
 }: {
-  groups: { key: string; entries: { name: string; slot: string; icon: string | null }[] }[];
+  groups: { key: string; entries: ScriptEntry[] }[];
   selected: Set<string>;
   onToggle: (name: string) => void;
+  onSelectNames: (names: string[], on: boolean) => void;
 }) {
-  const [open, setOpen] = useState<Set<string>>(new Set());
-  const ordered = [...groups].sort((a, b) => {
-    const ia = SCRIPT_SLOT_ORDER.indexOf(a.key.toLowerCase());
-    const ib = SCRIPT_SLOT_ORDER.indexOf(b.key.toLowerCase());
-    return (ia < 0 ? 90 : ia) - (ib < 0 ? 90 : ib) || a.key.localeCompare(b.key);
-  });
+  const [search, setSearch] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const query = search.trim().toLowerCase();
+  const columns = useMemo(() => scriptColumns(groups), [groups]);
+  const matches = useMemo(
+    () => (query ? columns.flatMap((column) => column.entries.filter((script) => scriptQueryHits(script.name, query)).map((script) => script.name)) : []),
+    [columns, query],
+  );
+
+  useEffect(() => {
+    if (!query) return;
+    const frame = requestAnimationFrame(() => {
+      rootRef.current?.querySelector("[data-script-match='true']")?.scrollIntoView({ block: "center" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [query]);
+
+  function selectMatches() {
+    if (matches.length === 0) return;
+    onSelectNames(matches, true);
+  }
+
+  if (columns.every((column) => column.entries.length === 0)) {
+    return <p className="mt-3 text-sm text-fg-muted">No scribing scripts in the catalog yet.</p>;
+  }
+
   return (
-    <div className="mt-2">
-      {ordered.map((group) => {
-        const expanded = open.has(group.key);
-        const title = group.key.charAt(0).toUpperCase() + group.key.slice(1);
-        return (
-          <section key={group.key} className="border-t border-border/60">
-            <CategoryToggle
-              title={title}
-              count={group.entries.length}
-              open={expanded}
-              onToggle={() =>
-                setOpen((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(group.key)) next.delete(group.key);
-                  else next.add(group.key);
-                  return next;
-                })
-              }
-            />
-            {expanded && (
-              <div className="pb-2 pl-6">
-                <GroupBlock
-                  title={`${title} scripts`}
-                  selected={selected}
-                  entries={group.entries.map((s) => ({ name: s.name, hint: s.slot, icon: s.icon }))}
-                  onToggle={onToggle}
-                />
+    <div ref={rootRef} className="mt-3">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              selectMatches();
+            }
+          }}
+          placeholder="Search scripts…"
+          aria-label="Search scripts"
+          className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+        />
+      </div>
+      {query && (
+        <p className="mt-1.5 text-xs text-fg-subtle">
+          {matches.length === 0 ? (
+            "No scripts match."
+          ) : (
+            <>
+              {matches.length} highlighted.
+              <button type="button" onClick={selectMatches} className="ml-2 text-accent hover:underline">
+                Select {matches.length === 1 ? "it" : "matches"}
+              </button>
+            </>
+          )}
+        </p>
+      )}
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+        {columns.map((column) => {
+          const names = column.entries.map((script) => script.name);
+          const all = names.length > 0 && names.every((name) => selected.has(name));
+          return (
+            <section key={column.id}>
+              <div className="mb-1 flex items-center justify-between gap-2 px-2">
+                <div className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{column.label}</div>
+                {names.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectNames(names, !all)}
+                    className="text-[11px] text-fg-subtle hover:text-accent"
+                  >
+                    {all ? "Deselect all" : "Select all"}
+                  </button>
+                )}
               </div>
-            )}
-          </section>
-        );
-      })}
+              <div className="space-y-0.5">
+                {column.entries.map((script, index) => {
+                  const match = scriptQueryHits(script.name, query);
+                  const firstMatch = match && !column.entries.slice(0, index).some((earlier) => scriptQueryHits(earlier.name, query));
+                  const on = selected.has(script.name);
+                  return (
+                    <button
+                      key={script.name}
+                      type="button"
+                      data-script-match={firstMatch ? "true" : undefined}
+                      aria-pressed={on}
+                      onClick={() => onToggle(script.name)}
+                      className={`flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
+                        match ? "bg-accent-soft ring-1 ring-accent" : on ? "bg-accent-soft" : "hover:bg-surface-2"
+                      } ${query && !match ? "opacity-40" : ""}`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                          on ? "border-accent bg-accent text-accent-fg" : "border-border-strong text-transparent"
+                        }`}
+                      >
+                        <Check className="h-3 w-3" />
+                      </span>
+                      <EsoMark name={script.name} icon={script.icon} size={22} />
+                      <span className="min-w-0 truncate text-fg">{script.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1040,81 +1151,3 @@ function AbilityMorphRow({
   );
 }
 
-function PickerRow({
-  name,
-  hint,
-  icon,
-  checked,
-  onToggle,
-}: {
-  name: string;
-  hint: string;
-  icon?: string | null;
-  checked: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={checked}
-      onClick={onToggle}
-      className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition ${
-        checked ? "bg-accent-soft" : "hover:bg-surface-2"
-      }`}
-    >
-      <span
-        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-          checked ? "border-accent bg-accent text-accent-fg" : "border-border-strong text-transparent"
-        }`}
-      >
-        <Check className="h-3 w-3" />
-      </span>
-      <EsoMark name={name} icon={icon} size={22} />
-      <span className="min-w-0 flex-1">
-        <span className={`block truncate ${checked ? "font-medium text-fg" : "text-fg"}`}>{name}</span>
-        <span className="block truncate text-xs text-fg-subtle">{hint}</span>
-      </span>
-    </button>
-  );
-}
-
-/** A titled block of picker items with a select-all header. */
-function GroupBlock({
-  title,
-  selected,
-  entries,
-  onToggle,
-}: {
-  title: string;
-  selected: Set<string>;
-  entries: { name: string; hint: string; icon?: string | null }[];
-  onToggle: (name: string) => void;
-}) {
-  const all = entries.length > 0 && entries.every((e) => selected.has(e.name));
-  return (
-    <div className="mb-2 last:mb-0">
-      <div className="flex items-center justify-between gap-2 px-2.5 py-1">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{title}</span>
-        <button
-          type="button"
-          onClick={() => entries.forEach((e) => onToggle(e.name))}
-          className="text-[11px] text-fg-subtle transition hover:text-accent"
-        >
-          {all ? "Deselect all" : "Select all"}
-        </button>
-      </div>
-      <div className="space-y-0.5">
-        {entries.map((e) => (
-          <PickerRow
-            key={e.name}
-            name={e.name}
-            hint={e.hint}
-            icon={e.icon}
-            checked={selected.has(e.name)}
-            onToggle={() => onToggle(e.name)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}

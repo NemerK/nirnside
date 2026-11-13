@@ -93,7 +93,7 @@ export default function PlannerPage() {
         <div className="mx-auto w-full max-w-6xl">
           <PageHeader
             title="Planner"
-            subtitle="Choose Skills, Abilities, or Scribing first. Categories stay closed until you open them."
+            subtitle="Choose Skills, Abilities, or Scribing. Skill lines stay closed until you open them."
           />
           {board}
         </div>
