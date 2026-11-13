@@ -7,8 +7,10 @@ import {
 } from "@/lib/characters/workspace";
 import { ALLIANCE_ACCENT, timeAgo } from "@/lib/format";
 import { AtlasEmpty, AtlasMeter, AtlasPage } from "./ui";
+import { RosterList } from "./roster-list";
 
 export type RosterSort = "progress" | "name";
+export type RosterView = "cards" | "list";
 
 function sortCards(cards: CharacterWorkspaceCard[], sort: RosterSort): CharacterWorkspaceCard[] {
   const next = [...cards];
@@ -31,15 +33,18 @@ function sortCards(cards: CharacterWorkspaceCard[], sort: RosterSort): Character
 export function AtlasRoster({
   cards,
   sort = "progress",
+  view = "cards",
   accountCP = 0,
   action,
 }: {
   cards: CharacterWorkspaceCard[];
   sort?: RosterSort;
+  view?: RosterView;
   accountCP?: number;
   action?: ReactNode;
 }) {
   const sorted = sortCards(cards, sort);
+  const listHref = "/characters?view=list";
 
   return (
     <AtlasPage
@@ -48,12 +53,31 @@ export function AtlasRoster({
       subtitle="Progress workspace and live sheets — Dashboard rings now live here."
       action={
         <div className="flex flex-wrap items-center gap-2">
-          {accountCP > 0 ? (
+          {view === "cards" && accountCP > 0 ? (
             <span className="rounded border border-accent/40 bg-accent-soft px-2 py-1 text-xs text-accent">
               CP {accountCP.toLocaleString("en-US")} · account-wide
             </span>
           ) : null}
           {action}
+          <div className="inline-flex gap-0.5 rounded-md border border-border bg-surface p-0.5">
+            {(
+              [
+                ["cards", "Cards", view === "cards" ? (sort === "name" ? "/characters?sort=name" : "/characters") : "/characters"],
+                ["list", "List", listHref],
+              ] as const
+            ).map(([key, label, href]) => (
+              <Link
+                key={key}
+                href={href}
+                className={`rounded px-2.5 py-1.5 text-xs ${
+                  view === key ? "bg-accent-soft font-medium text-accent" : "text-fg-muted hover:text-fg"
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+          {view === "cards" ? (
           <div className="inline-flex gap-0.5 rounded-md border border-border bg-surface p-0.5">
             {(
               [
@@ -72,15 +96,14 @@ export function AtlasRoster({
               </Link>
             ))}
           </div>
+          ) : null}
         </div>
       }
     >
       <p className="mb-4 text-sm text-fg-muted">
-        Classic{" "}
-        <Link href="/dashboard" className="text-accent hover:underline">
-          Dashboard
-        </Link>{" "}
-        progress is folded into these cards. Open a character for the full workspace.
+        {view === "list"
+          ? "Drag the handle to reorder. Target bars fill at mandatory ranks — extras stay out of the 100%."
+          : "Open a character for the full workspace."}
       </p>
 
       {sorted.length === 0 ? (
@@ -89,11 +112,15 @@ export function AtlasRoster({
           <code className="rounded bg-surface-2 px-1">/reloadui</code>, then import.
         </AtlasEmpty>
       ) : (
+        view === "list" ? (
+          <RosterList cards={cards} />
+        ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {sorted.map((card) => (
             <WorkspaceCard key={card.id} card={card} />
           ))}
         </div>
+        )
       )}
     </AtlasPage>
   );

@@ -6,8 +6,9 @@ import type { RoleAssignments } from "@/lib/roles/types";
 import { CharacterRoster } from "@/components/character-roster";
 import { RoleManagerButton } from "@/components/role-manager";
 import { LookSwitch } from "@/components/look-switch";
-import { AtlasRoster, type RosterSort } from "@/components/atlas/roster";
+import { AtlasRoster, type RosterSort, type RosterView } from "@/components/atlas/roster";
 import { presentCharacterWorkspaceCards } from "@/lib/characters/workspace";
+import { applyRosterOrder, getRosterOrder } from "@/lib/roster/order";
 import { buildGoalIndexes } from "@/lib/planner/data";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import type { GoalIndexes } from "@/lib/goals/types";
@@ -22,6 +23,7 @@ export default async function CharactersPage({
 }) {
   const sp = await searchParams;
   const sort: RosterSort = sp.sort === "name" ? "name" : "progress";
+  const view: RosterView = sp.view === "list" ? "list" : "cards";
 
   let characters: ReturnType<typeof getCharacters> = [];
   let archived: ReturnType<typeof getArchivedCharacters> = [];
@@ -46,7 +48,9 @@ export default async function CharactersPage({
     abilities: new Map(indexArrays?.abilityIndex ?? []),
   };
   const full = liveCharacters(safe(() => getCharactersFull()) ?? []);
-  const cards = presentCharacterWorkspaceCards(full.length > 0 ? full : characters, goals, indexes);
+  const source = full.length > 0 ? full : characters;
+  const cards = presentCharacterWorkspaceCards(source, goals, indexes, assignments);
+  const ordered = applyRosterOrder(cards, safe(() => getRosterOrder()) ?? []);
 
   const classic =
     characters.length === 0 && archived.length === 0 ? (
@@ -96,8 +100,9 @@ export default async function CharactersPage({
       classic={classic}
       atlas={
         <AtlasRoster
-          cards={cards}
+          cards={view === "list" ? ordered : cards}
           sort={sort}
+          view={view}
           accountCP={accountCP}
           action={<RoleManagerButton roles={roles} />}
         />
