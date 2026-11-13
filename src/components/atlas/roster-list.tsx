@@ -23,11 +23,13 @@ function Bar({ tally, unscanned }: { tally: ProgressTally; unscanned?: boolean }
     return <span className="text-xs text-fg-subtle">—</span>;
   }
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-2">
-        <div className="h-full rounded-full bg-ok" style={{ width: `${tally.pct}%` }} />
+    <div className="flex w-full items-center gap-2">
+      <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--meter-track,#3e4858)]">
+        <div className="h-full rounded-full bg-[var(--meter,#3dce7a)]" style={{ width: `${tally.pct}%` }} />
       </div>
-      <span className="w-9 shrink-0 text-right text-xs tabular-nums text-fg-muted">{tally.pct}%</span>
+      <span className="w-9 shrink-0 text-right text-xs font-medium tabular-nums text-[var(--meter,#3dce7a)]">
+        {tally.pct}%
+      </span>
     </div>
   );
 }
@@ -64,12 +66,12 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
   }
 
   const columns =
-    "grid-cols-[2rem_2.5rem_minmax(0,1fr)] sm:grid-cols-[2rem_2.5rem_minmax(8rem,1.2fr)_minmax(9rem,1fr)_minmax(9rem,1fr)]";
+    "grid-cols-[2rem_2.25rem_minmax(0,1fr)] gap-x-4 sm:grid-cols-[2rem_2.25rem_15rem_13rem_13rem] sm:justify-start sm:gap-x-6";
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       <div
-        className={`hidden items-center gap-3 border-b border-border px-2 py-2 text-[11px] font-medium text-fg-subtle sm:grid ${columns}`}
+        className={`hidden items-center border-b border-border px-2 py-2 text-[11px] font-medium text-fg-subtle sm:grid ${columns}`}
       >
         <span aria-hidden="true" />
         <span>Class</span>
@@ -91,7 +93,7 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
               setDragId(null);
               setOverId(null);
             }}
-            className={`grid items-center gap-x-3 gap-y-2 border-b border-border px-2 py-2 last:border-b-0 ${columns} ${
+            className={`grid items-center gap-y-2 border-b border-border px-2 py-2 last:border-b-0 ${columns} ${
               overId === card.id ? "bg-accent-soft shadow-[inset_0_2px_0_0_var(--accent)]" : ""
             } ${dragId === card.id ? "opacity-40" : ""}`}
           >
