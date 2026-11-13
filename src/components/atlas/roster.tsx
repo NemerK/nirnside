@@ -5,7 +5,9 @@ import {
   overallWorkspacePct,
   type CharacterWorkspaceCard,
 } from "@/lib/characters/workspace";
+import { classColor, classIcon } from "@/lib/classes";
 import { ALLIANCE_ACCENT, timeAgo } from "@/lib/format";
+import { GameIcon } from "../game-icon";
 import { AtlasEmpty, AtlasMeter, AtlasPage } from "./ui";
 import { RosterList } from "./roster-list";
 
@@ -132,11 +134,15 @@ function WorkspaceCard({ card }: { card: CharacterWorkspaceCard }) {
         className="flex flex-1 flex-col px-4 pb-3 pt-4"
       >
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-fg">{card.name}</h2>
-            <p className="mt-0.5 text-sm text-fg-muted">
-              {card.race} {card.className}
-            </p>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <GameIcon name={card.className} icon={classIcon(card.className)} size={32} bare />
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold text-fg">{card.name}</h2>
+              <p className="mt-0.5 truncate text-sm text-fg-muted">
+                {card.race}{" "}
+                <span style={{ color: classColor(card.className) }}>{card.className}</span>
+              </p>
+            </div>
           </div>
           <div className="shrink-0 text-right">
             <p className="text-sm font-semibold text-fg">{card.level >= 50 ? "Max" : `Lv ${card.level}`}</p>
