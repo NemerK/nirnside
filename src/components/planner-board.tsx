@@ -13,7 +13,7 @@ import { classIcon } from "@/lib/classes";
 import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
 import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
-import { abilitiesOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey } from "@/lib/planner/skill-groups";
+import { abilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "@/lib/planner/skill-groups";
 import { groupPlacedGoals } from "@/lib/planner/goal-groups";
 import { GroupedTargets } from "./goal-groups";
 import { isExcludedSkillLine } from "@/lib/catalog/excluded";
@@ -27,6 +27,7 @@ export interface PlannerChoices {
   lines: { name: string; category: string; className: string | null; maxRank: number | null; icon: string | null }[];
   scripts: { name: string; slot: string; icon: string | null }[];
   abilities: { name: string; lineName: string; className: string | null; icon: string | null }[];
+  abilityRows: PlannerAbilityRow[];
   roles: { id: string; name: string }[];
   classes: string[];
   characters: { id: string; name: string; className: string; ranks?: { name: string; rank: number }[] }[];
@@ -824,7 +825,8 @@ function AbilityCategories({
       ),
     [choices.lines, choices.classes, selectedClass],
   );
-  const abilitiesFor = (line: PlannerChoices["lines"][number]) => abilitiesOnPlannerLine(choices.abilities, line);
+  const rowsFor = (line: PlannerChoices["lines"][number]) =>
+    abilityRowsOnPlannerLine(choices.abilityRows ?? [], line);
 
   function toggleSet(setter: (value: Set<string>) => void, current: Set<string>, key: string) {
     const next = new Set(current);
@@ -859,37 +861,43 @@ function AbilityCategories({
         {lines
           .filter((line) => openLines.has(plannerLineKey(line)))
           .map((line) => {
-            const abilities = abilitiesFor(line);
+            const rows = rowsFor(line);
+            const names = rows.flatMap((row) => [row.base.name, ...row.morphs.map((morph) => morph.name)]);
             return (
               <div key={plannerLineKey(line)} className="rounded-lg border border-border/70 p-2">
-                <div className="mb-1 flex items-center justify-between px-1">
+                <div className="mb-2 flex items-center justify-between px-1">
                   <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-fg-subtle">
                     <EsoMark name={line.name} icon={line.icon} size={16} />
                     <span className="truncate">{line.name}</span>
                   </span>
-                  {abilities.length > 0 && (
+                  {names.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => abilities.forEach((a) => onToggle(a.name))}
+                      onClick={() => names.forEach((name) => onToggle(name))}
                       className="text-[11px] text-fg-subtle hover:text-accent"
                     >
-                      {abilities.every((a) => selected.has(a.name)) ? "Deselect all" : "Select all"}
+                      {names.every((name) => selected.has(name)) ? "Deselect all" : "Select all"}
                     </button>
                   )}
                 </div>
-                {abilities.length === 0 ? (
+                {rows.length === 0 ? (
                   <p className="px-1 py-1 text-xs text-fg-subtle">No abilities known for this line yet.</p>
                 ) : (
-                  abilities.map((a) => (
-                    <PickerRow
-                      key={a.name}
-                      name={a.name}
-                      hint={a.className ?? line.name}
-                      icon={a.icon}
-                      checked={selected.has(a.name)}
-                      onToggle={() => onToggle(a.name)}
-                    />
-                  ))
+                  <div className="grid grid-cols-3 gap-1">
+                    {["Ability", "Morph 1", "Morph 2"].map((label) => (
+                      <div key={label} className="px-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">
+                        {label}
+                      </div>
+                    ))}
+                    {rows.map((row) => (
+                      <AbilityMorphRow
+                        key={`${row.lineName}:${row.base.name}`}
+                        row={row}
+                        selected={selected}
+                        onToggle={onToggle}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             );
@@ -986,6 +994,47 @@ function ScriptCategories({
 }
 
 /** A clickable item in a picker modal. */
+function AbilityMorphRow({
+  row,
+  selected,
+  onToggle,
+}: {
+  row: PlannerAbilityRow;
+  selected: Set<string>;
+  onToggle: (name: string) => void;
+}) {
+  const cells = [row.base, row.morphs[0] ?? null, row.morphs[1] ?? null];
+  return (
+    <>
+      {cells.map((cell, index) =>
+        cell ? (
+          <button
+            key={cell.name}
+            type="button"
+            aria-pressed={selected.has(cell.name)}
+            onClick={() => onToggle(cell.name)}
+            className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
+              selected.has(cell.name) ? "bg-accent-soft" : "hover:bg-surface-2"
+            }`}
+          >
+            <span
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                selected.has(cell.name) ? "border-accent bg-accent text-accent-fg" : "border-border-strong text-transparent"
+              }`}
+            >
+              <Check className="h-3 w-3" />
+            </span>
+            <EsoMark name={cell.name} icon={cell.icon} size={22} />
+            <span className="min-w-0 truncate text-fg">{cell.name}</span>
+          </button>
+        ) : (
+          <div key={`${row.base.name}-open-${index}`} className="rounded-md border border-dashed border-border/50" />
+        ),
+      )}
+    </>
+  );
+}
+
 function PickerRow({
   name,
   hint,

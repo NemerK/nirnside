@@ -82,6 +82,34 @@ export function abilitiesOnPlannerLine<T extends { name: string; lineName: strin
   });
 }
 
+/** One skill on a line: the base ability and its two morphs, in game order. */
+export interface PlannerAbilityRow {
+  lineName: string;
+  className: string | null;
+  passive: boolean;
+  base: { name: string; icon: string | null };
+  /** Morph 1, then morph 2. Passives have none. */
+  morphs: { name: string; icon: string | null }[];
+}
+
+/** Rows for one skill line, with Class Mastery limited to that class. */
+export function abilityRowsOnPlannerLine(
+  rows: readonly PlannerAbilityRow[],
+  line: { name: string; className: string | null },
+): PlannerAbilityRow[] {
+  const names = new Set(
+    abilitiesOnPlannerLine(
+      rows.map((row) => ({ name: row.base.name, lineName: row.lineName, className: row.className })),
+      line,
+    ).map((row) => row.name.trim().toLowerCase()),
+  );
+  return rows.filter(
+    (row) =>
+      row.lineName.trim().toLowerCase() === line.name.trim().toLowerCase() &&
+      names.has(row.base.name.trim().toLowerCase()),
+  );
+}
+
 /** Open/selected state for a line. Class Mastery keys include the class. */
 export function plannerLineKey(line: { name: string; className: string | null }): string {
   const name = line.name.trim().toLowerCase();

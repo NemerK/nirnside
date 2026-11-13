@@ -74,6 +74,7 @@ export default function PlannerPage() {
     lines: data.lines,
     scripts: data.scripts,
     abilities: data.abilities,
+    abilityRows: data.abilityRows,
     roles: data.roles,
     classes: data.classes,
     characters: data.subjects.map((s) => ({
