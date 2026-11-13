@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
+import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
 
 const classes = ["Dragonknight", "Nightblade", "Templar"];
 
@@ -111,6 +111,10 @@ describe("class mastery stays with its class", () => {
         ["Lava Whip", "Molten Whip", "Flame Lash"],
         ["Combustion"],
       ],
+    );
+    assert.deepEqual(
+      activeAbilityRowsOnPlannerLine(rows, { name: "Ardent Flame", className: "Dragonknight" }).map((row) => row.base.name),
+      ["Lava Whip"],
     );
   });
 
