@@ -8,25 +8,17 @@ import {
   getCharactersFull,
   getCompletedAchievementIds,
   getHouses,
-  getItemCount,
   getOutfitStyles,
   getStickerbookStats,
 } from "@/lib/db/queries";
-import { listGoals } from "@/lib/db/goals";
-import { getSkillLineByName } from "@/lib/db/catalog-queries";
-import { loadPlannerData, goalCardsForClient } from "@/lib/planner/data";
 import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
-import { characterWalletBreakdown, dashboardWallet } from "@/lib/currencies";
-import { Card, PageHeader, Stat, EmptyState, Badge, SectionTitle } from "@/components/ui";
+import { PageHeader, EmptyState } from "@/components/ui";
 import { LoadDemoButton } from "@/components/demo-controls";
-import { GoalsBoard } from "@/components/goals-board";
-import { AccountWallet } from "@/components/account-wallet";
 import { LookSwitch } from "@/components/look-switch";
-import { AtlasHome } from "@/components/atlas/home";
+import { AccountOverview, AtlasHome } from "@/components/atlas/home";
 import { presentAchievements } from "@/lib/achievements/present";
 
-import type { Goal } from "@/lib/goals/types";
 import { presentOutfitStyles, summarizeAccountKnowledge } from "@/lib/knowledge/present";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { disabledModuleSet } from "@/lib/modules";
@@ -47,11 +39,7 @@ export default function HomePage() {
 
   const characters = safe(() => getCharacters()) ?? [];
   const archived = safe(() => getArchivedCharacters()) ?? [];
-  const itemCount = safe(() => getItemCount()) ?? 0;
   const sticker = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
-  const stickerPct = sticker.total ? Math.round((sticker.collected / sticker.total) * 100) : 0;
-  const goals = safe(() => listGoals()) ?? [];
-  const planner = safe(() => loadPlannerData());
   // Champion Points are account-wide, so show one number for the whole account.
   const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
   const gold = goldBreakdown({
@@ -79,108 +67,39 @@ export default function HomePage() {
   const off = safe(() => disabledModuleSet()) ?? new Set<string>();
   const show = (module: string) => !off.has(module);
 
-  const walletRows = dashboardWallet({
-    gold: gold.total,
-    telVar,
-    currencies: { ...(account.currencies ?? {}), alliancePoints },
-    breakdowns: {
-      gold: characterWalletBreakdown(characters, "gold", [{ name: "Bank", amount: gold.bank }]),
-      telVar: characterWalletBreakdown(characters, "telVar"),
-      alliancePoints: characterWalletBreakdown(characters, "alliancePoints"),
+  const overview = {
+    account: {
+      displayName: account.displayName,
+      region: account.region,
+      esoPlus: account.esoPlus,
+      lastSnapshot: account.lastSnapshot,
+      guilds: account.guilds ?? [],
     },
-  });
-
-  // Progress is computed here on the server; the board only gets compact rows.
-  const hrefForLine = lineHrefs(goals);
-  const goalCards = planner
-    ? goalCardsForClient(goals, planner, (g) =>
-        g.domain === "skillline" ? hrefForLine[g.target.toLowerCase()] : undefined,
-      )
-    : [];
-  const goalCatalog = planner
-    ? { lines: planner.lines, abilities: planner.abilities, scripts: planner.scripts }
-    : undefined;
-  const goalRoles = planner?.roles ?? [];
+    stats: {
+      characterCount: characters.length,
+      archivedCount: archived.length,
+      accountCP,
+      stickerCollected: sticker.collected,
+      stickerTotal: sticker.total,
+      housesCount: houses.length,
+      knowledge,
+      stylesUnlocked: styles.unlocked,
+      stylesTotal: styles.total,
+      pithkaDone: pithka.done,
+      pithkaTotal: pithka.total,
+      showCharacters: show("characters"),
+      showStickerbook: show("stickerbook"),
+      showStyles: show("styles"),
+      showHouses: show("houses"),
+      showKnowledge: show("knowledge"),
+      showAchievements: show("achievements"),
+    },
+    currencies: { gold: gold.total, telVar, alliancePoints },
+  };
 
   const classic = (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {show("characters") && (
-          <Link href="/characters" className="block h-full rounded-xl transition-colors hover:brightness-110">
-            <Stat
-              label="Characters"
-              value={characters.length}
-              hint={archived.length > 0 ? `${archived.length} archived` : "live roster"}
-            />
-          </Link>
-        )}
-        <Stat label="Champion Points" value={accountCP.toLocaleString("en-US")} hint="account-wide" />
-        {show("inventory") && (
-          <Link href="/inventory" className="block h-full rounded-xl transition-colors hover:brightness-110">
-            <Stat label="Items" value={itemCount.toLocaleString("en-US")} hint="across all bags" />
-          </Link>
-        )}
-        {show("stickerbook") && (
-          <Link href="/stickerbook" className="block h-full rounded-xl transition-colors hover:brightness-110">
-            <Stat label="Stickerbook" value={`${stickerPct}%`} hint={`${sticker.collected}/${sticker.total} pieces`} />
-          </Link>
-        )}
-        {show("dailies") && (
-          <Link href="/dailies" className="block h-full rounded-xl transition-colors hover:brightness-110">
-            <Stat label="Dailies" value="Board" hint="randoms, writs, pledges" />
-          </Link>
-        )}
-        {show("houses") && (
-          <Link href="/houses" className="block h-full rounded-xl transition-colors hover:brightness-110">
-            <Stat label="Houses" value={houses.length} hint="owned on this account" />
-          </Link>
-        )}
-        {show("knowledge") && (
-          <Link href="/knowledge" className="block h-full rounded-xl transition-colors hover:brightness-110">
-            <Stat
-              label="Knowledge"
-              value={knowledge.motifTotal ? `${Math.round((knowledge.motifKnown / knowledge.motifTotal) * 100)}%` : "Board"}
-              hint={knowledge.motifTotal ? `${knowledge.motifKnown}/${knowledge.motifTotal} motif chapters` : "research, motifs, recipes"}
-            />
-          </Link>
-        )}
-        {show("styles") && (
-          <Link href="/styles" className="block h-full rounded-xl transition-colors hover:brightness-110">
-            <Stat
-              label="Outfit Styles"
-              value={styles.total ? `${Math.round((styles.unlocked / styles.total) * 100)}%` : "—"}
-              hint={styles.total ? `${styles.unlocked}/${styles.total} unlocked` : "collections"}
-            />
-          </Link>
-        )}
-      </div>
-
-      <section className="mb-8">
-        <div className="mb-3 flex items-end justify-between gap-2">
-          <SectionTitle className="mb-0">Currencies</SectionTitle>
-          <Link href="/inventory?view=currency" className="text-xs text-fg-subtle hover:text-accent">
-            Full table
-          </Link>
-        </div>
-        <AccountWallet rows={walletRows} title="" compact />
-      </section>
-
-      <GoalsBoard cards={goalCards} roles={goalRoles} catalog={goalCatalog} />
-
-      {account.guilds?.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-fg-subtle">Guilds</h2>
-          <div className="flex flex-wrap gap-2">
-            {account.guilds.map((g) => (
-              <Card key={g.name} className="flex items-center gap-2 px-3 py-2">
-                <span className="text-sm text-fg">{g.name}</span>
-                {g.rank && <Badge tone="muted">{g.rank}</Badge>}
-                {g.trader && <Badge tone="accent">Trader</Badge>}
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
+      <AccountOverview {...overview} />
     </div>
   );
 
@@ -188,60 +107,10 @@ export default function HomePage() {
     <LookSwitch
       classic={classic}
       atlas={
-        <AtlasHome
-          account={{
-            displayName: account.displayName,
-            region: account.region,
-            esoPlus: account.esoPlus,
-            lastSnapshot: account.lastSnapshot,
-            guilds: account.guilds ?? [],
-          }}
-          stats={{
-            characterCount: characters.length,
-            archivedCount: archived.length,
-            itemCount,
-            accountCP,
-            stickerPct,
-            stickerCollected: sticker.collected,
-            stickerTotal: sticker.total,
-            housesCount: houses.length,
-            knowledge,
-            stylesUnlocked: styles.unlocked,
-            stylesTotal: styles.total,
-            pithkaDone: pithka.done,
-            pithkaTotal: pithka.total,
-            showCharacters: show("characters"),
-            showInventory: show("inventory"),
-            showStickerbook: show("stickerbook"),
-            showStyles: show("styles"),
-            showHouses: show("houses"),
-            showKnowledge: show("knowledge"),
-            showAchievements: show("achievements"),
-            showDailies: show("dailies"),
-            showEncyclopedia: show("encyclopedia"),
-          }}
-          wallet={<AccountWallet rows={walletRows} title="" compact />}
-          goals={<GoalsBoard cards={goalCards} roles={goalRoles} catalog={goalCatalog} />}
-        />
+        <AtlasHome {...overview} />
       }
     />
   );
-}
-
-function lineHrefs(goals: Goal[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const g of goals) {
-    if (g.domain !== "skillline") continue;
-    const key = g.target.toLowerCase();
-    if (out[key]) continue;
-    try {
-      const row = getSkillLineByName(g.target);
-      if (row) out[key] = `/encyclopedia/skills/${encodeURIComponent(row.entry.id)}`;
-    } catch {
-      // catalog missing this line
-    }
-  }
-  return out;
 }
 
 // Link straight at the .exe so a click downloads it — GitHub hides release

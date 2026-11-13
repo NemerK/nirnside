@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { AtlasEmpty, AtlasPage, AtlasPanel, AtlasStat } from "./ui";
-import { timeAgo } from "@/lib/format";
+import { formatGold, formatNumber } from "@/lib/format";
 import type { KnowledgeAccountSummary } from "@/lib/knowledge/present";
 
 export interface AtlasHomeAccount {
@@ -15,9 +14,7 @@ export interface AtlasHomeAccount {
 export interface AtlasHomeStats {
   characterCount: number;
   archivedCount: number;
-  itemCount: number;
   accountCP: number;
-  stickerPct: number;
   stickerCollected: number;
   stickerTotal: number;
   housesCount: number;
@@ -27,179 +24,177 @@ export interface AtlasHomeStats {
   pithkaDone: number;
   pithkaTotal: number;
   showCharacters: boolean;
-  showInventory: boolean;
   showStickerbook: boolean;
   showStyles: boolean;
   showHouses: boolean;
   showKnowledge: boolean;
   showAchievements: boolean;
-  showDailies: boolean;
-  showEncyclopedia: boolean;
+}
+
+export interface AtlasHomeCurrencies {
+  gold: number;
+  telVar: number;
+  alliancePoints: number;
 }
 
 /**
- * Atlas account overview — same data as Classic Home, regrouped by grain.
- * Wallet and goals arrive as pre-rendered nodes so existing boards stay intact.
+ * One account window: identity, currencies, and the progress that fits on screen.
+ * Planner goals, the wallet table, and the catalog live on their own pages.
  */
-export function AtlasHome({
+export function AccountOverview({
   account,
   stats,
-  wallet,
-  goals,
+  currencies,
 }: {
   account: AtlasHomeAccount;
   stats: AtlasHomeStats;
-  wallet?: ReactNode;
-  goals?: ReactNode;
+  currencies: AtlasHomeCurrencies;
 }) {
-  const knowledgePct = stats.knowledge.motifTotal
-    ? Math.round((stats.knowledge.motifKnown / stats.knowledge.motifTotal) * 100)
-    : null;
-  const stylesPct = stats.stylesTotal
-    ? Math.round((stats.stylesUnlocked / stats.stylesTotal) * 100)
-    : null;
-
-  const pulse: { label: string; value: ReactNode; hint?: string; href?: string }[] = [];
-  if (stats.showCharacters) {
-    pulse.push({
-      label: "Roster",
-      value: stats.characterCount,
-      hint: stats.archivedCount > 0 ? `${stats.archivedCount} archived` : "live characters",
-      href: "/characters",
-    });
-  }
-  pulse.push({
-    label: "Champion Points",
-    value: stats.accountCP.toLocaleString("en-US"),
-    hint: "account-wide",
-  });
-  if (stats.showInventory) {
-    pulse.push({
-      label: "Inventory",
-      value: stats.itemCount.toLocaleString("en-US"),
-      hint: "stacks across bags",
-      href: "/inventory",
-    });
-  }
+  const rows: { label: string; href: string; done: number; total: number }[] = [];
   if (stats.showStickerbook) {
-    pulse.push({
-      label: "Set pieces",
-      value: stats.stickerTotal ? `${stats.stickerPct}%` : "—",
-      hint: stats.stickerTotal
-        ? `${stats.stickerCollected}/${stats.stickerTotal} collected`
-        : "stickerbook empty",
+    rows.push({
+      label: "Sets",
       href: "/collections?tab=sets",
+      done: stats.stickerCollected,
+      total: stats.stickerTotal,
     });
   }
   if (stats.showStyles) {
-    pulse.push({
-      label: "Outfit styles",
-      value: stylesPct != null ? `${stylesPct}%` : "—",
-      hint: stats.stylesTotal
-        ? `${stats.stylesUnlocked}/${stats.stylesTotal} unlocked`
-        : "none listed",
+    rows.push({
+      label: "Styles",
       href: "/collections?tab=styles",
-    });
-  }
-  if (stats.showHouses) {
-    pulse.push({
-      label: "Houses",
-      value: stats.housesCount,
-      hint: "owned residences",
-      href: "/collections?tab=houses",
+      done: stats.stylesUnlocked,
+      total: stats.stylesTotal,
     });
   }
   if (stats.showKnowledge) {
-    pulse.push({
-      label: "Craft knowledge",
-      value: knowledgePct != null ? `${knowledgePct}%` : "Board",
-      hint: stats.knowledge.motifTotal
-        ? `${stats.knowledge.motifKnown}/${stats.knowledge.motifTotal} motif chapters`
-        : "research, motifs, recipes",
+    rows.push({
+      label: "Research",
       href: "/knowledge",
+      done: stats.knowledge.researchKnown,
+      total: stats.knowledge.researchTotal,
+    });
+    rows.push({
+      label: "Motifs",
+      href: "/knowledge",
+      done: stats.knowledge.motifKnown,
+      total: stats.knowledge.motifTotal,
     });
   }
   if (stats.showAchievements) {
-    pulse.push({
-      label: "Achievements",
-      value: stats.pithkaTotal ? `${stats.pithkaDone}/${stats.pithkaTotal}` : "Board",
-      hint: "Pithka-tracked clears",
+    rows.push({
+      label: "Clears",
       href: "/achievements",
-    });
-  }
-  if (stats.showDailies) {
-    pulse.push({
-      label: "Dailies",
-      value: "Board",
-      hint: "randoms, writs, pledges",
-      href: "/dailies",
-    });
-  }
-  if (stats.showEncyclopedia) {
-    pulse.push({
-      label: "Encyclopedia",
-      value: "Catalog",
-      hint: "sets, skills, CP, scribing",
-      href: "/encyclopedia",
+      done: stats.pithkaDone,
+      total: stats.pithkaTotal,
     });
   }
 
   return (
-    <AtlasPage
-      title={account.displayName}
-      subtitle={`${account.region}${account.esoPlus ? " · ESO+" : ""} · snapshot ${timeAgo(account.lastSnapshot)}`}
-    >
-      {pulse.length === 0 ? (
-        <AtlasEmpty title="Nothing on the pulse yet">
-          Turn modules back on in{" "}
+    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="h-0.5 bg-[var(--meter,#3dce7a)]" aria-hidden />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <Chip>CP {stats.accountCP.toLocaleString("en-US")}</Chip>
+          {stats.showCharacters ? (
+            <Link href="/characters" className="rounded-md border border-border px-2 py-0.5 text-xs text-fg-muted hover:text-fg">
+              {stats.characterCount} character{stats.characterCount === 1 ? "" : "s"}
+              {stats.archivedCount > 0 ? ` · ${stats.archivedCount} archived` : ""}
+            </Link>
+          ) : null}
+          {stats.showHouses ? (
+            <Link href="/collections?tab=houses" className="rounded-md border border-border px-2 py-0.5 text-xs text-fg-muted hover:text-fg">
+              {stats.housesCount} house{stats.housesCount === 1 ? "" : "s"}
+            </Link>
+          ) : null}
+        </div>
+        <Link href="/inventory?view=currency" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-fg-muted hover:text-fg">
+          <span>{formatGold(currencies.gold)}</span>
+          <span>{formatNumber(currencies.telVar)} TV</span>
+          <span>{formatNumber(currencies.alliancePoints)} AP</span>
+        </Link>
+      </div>
+      {account.guilds.length > 0 ? (
+        <p className="border-b border-border px-4 py-2 text-xs text-fg-muted">
+          {account.guilds.map((guild, index) => (
+            <span key={guild.name}>
+              {index > 0 ? <span className="text-fg-subtle"> · </span> : null}
+              <span className="text-fg">{guild.name}</span>
+              {guild.rank ? <span className="text-fg-subtle"> {guild.rank}</span> : null}
+              {guild.trader ? <span className="text-[var(--meter,#3dce7a)]"> Trader</span> : null}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {rows.length === 0 ? (
+        <p className="px-4 py-4 text-sm text-fg-muted">
+          Progress modules are off. Turn them back on in{" "}
           <Link href="/setup" className="text-accent hover:underline">
             Setup
-          </Link>{" "}
-          or import a snapshot.
-        </AtlasEmpty>
+          </Link>
+          .
+        </p>
       ) : (
-        <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {pulse.map((s) => (
-            <AtlasStat key={s.label} label={s.label} value={s.value} hint={s.hint} href={s.href} />
+        <ul>
+          {rows.map((row) => (
+            <li key={row.label} className="border-b border-border last:border-b-0">
+              <ProgressRow {...row} />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
+    </div>
+  );
+}
 
-      {wallet ? (
-        <AtlasPanel className="mb-8">
-          <div className="mb-3 flex items-end justify-between gap-2">
-            <h2 className="atlas-display text-lg text-fg">Wallet</h2>
-            <Link href="/inventory?view=currency" className="text-xs text-fg-subtle hover:text-accent">
-              Full table
-            </Link>
-          </div>
-          {wallet}
-        </AtlasPanel>
-      ) : null}
+export function AtlasHome({
+  account,
+  stats,
+  currencies,
+}: {
+  account: AtlasHomeAccount;
+  stats: AtlasHomeStats;
+  currencies: AtlasHomeCurrencies;
+}) {
+  return (
+    <div className="atlas-page mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col">
+      <h1 className="sr-only">{account.displayName}</h1>
+      <AccountOverview account={account} stats={stats} currencies={currencies} />
+    </div>
+  );
+}
 
-      {goals ? <div className="mb-8">{goals}</div> : null}
+function Chip({ children }: { children: ReactNode }) {
+  return <span className="rounded-md border border-border px-2 py-0.5 text-xs text-fg">{children}</span>;
+}
 
-      {account.guilds.length > 0 ? (
-        <AtlasPanel>
-          <h2 className="atlas-display mb-3 text-lg text-fg">Guilds</h2>
-          <ul className="flex flex-wrap gap-2">
-            {account.guilds.map((g) => (
-              <li
-                key={g.name}
-                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm text-fg"
-              >
-                <span>{g.name}</span>
-                {g.rank ? <span className="text-xs text-fg-subtle">{g.rank}</span> : null}
-                {g.trader ? (
-                  <span className="rounded border border-accent/40 bg-accent-soft px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-accent">
-                    Trader
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </AtlasPanel>
-      ) : null}
-    </AtlasPage>
+function ProgressRow({
+  href,
+  label,
+  done,
+  total,
+}: {
+  href: string;
+  label: string;
+  done: number;
+  total: number;
+}) {
+  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  return (
+    <Link
+      href={href}
+      className="grid grid-cols-[6.5rem_minmax(0,1fr)_2.75rem] items-center gap-3 px-4 py-2.5 hover:bg-surface-2 sm:grid-cols-[7.5rem_minmax(0,1fr)_3rem_6.5rem]"
+    >
+      <span className="text-[11px] font-medium uppercase tracking-wide text-fg-subtle">{label}</span>
+      <span className="h-2 overflow-hidden rounded-full bg-[var(--meter-track,#3e4858)]">
+        <span className="block h-full rounded-full bg-[var(--meter,#3dce7a)]" style={{ width: `${pct}%` }} />
+      </span>
+      <span className="text-right text-sm font-medium tabular-nums text-[var(--meter,#3dce7a)]">
+        {total > 0 ? `${pct}%` : "—"}
+      </span>
+      <span className="hidden text-right text-xs tabular-nums text-fg-muted sm:block">
+        {total > 0 ? `${done.toLocaleString("en-US")}/${total.toLocaleString("en-US")}` : ""}
+      </span>
+    </Link>
   );
 }
