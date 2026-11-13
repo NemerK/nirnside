@@ -21,7 +21,6 @@ export function AtlasInventoryChrome({
 
   return (
     <AtlasPage
-      grain="Account"
       title="Inventory"
       subtitle={
         view === "currency"

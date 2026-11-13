@@ -100,7 +100,7 @@ export default function AchievementsPage() {
         </PageFrame>
       }
       atlas={
-        <AtlasSection grain="Account" title="Achievements" action={badge} compact>
+        <AtlasSection title="Achievements" action={badge} compact>
           {content}
         </AtlasSection>
       }

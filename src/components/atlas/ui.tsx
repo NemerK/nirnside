@@ -3,14 +3,12 @@ import Link from "next/link";
 
 /** Atlas page chrome — quiet headings, same type as the rest of the app. */
 export function AtlasPage({
-  grain,
   title,
   subtitle,
   action,
   compact,
   children,
 }: {
-  grain: string;
   title: string;
   subtitle?: string;
   action?: ReactNode;
@@ -20,21 +18,18 @@ export function AtlasPage({
 }) {
   return (
     <div className="atlas-page mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col">
-      <header className={compact ? "mb-3 shrink-0" : "mb-6 shrink-0"}>
-        <p className="mb-0.5 text-xs font-medium text-fg-subtle">{grain}</p>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className={compact ? "text-lg font-semibold tracking-tight text-fg" : "text-2xl font-semibold tracking-tight text-fg"}>
-              {title}
-            </h1>
-            {subtitle ? (
-              <p className={compact ? "mt-0.5 max-w-2xl text-xs text-fg-muted" : "mt-2 max-w-2xl text-sm text-fg-muted"}>
-                {subtitle}
-              </p>
-            ) : null}
-          </div>
+      <header className={compact ? "mb-3 shrink-0" : "mb-4 shrink-0"}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className={compact ? "text-lg font-semibold tracking-tight text-fg" : "text-2xl font-semibold tracking-tight text-fg"}>
+            {title}
+          </h1>
           {action}
         </div>
+        {subtitle ? (
+          <p className={compact ? "mt-0.5 max-w-2xl text-xs text-fg-muted" : "mt-1 max-w-2xl text-sm text-fg-muted"}>
+            {subtitle}
+          </p>
+        ) : null}
       </header>
       <div className="min-h-0 flex-1">{children}</div>
     </div>

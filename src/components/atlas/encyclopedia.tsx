@@ -31,7 +31,6 @@ export function AtlasEncyclopediaHub({
 }) {
   return (
     <AtlasPage
-      grain="Catalog"
       title="Encyclopedia"
       subtitle="Live Tamriel reference over one shared database with your account. In-game data always wins."
       action={source ? <SourceBadge source={source} /> : undefined}

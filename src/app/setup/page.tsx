@@ -50,7 +50,6 @@ export default function SetupPage() {
       }
       atlas={
         <AtlasSection
-          grain="System"
           title="Setup"
           subtitle="Local machine only — find ESO, install addons, choose modules and look. Nothing is uploaded."
         >

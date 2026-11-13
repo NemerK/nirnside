@@ -95,4 +95,18 @@ describe("presentCharacterWorkspaceCard", () => {
     assert.equal(card.mandatoryTargets.total, 1);
     assert.equal(card.mandatoryTargets.pct, 100);
   });
+
+  it("keeps assigned roles on the card", () => {
+    const card = presentCharacterWorkspaceCard(
+      char({ id: "c", name: "Tank", lastSeen: 5 }),
+      [],
+      {},
+      ["r1", "missing"],
+      [{ id: "r1", name: "Tank", color: "#3f7fd6", sortOrder: 0 }],
+    );
+    assert.deepEqual(
+      card.roles.map((role) => role.name),
+      ["Tank"],
+    );
+  });
 });

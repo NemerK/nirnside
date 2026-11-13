@@ -1,5 +1,7 @@
 import type { Character } from "../snapshot/schema";
 import type { Goal, GoalIndexes, GoalSubject } from "../goals/types";
+import { rolesForCharacter } from "../roles/filter";
+import type { Role } from "../roles/types";
 import { goalAppliesTo, goalProgress, skillLineProgress, toGoalSubject } from "../goals/progress";
 import {
   presentMotifs,
@@ -40,6 +42,7 @@ export interface CharacterWorkspaceCard {
   vampire: boolean;
   werewolf: boolean;
   classMastery: boolean;
+  roles: Role[];
   targets: ProgressTally;
   /**
    * Essential goals only, measured at the mandatory rank.
@@ -111,6 +114,7 @@ export function presentCharacterWorkspaceCard(
   goals: Goal[],
   indexes: GoalIndexes,
   roleIds: string[] = [],
+  roleCatalog: Role[] = [],
 ): CharacterWorkspaceCard {
   const unknown = character.lastSeen == null;
   const subject = toGoalSubject(character, roleIds, !unknown);
@@ -130,6 +134,7 @@ export function presentCharacterWorkspaceCard(
     vampire: character.vampire?.isVampire ?? false,
     werewolf: character.werewolf?.isWerewolf ?? false,
     classMastery: character.classMastery ?? false,
+    roles: rolesForCharacter(character.id, roleCatalog, { [character.id]: roleIds }),
     targets: unknown ? tally(0, 0) : targetTally(goals, toGoalSubject(character), indexes),
     mandatoryTargets: unknown ? { ...tally(0, 0), unknownCount: 0 } : mandatoryTargetTally(goals, subject, indexes),
     research: researchTally(research),
@@ -144,8 +149,11 @@ export function presentCharacterWorkspaceCards(
   goals: Goal[],
   indexes: GoalIndexes,
   rolesByCharacter: Record<string, string[]> = {},
+  roleCatalog: Role[] = [],
 ): CharacterWorkspaceCard[] {
-  return characters.map((c) => presentCharacterWorkspaceCard(c, goals, indexes, rolesByCharacter[c.id] ?? []));
+  return characters.map((c) =>
+    presentCharacterWorkspaceCard(c, goals, indexes, rolesByCharacter[c.id] ?? [], roleCatalog),
+  );
 }
 
 export function overallWorkspacePct(card: CharacterWorkspaceCard): number {

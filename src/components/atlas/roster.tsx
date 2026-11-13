@@ -48,9 +48,7 @@ export function AtlasRoster({
 
   return (
     <AtlasPage
-      grain="Characters"
       title="Roster"
-      subtitle="Progress workspace and live sheets — Dashboard rings now live here."
       action={
         <div className="flex flex-wrap items-center gap-2">
           {view === "cards" && accountCP > 0 ? (
@@ -100,12 +98,6 @@ export function AtlasRoster({
         </div>
       }
     >
-      <p className="mb-4 text-sm text-fg-muted">
-        {view === "list"
-          ? "Drag the handle to reorder. Target bars fill at mandatory ranks — extras stay out of the 100%."
-          : "Open a character for the full workspace."}
-      </p>
-
       {sorted.length === 0 ? (
         <AtlasEmpty title="No characters yet">
           Install the addon, log a character out or{" "}

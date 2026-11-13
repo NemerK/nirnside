@@ -85,7 +85,6 @@ export default async function StylesPage({
       }
       atlas={
         <AtlasSection
-          grain="Account · Collections"
           title="Outfit Styles"
           subtitle="Account-wide cosmetics from Collections → Outfit Styles — not motif craft knowledge."
           action={<SourceBadge source={populated && !isSample ? "ingame" : "reference"} />}
