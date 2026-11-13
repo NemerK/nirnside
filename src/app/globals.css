@@ -68,6 +68,8 @@
   --accent-soft: #8aa0e81f;
   --danger: #e07a72;
   --ok: #6aab84;
+  --meter: #3dce7a;
+  --meter-track: #3e4858;
   --rank-mandatory: #8aa0e8;
   --rank-extra: #7eb0d4;
 }
@@ -87,6 +89,8 @@
   --accent-soft: #3f56b814;
   --danger: #b23a2c;
   --ok: #2f7a4a;
+  --meter: #1c9a4a;
+  --meter-track: #d3dae4;
   --rank-mandatory: #3f56b8;
   --rank-extra: #2c6fad;
 }
