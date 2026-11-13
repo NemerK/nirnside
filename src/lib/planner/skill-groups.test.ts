@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
+import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, plannerProgressionNames, withoutAbilityMorphDuplicates, type PlannerAbilityRow } from "./skill-groups";
 
 const classes = ["Dragonknight", "Nightblade", "Templar"];
 
@@ -123,6 +123,64 @@ describe("class mastery stays with its class", () => {
     assert.equal(plannerClassScopeAllows({ category: "Class", className: "Nightblade" }, "dragonknight"), false);
     assert.equal(plannerClassScopeAllows({ category: "Weapon", className: null }, "Dragonknight"), true);
     assert.equal(plannerClassScopeAllows({ category: "Class", className: "Nightblade" }, null), true);
+  });
+
+  it("drops a morph that was also listed as its own ability", () => {
+    const rows: PlannerAbilityRow[] = [
+      {
+        lineName: "Fighters Guild",
+        className: null,
+        passive: false,
+        base: { name: "Camouflaged Hunter", icon: null },
+        morphs: [],
+      },
+      {
+        lineName: "Fighters Guild",
+        className: null,
+        passive: false,
+        base: { name: "Expert Hunter", icon: null },
+        morphs: [
+          { name: "Evil Hunter", icon: null },
+          { name: "Camouflaged Hunter", icon: null },
+        ],
+      },
+      {
+        lineName: "Fighters Guild",
+        className: null,
+        passive: false,
+        base: { name: "Torchbearer", icon: null },
+        morphs: [],
+      },
+    ];
+    assert.deepEqual(
+      withoutAbilityMorphDuplicates(rows).map((row) => row.base.name),
+      ["Expert Hunter", "Torchbearer"],
+    );
+  });
+
+  it("keeps the base in the ability column when the character has a morph selected", () => {
+    assert.deepEqual(
+      plannerProgressionNames({
+        name: "Camouflaged Hunter",
+        morphs: [
+          { slot: 0, name: "Expert Hunter" },
+          { slot: 1, name: "Evil Hunter" },
+          { slot: 2, name: "Camouflaged Hunter" },
+        ],
+      }),
+      { base: "Expert Hunter", morphs: ["Evil Hunter", "Camouflaged Hunter"] },
+    );
+    assert.deepEqual(
+      plannerProgressionNames({
+        name: "Shadowy Disguise",
+        morphs: [
+          { slot: 0, name: "Shadow Cloak" },
+          { slot: 1, name: "Shadowy Disguise" },
+          { slot: 2, name: "Dark Cloak" },
+        ],
+      }),
+      { base: "Shadow Cloak", morphs: ["Shadowy Disguise", "Dark Cloak"] },
+    );
   });
 
   it("gives each class's Class Mastery its own key", () => {
