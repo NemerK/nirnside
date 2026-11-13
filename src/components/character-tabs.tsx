@@ -5,23 +5,26 @@ import { useState, type ReactNode } from "react";
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "targets", label: "Targets" },
+  { id: "scripts", label: "Scripts" },
   { id: "cp", label: "CP" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
-/** Overview, targets, and champion points each stay on their own pane. */
+/** Overview, targets, scripts, and champion points each stay on their own pane. */
 export function CharacterTabs({
   overview,
   targets,
+  scripts,
   champion,
 }: {
   overview: ReactNode;
   targets: ReactNode;
+  scripts: ReactNode;
   champion: ReactNode;
 }) {
   const [tab, setTab] = useState<TabId>("overview");
-  const panels: Record<TabId, ReactNode> = { overview, targets, cp: champion };
+  const panels: Record<TabId, ReactNode> = { overview, targets, scripts, cp: champion };
 
   return (
     <div>
