@@ -1,26 +1,15 @@
 import Link from "next/link";
 import type { Character, Wardrobe, WardrobeSetup } from "@/lib/snapshot/schema";
-
-type Worn = Character["equipped"][number];
-import { qualityText } from "@/lib/format";
 import { setHref } from "@/lib/db/catalog-queries";
 import { skillIconByName } from "@/lib/icons/skill-icons";
 import { GameIcon } from "./game-icon";
 
-const ARMOR: { label: string; match: string[] }[] = [
-  { label: "Shoulders", match: ["shoulder"] },
-  { label: "Head", match: ["head"] },
-  { label: "Chest", match: ["chest"] },
-  { label: "Hands", match: ["hand", "glove", "bracer"] },
-  { label: "Belt", match: ["belt", "waist"] },
-  { label: "Legs", match: ["leg", "pant", "greave"] },
-  { label: "Feet", match: ["feet", "foot", "boot", "shoe"] },
-];
+type Worn = Character["equipped"][number];
 
 /**
- * Equipped tab: the paper doll in the game's slot positions, then jewelry,
- * then front and back bars. Skill icons and food come from the first wardrobe
- * setup that saved them — the snapshot has no live action bar of its own.
+ * Paper doll in the character-sheet order: helm centered above the body,
+ * shoulders and chest at the shoulders, hands and belt, legs and feet.
+ * Accessories, then weapons, then the two skill bars.
  */
 export function CharacterLoadout({
   equipped,
@@ -39,75 +28,84 @@ export function CharacterLoadout({
     return found;
   };
 
-  const shoulders = take(ARMOR[0].match);
-  const head = take(ARMOR[1].match);
-  const chest = take(ARMOR[2].match);
-  const hands = take(ARMOR[3].match);
-  const belt = take(ARMOR[4].match);
-  const legs = take(ARMOR[5].match);
-  const feet = take(ARMOR[6].match);
-
+  const shoulders = take(["shoulder"]);
+  const head = take(["head"]);
+  const chest = take(["chest"]);
+  const hands = take(["hand", "glove", "bracer"]);
+  const belt = take(["belt", "waist"]);
+  const legs = take(["leg", "pant", "greave"]);
+  const feet = take(["feet", "foot", "boot", "shoe"]);
   const neck = take(["neck"]);
   const rings = worn.filter((item) => !used.has(item) && item.slot.toLowerCase().includes("ring"));
   rings.forEach((item) => used.add(item));
-  const jewelry = [neck, rings[0], rings[1]];
 
   const setup = firstBarSetup(wardrobe);
   const food = setup?.food?.name ? setup.food : firstFood(wardrobe);
   const frontSkills = setup?.bars.find((bar) => bar.bar === "front")?.skills ?? [];
   const backSkills = setup?.bars.find((bar) => bar.bar === "back")?.skills ?? [];
   const barLabel = setup ? barCaption(wardrobe, setup) : null;
+  const frontWeapons = equipped.filter((item) => item.bar === "front");
+  const backWeapons = equipped.filter((item) => item.bar === "back");
 
   return (
-    <div className="grid items-start gap-3 lg:grid-cols-[17.5rem_minmax(0,1fr)]">
-      <div className="space-y-2">
-        <div className="grid grid-cols-3 gap-1">
-          <GearWell item={shoulders} empty="Shoulders" className="col-start-1 row-start-1" />
-          <GearWell item={head} empty="Head" className="col-start-2 row-start-1" />
-          <GearWell item={chest} empty="Chest" className="col-start-3 row-start-1" />
-          <GearWell item={hands} empty="Hands" className="col-start-1 row-start-2" />
-          <div className="col-start-2 row-start-2 row-span-2 flex flex-col justify-center gap-1 rounded border border-border bg-surface px-1.5 py-1">
-            {(
-              [
-                ["Mag", attributes.magicka ?? 0, "text-sky-300"],
-                ["HP", attributes.health ?? 0, "text-rose-300"],
-                ["Stam", attributes.stamina ?? 0, "text-emerald-400"],
-              ] as const
-            ).map(([label, value, tone]) => (
-              <div key={label} className="flex items-baseline justify-between gap-1">
-                <span className="text-[10px] uppercase tracking-wide text-fg-subtle">{label}</span>
-                <span className={`text-sm font-semibold tabular-nums ${tone}`}>{value}</span>
-              </div>
-            ))}
-          </div>
-          <GearWell item={belt} empty="Belt" className="col-start-3 row-start-2" />
-          <GearWell item={legs} empty="Legs" className="col-start-1 row-start-3" />
-          <GearWell item={feet} empty="Feet" className="col-start-3 row-start-3" />
+    <div className="grid items-start gap-4 lg:grid-cols-[16.5rem_minmax(0,1fr)]">
+      <div>
+        <div className="mb-1 flex justify-center">
+          <GearSlot item={head} label="Head" />
+        </div>
+        <div className="grid grid-cols-2 gap-x-10 gap-y-1">
+          <GearSlot item={shoulders} label="Shoulders" />
+          <GearSlot item={chest} label="Chest" />
+          <GearSlot item={hands} label="Hands" />
+          <GearSlot item={belt} label="Belt" />
+          <GearSlot item={legs} label="Legs" />
+          <GearSlot item={feet} label="Feet" />
         </div>
 
+        <h2 className="mb-1 mt-3 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Accessories</h2>
         <div className="grid grid-cols-3 gap-1">
-          {jewelry.map((item, index) => (
-            <GearWell key={index} item={item} empty={index === 0 ? "Neck" : "Ring"} />
+          <GearSlot item={neck} label="Neck" />
+          <GearSlot item={rings[0]} label="Ring" />
+          <GearSlot item={rings[1]} label="Ring" />
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-1">
+          {(
+            [
+              ["Mag", attributes.magicka ?? 0, "text-sky-300"],
+              ["Health", attributes.health ?? 0, "text-rose-300"],
+              ["Stamina", attributes.stamina ?? 0, "text-emerald-400"],
+            ] as const
+          ).map(([label, value, tone]) => (
+            <div key={label} className="rounded border border-border bg-surface px-1.5 py-1 text-center">
+              <div className={`text-sm font-semibold tabular-nums ${tone}`}>{value}</div>
+              <div className="text-[9px] uppercase tracking-wide text-fg-subtle">{label}</div>
+            </div>
           ))}
         </div>
-
-        <GearWell item={foodPiece(food)} empty="Food" wide />
+        <div className="mt-1">
+          <GearSlot item={foodPiece(food)} label="Food" wide />
+        </div>
       </div>
 
-      <div className="space-y-2">
-        {barLabel ? <p className="text-[11px] text-fg-subtle">Skill bar from {barLabel}</p> : (
-          <p className="text-[11px] text-fg-subtle">No skill bar in this snapshot.</p>
-        )}
-        <WeaponBar
-          title="Front bar"
-          weapons={equipped.filter((item) => item.bar === "front")}
-          skills={frontSkills}
-        />
-        <WeaponBar
-          title="Back bar"
-          weapons={equipped.filter((item) => item.bar === "back")}
-          skills={backSkills}
-        />
+      <div className="space-y-3">
+        <section>
+          <h2 className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Weapons</h2>
+          <div className="flex flex-wrap gap-4">
+            <WeaponPair title="Front" items={frontWeapons} />
+            <WeaponPair title="Back" items={backWeapons} />
+          </div>
+        </section>
+        <section>
+          <h2 className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">
+            {barLabel ? `Skills · ${barLabel}` : "Skills"}
+          </h2>
+          {!barLabel ? <p className="mb-1 text-[11px] text-fg-subtle">No skill bar in this snapshot.</p> : null}
+          <SkillBar title="Front bar" skills={frontSkills} />
+          <div className="mt-1.5">
+            <SkillBar title="Back bar" skills={backSkills} />
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -128,92 +126,91 @@ function foodPiece(food: WardrobeSetup["food"] | null | undefined): Worn | undef
   };
 }
 
-function GearWell({
-  item,
-  empty,
-  wide = false,
-  className = "",
-}: {
-  item?: Worn;
-  empty: string;
-  wide?: boolean;
-  className?: string;
-}) {
+function GearSlot({ item, label, wide = false }: { item?: Worn; label: string; wide?: boolean }) {
   const title = item
-    ? [empty, item.name, item.setName, item.trait, item.enchant, ...item.scribing].filter(Boolean).join(" · ")
-    : empty;
+    ? [label, item.name, item.setName, item.trait, item.enchant, ...item.scribing].filter(Boolean).join(" · ")
+    : label;
   const body = (
-    <div
-      title={title}
-      data-slot={empty}
-      className={`flex h-full items-center gap-1 rounded border px-1 py-1 ${
-        item ? "border-border bg-surface" : "border-dashed border-border/80 bg-transparent"
-      } ${wide ? "" : "min-h-[3.4rem] flex-col justify-center text-center"}`}
-    >
-      {item ? <GameIcon name={item.name} icon={item.icon} size={wide ? 22 : 26} bare /> : null}
-      <span className="text-[9px] uppercase tracking-wide text-fg-subtle">{empty}</span>
-      <span className={`line-clamp-2 text-[10px] leading-tight ${item ? qualityText(item.quality) : "hidden"}`}>
-        {item?.name}
+    <div title={title} data-slot={label} className={wide ? "flex items-center gap-2" : "flex flex-col items-center"}>
+      <span
+        className={`flex items-center justify-center rounded border-2 bg-surface ${wide ? "h-10 w-10" : "h-14 w-14"} ${
+          item ? qualityBorder(item.quality) : "border-dashed border-border"
+        }`}
+      >
+        {item?.icon ? <GameIcon name={item.name} icon={item.icon} size={wide ? 32 : 44} bare /> : null}
+      </span>
+      <span className={`text-center leading-tight ${wide ? "min-w-0" : "mt-0.5 w-14"}`}>
+        <span className="block truncate text-[9px] uppercase tracking-wide text-fg-subtle">{label}</span>
+        {item ? <span className="block truncate text-[10px] text-fg">{item.name}</span> : null}
       </span>
     </div>
   );
   if (item?.setName) {
     return (
-      <Link href={setHref({ name: item.setName })} className={`${className} min-w-0 hover:opacity-90`}>
+      <Link href={setHref({ name: item.setName })} className="hover:opacity-90">
         {body}
       </Link>
     );
   }
-  return <div className={className}>{body}</div>;
+  return body;
 }
 
-function WeaponBar({
-  title,
-  weapons,
-  skills,
-}: {
-  title: string;
-  weapons: Worn[];
-  skills: { name: string; icon?: string | null }[];
-}) {
-  const slots = skills.length > 0 ? skills : Array.from({ length: 6 }, () => null);
+function WeaponPair({ title, items }: { title: string; items: Worn[] }) {
+  const main = items.find((item) => item.slot.toLowerCase().includes("main"));
+  const off = items.find((item) => item.slot.toLowerCase().includes("off"));
+  const rest = items.filter((item) => item !== main && item !== off);
+  const slots = [main, off, ...rest].slice(0, 2);
+  while (slots.length < 2) slots.push(undefined);
   return (
-    <section className="rounded-lg border border-border bg-surface p-2">
-      <h2 className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{title}</h2>
-      <div className="flex flex-wrap items-center gap-1">
-        {weapons.length > 0 ? (
-          weapons.map((item, index) => (
-            <div key={`${item.slot}-${index}`} className="w-[4.5rem]">
-              <GearWell item={item} empty={item.slot} />
-            </div>
-          ))
-        ) : (
-          <>
-            <EmptySkill label="Main" />
-            <EmptySkill label="Off" />
-          </>
-        )}
-        <span className="mx-1 h-8 w-px bg-border" aria-hidden />
-        {slots.map((skill, index) =>
-          skill ? (
-            <span key={`${skill.name}-${index}`} title={skill.name} className="inline-flex">
-              <GameIcon name={skill.name} icon={skill.icon || skillIconByName(skill.name)} size={32} />
-            </span>
-          ) : (
-            <EmptySkill key={index} label="" />
-          ),
-        )}
+    <div>
+      <div className="mb-1 text-[10px] uppercase tracking-wide text-fg-subtle">{title}</div>
+      <div className="flex gap-1">
+        {slots.map((item, index) => (
+          <GearSlot key={index} item={item} label={index === 0 ? "Main" : "Off"} />
+        ))}
       </div>
-    </section>
+    </div>
   );
 }
 
-function EmptySkill({ label }: { label: string }) {
+function SkillBar({ title, skills }: { title: string; skills: { name: string; icon?: string | null }[] }) {
+  const slots = Array.from({ length: 6 }, (_, index) => skills[index] ?? null);
   return (
-    <span className="inline-flex h-8 w-8 items-center justify-center rounded border border-dashed border-border text-[9px] text-fg-subtle">
-      {label}
-    </span>
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="w-14 text-[10px] uppercase tracking-wide text-fg-subtle">{title.replace(" bar", "")}</span>
+      {slots.map((skill, index) => {
+        const ultimate = index === 5;
+        return skill ? (
+          <span key={`${skill.name}-${index}`} title={skill.name} className={ultimate ? "rounded border-2 border-sky-400/80" : ""}>
+            <GameIcon name={skill.name} icon={skill.icon || skillIconByName(skill.name)} size={36} />
+          </span>
+        ) : (
+          <span
+            key={index}
+            className={`inline-flex h-9 w-9 rounded border ${ultimate ? "border-2 border-sky-400/40" : "border-dashed border-border"}`}
+            title={ultimate ? "Ultimate" : `Skill ${index + 1}`}
+          />
+        );
+      })}
+    </div>
   );
+}
+
+function qualityBorder(quality: Worn["quality"]): string {
+  switch (quality) {
+    case "mythic":
+      return "border-orange-400";
+    case "legendary":
+      return "border-amber-300";
+    case "epic":
+      return "border-violet-400";
+    case "superior":
+      return "border-sky-400";
+    case "fine":
+      return "border-emerald-500";
+    default:
+      return "border-border";
+  }
 }
 
 function firstBarSetup(wardrobe: Wardrobe | null | undefined): WardrobeSetup | null {
@@ -242,10 +239,9 @@ function barCaption(wardrobe: Wardrobe | null | undefined, setup: WardrobeSetup)
   for (const zone of wardrobe?.zones ?? []) {
     for (const page of zone.pages) {
       if (page.setups.includes(setup)) {
-        const where = [zone.name, page.name, setup.name].filter(Boolean).join(" · ");
-        return where || setup.name || "a wardrobe setup";
+        return [zone.name, setup.name].filter(Boolean).join(" · ") || "wardrobe";
       }
     }
   }
-  return setup.name || "a wardrobe setup";
+  return setup.name || "wardrobe";
 }

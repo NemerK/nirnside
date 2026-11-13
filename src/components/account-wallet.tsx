@@ -57,14 +57,11 @@ export function AccountWallet({
         {title ? (
           <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{title}</div>
         ) : null}
-        <div className="flex flex-wrap overflow-visible rounded-lg border border-border bg-surface">
-          {shown.map((row, index) => (
-            <div
-              key={row.key}
-              className={`group relative min-w-[7.5rem] flex-1 px-3 py-1 ${index > 0 ? "border-l border-border" : ""}`}
-            >
-              <div className="truncate text-[10px] uppercase tracking-wide text-fg-subtle">{row.label}</div>
-              <div className={`text-sm font-semibold tabular-nums ${row.colorClass}`}>{formatNumber(row.amount)}</div>
+        <div className="grid grid-cols-2 gap-px overflow-visible rounded-lg border border-border bg-border sm:grid-cols-3 lg:grid-cols-5">
+          {shown.map((row) => (
+            <div key={row.key} className="group relative bg-surface px-2.5 py-1.5">
+              <div className="text-[10px] leading-tight text-fg-subtle">{row.label}</div>
+              <div className={`mt-0.5 text-sm font-semibold tabular-nums ${row.colorClass}`}>{formatNumber(row.amount)}</div>
               <Breakdown entry={row} />
             </div>
           ))}
