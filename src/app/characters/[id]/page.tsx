@@ -8,7 +8,6 @@ import {
   Moon,
   ShieldQuestion,
   Sparkles,
-  Star,
   Swords,
   Users,
 } from "lucide-react";
@@ -26,6 +25,8 @@ import { SkillBook } from "@/components/skill-book";
 import { Wardrobe } from "@/components/wardrobe";
 import { RolePicker } from "@/components/role-picker";
 import { CharacterGoals } from "@/components/goals-board";
+import { CharacterTabs } from "@/components/character-tabs";
+import { CharacterChampion } from "@/components/character-champion";
 import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
@@ -281,33 +282,10 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           </div>
         </Card>
       )}
-      <CharacterGoals
-        rows={goalRows}
-        lines={lines}
-        subjectId={c.id}
-        subjectName={c.name}
-        characterClass={c.class}
-        lineBook={lineBook}
-        abilityPlans={abilityPlans}
-        catalog={{
-          lines: goalIndexes.lineIndex.map(([name, meta]) => ({
-            name,
-            category: meta.category,
-            className: meta.className,
-            classNames: meta.classNames,
-          })),
-          abilities: goalIndexes.abilityIndex.map(([name, meta]) => ({
-            name,
-            lineName: meta.lineName,
-            className: meta.className,
-            category: meta.category,
-          })),
-        }}
-      />
-
-      <div className="mt-6">
-        <SkillBook categories={skillBook} lastSeen={c.lastSeen} characterClass={c.class} />
-      </div>
+      <CharacterTabs
+        overview={
+          <>
+            <SkillBook categories={skillBook} lastSeen={c.lastSeen} characterClass={c.class} />
 
       {c.wardrobe && (c.wardrobe.zones?.length ?? 0) > 0 && (
         <div className="mt-6">
@@ -348,7 +326,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         </section>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           {/* Equipped gear */}
           <section>
@@ -366,41 +344,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         </div>
 
         <div className="space-y-6">
-          {/* Champion points */}
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <SectionTitle className="mb-0">Champion Points</SectionTitle>
-              <Link href="/encyclopedia/champion-points" className="text-xs text-accent hover:underline">
-                Tree & planner →
-              </Link>
-            </div>
-            {c.champion.length === 0 ? (
-              <Card className="px-4 py-6 text-sm text-fg-muted">None slotted or not captured.</Card>
-            ) : (
-              <div className="space-y-3">
-                {c.champion.map((disc, i) => (
-                  <Card key={i} className="p-4">
-                    <div className="mb-2 flex items-center gap-2 font-medium text-fg">
-                      <Star className="h-4 w-4 text-accent" /> {disc.name}
-                    </div>
-                    <ul className="space-y-1.5">
-                      {disc.stars.map((s, j) => (
-                        <li key={j} className="flex items-center justify-between text-sm">
-                          <span className={s.slotted ? "text-fg" : "text-fg-subtle"}>
-                            {s.slotted && <span className="mr-1 text-accent">●</span>}
-                            {s.name}
-                          </span>
-                          <span className="text-fg-muted">{s.points}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Attributes */}
           <section>
             <SectionTitle>Attributes</SectionTitle>
             <Card className="grid grid-cols-3 divide-x divide-border">
@@ -502,6 +445,35 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           )}
         </div>
       </div>
+          </>
+        }
+        targets={
+          <CharacterGoals
+            rows={goalRows}
+            lines={lines}
+            subjectId={c.id}
+            subjectName={c.name}
+            characterClass={c.class}
+            lineBook={lineBook}
+            abilityPlans={abilityPlans}
+            catalog={{
+              lines: goalIndexes.lineIndex.map(([name, meta]) => ({
+                name,
+                category: meta.category,
+                className: meta.className,
+                classNames: meta.classNames,
+              })),
+              abilities: goalIndexes.abilityIndex.map(([name, meta]) => ({
+                name,
+                lineName: meta.lineName,
+                className: meta.className,
+                category: meta.category,
+              })),
+            }}
+          />
+        }
+        champion={<CharacterChampion champion={c.champion} championPoints={c.championPoints} />}
+      />
     </div>
   );
 }
