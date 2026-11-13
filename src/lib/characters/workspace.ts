@@ -1,6 +1,6 @@
 import type { Character } from "../snapshot/schema";
 import type { Goal, GoalIndexes, GoalSubject } from "../goals/types";
-import { goalAppliesTo, goalProgress, toGoalSubject } from "../goals/progress";
+import { goalAppliesTo, goalProgress, skillLineProgress, toGoalSubject } from "../goals/progress";
 import {
   presentMotifs,
   presentResearch,
@@ -22,6 +22,8 @@ export interface ProgressTally {
   done: number;
   total: number;
   pct: number;
+  /** Applicable mandatory goals whose snapshot can't answer yet. */
+  unknownCount?: number;
 }
 
 export interface CharacterWorkspaceCard {
@@ -39,6 +41,11 @@ export interface CharacterWorkspaceCard {
   werewolf: boolean;
   classMastery: boolean;
   targets: ProgressTally;
+  /**
+   * Essential goals only, measured at the mandatory rank.
+   * Optional, completionist, and extra-above-mandatory ranks do not move this bar.
+   */
+  mandatoryTargets: ProgressTally;
   research: ProgressTally;
   motifs: ProgressTally;
   scribingKnown: number;
@@ -62,6 +69,33 @@ function targetTally(goals: Goal[], subject: GoalSubject, indexes: GoalIndexes):
   return tally(done, total);
 }
 
+/**
+ * 100% means every essential goal is at its mandatory rank.
+ * Extra ranks and non-essential tiers are ignored.
+ */
+export function mandatoryTargetTally(goals: Goal[], subject: GoalSubject, indexes: GoalIndexes): ProgressTally {
+  let done = 0;
+  let total = 0;
+  let unknownCount = 0;
+  for (const goal of goals) {
+    if (goal.tier !== "essential") continue;
+    if (!goalAppliesTo(goal, subject)) continue;
+    if (goal.domain === "skillline" && goal.targetRank <= 0 && goal.extraRank > 0) continue;
+    const progress =
+      goal.domain === "skillline"
+        ? skillLineProgress(subject, goal.target, goal.targetRank, indexes)
+        : goalProgress(goal, subject, indexes);
+    if (progress.state === "notapplicable") continue;
+    if (progress.state === "unknown") {
+      unknownCount += 1;
+      continue;
+    }
+    total += 1;
+    if (progress.state === "done") done += 1;
+  }
+  return { ...tally(done, total), unknownCount };
+}
+
 function researchTally(research: PresentedResearch | null): ProgressTally {
   if (!research) return tally(0, 0);
   return tally(research.known, research.total);
@@ -76,9 +110,10 @@ export function presentCharacterWorkspaceCard(
   character: Character,
   goals: Goal[],
   indexes: GoalIndexes,
+  roleIds: string[] = [],
 ): CharacterWorkspaceCard {
   const unknown = character.lastSeen == null;
-  const subject = toGoalSubject(character);
+  const subject = toGoalSubject(character, roleIds, !unknown);
   const research = unknown ? null : presentResearch(character.research);
   const motifs = unknown ? null : presentMotifs(character.motifs);
 
@@ -95,7 +130,8 @@ export function presentCharacterWorkspaceCard(
     vampire: character.vampire?.isVampire ?? false,
     werewolf: character.werewolf?.isWerewolf ?? false,
     classMastery: character.classMastery ?? false,
-    targets: unknown ? tally(0, 0) : targetTally(goals, subject, indexes),
+    targets: unknown ? tally(0, 0) : targetTally(goals, toGoalSubject(character), indexes),
+    mandatoryTargets: unknown ? { ...tally(0, 0), unknownCount: 0 } : mandatoryTargetTally(goals, subject, indexes),
     research: researchTally(research),
     motifs: motifTally(motifs),
     scribingKnown: unknown ? 0 : character.scribingScripts?.length ?? 0,
@@ -107,8 +143,9 @@ export function presentCharacterWorkspaceCards(
   characters: Character[],
   goals: Goal[],
   indexes: GoalIndexes,
+  rolesByCharacter: Record<string, string[]> = {},
 ): CharacterWorkspaceCard[] {
-  return characters.map((c) => presentCharacterWorkspaceCard(c, goals, indexes));
+  return characters.map((c) => presentCharacterWorkspaceCard(c, goals, indexes, rolesByCharacter[c.id] ?? []));
 }
 
 export function overallWorkspacePct(card: CharacterWorkspaceCard): number {
