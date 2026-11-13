@@ -26,6 +26,24 @@ export function classIcon(className: string): string | undefined {
   return CLASS_ICONS[className];
 }
 
+/**
+ * Class hues from the game: fire, storm, shadow, sun, green, grave, and
+ * Apocrypha. Kept distinct so two classes never share a color.
+ */
+export const CLASS_COLORS: Record<string, string> = {
+  Dragonknight: "#e06a3a",
+  Sorcerer: "#5b9fe8",
+  Nightblade: "#b46ad4",
+  Templar: "#e0c04a",
+  Warden: "#3eaf62",
+  Necromancer: "#8fbf7a",
+  Arcanist: "#2fbfb0",
+};
+
+export function classColor(className: string): string | undefined {
+  return CLASS_COLORS[className];
+}
+
 /** Live classes first, then any extra names a snapshot still carries. */
 export function classFilterOrder(present: string[]): string[] {
   const seen = new Set<string>();
