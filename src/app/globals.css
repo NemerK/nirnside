@@ -10,6 +10,14 @@
  * game data: .look-classic (parchment/gold) vs .look-atlas (neutral, low-glare).
  */
 
+/* Craft station pins are white silhouettes. Black on a light page, white on a dark one. */
+.craft-station-icon {
+  filter: brightness(0);
+}
+.theme-dark .craft-station-icon {
+  filter: none;
+}
+
 .theme-dark {
   --bg: #0d0f13;
   --bg-elev: #141821;
