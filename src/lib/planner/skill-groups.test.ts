@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { abilitiesOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey } from "./skill-groups";
+import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
 
 const classes = ["Dragonknight", "Nightblade", "Templar"];
 
@@ -71,6 +71,46 @@ describe("class mastery stays with its class", () => {
     assert.deepEqual(
       abilitiesOnPlannerLine(unnamed, { name: "Class Mastery", className: "Dragonknight" }),
       [],
+    );
+  });
+
+  it("keeps a skill with its two morphs, and leaves passives in the ability column", () => {
+    const rows: PlannerAbilityRow[] = [
+      {
+        lineName: "Ardent Flame",
+        className: "Dragonknight",
+        passive: false,
+        base: { name: "Lava Whip", icon: null },
+        morphs: [
+          { name: "Molten Whip", icon: null },
+          { name: "Flame Lash", icon: null },
+        ],
+      },
+      {
+        lineName: "Ardent Flame",
+        className: "Dragonknight",
+        passive: true,
+        base: { name: "Combustion", icon: null },
+        morphs: [],
+      },
+      {
+        lineName: "Assassination",
+        className: "Nightblade",
+        passive: false,
+        base: { name: "Death Stroke", icon: null },
+        morphs: [
+          { name: "Incapacitating Strike", icon: null },
+          { name: "Soul Harvest", icon: null },
+        ],
+      },
+    ];
+    const flame = abilityRowsOnPlannerLine(rows, { name: "Ardent Flame", className: "Dragonknight" });
+    assert.deepEqual(
+      flame.map((row) => [row.base.name, ...row.morphs.map((morph) => morph.name)]),
+      [
+        ["Lava Whip", "Molten Whip", "Flame Lash"],
+        ["Combustion"],
+      ],
     );
   });
 

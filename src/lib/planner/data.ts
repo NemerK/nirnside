@@ -18,7 +18,8 @@ import type { Goal, GoalIndexes } from "../goals/types";
 import type { GoalCardView, GoalMarkView, GoalRowItem } from "../goals/views";
 import { ESO_CLASSES } from "../classes";
 import { plannerAbilityIcon, plannerLineIcon, plannerScriptIcon } from "../icons/planner-icons";
-import { plannerLineKey } from "./skill-groups";
+import { plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
+export type { PlannerAbilityRow };
 import { skillLineCap } from "../skills/line-cap";
 import type { AbilityMeta, GoalSubject, LineMeta, SkillLineChoice } from "../goals/types";
 
@@ -59,6 +60,7 @@ export interface PlannerData extends GoalIndexArrays {
   lines: PlannerLineChoice[];
   scripts: { name: string; slot: string; icon: string | null }[];
   abilities: PlannerAbilityChoice[];
+  abilityRows: PlannerAbilityRow[];
 }
 
 function isClassCategory(category: string): boolean {
@@ -109,6 +111,14 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
 
   const abilityMeta = new Map<string, AbilityMeta>();
   const abilities: PlannerAbilityChoice[] = [];
+  const abilityRows: PlannerAbilityRow[] = [];
+  const claimedAbility = new Set<string>();
+  function claimAbility(lineName: string, className: string | null, name: string) {
+    claimedAbility.add(`${plannerLineKey({ name: lineName, className })}::${name.trim().toLowerCase()}`);
+  }
+  function alreadyClaimed(lineName: string, className: string | null, name: string) {
+    return claimedAbility.has(`${plannerLineKey({ name: lineName, className })}::${name.trim().toLowerCase()}`);
+  }
   const lineNameById = new Map(
     catalogLines.filter(({ entry }) => !isExcludedSkillLine(entry)).map(({ entry }) => [entry.id, entry]),
   );
@@ -150,6 +160,15 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         className: line.className,
       }),
     );
+    const morphSlots = entry.morphs
+      .filter(
+        (m) =>
+          m.isMorph &&
+          m.name.trim() &&
+          m.name.trim().toLowerCase() !== entry.name.trim().toLowerCase(),
+      )
+      .slice(0, 2)
+      .map((m) => m.name);
     for (const m of entry.morphs) {
       rememberAbility(
         m.name,
@@ -162,6 +181,15 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         }),
       );
     }
+    abilityRows.push({
+      lineName: line.name,
+      className: line.className ?? null,
+      passive: entry.type === "passive",
+      base: { name: entry.name, icon: null },
+      morphs: entry.type === "passive" ? [] : morphSlots.map((name) => ({ name, icon: null })),
+    });
+    claimAbility(line.name, line.className ?? null, entry.name);
+    for (const name of morphSlots) claimAbility(line.name, line.className ?? null, name);
   }
   for (const c of live) {
     for (const line of c.skillLines) {
@@ -207,8 +235,30 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
             }),
           );
         }
+        const morphNames = slots
+          .map((m) => m.name?.trim() ?? "")
+          .filter((name) => name && name.toLowerCase() !== ability.name.trim().toLowerCase())
+          .slice(0, 2);
+        const known = [ability.name, ...morphNames].some((name) => alreadyClaimed(line.name, shared.className, name));
+        if (!known && ability.name.trim()) {
+          abilityRows.push({
+            lineName: line.name,
+            className: shared.className,
+            passive,
+            base: { name: ability.name, icon: null },
+            morphs: passive ? [] : morphNames.map((name) => ({ name, icon: null })),
+          });
+          claimAbility(line.name, shared.className, ability.name);
+          for (const name of morphNames) claimAbility(line.name, shared.className, name);
+        }
       }
     }
+  }
+
+  const iconByName = new Map(abilities.map((ability) => [ability.name.trim().toLowerCase(), ability.icon]));
+  for (const row of abilityRows) {
+    row.base.icon = iconByName.get(row.base.name.trim().toLowerCase()) ?? null;
+    for (const morph of row.morphs) morph.icon = iconByName.get(morph.name.trim().toLowerCase()) ?? null;
   }
 
   const abilityFace = new Map<string, string>();
@@ -235,6 +285,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         a.name.localeCompare(b.name),
     ),
     abilities,
+    abilityRows,
     lineIndex: [...lineMeta.entries()] as [string, LineMeta][],
     abilityIndex: [...abilityMeta.entries()] as [string, AbilityMeta][],
   };
@@ -367,7 +418,7 @@ export const loadPlannerData = cache(function loadPlannerData(): PlannerData {
     ),
   );
 
-  const { lines, abilities, lineIndex, abilityIndex } = collectLineAbilityData(live);
+  const { lines, abilities, abilityRows, lineIndex, abilityIndex } = collectLineAbilityData(live);
   const scripts = (safe(getScripts) ?? []).map(({ entry }) => ({
     name: entry.name,
     slot: entry.slot,
@@ -381,6 +432,7 @@ export const loadPlannerData = cache(function loadPlannerData(): PlannerData {
     lines,
     scripts,
     abilities,
+    abilityRows,
     lineIndex,
     abilityIndex,
   };
