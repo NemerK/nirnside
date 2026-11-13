@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { collectionsSummaryLine, presentCollections } from "./present";
+import { presentCollections } from "./present";
 import type { House, OutfitStyleCategory, StickerbookSet } from "../snapshot/schema";
 
 describe("presentCollections", () => {
@@ -51,6 +51,6 @@ describe("presentCollections", () => {
     const withHouses = presentCollections({ stickerbook: [], outfitStyles: [], houses });
     assert.equal(withHouses.defaultTab, "houses");
     assert.equal(withHouses.houses.primary?.name, "Snugpod");
-    assert.match(collectionsSummaryLine(withHouses), /1 houses/);
+    assert.equal(withHouses.houses.total, 1);
   });
 });
