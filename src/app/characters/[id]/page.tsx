@@ -16,7 +16,7 @@ import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
 import { skillLineChoices } from "@/lib/planner/data";
-import { getSkillLineByName, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
+import { getSkillLineByName, getSkillsForLine, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { rolesForCharacter } from "@/lib/roles/filter";
@@ -26,10 +26,12 @@ import { SkillBook } from "@/components/skill-book";
 import { Wardrobe } from "@/components/wardrobe";
 import { RolePicker } from "@/components/role-picker";
 import { CharacterGoals } from "@/components/goals-board";
-import { toGoalSubject } from "@/lib/goals/progress";
+import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
-import { ALLIANCE_ACCENT, formatDateTime, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
+import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 import { formatResearchRemaining, presentMotifs, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
+import { skillLineCap } from "@/lib/skills/line-cap";
+import type { AbilityPlan, LineSkillView } from "@/lib/planner/line-plan";
 
 function skillLineHref(name: string, className?: string | null): string | null {
   try {
@@ -144,6 +146,53 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   const hasKnowledge =
     researchView.total > 0 || motifView.total > 0 || recipeView.total > 0 || planView.total > 0;
 
+  const lineBook: Record<string, { maxRank: number | null; skills: LineSkillView[] }> = {};
+  for (const category of skillBook) {
+    for (const line of category.lines) {
+      const key = line.name.trim().toLowerCase();
+      if (!key || lineBook[key]) continue;
+      lineBook[key] = {
+        maxRank: skillLineCap(line.name),
+        skills: line.abilities.map((ability) => ({
+          name: ability.name,
+          icon: ability.icon,
+          passive: ability.passive,
+          purchased: ability.purchased,
+          morphs: ability.morphs.map((morph) => morph.name),
+        })),
+      };
+    }
+  }
+  for (const goal of goals) {
+    if (goal.domain !== "skillline") continue;
+    const key = goal.target.trim().toLowerCase();
+    if (!key || lineBook[key]) continue;
+    let skills: LineSkillView[] = [];
+    try {
+      const row = getSkillLineByName(goal.target, c.class);
+      if (row) {
+        skills = getSkillsForLine(row.entry.id).map(({ entry }) => ({
+          name: entry.name,
+          icon: entry.icon,
+          passive: entry.type === "passive",
+          purchased: null,
+          morphs: entry.morphs.filter((morph) => morph.isMorph).map((morph) => morph.name),
+        }));
+      }
+    } catch {
+      skills = [];
+    }
+    lineBook[key] = { maxRank: skillLineCap(goal.target), skills };
+  }
+  const abilityByName = new Map(goalIndexes.abilityIndex);
+  const abilityPlans: AbilityPlan[] = [];
+  for (const goal of goals) {
+    if (goal.domain !== "ability" || !goalAppliesTo(goal, goalSubject)) continue;
+    const meta = abilityByName.get(goal.target.trim().toLowerCase());
+    if (!meta) continue;
+    abilityPlans.push({ target: goal.target, tier: goal.tier, lineName: meta.lineName });
+  }
+
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <Link
@@ -153,16 +202,18 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         <ArrowLeft className="h-4 w-4" /> {archived ? "Archive" : "All characters"}
       </Link>
 
-      <Card className="mb-6">
-        <div className="h-1 rounded-t-xl" style={{ background: accent }} />
-        <div className="flex flex-wrap items-start justify-between gap-4 p-6">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-fg">{c.name}</h1>
-            <p className="mt-1 text-fg-muted">
-              {c.race} {c.class} · <span style={{ color: accent }}>{c.alliance}</span>
-              {c.gender ? ` · ${c.gender}` : ""}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <Card className="mb-4 overflow-hidden">
+        <div className="h-0.5" style={{ background: accent }} />
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+              <h1 className="text-lg font-semibold tracking-tight text-fg">{c.name}</h1>
+              <p className="text-sm text-fg-muted">
+                {c.race} {c.class} · <span style={{ color: accent }}>{c.alliance}</span>
+                {c.lastSeen ? <span className="text-fg-subtle"> · {timeAgo(c.lastSeen)}</span> : null}
+              </p>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               {c.vampire.isVampire && (
                 <Badge tone="accent">
                   <Droplet className="h-3 w-3" /> Vampire · Stage {c.vampire.stage}
@@ -173,7 +224,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
                   <Moon className="h-3 w-3" /> Werewolf
                 </Badge>
               )}
-              {!c.vampire.isVampire && !c.werewolf.isWerewolf && <Badge tone="muted">Mortal</Badge>}
               {archived && (
                 <Badge tone="muted">
                   <Archive className="h-3 w-3" /> Archived
@@ -181,42 +231,31 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               )}
               {c.classMastery && <Badge tone="muted">Class Mastery</Badge>}
               {c.mundus && <Badge tone="muted">{c.mundus}</Badge>}
-            </div>
-            {c.classMasteries.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-fg-subtle">
-                <span className="inline-flex items-center gap-1 uppercase tracking-wider">
-                  <Sparkles className="h-3 w-3 text-accent" /> Mastered class lines
+              {c.classMasteries.length > 0 && (
+                <span className="inline-flex flex-wrap items-center gap-1 text-[11px] text-fg-subtle">
+                  <Sparkles className="h-3 w-3 text-accent" />
+                  {c.classMasteries.map((m) => (
+                    <Badge key={m} tone="accent">
+                      {m}
+                    </Badge>
+                  ))}
                 </span>
-                {c.classMasteries.map((m) => (
-                  <Badge key={m} tone="accent">
-                    {m}
-                  </Badge>
-                ))}
-              </div>
-            )}
-            <div className="mt-3">
+              )}
               <RolePicker characterId={c.id} assigned={assigned} roles={roles} />
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-semibold text-fg">
-              {c.level >= 50 ? c.championPoints : c.level}
-            </div>
-            <div className="text-xs uppercase tracking-wider text-fg-subtle">
-              {c.level >= 50 ? "Champion Points" : "Level"}
+            <div className="text-lg font-semibold tabular-nums leading-none text-fg">
+              {c.level >= 50 ? c.championPoints.toLocaleString("en-US") : c.level}
+              <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-subtle">
+                {c.level >= 50 ? "CP" : "Level"}
+              </span>
             </div>
             {c.lastSeen ? (
-              <div className="mt-2 text-sm tabular-nums text-fg-muted">
+              <div className="mt-1 text-xs tabular-nums text-fg-muted">
                 {formatGold(c.gold ?? 0)}
-                <div className="text-xs uppercase tracking-wider text-fg-subtle">
-                  {archived ? "Last-known wallet" : "Wallet"}
-                </div>
-                {(c.telVar ?? 0) > 0 && (
-                  <div className="mt-1 text-xs text-fg-subtle">{formatNumber(c.telVar ?? 0)} Tel Var</div>
-                )}
-                {(c.alliancePoints ?? 0) > 0 && (
-                  <div className="mt-1 text-xs text-fg-subtle">{formatNumber(c.alliancePoints ?? 0)} Alliance Points</div>
-                )}
+                {(c.alliancePoints ?? 0) > 0 ? ` · ${formatNumber(c.alliancePoints ?? 0)} AP` : ""}
+                {(c.telVar ?? 0) > 0 ? ` · ${formatNumber(c.telVar ?? 0)} TV` : ""}
               </div>
             ) : null}
           </div>
@@ -242,18 +281,14 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           </div>
         </Card>
       )}
-      {c.lastSeen && (
-        <p className="mb-6 text-sm text-fg-subtle">
-          Snapshot taken {formatDateTime(c.lastSeen)} · {timeAgo(c.lastSeen)}
-        </p>
-      )}
-
       <CharacterGoals
         rows={goalRows}
         lines={lines}
         subjectId={c.id}
         subjectName={c.name}
         characterClass={c.class}
+        lineBook={lineBook}
+        abilityPlans={abilityPlans}
         catalog={{
           lines: goalIndexes.lineIndex.map(([name, meta]) => ({
             name,

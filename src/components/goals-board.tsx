@@ -10,7 +10,9 @@ import { Badge, Card, SectionTitle } from "./ui";
 import { AddGoalButton } from "./goal-editor";
 import { GoalCard } from "./goal-card";
 import { GoalMark } from "./goal-mark";
-import { GroupedTargets } from "./goal-groups";
+import { DenseTargetGroups } from "./goal-groups";
+import { LinePlanButton, type LinePlanBook } from "./line-plan-dialog";
+import type { AbilityPlan } from "@/lib/planner/line-plan";
 import { classIcon } from "@/lib/classes";
 import { GameIcon } from "./game-icon";
 
@@ -126,6 +128,8 @@ export function CharacterGoals({
   subjectName,
   catalog,
   characterClass,
+  lineBook = {},
+  abilityPlans = [],
 }: {
   rows: GoalRowItem[];
   lines: SkillLineChoice[];
@@ -133,6 +137,8 @@ export function CharacterGoals({
   subjectName: string;
   catalog?: GoalCatalog;
   characterClass?: string | null;
+  lineBook?: Record<string, LinePlanBook>;
+  abilityPlans?: AbilityPlan[];
 }) {
   const router = useRouter();
 
@@ -162,7 +168,7 @@ export function CharacterGoals({
           to set them.
         </Card>
       ) : (
-        <GroupedTargets
+        <DenseTargetGroups
           groups={groupPlacedGoals(
             rows.map((row) => ({ ...row.goal, row })),
             catalog ?? { lines: [], abilities: [] },
@@ -172,6 +178,8 @@ export function CharacterGoals({
           renderItem={(item) => (
             <GoalRow
               row={item.row}
+              lineBook={lineBook}
+              abilityPlans={abilityPlans}
               onDelete={async () => {
                 await fetch(`/api/goals/${encodeURIComponent(item.id)}`, { method: "DELETE" });
                 router.refresh();
@@ -184,17 +192,32 @@ export function CharacterGoals({
   );
 }
 
-function GoalRow({ row, onDelete }: { row: GoalRowItem; onDelete: () => void }) {
+function GoalRow({
+  row,
+  lineBook,
+  abilityPlans,
+  onDelete,
+}: {
+  row: GoalRowItem;
+  lineBook: Record<string, LinePlanBook>;
+  abilityPlans: AbilityPlan[];
+  onDelete: () => void;
+}) {
   const { goal } = row;
   const title = goal.domain === "skillline" ? skillLineTitle(goal) : goal.target;
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3">
+    <div className="flex items-center justify-between gap-3 px-3 py-1.5">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          {row.href ? (
-            <Link href={row.href} className="text-sm font-medium text-fg hover:text-accent hover:underline">
-              {title}
-            </Link>
+          {goal.domain === "skillline" ? (
+            <LinePlanButton
+              title={title}
+              lineName={goal.target}
+              mandatoryRank={goal.targetRank}
+              tier={goal.tier}
+              book={lineBook[goal.target.trim().toLowerCase()]}
+              plans={abilityPlans}
+            />
           ) : (
             <span className="text-sm font-medium text-fg">{title}</span>
           )}
