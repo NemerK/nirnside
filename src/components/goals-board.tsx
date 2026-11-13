@@ -142,10 +142,14 @@ export function CharacterGoals({
 }) {
   const router = useRouter();
 
+  const done = rows.filter((row) => row.mark.state === "done").length;
+
   return (
-    <section className="mb-6">
+    <section>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <SectionTitle className="mb-0">Targets</SectionTitle>
+        <p className="text-xs text-fg-muted">
+          {rows.length === 0 ? "Nothing planned for this character" : `${done} of ${rows.length} done`}
+        </p>
         <div className="flex items-center gap-2">
           <Link href="/planner" className="text-xs text-accent hover:underline">
             Planner →
@@ -221,7 +225,7 @@ function GoalRow({
           ) : (
             <span className="text-sm font-medium text-fg">{title}</span>
           )}
-          <Badge tone={TIER_TONE[goal.tier]}>{TIER_LABEL[goal.tier]}</Badge>
+          {goal.tier === "essential" ? null : <Badge tone={TIER_TONE[goal.tier]}>{TIER_LABEL[goal.tier]}</Badge>}
         </div>
         {goal.note ? <p className="mt-0.5 text-xs text-fg-subtle">{goal.note}</p> : null}
       </div>
