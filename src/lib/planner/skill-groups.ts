@@ -121,6 +121,50 @@ export function activeAbilityRowsOnPlannerLine(
   return abilityRowsOnPlannerLine(rows, line).filter((row) => !row.passive);
 }
 
+function abilityRowForName(rows: readonly PlannerAbilityRow[], name: string): PlannerAbilityRow | undefined {
+  return rows.find(
+    (row) => row.base.name === name || row.morphs.some((morph) => morph.name === name),
+  );
+}
+
+/**
+ * A morph is learned on top of its base, so picking a morph also picks the
+ * base. Clearing the base clears its morphs.
+ */
+export function toggleAbilitySelection(
+  selected: ReadonlySet<string>,
+  name: string,
+  rows: readonly PlannerAbilityRow[],
+): Set<string> {
+  const next = new Set(selected);
+  const row = abilityRowForName(rows, name);
+  const isBase = !row || row.base.name === name;
+  if (next.has(name)) {
+    next.delete(name);
+    if (row && isBase) {
+      for (const morph of row.morphs) next.delete(morph.name);
+    }
+    return next;
+  }
+  if (row && !isBase) next.add(row.base.name);
+  next.add(name);
+  return next;
+}
+
+/** Select or clear every name on a line without flipping them one by one. */
+export function setAbilityNamesSelected(
+  selected: ReadonlySet<string>,
+  names: readonly string[],
+  on: boolean,
+): Set<string> {
+  const next = new Set(selected);
+  for (const name of names) {
+    if (on) next.add(name);
+    else next.delete(name);
+  }
+  return next;
+}
+
 /** Open/selected state for a line. Class Mastery keys include the class. */
 export function plannerLineKey(line: { name: string; className: string | null }): string {
   const name = line.name.trim().toLowerCase();

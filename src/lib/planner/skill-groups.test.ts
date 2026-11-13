@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
+import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, setAbilityNamesSelected, toggleAbilitySelection, type PlannerAbilityRow } from "./skill-groups";
 
 const classes = ["Dragonknight", "Nightblade", "Templar"];
 
@@ -123,6 +123,48 @@ describe("class mastery stays with its class", () => {
     assert.equal(plannerClassScopeAllows({ category: "Class", className: "Nightblade" }, "dragonknight"), false);
     assert.equal(plannerClassScopeAllows({ category: "Weapon", className: null }, "Dragonknight"), true);
     assert.equal(plannerClassScopeAllows({ category: "Class", className: "Nightblade" }, null), true);
+  });
+
+  it("selects the base when a morph is chosen, and drops morphs when the base is cleared", () => {
+    const rows: PlannerAbilityRow[] = [
+      {
+        lineName: "Assassination",
+        className: "Nightblade",
+        passive: false,
+        base: { name: "Assassin's Blade", icon: null },
+        morphs: [
+          { name: "Killer's Blade", icon: null },
+          { name: "Impale", icon: null },
+        ],
+      },
+      {
+        lineName: "Assassination",
+        className: "Nightblade",
+        passive: false,
+        base: { name: "Death Stroke", icon: null },
+        morphs: [
+          { name: "Incapacitating Strike", icon: null },
+          { name: "Soul Harvest", icon: null },
+        ],
+      },
+    ];
+    const withMorph = toggleAbilitySelection(new Set(), "Killer's Blade", rows);
+    assert.deepEqual([...withMorph], ["Assassin's Blade", "Killer's Blade"]);
+    const bothMorphs = toggleAbilitySelection(withMorph, "Impale", rows);
+    assert.deepEqual([...bothMorphs], ["Assassin's Blade", "Killer's Blade", "Impale"]);
+    const baseOnly = toggleAbilitySelection(bothMorphs, "Killer's Blade", rows);
+    assert.deepEqual([...baseOnly], ["Assassin's Blade", "Impale"]);
+    const cleared = toggleAbilitySelection(baseOnly, "Assassin's Blade", rows);
+    assert.deepEqual([...cleared], []);
+    const other = toggleAbilitySelection(new Set(["Soul Harvest", "Death Stroke"]), "Assassin's Blade", rows);
+    assert.deepEqual([...other], ["Soul Harvest", "Death Stroke", "Assassin's Blade"]);
+  });
+
+  it("selects or clears a whole line at once", () => {
+    const names = ["Assassin's Blade", "Killer's Blade", "Impale"];
+    const selected = setAbilityNamesSelected(new Set(["Death Stroke"]), names, true);
+    assert.deepEqual([...selected], ["Death Stroke", "Assassin's Blade", "Killer's Blade", "Impale"]);
+    assert.deepEqual([...setAbilityNamesSelected(selected, names, false)], ["Death Stroke"]);
   });
 
   it("gives each class's Class Mastery its own key", () => {

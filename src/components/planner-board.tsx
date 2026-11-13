@@ -13,7 +13,7 @@ import { classIcon } from "@/lib/classes";
 import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
 import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
-import { activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "@/lib/planner/skill-groups";
+import { activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, setAbilityNamesSelected, toggleAbilitySelection, type PlannerAbilityRow } from "@/lib/planner/skill-groups";
 import { groupPlacedGoals } from "@/lib/planner/goal-groups";
 import { GroupedTargets } from "./goal-groups";
 import { isExcludedSkillLine } from "@/lib/catalog/excluded";
@@ -341,7 +341,10 @@ export function PlannerBoard({
                   ? (choices.characters.find((c) => c.id === scopeKey)?.className ?? null)
                   : null
             }
-            onToggle={toggleSelected}
+            onToggle={(name) =>
+              setSelected((prev) => toggleAbilitySelection(prev, name, choices.abilityRows ?? []))
+            }
+            onSelectNames={(names, on) => setSelected((prev) => setAbilityNamesSelected(prev, names, on))}
           />
           <AddBar busy={busy} count={selected.size} enabled={scopeOk(scope, scopeKey)} onAdd={addSelected} />
           {error && <p className="mt-2 text-sm text-danger">{error}</p>}
@@ -809,11 +812,13 @@ function AbilityCategories({
   selected,
   selectedClass,
   onToggle,
+  onSelectNames,
 }: {
   choices: PlannerChoices;
   selected: Set<string>;
   selectedClass: string | null;
   onToggle: (name: string) => void;
+  onSelectNames: (names: string[], on: boolean) => void;
 }) {
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [openLines, setOpenLines] = useState<Set<string>>(new Set());
@@ -878,7 +883,7 @@ function AbilityCategories({
                   {names.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => names.forEach((name) => onToggle(name))}
+                      onClick={() => onSelectNames(names, !names.every((name) => selected.has(name)))}
                       className="text-[11px] text-fg-subtle hover:text-accent"
                     >
                       {names.every((name) => selected.has(name)) ? "Deselect all" : "Select all"}
