@@ -19,6 +19,10 @@ import (
 
 const appPort = 43219
 
+// HTTP origin of the running launcher, set once main binds its port.
+// The app asks this origin to apply an in-window update. Empty in tests.
+var launcherBase string
+
 func runtimeNode(root string) string {
 	if runtime.GOOS == "windows" {
 		return filepath.Join(root, "runtime", "node.exe")
@@ -170,6 +174,9 @@ func buildApp(log *os.File, root string) error {
 
 func startApp(log *os.File, root string) (*exec.Cmd, error) {
 	env := runtimeEnv(root)
+	if launcherBase != "" {
+		env = append(env, "NIRNSIDE_LAUNCHER_URL="+launcherBase)
+	}
 	next, err := nextBin(root)
 	if err != nil {
 		return nil, err

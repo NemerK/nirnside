@@ -483,9 +483,10 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
           Updates
         </div>
         <p className="text-sm text-fg-muted">
-          Each time you start Nirnside with <code className="rounded bg-surface-2 px-1">start-nirnside.cmd</code> (or
-          the .sh), it pulls the latest code from GitHub. Your account database in{" "}
-          <code className="rounded bg-surface-2 px-1">data/</code> is never overwritten, and nothing is uploaded.
+          When a newer version is published, an Update button appears at the top of the window. Nirnside downloads it
+          and reloads this window on the new version. Starting from the shortcut still updates too. Your account
+          database in <code className="rounded bg-surface-2 px-1">data/</code> is never overwritten, and nothing is
+          uploaded.
         </p>
         <p className="mt-2 font-mono text-xs text-fg-subtle">
           Tracking {status.update.repo}

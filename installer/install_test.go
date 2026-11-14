@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"sync/atomic"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -13,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -415,7 +415,8 @@ func TestLauncherSelfUpdateKeepsCurrentOnChecksumFailure(t *testing.T) {
 	}
 }
 
-func TestSyncLauncherIntoInstall(t *testing.T) {	dir := t.TempDir()
+func TestSyncLauncherIntoInstall(t *testing.T) {
+	dir := t.TempDir()
 	freshExe := filepath.Join(dir, "Downloaded", "Nirnside.exe")
 	if err := os.MkdirAll(filepath.Dir(freshExe), 0o755); err != nil {
 		t.Fatal(err)
@@ -509,5 +510,43 @@ func TestUpdatePendingZip(t *testing.T) {
 	// Offline or bad responses must read as "no update" (never block startup).
 	if updatePendingZip(dir, "http://127.0.0.1:1") {
 		t.Fatal("an unreachable probe must read as not pending")
+	}
+}
+
+func TestClaimUpdate(t *testing.T) {
+	in := newInstaller()
+	if _, errMsg := in.claimUpdate(); errMsg == "" {
+		t.Fatal("the welcome screen must not accept an in-window update")
+	}
+	in.set(func(s *jobState) {
+		s.Phase = "ready"
+		s.Ready = true
+		s.Dest = t.TempDir()
+	})
+	root, errMsg := in.claimUpdate()
+	if errMsg != "" || root == "" {
+		t.Fatalf("a running install must accept one update, got %q", errMsg)
+	}
+	if _, errMsg := in.claimUpdate(); errMsg == "" {
+		t.Fatal("a second update must wait until the first finishes")
+	}
+}
+
+func TestStateAllowsAppOriginOnly(t *testing.T) {
+	in := newInstaller()
+	req := httptest.NewRequest(http.MethodGet, "/api/state", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:43219")
+	rec := httptest.NewRecorder()
+	in.handleState(rec, req)
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "http://127.0.0.1:43219" {
+		t.Fatalf("app origin must be readable from the window, got %q", got)
+	}
+
+	foreign := httptest.NewRequest(http.MethodGet, "/api/state", nil)
+	foreign.Header.Set("Origin", "https://example.com")
+	rec2 := httptest.NewRecorder()
+	in.handleState(rec2, foreign)
+	if got := rec2.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("foreign origins must not be allowed, got %q", got)
 	}
 }

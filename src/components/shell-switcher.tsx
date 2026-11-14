@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { ModuleDef } from "@/lib/modules";
 import { AppShell, type ShellAccount } from "./app-shell";
+import { AppUpdate } from "./app-update";
 import { AtlasShell } from "./atlas/shell";
 import { useLook } from "./look-provider";
 
@@ -19,16 +20,20 @@ export function ShellSwitcher({
 }) {
   const { look, ready } = useLook();
   // SSR + first paint use Classic shell; Atlas swaps in once look is known.
-  if (ready && look === "atlas") {
-    return (
+  const shell =
+    ready && look === "atlas" ? (
       <AtlasShell account={account} hiddenModules={hiddenModules} modules={modules}>
         {children}
       </AtlasShell>
+    ) : (
+      <AppShell account={account} hiddenModules={hiddenModules} modules={modules}>
+        {children}
+      </AppShell>
     );
-  }
   return (
-    <AppShell account={account} hiddenModules={hiddenModules} modules={modules}>
-      {children}
-    </AppShell>
+    <div className="flex h-full min-h-0 flex-col">
+      <AppUpdate />
+      <div className="min-h-0 flex-1">{shell}</div>
+    </div>
   );
 }

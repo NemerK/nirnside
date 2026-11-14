@@ -94,10 +94,16 @@ func (in *installer) runInstall(dest string, shortcut bool) error {
 		}
 	}
 
-	return in.launch(dest, log)
+	return in.launch(dest, log, false)
 }
 
 func (in *installer) launchExisting(root string) error {
+	return in.launchExistingMode(root, false)
+}
+
+// quiet is the in-window update: the browser is already open and reloads
+// itself, so finishing must not open a second window.
+func (in *installer) launchExistingMode(root string, quiet bool) error {
 	log, err := openLog(root)
 	if err != nil {
 		return err
@@ -108,10 +114,16 @@ func (in *installer) launchExisting(root string) error {
 		s.Dest = root
 		s.Step = "Starting Nirnside"
 		s.Percent = 10
+		if quiet {
+			s.Step = "Updating Nirnside"
+			s.Detail = "The window will reload with the new version."
+		}
 	})
 	if appAlreadyUp() {
 		in.markReady()
-		in.openAppOnce()
+		if !quiet {
+			in.openAppOnce()
+		}
 		return nil
 	}
 
@@ -131,14 +143,16 @@ func (in *installer) launchExisting(root string) error {
 		_ = runNodeScript(log, root, filepath.Join("scripts", "check-sqlite.mjs"))
 	}
 	installAddonsBestEffort(log, root)
-	return in.launch(root, log)
+	return in.launch(root, log, quiet)
 }
 
-func (in *installer) launch(root string, log *os.File) error {
+func (in *installer) launch(root string, log *os.File, quiet bool) error {
 	url := appURL()
 	if looksLikeNirnside() {
 		in.markReady()
-		in.openAppOnce()
+		if !quiet {
+			in.openAppOnce()
+		}
 		return nil
 	}
 	if portBusy(appPort) {
@@ -153,7 +167,11 @@ func (in *installer) launch(root string, log *os.File) error {
 			return err
 		}
 	}
-	in.progress(98, "Starting Nirnside", "A browser tab will open.")
+	startDetail := "A browser tab will open."
+	if quiet {
+		startDetail = "This window will reload in a moment."
+	}
+	in.progress(98, "Starting Nirnside", startDetail)
 	cmd, err := startApp(log, root)
 	if err != nil {
 		return fmt.Errorf("could not start Nirnside: %w", err)
@@ -161,8 +179,13 @@ func (in *installer) launch(root string, log *os.File) error {
 	if err := waitReady(url, cmd, 3*time.Minute, func(waited time.Duration) {
 		in.progress(98, "Starting Nirnside", fmt.Sprintf("Waiting for the app… %ds", int(waited.Seconds())))
 	}, func() {
-		// The app stopped itself or died: the launcher exits with it, so
-		// nothing is left running invisible.
+		// In-window Update asked us to restart. The browser keeps its loading
+		// screen and reloads when the new server answers. Any other exit is
+		// Stop: leave nothing running invisible.
+		if in.relaunch.CompareAndSwap(true, false) {
+			go in.relaunchInPlace(root)
+			return
+		}
 		fmt.Println("[launcher] the app stopped — Nirnside is closed.")
 		os.Exit(0)
 	}); err != nil {
@@ -173,12 +196,34 @@ func (in *installer) launch(root string, log *os.File) error {
 		return fmt.Errorf("%w\nThe start log is %s", err, logPath)
 	}
 	in.markReady()
-	in.openAppOnce()
+	if !quiet {
+		in.openAppOnce()
+	}
 	fmt.Println()
 	fmt.Println("Nirnside is running in the background.")
 	fmt.Println("Reopen it from the shortcut any time; stop it from Nirnside settings.")
 	fmt.Println("Browser:", url)
 	return nil
+}
+
+// relaunchInPlace runs the normal update and build after an in-window Update
+// stopped the server. The browser window stays open on its loading screen.
+func (in *installer) relaunchInPlace(root string) {
+	defer func() {
+		in.mu.Lock()
+		in.busy = false
+		in.mu.Unlock()
+	}()
+	fmt.Println("[launcher] applying an in-window update…")
+	if err := in.launchExistingMode(root, true); err != nil {
+		in.set(func(s *jobState) {
+			s.Phase = "error"
+			s.Ready = false
+			s.Step = "Could not update Nirnside"
+			s.Error = err.Error()
+		})
+		fmt.Fprintf(os.Stderr, "[nirnside] update: %v\n", err)
+	}
 }
 
 // Open the app exactly once. The launcher page that has been
