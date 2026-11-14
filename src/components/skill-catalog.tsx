@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { ESO_CLASSES } from "@/lib/classes";
+import { omitClasslessDuplicates } from "@/lib/planner/skill-groups";
 import { SKILL_CATEGORY_ORDER } from "@/lib/skills/present";
 import { GameIcon } from "./game-icon";
 
@@ -83,7 +84,7 @@ export function SkillCatalog({ items }: { items: SkillCatalogItem[] }) {
 
 function ClassGroups({ lines }: { lines: SkillCatalogItem[] }) {
   const groups = new Map<string, SkillCatalogItem[]>();
-  for (const line of lines) {
+  for (const line of omitClasslessDuplicates(lines)) {
     const key = line.className?.trim() || "Class";
     const list = groups.get(key) ?? [];
     list.push(line);
