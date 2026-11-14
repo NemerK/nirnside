@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/queries";
 import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
+import { canonicalizeCurrencies } from "@/lib/currencies";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { LoadDemoButton } from "@/components/demo-controls";
 import { LookSwitch } from "@/components/look-switch";
@@ -67,6 +68,7 @@ export default function HomePage() {
   const off = safe(() => disabledModuleSet()) ?? new Set<string>();
   const show = (module: string) => !off.has(module);
 
+  const sharedWallet = canonicalizeCurrencies(account.currencies);
   const overview = {
     account: {
       displayName: account.displayName,
@@ -94,7 +96,14 @@ export default function HomePage() {
       showKnowledge: show("knowledge"),
       showAchievements: show("achievements"),
     },
-    currencies: { gold: gold.total, telVar, alliancePoints },
+    currencies: {
+      gold: gold.total,
+      telVar,
+      alliancePoints,
+      writVouchers: sharedWallet.writVouchers ?? 0,
+      transmuteCrystals: sharedWallet.transmuteCrystals ?? 0,
+      undauntedKeys: sharedWallet.undauntedKeys ?? 0,
+    },
   };
 
   const classic = (
