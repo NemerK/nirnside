@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -17,14 +18,14 @@ type LauncherState struct {
 }
 
 type jobState struct {
-	Phase    string `json:"phase"`
-	Step     string `json:"step"`
-	Detail   string `json:"detail"`
-	Percent  int    `json:"percent"`
-	Error    string `json:"error,omitempty"`
-	AppURL   string `json:"appUrl,omitempty"`
-	Dest     string `json:"dest"`
-	Ready    bool   `json:"ready"`
+	Phase    string        `json:"phase"`
+	Step     string        `json:"step"`
+	Detail   string        `json:"detail"`
+	Percent  int           `json:"percent"`
+	Error    string        `json:"error,omitempty"`
+	AppURL   string        `json:"appUrl,omitempty"`
+	Dest     string        `json:"dest"`
+	Ready    bool          `json:"ready"`
 	Launcher LauncherState `json:"launcher"`
 	/** Short code revision of the app layer, from the updater's revision file. */
 	AppRevision string `json:"appRevision,omitempty"`
@@ -34,6 +35,7 @@ type installer struct {
 	mu       sync.Mutex
 	state    jobState
 	busy     bool
+	relaunch atomic.Bool // an in-window Update is restarting the app, so its exit is not Stop
 	client   *http.Client
 	lastPoll int64 // unix ms of the last /api/state poll from the launcher window
 }
@@ -99,7 +101,19 @@ func (in *installer) handleLauncherLog(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte(tailFile(p, 6000)))
 }
 
-func (in *installer) handleState(w http.ResponseWriter, _ *http.Request) {	in.mu.Lock()
+func allowAppOrigin(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	app := fmt.Sprintf("http://127.0.0.1:%d", appPort)
+	local := fmt.Sprintf("http://localhost:%d", appPort)
+	if origin == app || origin == local {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Vary", "Origin")
+	}
+}
+
+func (in *installer) handleState(w http.ResponseWriter, r *http.Request) {
+	allowAppOrigin(w, r)
+	in.mu.Lock()
 	in.lastPoll = time.Now().UnixMilli()
 	in.mu.Unlock()
 	st := in.snapshot()
@@ -129,6 +143,74 @@ func (in *installer) handleDefaults(w http.ResponseWriter, _ *http.Request) {
 		"shortcut": true,
 		"note":     "Nirnside stays on this PC. It never asks for an ESO password and never uploads your account.",
 	})
+}
+
+// claimUpdate reserves the single in-window update. The launcher must already
+// be serving a running app; the welcome screen is not an update target.
+func (in *installer) claimUpdate() (string, string) {
+	in.mu.Lock()
+	defer in.mu.Unlock()
+	if in.busy || in.relaunch.Load() {
+		return "", "update already running"
+	}
+	if !in.state.Ready || in.state.Dest == "" {
+		return "", "Nirnside is not running yet"
+	}
+	in.busy = true
+	in.relaunch.Store(true)
+	return in.state.Dest, ""
+}
+
+func writeJSON(w http.ResponseWriter, status int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
+}
+
+/**
+ * The open window asked to update. Answer first, then stop the app so the
+ * browser can paint its loading screen. The child's exit is what actually
+ * runs the update — see launch's onExit.
+ */
+func (in *installer) handleApplyUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST only"})
+		return
+	}
+	root, errMsg := in.claimUpdate()
+	if errMsg != "" {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": errMsg})
+		return
+	}
+	in.set(func(s *jobState) {
+		s.Ready = false
+		s.Phase = "installing"
+		s.Percent = 8
+		s.Step = "Updating Nirnside"
+		s.Detail = "The window will reload with the new version."
+		s.Error = ""
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "restarting": true})
+	if fl, ok := w.(http.Flusher); ok {
+		fl.Flush()
+	}
+	go func() {
+		time.Sleep(750 * time.Millisecond)
+		stopRunningApp()
+		if appAlreadyUp() {
+			in.relaunch.Store(false)
+			in.mu.Lock()
+			in.busy = false
+			in.mu.Unlock()
+			in.set(func(s *jobState) {
+				s.Phase = "error"
+				s.Ready = false
+				s.Step = "Update did not start"
+				s.Error = "Could not restart the running app. Start Nirnside from the shortcut to update."
+			})
+			fmt.Fprintf(os.Stderr, "[nirnside] in-window update could not stop %s\n", root)
+		}
+	}()
 }
 
 func (in *installer) handleInstall(w http.ResponseWriter, r *http.Request) {

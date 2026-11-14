@@ -87,6 +87,7 @@ func main() {
 		messageBox("Nirnside", err.Error())
 		os.Exit(1)
 	}
+	launcherBase = fmt.Sprintf("http://127.0.0.1:%d", port)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +105,7 @@ func main() {
 	mux.HandleFunc("/api/state", in.handleState)
 	mux.HandleFunc("/api/launcher-log", in.handleLauncherLog)
 	mux.HandleFunc("/api/install", in.handleInstall)
+	mux.HandleFunc("/api/apply-update", in.handleApplyUpdate)
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 8 * time.Second}
 	go func() { _ = srv.Serve(ln) }()
 
