@@ -72,7 +72,7 @@ function NavLinks({ hiddenModules, onNavigate }: { hiddenModules?: string[]; onN
         if (hidden.has(moduleId)) return null;
         const active = exact ? pathname === href : pathname.startsWith(href);
         return (
-          <a
+          <Link
             key={href}
             href={href}
             onClick={onNavigate}
@@ -84,7 +84,7 @@ function NavLinks({ hiddenModules, onNavigate }: { hiddenModules?: string[]; onN
           >
             <Icon className={`h-4.5 w-4.5 ${active ? "text-accent" : "text-fg-subtle group-hover:text-fg"}`} />
             {label}
-          </a>
+          </Link>
         );
       })}
     </nav>

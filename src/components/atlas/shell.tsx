@@ -72,7 +72,7 @@ function AtlasNav({ hiddenModules, onNavigate }: { hiddenModules?: string[]; onN
                     ? pathname === "/"
                     : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
-                  <a
+                  <Link
                     key={item.href}
                     href={item.href}
                     title={item.blurb}
@@ -85,7 +85,7 @@ function AtlasNav({ hiddenModules, onNavigate }: { hiddenModules?: string[]; onN
                   >
                     <Icon className={`h-4 w-4 ${active ? "text-accent" : "text-fg-subtle group-hover:text-fg"}`} />
                     <span className="font-medium">{item.label}</span>
-                  </a>
+                  </Link>
                 );
               })}
             </div>

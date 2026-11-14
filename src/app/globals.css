@@ -8,7 +8,14 @@
  *
  * A second axis — look — swaps the visual language and IA without touching
  * game data: .look-classic (parchment/gold) vs .look-atlas (neutral, low-glare).
+ *
+ * If the saved look and the shell this response rendered ever disagree, keep
+ * the wrong shell off the first paint. The pre-paint script sets data-look.
  */
+html[data-look="atlas"] [data-rendered-look="classic"],
+html[data-look="classic"] [data-rendered-look="atlas"] {
+  visibility: hidden;
+}
 
 /* Craft station pins are white silhouettes. Black on a light page, white on a dark one. */
 .craft-station-icon {

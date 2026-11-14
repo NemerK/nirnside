@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider, themeScript } from "@/components/theme-provider";
@@ -6,6 +7,7 @@ import { LookProvider, lookScript } from "@/components/look-provider";
 import { ShellSwitcher } from "@/components/shell-switcher";
 import type { ShellAccount } from "@/components/app-shell";
 import { getAccount } from "@/lib/db/queries";
+import { LOOK_COOKIE, normalizeLook } from "@/lib/look";
 import { getDisabledModules, TOGGLEABLE_MODULES } from "@/lib/modules";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -17,7 +19,8 @@ export const metadata: Metadata = {
     "A local, private hub for your Elder Scrolls Online account: characters, inventory, stickerbook and a live encyclopedia.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const look = normalizeLook((await cookies()).get(LOOK_COOKIE)?.value);
   let account: ShellAccount | null = null;
   let hiddenModules: string[] = [];
   try {
@@ -53,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="h-full overflow-hidden">
         <ThemeProvider>
-          <LookProvider>
+          <LookProvider initialLook={look}>
             <ShellSwitcher account={account} hiddenModules={hiddenModules} modules={TOGGLEABLE_MODULES}>
               {children}
             </ShellSwitcher>
