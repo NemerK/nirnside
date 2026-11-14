@@ -127,6 +127,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     slot: row.entry.slot,
     effect: row.entry.effect ?? "",
     known: knownScripts.has(row.entry.name.trim().toLowerCase()),
+    icon: row.entry.icon,
   }));
   const listed = new Set(scriptRows.map((script) => script.name.trim().toLowerCase()));
   for (const name of c.scribingScripts) {

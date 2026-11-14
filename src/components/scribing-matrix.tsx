@@ -1,20 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Feather } from "lucide-react";
+import { Check } from "lucide-react";
+import { GameIcon } from "@/components/game-icon";
 import { PageScroll, StickyMenu } from "@/components/ui";
+import { plannerGrimoireIcon, plannerScriptIcon } from "@/lib/icons/planner-icons";
 
 export interface ScriptLite {
   id: string;
   name: string;
   effect: string;
   slot?: "focus" | "signature" | "affix";
+  icon?: string | null;
 }
 export interface GrimoireLite {
   id: string;
   name: string;
   skillLine: string;
   description: string;
+  icon?: string | null;
   focus: ScriptLite[];
   signature: ScriptLite[];
   affix: ScriptLite[];
@@ -104,7 +108,7 @@ export function ScribingMatrix({
       <PageScroll>
       <div className="mb-5 rounded-xl border border-border bg-surface/70 p-4">
         <div className="flex items-center gap-2 text-fg">
-          <Feather className="h-4 w-4 text-accent" />
+          <GameIcon name={grim.name} icon={grim.icon ?? plannerGrimoireIcon(grim.name)} size={28} bare />
           <span className="font-medium">{grim.name}</span>
           <span className="text-sm text-fg-muted">· {grim.skillLine}</span>
         </div>
@@ -201,7 +205,10 @@ function ScriptPicker({
                   : "border-border text-fg hover:bg-surface-2"
               }`}
             >
-              <span className="truncate">{s.name}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <GameIcon name={s.name} icon={s.icon ?? plannerScriptIcon(s.name)} size={22} bare />
+                <span className="truncate">{s.name}</span>
+              </span>
               {isKnown && <Check className="h-3.5 w-3.5 shrink-0 text-ok" />}
             </button>
           );

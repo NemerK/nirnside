@@ -383,6 +383,7 @@ function progressPanel(
         name: entry.name,
         slot: entry.slot,
         effect: entry.effect,
+        icon: entry.icon,
       }));
       return <ScribingPanel character={character} scripts={scripts} />;
     }

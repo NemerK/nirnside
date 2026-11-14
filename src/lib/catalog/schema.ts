@@ -96,6 +96,8 @@ export const CatalogScript = z.object({
   ...base,
   slot: z.enum(["focus", "signature", "affix"]),
   effect: z.string().default(""),
+  /** GetCraftedAbilityScriptIcon, when a catalog scan has seen it. */
+  icon: z.string().nullable().default(null),
 });
 export type CatalogScript = z.infer<typeof CatalogScript>;
 

@@ -294,6 +294,9 @@ local function gatherScribing()
                     id = "scr-" .. slug(name),
                     name = name,
                     slot = slotName,
+                    icon = safe(function()
+                      return GetCraftedAbilityScriptIcon and normIcon(GetCraftedAbilityScriptIcon(id)) or nil
+                    end, nil),
                     effect = safe(function()
                       if GetCraftedAbilityScriptGeneralDescription then
                         local text = GetCraftedAbilityScriptGeneralDescription(id)
