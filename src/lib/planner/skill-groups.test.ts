@@ -36,6 +36,37 @@ describe("groupPlannerLines", () => {
       ["Bow", "One Hand and Shield"],
     );
   });
+
+  it("drops a class line that has no class when that line already belongs to one", () => {
+    const groups = groupPlannerLines(
+      [
+        { name: "Dawn's Wrath", category: "Class", className: "Templar" },
+        { name: "Dawn's Wrath", category: "Class", className: null },
+        { name: "Winter's Embrace", category: "Class", className: null },
+        { name: "Winter's Embrace", category: "Class", className: "Warden" },
+        { name: "Aedric Spear", category: "Class", className: "Templar" },
+        { name: "Unfiled", category: "Class", className: null },
+      ],
+      ["Templar", "Warden"],
+    );
+    const classGroup = groups[0];
+    assert.deepEqual(
+      classGroup.classes?.map((group) => group.name),
+      ["Templar", "Warden", "Class"],
+    );
+    assert.deepEqual(
+      classGroup.classes?.find((group) => group.name === "Templar")?.lines.map((line) => line.name),
+      ["Aedric Spear", "Dawn's Wrath"],
+    );
+    assert.deepEqual(
+      classGroup.classes?.find((group) => group.name === "Warden")?.lines.map((line) => line.name),
+      ["Winter's Embrace"],
+    );
+    assert.deepEqual(
+      classGroup.classes?.find((group) => group.name === "Class")?.lines.map((line) => line.name),
+      ["Unfiled"],
+    );
+  });
 });
 
 describe("class mastery stays with its class", () => {

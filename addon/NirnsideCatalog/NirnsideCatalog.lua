@@ -32,6 +32,14 @@ local function slug(s)
   return s
 end
 
+-- Skill-line ids in the seed drop apostrophes (line-dawns-wrath). The general
+-- slug keeps them as hyphens, which would file a second copy with no class.
+local function lineSlug(s)
+  s = zo_strformat("<<1>>", s or "")
+  s = s:gsub("['’]", "")
+  return slug(s)
+end
+
 -- Normalize an in-game .dds texture path to the plain path the app resolves
 -- against the icon CDN (e.g. "/esoui/art/icons/ability_x.dds").
 local function normIcon(path)
@@ -111,7 +119,7 @@ local function gatherSkills()
       for lineIndex = 1, numLines do
         local lineName = zo_strformat("<<1>>", GetSkillLineInfo(skillType, lineIndex))
         if lineName and lineName ~= "" and not isVengeanceLine(skillType, lineIndex, lineName) then
-          local lineId = "line-" .. slug(lineName)
+          local lineId = "line-" .. lineSlug(lineName)
           local line = {
             id = lineId,
             name = lineName,

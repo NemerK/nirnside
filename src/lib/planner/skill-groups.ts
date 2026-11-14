@@ -45,6 +45,24 @@ function classRank(name: string, classOrder: string[]): number {
   return i < 0 ? 90 : i;
 }
 
+/**
+ * A second copy of a class line with no class of its own. Dawn's Wrath already
+ * sits under Templar; the copy filed under a plain "Class" heading is the same line.
+ */
+export function omitClasslessDuplicates<T extends PlannerLineRef>(lines: readonly T[]): T[] {
+  const owned = new Set<string>();
+  for (const line of lines) {
+    if (line.category.trim().toLowerCase() !== "class") continue;
+    if (line.className?.trim()) owned.add(line.name.trim().toLowerCase());
+  }
+  if (owned.size === 0) return [...lines];
+  return lines.filter((line) => {
+    if (line.category.trim().toLowerCase() !== "class") return true;
+    if (line.className?.trim()) return true;
+    return !owned.has(line.name.trim().toLowerCase());
+  });
+}
+
 /** A chosen class keeps that class's lines, including its own Class Mastery. */
 export function plannerClassScopeAllows(
   line: { category: string; className: string | null },
@@ -133,7 +151,7 @@ export function groupPlannerLines<T extends PlannerLineRef>(
   classOrder: readonly string[],
 ): PlannerCategory<T>[] {
   const byCat = new Map<string, T[]>();
-  for (const line of lines) {
+  for (const line of omitClasslessDuplicates(lines)) {
     const title = line.category.trim() || "Skill";
     const key = title.toLowerCase();
     const arr = byCat.get(key);
