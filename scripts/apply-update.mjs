@@ -35,6 +35,16 @@ export function npmInstallArgs(root) {
   return { cmd: npm, args: args.slice(1) };
 }
 
+/** WMI-started helpers do not inherit the launcher's PATH. Git's default install is still on disk. */
+function ensureToolPath() {
+  if (process.platform !== "win32") return;
+  const extra = ["C:\\Program Files\\Git\\cmd", "C:\\Program Files (x86)\\Git\\cmd"].filter((dir) =>
+    existsSync(join(dir, "git.exe")),
+  );
+  if (extra.length === 0) return;
+  process.env.PATH = `${extra.join(";")};${process.env.PATH || ""}`;
+}
+
 function log(root, msg) {
   const line = `[nirnside-update] ${msg}\n`;
   try {
@@ -108,6 +118,7 @@ function defaultStart(root, args) {
  * `run` and `start` are injectable so tests never touch the real install.
  */
 export async function applyAndRestart(root, options = {}) {
+  ensureToolPath();
   const pid = Number(options.pid || 0);
   const dev = Boolean(options.dev);
   const runUpdate = options.runUpdate || (() => runSelfUpdate(root));
@@ -148,13 +159,34 @@ export async function applyAndRestart(root, options = {}) {
   start(serverArgs(dev));
 }
 
+/** Flags win over env so a WMI-started helper does not depend on the launcher's environment. */
+export function readRestartArgs(argv, env = {}, cwd = "") {
+  const value = (flag) => {
+    const i = argv.indexOf(flag);
+    if (i === -1) return undefined;
+    const next = argv[i + 1];
+    if (next == null || next.startsWith("--")) return undefined;
+    return next;
+  };
+  const root = value("--root") || cwd;
+  const pid = Number(value("--pid") ?? env.NIRNSIDE_SERVER_PID ?? 0);
+  const devFlag = value("--dev");
+  const dev = devFlag != null ? devFlag === "1" : env.NIRNSIDE_RESTART_DEV === "1";
+  return { root, pid: Number.isFinite(pid) ? pid : 0, dev };
+}
+
 const thisFile = fileURLToPath(import.meta.url);
 const invoked = process.argv[1] ? resolve(process.argv[1]) : "";
 if (thisFile.toLowerCase() === invoked.toLowerCase()) {
-  const root = process.cwd();
+  const { root, pid, dev } = readRestartArgs(process.argv, process.env, process.cwd());
+  try {
+    process.chdir(root);
+  } catch {
+    /* applyAndRestart still receives the root explicitly */
+  }
   applyAndRestart(root, {
-    pid: Number(process.env.NIRNSIDE_SERVER_PID || 0),
-    dev: process.env.NIRNSIDE_RESTART_DEV === "1",
+    pid,
+    dev,
   })
     .then(() => process.exit(0))
     .catch((err) => {
