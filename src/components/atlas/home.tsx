@@ -35,6 +35,9 @@ export interface AtlasHomeCurrencies {
   gold: number;
   telVar: number;
   alliancePoints: number;
+  writVouchers: number;
+  transmuteCrystals: number;
+  undauntedKeys: number;
 }
 
 interface ProgressCell {
@@ -79,6 +82,9 @@ export function AccountOverview({
     { label: "Gold", value: formatGold(currencies.gold), href: "/inventory?view=currency" },
     { label: "Tel Var", value: formatNumber(currencies.telVar), href: "/inventory?view=currency" },
     { label: "Alliance Points", value: formatNumber(currencies.alliancePoints), href: "/inventory?view=currency" },
+    { label: "Writ Vouchers", value: formatNumber(currencies.writVouchers), href: "/inventory?view=currency" },
+    { label: "Transmute Crystals", value: formatNumber(currencies.transmuteCrystals), href: "/inventory?view=currency" },
+    { label: "Undaunted Keys", value: formatNumber(currencies.undauntedKeys), href: "/inventory?view=currency" },
   ];
 
   const progress: ProgressCell[] = [];
