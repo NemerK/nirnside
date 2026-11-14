@@ -124,8 +124,29 @@ function listsMorph(row: PlannerAbilityRow, name: string): boolean {
 }
 
 /**
- * A morph that was also stored as its own skill. Elemental Blockade stays on
- * Wall of Elements; it is not a second ability with empty morph columns.
+ * The base ability and its two morphs. A snapshot's headline is whichever
+ * morph is currently selected, so slot 0 is the base when the slots are known.
+ */
+export function baseAndMorphsFromSlots(
+  headline: string,
+  slots: readonly { slot?: number; name?: string | null }[],
+): { base: string; morphs: string[] } {
+  const named = slots.filter((slot) => slot.name?.trim());
+  const baseSlot = named.find((slot) => slot.slot === 0);
+  const base = baseSlot?.name?.trim() || headline.trim();
+  const morphs = named
+    .filter((slot) => slot.slot !== 0 && abilityName(slot.name ?? "") !== abilityName(base))
+    .sort((a, b) => (a.slot ?? 99) - (b.slot ?? 99))
+    .map((slot) => slot.name!.trim())
+    .filter((name, index, all) => all.findIndex((other) => abilityName(other) === abilityName(name)) === index)
+    .slice(0, 2);
+  return { base, morphs };
+}
+
+/**
+ * A morph that was also stored as its own skill. The row to keep is the base
+ * plus its two morphs. A second row titled with the morph is dropped when the
+ * base row does not point back at it.
  */
 export function omitAbilitiesListedAsMorphs(rows: readonly PlannerAbilityRow[]): PlannerAbilityRow[] {
   return rows.filter((row) => {
@@ -133,7 +154,7 @@ export function omitAbilitiesListedAsMorphs(rows: readonly PlannerAbilityRow[]):
     const base = abilityName(row.base.name);
     const line = abilityName(row.lineName);
     return !rows.some((other) => {
-      if (other === row || abilityName(other.lineName) !== line) return false;
+      if (other === row || other.passive || abilityName(other.lineName) !== line) return false;
       if (!listsMorph(other, base)) return false;
       return !listsMorph(row, abilityName(other.base.name));
     });

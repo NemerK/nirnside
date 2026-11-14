@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, groupPlannerLines, omitAbilitiesListedAsMorphs, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
+import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, baseAndMorphsFromSlots, groupPlannerLines, omitAbilitiesListedAsMorphs, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
 
 const classes = ["Dragonknight", "Nightblade", "Templar"];
 
@@ -181,6 +181,33 @@ describe("class mastery stays with its class", () => {
         ["Weakness to Elements", "Elemental Susceptibility", "Elemental Drain"],
         ["Force Shock", "Crushing Shock", "Force Pulse"],
       ],
+    );
+  });
+
+  it("reads the base from slot 0 when the headline is the selected morph", () => {
+    assert.deepEqual(
+      baseAndMorphsFromSlots("Elemental Blockade", [
+        { slot: 0, name: "Wall of Elements" },
+        { slot: 1, name: "Unstable Wall of Elements" },
+        { slot: 2, name: "Elemental Blockade" },
+      ]),
+      { base: "Wall of Elements", morphs: ["Unstable Wall of Elements", "Elemental Blockade"] },
+    );
+    assert.deepEqual(
+      baseAndMorphsFromSlots("Pierce Armor", [
+        { slot: 0, name: "Puncture" },
+        { slot: 1, name: "Pierce Armor" },
+        { slot: 2, name: "Ransack" },
+      ]),
+      { base: "Puncture", morphs: ["Pierce Armor", "Ransack"] },
+    );
+    assert.deepEqual(
+      baseAndMorphsFromSlots("Bloodthirst", [
+        { slot: 0, name: "Flurry" },
+        { slot: 1, name: "Rapid Strikes" },
+        { slot: 2, name: "Bloodthirst" },
+      ]),
+      { base: "Flurry", morphs: ["Rapid Strikes", "Bloodthirst"] },
     );
   });
 

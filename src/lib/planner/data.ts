@@ -18,7 +18,7 @@ import type { Goal, GoalIndexes } from "../goals/types";
 import type { GoalCardView, GoalMarkView, GoalRowItem } from "../goals/views";
 import { ESO_CLASSES } from "../classes";
 import { plannerAbilityIcon, plannerLineIcon, plannerScriptIcon } from "../icons/planner-icons";
-import { plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
+import { baseAndMorphsFromSlots, omitAbilitiesListedAsMorphs, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
 export type { PlannerAbilityRow };
 import { skillLineCap } from "../skills/line-cap";
 import type { AbilityMeta, GoalSubject, LineMeta, SkillLineChoice } from "../goals/types";
@@ -140,7 +140,22 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
       if (row && !row.icon) row.icon = icon;
     }
   }
-  for (const { entry } of safe(getSkills) ?? []) {
+  const catalogSkills = safe(getSkills) ?? [];
+  const morphNamesByLineId = new Map<string, Set<string>>();
+  for (const { entry } of catalogSkills) {
+    const line = lineNameById.get(entry.lineId);
+    if (!line || isExcludedSkillLine(line)) continue;
+    let names = morphNamesByLineId.get(line.id);
+    if (!names) {
+      names = new Set();
+      morphNamesByLineId.set(line.id, names);
+    }
+    for (const morph of entry.morphs) {
+      const name = morph.name.trim().toLowerCase();
+      if (morph.isMorph && name && name !== entry.name.trim().toLowerCase()) names.add(name);
+    }
+  }
+  for (const { entry } of catalogSkills) {
     const line = lineNameById.get(entry.lineId);
     if (!line || isExcludedSkillLine(line)) continue;
     const shared = {
@@ -181,15 +196,20 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         }),
       );
     }
-    abilityRows.push({
-      lineName: line.name,
-      className: line.className ?? null,
-      passive: entry.type === "passive",
-      base: { name: entry.name, icon: null },
-      morphs: entry.type === "passive" ? [] : morphSlots.map((name) => ({ name, icon: null })),
-    });
-    claimAbility(line.name, line.className ?? null, entry.name);
-    for (const name of morphSlots) claimAbility(line.name, line.className ?? null, name);
+    // A scan can file the selected morph as its own skill beside the base.
+    const listedAsMorph =
+      entry.type !== "passive" && morphNamesByLineId.get(line.id)?.has(entry.name.trim().toLowerCase()) === true;
+    if (!listedAsMorph) {
+      abilityRows.push({
+        lineName: line.name,
+        className: line.className ?? null,
+        passive: entry.type === "passive",
+        base: { name: entry.name, icon: null },
+        morphs: entry.type === "passive" ? [] : morphSlots.map((name) => ({ name, icon: null })),
+      });
+      claimAbility(line.name, line.className ?? null, entry.name);
+      for (const name of morphSlots) claimAbility(line.name, line.className ?? null, name);
+    }
   }
   for (const c of live) {
     for (const line of c.skillLines) {
@@ -235,25 +255,50 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
             }),
           );
         }
-        const morphNames = slots
-          .map((m) => m.name?.trim() ?? "")
-          .filter((name) => name && name.toLowerCase() !== ability.name.trim().toLowerCase())
-          .slice(0, 2);
-        const known = [ability.name, ...morphNames].some((name) => alreadyClaimed(line.name, shared.className, name));
-        if (!known && ability.name.trim()) {
+        const shaped = passive
+          ? { base: ability.name.trim(), morphs: [] as string[] }
+          : baseAndMorphsFromSlots(ability.name, slots);
+        const known = [shaped.base, ...shaped.morphs].some((name) => alreadyClaimed(line.name, shared.className, name));
+        if (!known && shaped.base) {
           abilityRows.push({
             lineName: line.name,
             className: shared.className,
             passive,
-            base: { name: ability.name, icon: null },
-            morphs: passive ? [] : morphNames.map((name) => ({ name, icon: null })),
+            base: { name: shaped.base, icon: null },
+            morphs: shaped.morphs.map((name) => ({ name, icon: null })),
           });
-          claimAbility(line.name, shared.className, ability.name);
-          for (const name of morphNames) claimAbility(line.name, shared.className, name);
+          claimAbility(line.name, shared.className, shaped.base);
+          for (const name of shaped.morphs) claimAbility(line.name, shared.className, name);
+        } else if (shaped.base && slots.some((slot) => slot.slot === 0)) {
+          // The catalog row was titled with the selected morph. Slot 0 is the base.
+          const lineKey = line.name.trim().toLowerCase();
+          const baseKey = shaped.base.trim().toLowerCase();
+          const idx = abilityRows.findIndex((row) => {
+            if (row.passive || row.lineName.trim().toLowerCase() !== lineKey) return false;
+            if (row.base.name.trim().toLowerCase() === baseKey) return false;
+            const titledWithOurMorph = shaped.morphs.some((name) => name.trim().toLowerCase() === row.base.name.trim().toLowerCase());
+            if (!titledWithOurMorph) return false;
+            const first = row.morphs[0]?.name.trim().toLowerCase() ?? "";
+            return row.morphs.length === 0 || first === baseKey;
+          });
+          if (idx >= 0) {
+            abilityRows[idx] = {
+              lineName: line.name,
+              className: shared.className,
+              passive: false,
+              base: { name: shaped.base, icon: null },
+              morphs: shaped.morphs.map((name) => ({ name, icon: null })),
+            };
+            claimAbility(line.name, shared.className, shaped.base);
+            for (const name of shaped.morphs) claimAbility(line.name, shared.className, name);
+          }
         }
       }
     }
   }
+
+  const keptRows = omitAbilitiesListedAsMorphs(abilityRows);
+  abilityRows.splice(0, abilityRows.length, ...keptRows);
 
   const iconByName = new Map(abilities.map((ability) => [ability.name.trim().toLowerCase(), ability.icon]));
   for (const row of abilityRows) {
