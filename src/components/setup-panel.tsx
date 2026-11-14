@@ -490,7 +490,7 @@ export function SetupPanel({ initial }: { initial: SetupStatus }) {
         </p>
         <p className="mt-2 font-mono text-xs text-fg-subtle">
           Tracking {status.update.repo}
-          {status.update.source === "git" ? " (git pull on this branch)" : ` @ ${status.update.ref}`}
+          {status.update.source === "git" ? " (git pull of main)" : ` @ ${status.update.ref}`}
           {status.update.sha ? ` · ${status.update.sha.slice(0, 7)}` : ""}
           {status.update.skipped ? " · updates skipped" : ""}
         </p>
