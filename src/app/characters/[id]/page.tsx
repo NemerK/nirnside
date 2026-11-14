@@ -129,11 +129,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     known: knownScripts.has(row.entry.name.trim().toLowerCase()),
     icon: row.entry.icon,
   }));
-  const listed = new Set(scriptRows.map((script) => script.name.trim().toLowerCase()));
-  for (const name of c.scribingScripts) {
-    if (listed.has(name.trim().toLowerCase())) continue;
-    scriptRows.push({ name, slot: null, effect: "", known: true });
-  }
 
   // Cross-link every set worn in a Wizard's Wardrobe setup back to its catalog page.
   const hrefForSet: Record<string, string> = {};
