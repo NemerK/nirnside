@@ -110,6 +110,36 @@ export interface PlannerAbilityRow {
   morphs: { name: string; icon: string | null }[];
 }
 
+function abilityName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** True when `name` is one of this row's morphs, not the base itself. */
+function listsMorph(row: PlannerAbilityRow, name: string): boolean {
+  const base = abilityName(row.base.name);
+  return row.morphs.some((morph) => {
+    const morphName = abilityName(morph.name);
+    return morphName === name && morphName !== base;
+  });
+}
+
+/**
+ * A morph that was also stored as its own skill. Elemental Blockade stays on
+ * Wall of Elements; it is not a second ability with empty morph columns.
+ */
+export function omitAbilitiesListedAsMorphs(rows: readonly PlannerAbilityRow[]): PlannerAbilityRow[] {
+  return rows.filter((row) => {
+    if (row.passive) return true;
+    const base = abilityName(row.base.name);
+    const line = abilityName(row.lineName);
+    return !rows.some((other) => {
+      if (other === row || abilityName(other.lineName) !== line) return false;
+      if (!listsMorph(other, base)) return false;
+      return !listsMorph(row, abilityName(other.base.name));
+    });
+  });
+}
+
 /** Rows for one skill line, with Class Mastery limited to that class. */
 export function abilityRowsOnPlannerLine(
   rows: readonly PlannerAbilityRow[],
@@ -121,10 +151,12 @@ export function abilityRowsOnPlannerLine(
       line,
     ).map((row) => row.name.trim().toLowerCase()),
   );
-  return rows.filter(
-    (row) =>
-      row.lineName.trim().toLowerCase() === line.name.trim().toLowerCase() &&
-      names.has(row.base.name.trim().toLowerCase()),
+  return omitAbilitiesListedAsMorphs(
+    rows.filter(
+      (row) =>
+        row.lineName.trim().toLowerCase() === line.name.trim().toLowerCase() &&
+        names.has(row.base.name.trim().toLowerCase()),
+    ),
   );
 }
 

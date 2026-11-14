@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
+import { abilitiesOnPlannerLine, abilityRowsOnPlannerLine, activeAbilityRowsOnPlannerLine, groupPlannerLines, omitAbilitiesListedAsMorphs, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
 
 const classes = ["Dragonknight", "Nightblade", "Templar"];
 
@@ -146,6 +146,41 @@ describe("class mastery stays with its class", () => {
     assert.deepEqual(
       activeAbilityRowsOnPlannerLine(rows, { name: "Ardent Flame", className: "Dragonknight" }).map((row) => row.base.name),
       ["Lava Whip"],
+    );
+  });
+
+  it("drops a morph that was also stored as its own ability", () => {
+    const row = (
+      base: string,
+      morphs: string[],
+    ): PlannerAbilityRow => ({
+      lineName: "Destruction Staff",
+      className: null,
+      passive: false,
+      base: { name: base, icon: null },
+      morphs: morphs.map((name) => ({ name, icon: null })),
+    });
+    const rows = [
+      row("Elemental Blockade", []),
+      row("Wall of Elements", ["Unstable Wall of Elements", "Elemental Blockade"]),
+      row("Elemental Susceptibility", []),
+      row("Weakness to Elements", ["Elemental Susceptibility", "Elemental Drain"]),
+      row("Force Shock", ["Crushing Shock", "Force Pulse"]),
+    ];
+    assert.deepEqual(
+      omitAbilitiesListedAsMorphs(rows).map((entry) => entry.base.name),
+      ["Wall of Elements", "Weakness to Elements", "Force Shock"],
+    );
+    assert.deepEqual(
+      abilityRowsOnPlannerLine(rows, { name: "Destruction Staff", className: null }).map((entry) => [
+        entry.base.name,
+        ...entry.morphs.map((morph) => morph.name),
+      ]),
+      [
+        ["Wall of Elements", "Unstable Wall of Elements", "Elemental Blockade"],
+        ["Weakness to Elements", "Elemental Susceptibility", "Elemental Drain"],
+        ["Force Shock", "Crushing Shock", "Force Pulse"],
+      ],
     );
   });
 
