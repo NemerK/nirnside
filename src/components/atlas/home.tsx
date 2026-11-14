@@ -44,9 +44,12 @@ interface ProgressCell {
   href: string;
 }
 
+/** An account can sit in five guilds. The row keeps that many places. */
+const GUILD_SLOTS = 5;
+
 /**
- * Account home as a few grouped cards: who you are, the wallet, progress,
- * and guilds as their own tiles.
+ * Account home as three stacked cards: the account, progress, then guilds.
+ * Guilds are one row of five, with a blank place for each open slot.
  */
 export function AccountOverview({
   account,
@@ -106,51 +109,26 @@ export function AccountOverview({
         </p>
       </header>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.8fr)]">
-        <section className="rounded-lg border border-border bg-surface p-3">
-          <h2 className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Account</h2>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {identity.map((cell) => (
-              <Tile key={cell.label} href={cell.href}>
-                <div className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{cell.label}</div>
-                <div className="mt-1 text-xl font-semibold tabular-nums text-fg">{cell.value}</div>
-                {cell.hint ? <div className="text-[10px] text-fg-subtle">{cell.hint}</div> : null}
-              </Tile>
-            ))}
-          </div>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {wallet.map((cell) => (
-              <Tile key={cell.label} href={cell.href}>
-                <div className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{cell.label}</div>
-                <div className="mt-1 text-sm font-semibold tabular-nums text-fg">{cell.value}</div>
-              </Tile>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-lg border border-border bg-surface p-3">
-          <h2 className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Guilds</h2>
-          {account.guilds.length === 0 ? (
-            <p className="mt-3 text-sm text-fg-muted">No guilds in this snapshot.</p>
-          ) : (
-            <ul className="mt-2 space-y-2">
-              {account.guilds.map((guild) => (
-                <li key={guild.name} className="rounded-md border border-border bg-bg px-3 py-2">
-                  <div className="truncate text-sm font-medium text-fg">{guild.name}</div>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-fg-muted">
-                      {guild.rank ?? "Member"}
-                    </span>
-                    {guild.trader ? (
-                      <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-accent">Trader</span>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      <section className="rounded-lg border border-border bg-surface p-3">
+        <h2 className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Account</h2>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {identity.map((cell) => (
+            <Tile key={cell.label} href={cell.href}>
+              <div className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{cell.label}</div>
+              <div className="mt-1 text-xl font-semibold tabular-nums text-fg">{cell.value}</div>
+              {cell.hint ? <div className="text-[10px] text-fg-subtle">{cell.hint}</div> : null}
+            </Tile>
+          ))}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {wallet.map((cell) => (
+            <Tile key={cell.label} href={cell.href}>
+              <div className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{cell.label}</div>
+              <div className="mt-1 text-sm font-semibold tabular-nums text-fg">{cell.value}</div>
+            </Tile>
+          ))}
+        </div>
+      </section>
 
       {progress.length > 0 ? (
         <section className="rounded-lg border border-border bg-surface p-3">
@@ -182,6 +160,30 @@ export function AccountOverview({
           </div>
         </section>
       ) : null}
+
+      <section className="rounded-lg border border-border bg-surface p-3">
+        <h2 className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Guilds</h2>
+        <ul className="mt-2 grid grid-cols-5 gap-2">
+          {Array.from({ length: Math.max(GUILD_SLOTS, account.guilds.length) }, (_, index) => account.guilds[index] ?? null).map(
+            (guild, index) =>
+              guild ? (
+                <li key={guild.name} className="min-h-[4.25rem] min-w-0 rounded-md border border-border bg-bg px-3 py-2">
+                  <div className="truncate text-sm font-medium text-fg">{guild.name}</div>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-fg-muted">
+                      {guild.rank ?? "Member"}
+                    </span>
+                    {guild.trader ? (
+                      <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-accent">Trader</span>
+                    ) : null}
+                  </div>
+                </li>
+              ) : (
+                <li key={`open-guild-${index}`} aria-hidden className="min-h-[4.25rem] rounded-md border border-dashed border-border bg-bg" />
+              ),
+          )}
+        </ul>
+      </section>
     </div>
   );
 }
