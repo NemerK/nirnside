@@ -1,36 +1,34 @@
 import { NextResponse } from "next/server";
-import { spawn } from "node:child_process";
+import { appendFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { canRestartWithoutLauncher, parentIsLauncher } from "@/lib/setup/launcher-parent";
+import { parentIsLauncher } from "@/lib/setup/launcher-parent";
 import { launcherApplyUrl } from "@/lib/setup/update-status";
 import { getUpdateStatus } from "@/lib/setup/update-check";
+import {
+  classifyLauncherResponse,
+  launcherCandidates,
+  outsideJobCommand,
+  planUpdate,
+} from "@/lib/setup/update-handoff";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const LAUNCHER_MISSING =
-  "Start Nirnside once from the shortcut to finish installing the in-window updater. After that, Update reloads this window on its own.";
+const HANDOFF_FAILED =
+  "Could not start the update. Start Nirnside from the shortcut once, then try Update again.";
 
-/**
- * Ask the running launcher to apply the update. The Windows exe owns the
- * server process; if this process exited on its own, that launcher would
- * treat it as Stop and shut everything down — including a helper we spawned.
- */
-async function askLauncher(url: string): Promise<Response> {
+/** POST one launcher. Null when that port is not the in-window updater. */
+async function tryLauncher(url: string): Promise<Response | null> {
   let res: Response;
   try {
     res = await fetch(url, { method: "POST", signal: AbortSignal.timeout(8000) });
   } catch {
-    return NextResponse.json(
-      { error: "The launcher did not answer. Start Nirnside from the shortcut, then use Update." },
-      { status: 503 },
-    );
+    return null;
   }
-  if (res.status === 404) {
-    return NextResponse.json({ error: LAUNCHER_MISSING }, { status: 409 });
-  }
-  const text = await res.text();
-  return new NextResponse(text || "{}", {
+  const body = await res.text();
+  if (classifyLauncherResponse(res.status, body) === "miss") return null;
+  return new NextResponse(body || "{}", {
     status: res.status,
     headers: { "content-type": "application/json" },
   });
@@ -56,6 +54,39 @@ function restartWithoutLauncher(): void {
   setTimeout(() => process.exit(0), 600);
 }
 
+/**
+ * Older Nirnside.exe owns this process. A child of the server dies with that
+ * exe, so WMI starts the helper outside the job. The exe then treats our exit
+ * as Stop and closes; the browser window stays and reloads when the helper
+ * brings the server back.
+ */
+function restartOutsideJob(): boolean {
+  const root = process.cwd();
+  const cmd = outsideJobCommand({
+    node: process.execPath,
+    script: join(root, "scripts", "apply-update.mjs"),
+    root,
+    pid: process.pid,
+    dev: process.env.NODE_ENV === "development",
+  });
+  const result = spawnSync(cmd.file, cmd.args, {
+    windowsHide: true,
+    encoding: "utf8",
+    timeout: 20_000,
+  });
+  if (result.status === 0) {
+    setTimeout(() => process.exit(0), 600);
+    return true;
+  }
+  const detail = (result.stderr || result.stdout || result.error?.message || "powershell failed").trim();
+  try {
+    appendFileSync(join(root, "nirnside-installer.log"), `[nirnside-update] Could not start the updater outside the launcher. ${detail}\n`);
+  } catch {
+    /* the restart log is best-effort */
+  }
+  return false;
+}
+
 export async function GET() {
   return NextResponse.json(await getUpdateStatus());
 }
@@ -65,14 +96,22 @@ export async function POST() {
   if (status.skipped) {
     return NextResponse.json({ error: "Updates are turned off on this copy." }, { status: 400 });
   }
-  const launcher = launcherApplyUrl(process.env.NIRNSIDE_LAUNCHER_URL);
-  if (launcher) return askLauncher(launcher);
-  // An older Nirnside.exe has no apply endpoint and kills whatever it started
-  // when that process exits. Don't take the window down with a helper that
-  // would die in the same moment.
-  if (!canRestartWithoutLauncher(parentIsLauncher())) {
-    return NextResponse.json({ error: LAUNCHER_MISSING }, { status: 409 });
+
+  for (const url of launcherCandidates(launcherApplyUrl(process.env.NIRNSIDE_LAUNCHER_URL))) {
+    const answer = await tryLauncher(url);
+    if (answer) return answer;
   }
-  restartWithoutLauncher();
+
+  const plan = planUpdate({
+    platform: process.platform,
+    parentIsLauncher: parentIsLauncher(),
+  });
+  if (plan === "outside-job") {
+    if (!restartOutsideJob()) {
+      return NextResponse.json({ error: HANDOFF_FAILED }, { status: 503 });
+    }
+  } else {
+    restartWithoutLauncher();
+  }
   return NextResponse.json({ ok: true, restarting: true });
 }

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { applyAndRestart, npmInstallArgs, serverArgs } from "./apply-update.mjs";
+import { applyAndRestart, npmInstallArgs, readRestartArgs, serverArgs } from "./apply-update.mjs";
 
 describe("apply-update", () => {
   it("starts the dev server without a build, and production with one", () => {
@@ -35,6 +35,18 @@ describe("apply-update", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("reads restart flags, and falls back to the environment", () => {
+    assert.deepEqual(readRestartArgs(["node", "apply-update.mjs"], { NIRNSIDE_SERVER_PID: "9", NIRNSIDE_RESTART_DEV: "1" }, "/app"), {
+      root: "/app",
+      pid: 9,
+      dev: true,
+    });
+    assert.deepEqual(
+      readRestartArgs(["node", "apply-update.mjs", "--root", "D:\\Nirnside", "--pid", "42", "--dev", "0"], { NIRNSIDE_SERVER_PID: "9", NIRNSIDE_RESTART_DEV: "1" }, "/app"),
+      { root: "D:\\Nirnside", pid: 42, dev: false },
+    );
   });
 
   it("applies the update, then starts the server, without touching a real install", async () => {
