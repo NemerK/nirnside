@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { CalendarClock, FlaskConical, Sparkles, Star } from "lucide-react";
 import type { Character } from "@/lib/snapshot/schema";
+import { GameIcon } from "@/components/game-icon";
 import { Badge, Card, ProgressBar, SectionTitle } from "@/components/ui";
+import { plannerScriptIcon } from "@/lib/icons/planner-icons";
 import {
   formatResearchRemaining,
   presentMotifs,
@@ -120,6 +122,7 @@ export interface FocusScript {
   name: string;
   slot: string;
   effect: string;
+  icon?: string | null;
 }
 
 const SLOT_ORDER = ["focus", "signature", "affix"] as const;
@@ -164,12 +167,16 @@ export function ScribingPanel({ character, scripts }: { character: Character; sc
                 <ul className="space-y-1.5">
                   {list.map((s) =>
                     known.has(s.name.toLowerCase()) ? (
-                      <li key={s.id} className="text-sm text-fg" title={s.effect}>
-                        {s.name}
+                      <li key={s.id} className="flex items-center gap-2 text-sm text-fg" title={s.effect}>
+                        <GameIcon name={s.name} icon={s.icon ?? plannerScriptIcon(s.name)} size={20} bare />
+                        <span className="min-w-0 truncate">{s.name}</span>
                       </li>
                     ) : (
-                      <li key={s.id} className="text-sm text-fg-subtle opacity-70" title={s.effect}>
-                        {s.name} <span className="text-xs">· missing</span>
+                      <li key={s.id} className="flex items-center gap-2 text-sm text-fg-subtle opacity-70" title={s.effect}>
+                        <GameIcon name={s.name} icon={s.icon ?? plannerScriptIcon(s.name)} size={20} bare />
+                        <span className="min-w-0 truncate">
+                          {s.name} <span className="text-xs">· missing</span>
+                        </span>
                       </li>
                     ),
                   )}

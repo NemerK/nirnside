@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { plannerGrimoireIcon, plannerScriptIcon } from "../icons/planner-icons";
 import { CatalogBundle } from "./schema";
 
 /** Same folding as NirnsideCatalog's slug(), so a later in-game scan hits the same id. */
@@ -29,6 +30,7 @@ describe("scribing seed", () => {
     for (const script of bundle.scripts) {
       assert.equal(script.source, "community");
       assert.equal(script.id, `scr-${slug(script.name)}`);
+      assert.ok(plannerScriptIcon(script.name), `missing scribing icon for ${script.name}`);
     }
   });
 
@@ -47,6 +49,7 @@ describe("scribing seed", () => {
       assert.deepEqual(grim.focusScripts, []);
       assert.deepEqual(grim.signatureScripts, []);
       assert.deepEqual(grim.affixScripts, []);
+      assert.ok(plannerGrimoireIcon(grim.name), `missing grimoire icon for ${grim.name}`);
     }
   });
 
@@ -63,6 +66,7 @@ describe("scribing seed", () => {
     assert.match(body, /GetCraftedAbilityActiveScriptIds/);
     const catalog = readFileSync("addon/NirnsideCatalog/NirnsideCatalog.lua", "utf8");
     assert.match(catalog, /GetNumScriptsInSlotForCraftedAbility/);
+    assert.match(catalog, /GetCraftedAbilityScriptIcon/);
     assert.doesNotMatch(catalog, /GetNumCraftedAbilityScripts/);
   });
 });

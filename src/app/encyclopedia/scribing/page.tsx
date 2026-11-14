@@ -18,6 +18,7 @@ export default function ScribingPage() {
     name: entry.name,
     effect: entry.effect,
     slot: entry.slot,
+    icon: entry.icon,
   }));
   const scriptMap = new Map(book.map((s) => [s.id, s]));
   const resolve = (ids: string[]) => ids.map((id) => scriptMap.get(id)).filter((x): x is ScriptLite => !!x);
@@ -27,6 +28,7 @@ export default function ScribingPage() {
     name: entry.name,
     skillLine: entry.skillLine,
     description: entry.description,
+    icon: entry.icon,
     focus: resolve(entry.focusScripts),
     signature: resolve(entry.signatureScripts),
     affix: resolve(entry.affixScripts),

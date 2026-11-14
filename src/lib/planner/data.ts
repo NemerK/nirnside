@@ -422,7 +422,7 @@ export const loadPlannerData = cache(function loadPlannerData(): PlannerData {
   const scripts = (safe(getScripts) ?? []).map(({ entry }) => ({
     name: entry.name,
     slot: entry.slot,
-    icon: plannerScriptIcon(entry.name),
+    icon: plannerScriptIcon(entry.name, entry.icon),
   }));
 
   return {

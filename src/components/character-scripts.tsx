@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { GameIcon } from "@/components/game-icon";
+import { plannerScriptIcon } from "@/lib/icons/planner-icons";
 
 const SLOTS = [
   { id: "focus", label: "Focus", edge: "#6aa8e0" },
@@ -14,6 +16,8 @@ export interface CharacterScript {
   slot: SlotId | null;
   effect: string;
   known: boolean;
+  /** Scanned GetCraftedAbilityScriptIcon, when the catalog has one. */
+  icon?: string | null;
 }
 
 /** Every catalog script, with a check on the ones this character has learned. */
@@ -52,8 +56,9 @@ export function CharacterScripts({ scripts }: { scripts: CharacterScript[] }) {
                 </div>
                 <ul className="divide-y divide-border">
                   {list.map((script) => (
-                    <li key={script.name} className="flex items-center justify-between gap-2 px-3 py-1.5" title={script.effect || undefined}>
-                      <span className={`min-w-0 truncate text-sm ${script.known ? "text-fg" : "text-fg-subtle"}`}>
+                    <li key={script.name} className="flex items-center gap-2 px-3 py-1.5" title={script.effect || undefined}>
+                      <GameIcon name={script.name} icon={script.icon ?? plannerScriptIcon(script.name)} size={22} bare />
+                      <span className={`min-w-0 flex-1 truncate text-sm ${script.known ? "text-fg" : "text-fg-subtle"}`}>
                         {script.name}
                       </span>
                       {script.known ? (
@@ -77,8 +82,9 @@ export function CharacterScripts({ scripts }: { scripts: CharacterScript[] }) {
           </div>
           <ul className="divide-y divide-border">
             {other.map((script) => (
-              <li key={script.name} className="flex items-center justify-between gap-2 px-3 py-1.5">
-                <span className="min-w-0 truncate text-sm text-fg">{script.name}</span>
+              <li key={script.name} className="flex items-center gap-2 px-3 py-1.5">
+                <GameIcon name={script.name} icon={script.icon ?? plannerScriptIcon(script.name)} size={22} bare />
+                <span className="min-w-0 flex-1 truncate text-sm text-fg">{script.name}</span>
                 <Check className="h-3.5 w-3.5 shrink-0 text-ok" aria-label="Learned" />
               </li>
             ))}

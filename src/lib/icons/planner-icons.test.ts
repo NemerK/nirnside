@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { plannerAbilityIcon, plannerLineIcon, plannerScriptIcon } from "./planner-icons";
+import { plannerAbilityIcon, plannerGrimoireIcon, plannerLineIcon, plannerScriptIcon } from "./planner-icons";
 
 describe("planner icons", () => {
   it("uses the sword-and-board, greatsword, bow, and dual-wield line art", () => {
@@ -70,15 +70,30 @@ describe("planner icons", () => {
     );
   });
 
-  it("maps a script only when the name is one confirmed status or element", () => {
-    assert.equal(plannerScriptIcon("Berserk"), "esoui/art/icons/ability_buff_major_berserk.dds");
-    assert.equal(plannerScriptIcon("Off Balance"), "esoui/art/icons/ability_debuff_offbalance.dds");
-    assert.equal(plannerScriptIcon("Stun"), "esoui/art/icons/ability_debuff_stun.dds");
-    assert.equal(plannerScriptIcon("Flame Damage"), "esoui/art/progression/icon_firestaff.dds");
-    assert.equal(plannerScriptIcon("Brutality and Sorcery"), null);
-    assert.equal(plannerScriptIcon("Intellect and Endurance"), null);
-    assert.equal(plannerScriptIcon("Savagery and Prophecy"), null);
-    assert.equal(plannerScriptIcon("Interrupt"), null);
-    assert.equal(plannerScriptIcon("Class Flourish"), null);
+  it("uses the scribing-window texture for every live script, including the paired affixes", () => {
+    assert.equal(plannerScriptIcon("Berserk"), "esoui/art/icons/scribing_tertiary_berserk.dds");
+    assert.equal(plannerScriptIcon("Off Balance"), "esoui/art/icons/scribing_tertiary_offbalance.dds");
+    assert.equal(plannerScriptIcon("Stun"), "esoui/art/icons/scribing_primary_stunned.dds");
+    assert.equal(plannerScriptIcon("Flame Damage"), "esoui/art/icons/scribing_primary_flame.dds");
+    assert.equal(plannerScriptIcon("Physical Damage"), "esoui/art/icons/scribing_primary_increasedamage.dds");
+    assert.equal(plannerScriptIcon("Mitigation"), "esoui/art/icons/scribing_primary_transferbuff.dds");
+    assert.equal(plannerScriptIcon("Brutality and Sorcery"), "esoui/art/icons/scribing_tertiary_brutalitysorcery.dds");
+    assert.equal(plannerScriptIcon("Intellect and Endurance"), "esoui/art/icons/scribing_tertiary_intellectendurance.dds");
+    assert.equal(plannerScriptIcon("Savagery and Prophecy"), "esoui/art/icons/scribing_tertiary_savageprophecy.dds");
+    assert.equal(plannerScriptIcon("Interrupt"), "esoui/art/icons/scribing_tertiary_interrupt.dds");
+    assert.equal(plannerScriptIcon("Class Flourish"), "esoui/art/icons/scribing_secondary_classmod.dds");
+    assert.equal(plannerScriptIcon("Anchorite's Cruelty"), "esoui/art/icons/scribing_secondary_soulcollapse.dds");
+    assert.equal(
+      plannerScriptIcon("Berserk", "esoui/art/icons/from-the-scan.dds"),
+      "esoui/art/icons/from-the-scan.dds",
+    );
+    assert.equal(plannerScriptIcon("Not a Script"), null);
+  });
+
+  it("uses each grimoire's own ability icon", () => {
+    assert.equal(plannerGrimoireIcon("Vault"), "esoui/art/icons/ability_grimoire_bow.dds");
+    assert.equal(plannerGrimoireIcon("Wield Soul"), "esoui/art/icons/ability_grimoire_soulmagic1.dds");
+    assert.equal(plannerGrimoireIcon("Banner Bearer"), "esoui/art/icons/ability_grimoire_support.dds");
+    assert.equal(plannerGrimoireIcon("Not a Grimoire"), null);
   });
 });
