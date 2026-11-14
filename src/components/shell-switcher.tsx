@@ -18,10 +18,9 @@ export function ShellSwitcher({
   modules?: ModuleDef[];
   children: ReactNode;
 }) {
-  const { look, ready } = useLook();
-  // SSR + first paint use Classic shell; Atlas swaps in once look is known.
+  const { look } = useLook();
   const shell =
-    ready && look === "atlas" ? (
+    look === "atlas" ? (
       <AtlasShell account={account} hiddenModules={hiddenModules} modules={modules}>
         {children}
       </AtlasShell>
@@ -31,7 +30,7 @@ export function ShellSwitcher({
       </AppShell>
     );
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div data-rendered-look={look} className="flex h-full min-h-0 flex-col">
       <AppUpdate />
       <div className="min-h-0 flex-1">{shell}</div>
     </div>
