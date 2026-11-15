@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import { GameIcon } from "@/components/game-icon";
+import { SortHeader, useSort } from "@/components/sort-header";
 import { PageScroll, StickyMenu } from "@/components/ui";
 import { plannerGrimoireIcon, plannerScriptIcon } from "@/lib/icons/planner-icons";
+import { sortRows } from "@/lib/ui/column-sort";
 
 export interface ScriptLite {
   id: string;
@@ -64,6 +66,19 @@ export function ScribingMatrix({
     }
     return out;
   }, [grim, known, knownOnly, linked]);
+
+  type ComboColumn = "focus" | "signature" | "affix" | "you";
+  const { sort, onSort } = useSort<ComboColumn>();
+  const sortedCombos = useMemo(
+    () =>
+      sortRows(combos, sort, (combo, key) => {
+        if (key === "focus") return combo.focus.name;
+        if (key === "signature") return combo.sig.name;
+        if (key === "affix") return combo.affix.name;
+        return combo.known ? 1 : 0;
+      }),
+    [combos, sort],
+  );
 
   const totalCombos = linked && grim ? grim.focus.length * grim.signature.length * grim.affix.length : 0;
 
@@ -150,15 +165,23 @@ export function ScribingMatrix({
       {linked && <div className="max-h-[520px] overflow-y-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-bg-elev">
-            <tr className="text-left text-xs uppercase tracking-wider text-fg-subtle">
-              <th className="px-3 py-2 font-medium">Focus</th>
-              <th className="px-3 py-2 font-medium">Signature</th>
-              <th className="px-3 py-2 font-medium">Affix</th>
-              <th className="px-3 py-2 font-medium text-right">You</th>
+            <tr className="text-left text-xs font-medium">
+              <th className="px-3 py-2">
+                <SortHeader label="Focus" column="focus" sort={sort} onSort={onSort} />
+              </th>
+              <th className="px-3 py-2">
+                <SortHeader label="Signature" column="signature" sort={sort} onSort={onSort} />
+              </th>
+              <th className="px-3 py-2">
+                <SortHeader label="Affix" column="affix" sort={sort} onSort={onSort} />
+              </th>
+              <th className="px-3 py-2">
+                <SortHeader label="You" column="you" sort={sort} onSort={onSort} align="right" />
+              </th>
             </tr>
           </thead>
           <tbody>
-            {combos.map((c, i) => (
+            {sortedCombos.map((c, i) => (
               <tr key={i} className="border-t border-border/50 hover:bg-surface-2/40">
                 <td className="px-3 py-1.5 text-fg">{c.focus.name}</td>
                 <td className="px-3 py-1.5 text-fg-muted">{c.sig.name}</td>

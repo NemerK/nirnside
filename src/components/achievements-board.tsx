@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, Minus, Search, Trophy } from "lucide-react";
+import { SortHeader, useSort } from "@/components/sort-header";
 import { PageScroll, StickyMenu } from "@/components/ui";
 import {
   PITHKA_TABS,
@@ -9,6 +10,7 @@ import {
   type PithkaInstance,
   type PithkaTab,
 } from "@/lib/achievements/pithka";
+import { sortRows } from "@/lib/ui/column-sort";
 
 type Filter = "all" | "done" | "todo";
 
@@ -55,6 +57,20 @@ const COLUMNS: Record<PithkaTab, Col[]> = {
   ],
 };
 
+function doneRank(id: number | null | undefined, done: Set<number>): number | null {
+  if (typeof id !== "number") return null;
+  return done.has(id) ? 1 : 0;
+}
+
+function columnRank(row: PithkaInstance, col: Col | undefined, done: Set<number>): number | null {
+  if (!col) return null;
+  if (col.kind === "check") return doneRank(row[col.field], done);
+  if (col.kind === "named") return doneRank(row[col.id], done);
+  const parts = [doneRank(row.cha, done), doneRank(row.tri, done)].filter((value): value is number => value != null);
+  if (parts.length === 0) return null;
+  return parts.reduce((sum, value) => sum + value, 0);
+}
+
 const ROW_LABEL: Record<PithkaTab, string> = {
   Trials: "Trial",
   "Trifecta Dungeons": "Dungeon",
@@ -67,6 +83,7 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
   const [tab, setTab] = useState<PithkaTab>("Trials");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const { sort, onSort, clear } = useSort<string>();
 
   const rows = useMemo(() => PITHKA_TABS.find((t) => t.id === tab)!.rows, [tab]);
   const cols = COLUMNS[tab];
@@ -87,6 +104,15 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, search, filter, done]);
 
+  const sorted = useMemo(
+    () =>
+      sortRows(filtered, sort, (row, key) => {
+        if (key === "name") return row.name;
+        return columnRank(row, cols[Number(key)], done);
+      }),
+    [filtered, sort, cols, done],
+  );
+
   const summary = useMemo(() => {
     const ids = allTrackedIds(rows);
     const earned = ids.filter((id) => done.has(id)).length;
@@ -103,7 +129,10 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
           {PITHKA_TABS.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => {
+                setTab(t.id);
+                clear();
+              }}
               className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
                 tab === t.id ? "bg-accent-soft text-fg" : "text-fg-muted hover:text-fg"
               }`}
@@ -153,20 +182,28 @@ export function AchievementsBoard({ completedIds }: { completedIds: number[] }) 
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wider text-fg-subtle">
-              <th className="sticky left-0 z-10 bg-surface-2/40 px-3 py-2 font-medium">{ROW_LABEL[tab]}</th>
+              <th className="sticky left-0 z-10 bg-surface-2/40 px-3 py-2 font-medium">
+                <SortHeader label={ROW_LABEL[tab]} column="name" sort={sort} onSort={onSort} />
+              </th>
               {cols.map((c, i) => (
                 <th
                   key={i}
-                  title={c.kind === "check" ? c.tip : undefined}
                   className={`px-3 py-2 font-medium ${c.kind === "check" ? "text-center" : "text-left"}`}
                 >
-                  {c.label}
+                  <SortHeader
+                    label={c.label}
+                    column={String(i)}
+                    sort={sort}
+                    onSort={onSort}
+                    align={c.kind === "check" ? "center" : "left"}
+                    title={c.kind === "check" ? c.tip : undefined}
+                  />
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => (
+            {sorted.map((r) => (
               <tr key={r.abbv} className="border-b border-border/50 align-middle last:border-0 hover:bg-surface-2/30">
                 <td className="sticky left-0 z-10 bg-surface px-3 py-1 font-medium text-fg">{r.name}</td>
                 {cols.map((c, i) => (
