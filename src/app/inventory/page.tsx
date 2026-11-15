@@ -1,17 +1,17 @@
-import Link from "next/link";
-import { Backpack, Ban, Coins, Hand } from "lucide-react";
+import { Backpack, Coins } from "lucide-react";
 import { getAccount, getArchivedCharacters, getCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
 import { setHref } from "@/lib/db/catalog-queries";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryTabs } from "@/components/inventory-tabs";
+import { InventoryTable } from "@/components/inventory-table";
 import { CurrencyTable } from "@/components/currency-table";
 import { LookSwitch } from "@/components/look-switch";
 import { AtlasInventoryChrome } from "@/components/atlas/inventory";
-import { Badge, Card, EmptyState, PageFrame, PageHeader, PageScroll, StickyMenu } from "@/components/ui";
-import { formatGold, formatNumber, locationLabel, qualityText } from "@/lib/format";
-import { bagSubtypeLabel, tallyBagFilters } from "@/lib/inventory/bag-filters";
+import { Card, EmptyState, PageFrame, PageHeader, PageScroll, StickyMenu } from "@/components/ui";
+import { formatGold, formatNumber } from "@/lib/format";
+import { tallyBagFilters } from "@/lib/inventory/bag-filters";
 import { InventoryCategories } from "@/components/inventory-categories";
 
 export const dynamic = "force-dynamic";
@@ -157,6 +157,24 @@ export default async function InventoryPage({
   );
 }
 
+function setHrefsFor(
+  items: ReturnType<typeof getItems>,
+  mythics: NonNullable<ReturnType<typeof getAccount>>["mythics"],
+): Record<string, string> {
+  const hrefs: Record<string, string> = {};
+  for (const item of items) {
+    if (!item.setName) continue;
+    const key = `${item.setId ?? ""}|${item.setName}`;
+    if (hrefs[key]) continue;
+    hrefs[key] = hrefForMythicOrSet(
+      mythics,
+      { name: item.setName, setId: item.setId },
+      setHref({ name: item.setName, setId: item.setId }),
+    );
+  }
+  return hrefs;
+}
+
 function ItemsBody({
   items,
   mythics,
@@ -215,77 +233,7 @@ function ItemsBody({
           <div className="mb-3 text-sm text-fg-muted">
             {totalStacks.toLocaleString("en-US")} stacks · {totalCount.toLocaleString("en-US")} items
           </div>
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-fg-subtle">
-                    <th className="px-4 py-2.5 font-medium">Item</th>
-                    <th className="px-3 py-2.5 font-medium text-right">Qty</th>
-                    <th className="px-3 py-2.5 font-medium">Location</th>
-                    <th className="px-3 py-2.5 font-medium">Owner</th>
-                    <th className="px-3 py-2.5 font-medium">Set</th>
-                    <th className="px-3 py-2.5 font-medium">Trait</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((it, i) => (
-                    <tr key={i} className="border-b border-border/60 last:border-0 hover:bg-surface-2/50">
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${qualityText(it.quality)}`}>{it.name}</span>
-                          {it.stolen && (
-                            <Badge tone="danger">
-                              <Hand className="h-3 w-3" /> Stolen
-                            </Badge>
-                          )}
-                          {!it.obtainable && (
-                            <Badge tone="muted">
-                              <Ban className="h-3 w-3" /> Unobtainable
-                            </Badge>
-                          )}
-                        </div>
-                        {it.bagCategory ? (
-                          <div className="text-xs text-fg-subtle">
-                            {bagSubtypeLabel(it.bagCategory, it.bagSubtype, it.bagSubtypeLabel) ||
-                              it.bagCategoryLabel ||
-                              it.bagCategory}
-                          </div>
-                        ) : null}
-                        {it.level && <div className="text-xs text-fg-subtle">CP{it.level}</div>}
-                      </td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-fg-muted">
-                        {it.count.toLocaleString("en-US")}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span className="rounded-md border border-border px-1.5 py-0.5 text-xs text-fg-muted">
-                          {locationLabel(it.location)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-fg-muted">{it.ownerCharacter ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-fg-muted">
-                        {it.setName ? (
-                          <Link
-                            href={hrefForMythicOrSet(
-                              mythics,
-                              { name: it.setName, setId: it.setId },
-                              setHref({ name: it.setName, setId: it.setId }),
-                            )}
-                            className="text-accent hover:underline"
-                          >
-                            {it.setName}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-fg-muted">{it.trait ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <InventoryTable items={items} setHrefs={setHrefsFor(items, mythics)} />
         </>
       )}
     </>

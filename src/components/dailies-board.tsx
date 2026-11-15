@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Search } from "lucide-react";
+import { SortHeader, useSort } from "@/components/sort-header";
 import { PageScroll, StickyMenu } from "@/components/ui";
 import { formatRemainingSeconds } from "@/lib/dailies/day";
 import {
@@ -10,8 +11,11 @@ import {
   WRIT_LABELS,
   type DailyCell,
   type PresentedCharacterDailies,
+  type WritCraft,
 } from "@/lib/dailies/present";
 import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "@/lib/dailies/pledges";
+import { sortRows, statusRank } from "@/lib/ui/column-sort";
+import type { SortState } from "@/lib/ui/column-sort";
 import { ZoneDailiesBoard } from "@/components/zone-dailies-board";
 
 type Filter = "all" | "open" | "done";
@@ -69,10 +73,37 @@ function ResetCountdown({ resetAt, label }: { resetAt: number; label?: string })
   );
 }
 
-function PledgeHead({ giver, today }: { giver: PledgeGiver; today?: string }) {
+function todayValue(row: PresentedCharacterDailies, key: string): string | number | null {
+  if (key === "name") return row.name;
+  if (key === "rn") return statusRank(row.randomNormal.status);
+  if (key === "rv") return statusRank(row.randomVeteran.status);
+  if (key.startsWith("writ:")) return statusRank(row.writs[key.slice(5) as WritCraft]?.status);
+  if (key.startsWith("pledge:")) return statusRank(row.pledges[key.slice(7) as PledgeGiver]?.status);
+  return null;
+}
+
+function PledgeHead({
+  giver,
+  today,
+  sort,
+  onSort,
+}: {
+  giver: PledgeGiver;
+  today?: string;
+  sort: SortState<string>;
+  onSort: (column: string) => void;
+}) {
+  const label = giver === "maj" ? "Maj" : giver === "glirion" ? "Gli" : "Urg";
   return (
-    <th className="px-1.5 py-1 text-center font-medium" title={PLEDGE_GIVER_NAMES[giver]}>
-      {giver === "maj" ? "Maj" : giver === "glirion" ? "Gli" : "Urg"}
+    <th className="px-1.5 py-1 text-center font-medium">
+      <SortHeader
+        label={label}
+        column={`pledge:${giver}`}
+        sort={sort}
+        onSort={onSort}
+        align="center"
+        title={`${PLEDGE_GIVER_NAMES[giver]} — sort by status`}
+      />
       {today ? (
         <div className="mt-0.5 max-w-[7.5rem] truncate text-[10px] font-normal normal-case tracking-normal text-fg-muted">
           {today}
@@ -113,6 +144,9 @@ export function DailiesBoard({
       return true;
     });
   }, [rows, search, filter, tab]);
+
+  const { sort, onSort } = useSort<string>();
+  const sorted = useMemo(() => sortRows(filtered, sort, todayValue), [filtered, sort]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -188,25 +222,34 @@ export function DailiesBoard({
           <table className="w-max min-w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-2/40 text-left text-[11px] uppercase tracking-wider text-fg-subtle">
-                <th className="sticky left-0 z-10 bg-surface-2 px-2 py-1 font-medium">Character</th>
-                <th className="px-1.5 py-1 text-center font-medium" title="Random Normal daily reward">
-                  RN
+                <th className="sticky left-0 z-10 bg-surface-2 px-2 py-1 font-medium">
+                  <SortHeader label="Character" column="name" sort={sort} onSort={onSort} />
                 </th>
-                <th className="px-1.5 py-1 text-center font-medium" title="Random Veteran daily reward">
-                  RV
+                <th className="px-1.5 py-1 text-center font-medium">
+                  <SortHeader label="RN" column="rn" sort={sort} onSort={onSort} align="center" title="Random Normal daily reward" />
+                </th>
+                <th className="px-1.5 py-1 text-center font-medium">
+                  <SortHeader label="RV" column="rv" sort={sort} onSort={onSort} align="center" title="Random Veteran daily reward" />
                 </th>
                 {WRIT_CRAFTS.map((c) => (
-                  <th key={c} className="px-1.5 py-1 text-center font-medium" title={`${WRIT_LABELS[c]} writ`}>
-                    {WRIT_ABBR[c]}
+                  <th key={c} className="px-1.5 py-1 text-center font-medium">
+                    <SortHeader
+                      label={WRIT_ABBR[c]}
+                      column={`writ:${c}`}
+                      sort={sort}
+                      onSort={onSort}
+                      align="center"
+                      title={`${WRIT_LABELS[c]} writ`}
+                    />
                   </th>
                 ))}
-                <PledgeHead giver="maj" today={todayPledges.maj} />
-                <PledgeHead giver="glirion" today={todayPledges.glirion} />
-                <PledgeHead giver="urgarlag" today={todayPledges.urgarlag} />
+                <PledgeHead giver="maj" today={todayPledges.maj} sort={sort} onSort={onSort} />
+                <PledgeHead giver="glirion" today={todayPledges.glirion} sort={sort} onSort={onSort} />
+                <PledgeHead giver="urgarlag" today={todayPledges.urgarlag} sort={sort} onSort={onSort} />
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
+              {sorted.map((r) => (
                 <tr key={r.characterId} className="group border-b border-border/50 align-middle last:border-0">
                   <td className="sticky left-0 z-10 whitespace-nowrap bg-surface px-2 py-0.5 group-hover:bg-surface-2">
                     <a href={`/characters/${encodeURIComponent(r.characterId)}`} className="text-sm font-medium text-fg hover:text-accent">

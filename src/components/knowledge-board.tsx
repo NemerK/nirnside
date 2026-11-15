@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Check, Minus, Search } from "lucide-react";
 import { Card } from "@/components/ui";
 import { Modal } from "@/components/modal";
+import { SortHeader, useSort } from "@/components/sort-header";
 import { GameIcon } from "@/components/game-icon";
 import { classIcon } from "@/lib/classes";
 import {
@@ -14,7 +15,8 @@ import {
   recipeQualityClass,
   type PresentedResearch,
 } from "@/lib/knowledge/present";
-import type { MotifStyle, RecipeList } from "@/lib/snapshot/schema";
+import type { MotifStyle, RecipeList, ResearchLine } from "@/lib/snapshot/schema";
+import { sortRows } from "@/lib/ui/column-sort";
 
 export type KnowledgeTab = "research" | "motifs" | "recipes" | "plans";
 
@@ -58,22 +60,41 @@ export function KnowledgeBoard({
   );
   const close = useCallback(() => setOpenId(null), []);
   const open = characters.find((c) => c.id === openId) ?? null;
+  const { sort, onSort } = useSort<string>();
+  const rows = useMemo(
+    () =>
+      sortRows(characters, sort, (character, key) => {
+        if (key === "class") return character.className;
+        if (key === "name") return character.name;
+        const tally =
+          key === "research"
+            ? researchTally(character)
+            : key === "motifs"
+              ? motifTally(character)
+              : key === "recipes"
+                ? listTally(character.scanned, character.recipes)
+                : listTally(character.scanned, character.plans);
+        if (!tally.scanned || tally.total <= 0) return null;
+        return tally.known / tally.total;
+      }),
+    [characters, sort],
+  );
 
   if (characters.length === 0) return null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
       <div className={`sticky top-0 z-10 hidden shrink-0 items-center gap-3 border-b border-border bg-surface px-3 py-2 text-[11px] font-medium text-fg-subtle sm:grid ${COLUMNS}`}>
-        <span>Class</span>
-        <span>Name</span>
-        <span>Research</span>
-        <span>Motifs</span>
-        <span>Recipes</span>
-        <span>Plans</span>
+        <SortHeader label="Class" column="class" sort={sort} onSort={onSort} />
+        <SortHeader label="Name" column="name" sort={sort} onSort={onSort} />
+        <SortHeader label="Research" column="research" sort={sort} onSort={onSort} />
+        <SortHeader label="Motifs" column="motifs" sort={sort} onSort={onSort} />
+        <SortHeader label="Recipes" column="recipes" sort={sort} onSort={onSort} />
+        <SortHeader label="Plans" column="plans" sort={sort} onSort={onSort} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ul>
-          {characters.map((character) => (
+          {rows.map((character) => (
             <li key={character.id} className="border-b border-border last:border-b-0">
               <button
                 type="button"
@@ -364,37 +385,7 @@ function ResearchPanel({
               ) : (
                 <div className="space-y-3">
                   {groups.map(({ gi, group, lines }) => (
-                    <Card key={`${craft.craft}-${gi}`} className="overflow-x-auto">
-                      <table className="w-full min-w-[36rem] border-collapse text-left text-xs">
-                        <thead>
-                          <tr className="border-b border-border text-fg-subtle">
-                            <th className="px-3 py-2 font-medium">Line</th>
-                            {group.traits.map((trait) => (
-                              <th key={trait} className="px-1 py-2 text-center font-medium">
-                                {trait}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lines.map((line) => (
-                            <tr key={line.name} className="border-b border-border/70 last:border-0">
-                              <td className="px-3 py-1.5 font-medium text-fg">{line.name}</td>
-                              {line.traits.map((trait) => (
-                                <td key={trait.name} className="px-1 py-1.5 text-center">
-                                  <TraitCell
-                                    known={trait.known}
-                                    researching={trait.researching}
-                                    name={trait.name}
-                                    remaining={trait.remainingSeconds}
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </Card>
+                    <ResearchTable key={`${craft.craft}-${gi}`} lines={lines} traits={group.traits} />
                   ))}
                 </div>
               )}
@@ -403,6 +394,61 @@ function ResearchPanel({
         })}
       </div>
     </div>
+  );
+}
+
+function traitRank(line: ResearchLine, traitName: string): number | null {
+  const trait = line.traits.find((entry) => entry.name === traitName);
+  if (!trait) return null;
+  if (trait.known) return 2;
+  if (trait.researching) return 1;
+  return 0;
+}
+
+function ResearchTable({ lines, traits }: { lines: ResearchLine[]; traits: string[] }) {
+  const { sort, onSort } = useSort<string>();
+  const rows = useMemo(
+    () =>
+      sortRows(lines, sort, (line, key) => {
+        if (key === "line") return line.name;
+        return traitRank(line, key);
+      }),
+    [lines, sort],
+  );
+  return (
+    <Card className="overflow-x-auto">
+      <table className="w-full min-w-[36rem] border-collapse text-left text-xs">
+        <thead>
+          <tr className="border-b border-border text-fg-subtle">
+            <th className="px-3 py-2 font-medium">
+              <SortHeader label="Line" column="line" sort={sort} onSort={onSort} />
+            </th>
+            {traits.map((trait) => (
+              <th key={trait} className="px-1 py-2 text-center font-medium">
+                <SortHeader label={trait} column={trait} sort={sort} onSort={onSort} align="center" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((line) => (
+            <tr key={line.name} className="border-b border-border/70 last:border-0">
+              <td className="px-3 py-1.5 font-medium text-fg">{line.name}</td>
+              {line.traits.map((trait) => (
+                <td key={trait.name} className="px-1 py-1.5 text-center">
+                  <TraitCell
+                    known={trait.known}
+                    researching={trait.researching}
+                    name={trait.name}
+                    remaining={trait.remainingSeconds}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
   );
 }
 

@@ -1,10 +1,25 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo } from "react";
 import type { Character } from "@/lib/snapshot/schema";
 import type { GoldBreakdown } from "@/lib/snapshot/roster";
 import { accountAlliancePoints, accountTelVar } from "@/lib/snapshot/roster";
 import { formatGold, formatNumber } from "@/lib/format";
+import { sortRows } from "@/lib/ui/column-sort";
+import { SortHeader, useSort } from "./sort-header";
 import { AccountWallet } from "./account-wallet";
 import { Card } from "./ui";
+
+type WalletColumn = "name" | "gold" | "telVar" | "ap";
+
+function walletValue(character: Character, key: WalletColumn): string | number | null {
+  if (key === "name") return character.name;
+  if (!character.lastSeen) return null;
+  if (key === "gold") return character.gold ?? 0;
+  if (key === "telVar") return character.telVar ?? 0;
+  return character.alliancePoints ?? 0;
+}
 
 function walletCell(lastSeen: number | null | undefined, amount: number): string {
   if (!lastSeen) return "—";
@@ -37,6 +52,8 @@ export function CurrencyTable({
     characters,
     legacyAlliancePoints: currencies.alliancePoints,
   });
+  const { sort, onSort } = useSort<WalletColumn>();
+  const rows = useMemo(() => sortRows(characters, sort, walletValue), [characters, sort]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -52,13 +69,21 @@ export function CurrencyTable({
       ) : (
         <div className="min-h-0 max-h-full overflow-y-auto">
         <div className="rounded-lg border border-border bg-surface">
-          <div className={`sticky top-0 z-10 grid ${COLS} border-b border-border bg-surface text-xs uppercase tracking-wider text-fg-subtle`}>
-            <div className="px-3 py-2 font-medium">Character</div>
-            <div className="px-3 py-2 text-right font-medium">Gold</div>
-            <div className="px-3 py-2 text-right font-medium">Tel Var</div>
-            <div className="px-3 py-2 text-right font-medium">Alliance Points</div>
+          <div className={`sticky top-0 z-10 grid ${COLS} border-b border-border bg-surface text-xs font-medium`}>
+            <div className="px-3 py-2">
+              <SortHeader label="Character" column="name" sort={sort} onSort={onSort} />
+            </div>
+            <div className="px-3 py-2">
+              <SortHeader label="Gold" column="gold" sort={sort} onSort={onSort} align="right" />
+            </div>
+            <div className="px-3 py-2">
+              <SortHeader label="Tel Var" column="telVar" sort={sort} onSort={onSort} align="right" />
+            </div>
+            <div className="px-3 py-2">
+              <SortHeader label="Alliance Points" column="ap" sort={sort} onSort={onSort} align="right" />
+            </div>
           </div>
-          {characters.map((c) => (
+          {rows.map((c) => (
             <div key={c.id} className={`grid ${COLS} border-b border-border/60 text-sm hover:bg-surface-2/50`}>
               <div className="min-w-0 px-3 py-1.5">
                 <Link href={`/characters/${encodeURIComponent(c.id)}`} className="block truncate text-fg hover:text-accent hover:underline">

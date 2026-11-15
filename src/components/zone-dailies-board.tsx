@@ -1,8 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { Check } from "lucide-react";
+import { SortHeader, useSort } from "@/components/sort-header";
 import { zoneSlotKey, type PresentedCharacterDailies, type ZoneSlotCell } from "@/lib/dailies/present";
 import { ZONE_DAILY_ZONES } from "@/lib/dailies/zone-dailies";
+import { sortRows, statusRank } from "@/lib/ui/column-sort";
 
 function ZoneBox({ cell }: { cell: ZoneSlotCell }) {
   if (cell.status === "done") {
@@ -50,13 +53,22 @@ export function ZoneDailiesBoard({
   accountRows: PresentedCharacterDailies[];
 }) {
   const counts = accountRows;
+  const { sort, onSort } = useSort<string>();
+  const sorted = useMemo(
+    () =>
+      sortRows(rows, sort, (row, key) => {
+        if (key === "name") return row.name;
+        return statusRank(row.zoneSlots[key]?.status);
+      }),
+    [rows, sort],
+  );
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-max min-w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border bg-surface-2 text-left text-[11px] text-fg-subtle">
             <th className="sticky left-0 z-10 bg-surface-2 px-2 py-1 font-medium" rowSpan={2}>
-              Character
+              <SortHeader label="Character" column="name" sort={sort} onSort={onSort} />
             </th>
             {ZONE_DAILY_ZONES.map((zone, index) => (
               <th
@@ -83,8 +95,22 @@ export function ZoneDailiesBoard({
                         : `${zone.name} ${slot.label}`
                     }
                   >
-                    {slot.label}
-                    {count > 0 ? <span className="ml-0.5 tabular-nums normal-case tracking-normal text-fg-muted">{count}</span> : null}
+                    <span className="inline-flex items-center justify-center gap-0.5">
+                      <SortHeader
+                        label={slot.label}
+                        column={key}
+                        sort={sort}
+                        onSort={onSort}
+                        title={
+                          count > 0
+                            ? `${zone.name} ${slot.label} — done on ${count} ${count === 1 ? "character" : "characters"}`
+                            : `${zone.name} ${slot.label}`
+                        }
+                      />
+                      {count > 0 ? (
+                        <span className="tabular-nums normal-case tracking-normal text-fg-muted">{count}</span>
+                      ) : null}
+                    </span>
                   </th>
                 );
               }),
@@ -92,7 +118,7 @@ export function ZoneDailiesBoard({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {sorted.map((row) => (
             <tr key={row.characterId} className="group border-b border-border/50 align-middle last:border-0">
               <td className="sticky left-0 z-10 whitespace-nowrap bg-surface px-2 py-0.5 group-hover:bg-surface-2">
                 <a href={`/characters/${encodeURIComponent(row.characterId)}`} className="text-sm font-medium text-fg hover:text-accent">
