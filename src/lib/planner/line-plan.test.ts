@@ -9,7 +9,7 @@ const spear: LineSkillView[] = [
 ];
 
 describe("skillsForLinePlan", () => {
-  it("marks every skill mandatory when the line target is its maximum and nothing is planned", () => {
+  it("marks every active ability mandatory when the line target is its maximum and nothing is planned", () => {
     const result = skillsForLinePlan({
       skills: spear,
       plans: [],
@@ -21,9 +21,21 @@ describe("skillsForLinePlan", () => {
     assert.equal(result.implied, true);
     assert.deepEqual(
       result.skills.map((skill) => skill.name),
-      ["Puncturing Strikes", "Piercing Javelin", "Spear Wall"],
+      ["Puncturing Strikes", "Piercing Javelin"],
     );
-    assert.ok(result.skills.every((skill) => skill.tier === "essential" && skill.implied));
+    assert.ok(result.skills.every((skill) => skill.tier === "essential" && skill.implied && !skill.passive));
+  });
+
+  it("drops a passive even when it was planned on its own", () => {
+    const result = skillsForLinePlan({
+      skills: spear,
+      plans: [{ target: "Spear Wall", tier: "essential", lineName: "Aedric Spear" }],
+      lineName: "Aedric Spear",
+      mandatoryRank: 50,
+      maxRank: 50,
+      tier: "essential",
+    });
+    assert.deepEqual(result.skills, []);
   });
 
   it("does not invent a full plan when the mandatory rank is below the line cap", () => {

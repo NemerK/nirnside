@@ -40,10 +40,21 @@ function stronger(a: GoalTier, b: GoalTier): GoalTier {
   return TIER_RANK[a] <= TIER_RANK[b] ? a : b;
 }
 
+function passiveKeys(skills: LineSkillView[]): Set<string> {
+  const keys = new Set<string>();
+  for (const skill of skills) {
+    if (!skill.passive) continue;
+    for (const name of [skill.name, ...skill.morphs]) keys.add(name.trim().toLowerCase());
+  }
+  return keys;
+}
+
 /**
- * Skills to show when a character opens a skill-line target.
- * Planned abilities win. When none are planned and the mandatory rank is the
- * line's own maximum, every skill on the line counts as mandatory.
+ * Active abilities to show when a character opens a skill-line target.
+ * Passives are omitted: they unlock with the line's rank, so they are not
+ * separate work. Planned abilities win. When none are planned and the
+ * mandatory rank is the line's own maximum, every active ability counts as
+ * mandatory.
  */
 export function skillsForLinePlan(opts: {
   skills: LineSkillView[];
@@ -53,26 +64,30 @@ export function skillsForLinePlan(opts: {
   maxRank: number | null;
   tier: GoalTier;
 }): { implied: boolean; skills: ShownSkill[] } {
-  const planned = opts.plans.filter((plan) => same(plan.lineName, opts.lineName));
-  if (planned.length === 0) {
+  const passives = passiveKeys(opts.skills);
+  const actives = opts.skills.filter((skill) => !skill.passive);
+  const linePlans = opts.plans.filter((plan) => same(plan.lineName, opts.lineName));
+  const planned = linePlans.filter((plan) => !passives.has(plan.target.trim().toLowerCase()));
+  if (linePlans.length === 0) {
     const atMax = opts.tier === "essential" && opts.maxRank != null && opts.maxRank > 0 && opts.mandatoryRank >= opts.maxRank;
     if (!atMax) return { implied: false, skills: [] };
     return {
       implied: true,
-      skills: opts.skills.map((skill) => ({
+      skills: actives.map((skill) => ({
         name: skill.name,
         icon: skill.icon,
-        passive: skill.passive,
+        passive: false,
         purchased: skill.purchased,
         tier: "essential",
         implied: true,
       })),
     };
   }
+  if (planned.length === 0) return { implied: false, skills: [] };
 
   const used = new Set<string>();
   const shown: ShownSkill[] = [];
-  for (const skill of opts.skills) {
+  for (const skill of actives) {
     const names = [skill.name, ...skill.morphs];
     const hits = planned.filter((plan) => names.some((name) => same(name, plan.target)));
     if (hits.length === 0) continue;

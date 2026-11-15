@@ -56,7 +56,9 @@ export function LinePlanButton({
         <Modal title={lineName} onClose={() => setOpen(false)} maxWidthClass="max-w-md">
           <p className="mb-3 text-sm text-fg-muted">
             {result.implied
-              ? `Mandatory rank is ${mandatoryRank}, the maximum for this line. Every skill counts as mandatory.`
+              ? result.skills.length > 0
+                ? `Mandatory rank is ${mandatoryRank}, the maximum for this line. These active abilities count as mandatory.`
+                : `Mandatory rank is ${mandatoryRank}, the maximum for this line.`
               : result.skills.length > 0
                 ? "Planned skills"
                 : maxRank != null
@@ -69,9 +71,7 @@ export function LinePlanButton({
                 <li key={skill.name} className="flex items-center gap-2 px-3 py-1.5">
                   <GameIcon name={skill.name} icon={skill.icon} size={28} bare />
                   <span className="min-w-0 flex-1 truncate text-sm text-fg">{skill.name}</span>
-                  {skill.passive ? <span className="text-[10px] uppercase tracking-wide text-fg-subtle">Passive</span> : null}
                   <Badge tone={skill.tier === "essential" ? "accent" : "muted"}>{TIER_LABEL[skill.tier]}</Badge>
-                  {skill.purchased === false ? <span className="text-[11px] text-fg-subtle">Not purchased</span> : null}
                 </li>
               ))}
             </ul>
