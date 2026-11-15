@@ -9,11 +9,12 @@ import {
   ShieldQuestion,
   Sparkles,
 } from "lucide-react";
-import { getCharacter, getItemsForCharacter } from "@/lib/db/queries";
+import { getAccount, getCharacter, getItemsForCharacter } from "@/lib/db/queries";
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
 import { skillLineChoices } from "@/lib/planner/data";
 import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
+import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { rolesForCharacter } from "@/lib/roles/filter";
@@ -130,7 +131,9 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     icon: row.entry.icon,
   }));
 
-  // Cross-link every set worn in a Wizard's Wardrobe setup back to its catalog page.
+  // Cross-link every set worn in a Wizard's Wardrobe setup. Mythics open their
+  // missing leads instead of the encyclopedia.
+  const mythics = safe(() => getAccount()?.mythics ?? []) ?? [];
   const hrefForSet: Record<string, string> = {};
   for (const zone of c.wardrobe?.zones ?? []) {
     for (const page of zone.pages) {
@@ -139,7 +142,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           if (!piece.setName) continue;
           const key = piece.setName.toLowerCase();
           if (hrefForSet[key]) continue;
-          hrefForSet[key] = setHref({ name: piece.setName });
+          hrefForSet[key] = hrefForMythicOrSet(mythics, { name: piece.setName }, setHref({ name: piece.setName }));
         }
       }
     }

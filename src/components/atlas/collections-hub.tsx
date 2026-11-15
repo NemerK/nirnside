@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Star } from "lucide-react";
+import type { MythicSet } from "@/lib/snapshot/schema";
 import type { CollectionTab, CollectionsPresent } from "@/lib/collections/present";
 import { setHref } from "@/lib/db/catalog-queries";
 import type { StickerbookSetView } from "@/lib/stickerbook/seen";
@@ -21,9 +22,11 @@ const TAB_ID: Record<CollectionTab, CollectionsTabId> = {
 export function AtlasCollectionsHub({
   collections,
   motifKeys = [],
+  mythics = [],
 }: {
   collections: CollectionsPresent;
   motifKeys?: string[];
+  mythics?: MythicSet[];
 }) {
   const { sets, styles, houses } = collections;
   const stickerCount = sets.total > 0 ? `${sets.collected}/${sets.total}` : "0";
@@ -35,7 +38,7 @@ export function AtlasCollectionsHub({
       <CollectionsTabs
         initial={TAB_ID[collections.defaultTab]}
         counts={{ stickerbook: stickerCount, styles: stylesCount, houses: housesCount }}
-        stickerbook={<StickerbookPane rows={sets.rows} total={sets.total} />}
+        stickerbook={<StickerbookPane rows={sets.rows} total={sets.total} mythics={mythics} />}
         styles={<StylesPane collections={collections} motifKeys={motifKeys} />}
         houses={<HousesPane collections={collections} />}
       />
@@ -47,7 +50,15 @@ function isStickerbookView(rows: CollectionsPresent["sets"]["rows"]): rows is St
   return rows.every((row) => "newCount" in row);
 }
 
-function StickerbookPane({ rows, total }: { rows: CollectionsPresent["sets"]["rows"]; total: number }) {
+function StickerbookPane({
+  rows,
+  total,
+  mythics,
+}: {
+  rows: CollectionsPresent["sets"]["rows"];
+  total: number;
+  mythics: MythicSet[];
+}) {
   if (total === 0 || !isStickerbookView(rows)) {
     return (
       <AtlasEmpty title="Stickerbook is empty">
@@ -62,6 +73,7 @@ function StickerbookPane({ rows, total }: { rows: CollectionsPresent["sets"]["ro
   return (
     <StickerbookGrid
       contained
+      mythics={mythics}
       sets={rows.map((set) => ({ ...set, href: setHref({ name: set.name, setId: set.setId }) }))}
     />
   );

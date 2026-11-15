@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BookMarked, Home, Shirt } from "lucide-react";
-import { getCharactersFull, getHouses, getOutfitStyles, getStickerbook, getStickerbookStats } from "@/lib/db/queries";
+import { getAccount, getCharactersFull, getHouses, getOutfitStyles, getStickerbook, getStickerbookStats } from "@/lib/db/queries";
 import { presentCollections } from "@/lib/collections/present";
 import { knownMotifKeys } from "@/lib/knowledge/present";
 import { liveCharacters } from "@/lib/snapshot/roster";
@@ -69,7 +69,13 @@ export default async function CollectionsPage() {
           </div>
         </PageFrame>
       }
-      atlas={<AtlasCollectionsHub collections={collections} motifKeys={motifKeys} />}
+      atlas={
+        <AtlasCollectionsHub
+          collections={collections}
+          motifKeys={motifKeys}
+          mythics={safe(() => getAccount()?.mythics ?? []) ?? []}
+        />
+      }
     />
   );
 }
