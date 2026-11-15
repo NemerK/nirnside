@@ -93,6 +93,35 @@ NirnsideData =
                         },
                     },
                 },
+                ["mythics"] =
+                {
+                    {
+                        ["setId"] = 574,
+                        ["name"] = "Ring of the Pale Order",
+                        ["collected"] = false,
+                        ["leads"] =
+                        {
+                            { ["antiquityId"] = 5741, ["name"] = "Aurmine Ancestral Signet", ["recovered"] = true, ["hasLead"] = false },
+                            { ["antiquityId"] = 5742, ["name"] = "Direnni Elegy Loop", ["recovered"] = false, ["hasLead"] = true, ["zone"] = "Alik'r Desert" },
+                            { ["antiquityId"] = 5743, ["name"] = "Onyx Accent Stones", ["recovered"] = false, ["hasLead"] = false },
+                            { ["antiquityId"] = 5744, ["name"] = "Order-Etched Gallery Rail", ["recovered"] = false, ["hasLead"] = false },
+                            { ["antiquityId"] = 5745, ["name"] = "Pale Order's Golden Band", ["recovered"] = true, ["hasLead"] = false },
+                        },
+                    },
+                    {
+                        ["setId"] = 583,
+                        ["name"] = "Spaulder of Ruin",
+                        ["collected"] = false,
+                        ["leads"] =
+                        {
+                            { ["antiquityId"] = 5831, ["name"] = "Petrified Daedroth Horn", ["recovered"] = true, ["hasLead"] = false },
+                            { ["antiquityId"] = 5832, ["name"] = "Void Alloy Rivets", ["recovered"] = false, ["hasLead"] = false },
+                            { ["antiquityId"] = 5833, ["name"] = "Void Alloy Lame Plates", ["recovered"] = true, ["hasLead"] = false },
+                            { ["antiquityId"] = 5834, ["name"] = "Aureal Armor Glaze", ["recovered"] = false, ["hasLead"] = true, ["zone"] = "The Deadlands" },
+                            { ["antiquityId"] = 5835, ["name"] = "Clannfear Leather Strapping", ["recovered"] = true, ["hasLead"] = false },
+                        },
+                    },
+                },
                 ["characters"] =
                 {
                     {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Backpack, Ban, Coins, Hand } from "lucide-react";
 import { getAccount, getArchivedCharacters, getCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
 import { setHref } from "@/lib/db/catalog-queries";
+import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryTabs } from "@/components/inventory-tabs";
@@ -34,6 +35,7 @@ export default async function InventoryPage({
   const sub = str(sp.sub);
 
   let items: ReturnType<typeof getItems> = [];
+  let mythics: NonNullable<ReturnType<typeof getAccount>>["mythics"] = [];
   let bagCounts: ReturnType<typeof tallyBagFilters>["counts"] = {};
   let bagLabels: Record<string, string> = {};
   let untagged = 0;
@@ -54,6 +56,7 @@ export default async function InventoryPage({
   } | null = null;
   try {
     items = getItems(filters);
+    mythics = getAccount()?.mythics ?? [];
     untagged = items.filter((it) => !it.bagCategory).length;
     const tallied = tallyBagFilters(items);
     bagCounts = tallied.counts;
@@ -87,6 +90,7 @@ export default async function InventoryPage({
   const itemList = (
     <ItemsBody
       items={items}
+      mythics={mythics}
       ownerWallet={ownerWallet}
       archivedOwner={archivedOwner}
       totalStacks={totalStacks}
@@ -155,12 +159,14 @@ export default async function InventoryPage({
 
 function ItemsBody({
   items,
+  mythics,
   ownerWallet,
   archivedOwner,
   totalStacks,
   totalCount,
 }: {
   items: ReturnType<typeof getItems>;
+  mythics: NonNullable<ReturnType<typeof getAccount>>["mythics"];
   ownerWallet: {
     name: string;
     gold: number;
@@ -259,7 +265,14 @@ function ItemsBody({
                       <td className="px-3 py-2.5 text-fg-muted">{it.ownerCharacter ?? "—"}</td>
                       <td className="px-3 py-2.5 text-fg-muted">
                         {it.setName ? (
-                          <Link href={setHref({ name: it.setName })} className="text-accent hover:underline">
+                          <Link
+                            href={hrefForMythicOrSet(
+                              mythics,
+                              { name: it.setName, setId: it.setId },
+                              setHref({ name: it.setName, setId: it.setId }),
+                            )}
+                            className="text-accent hover:underline"
+                          >
                             {it.setName}
                           </Link>
                         ) : (

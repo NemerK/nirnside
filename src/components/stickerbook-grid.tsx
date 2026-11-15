@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronRight, Minus, Search } from "lucide-react";
+import type { MythicSet } from "@/lib/snapshot/schema";
 import type { StickerbookSetView } from "@/lib/stickerbook/seen";
+import { findMythic, isMythicCategory, mythicAnchor } from "@/lib/collections/mythic-match";
 import { GameIcon } from "./game-icon";
 
 type SetWithTotals = StickerbookSetView & { href?: string };
@@ -33,13 +35,22 @@ interface ParentNode {
   subs: SubNode[];
 }
 
-export function StickerbookGrid({ sets, contained = false }: { sets: SetWithTotals[]; contained?: boolean }) {
+export function StickerbookGrid({
+  sets,
+  contained = false,
+  mythics = [],
+}: {
+  sets: SetWithTotals[];
+  contained?: boolean;
+  mythics?: MythicSet[];
+}) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("all");
   const [parent, setParent] = useState<string | null>(null);
   const [sub, setSub] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [hoveredSeen, setHoveredSeen] = useState<Set<string>>(new Set());
+  const openMythic = useMythicHash();
 
   function pieceIsNew(p: { isNew: boolean; pieceKey: string }): boolean {
     return p.isNew && !hoveredSeen.has(p.pieceKey);
@@ -291,6 +302,8 @@ export function StickerbookGrid({ sets, contained = false }: { sets: SetWithTota
                 <SetCard
                   key={s.setId}
                   set={s}
+                  mythic={mythicForSet(s, mythics)}
+                  openLeads={openMythic === mythicAnchor(s.setId)}
                   newCount={visibleNewBySet.get(s.setId) ?? 0}
                   pieceIsNew={pieceIsNew}
                   onSeePiece={markPieceSeen}
@@ -340,6 +353,36 @@ function pieceLabel(p: { name?: string; type?: string; slot?: string }, setName:
   return `${setName} ${slotWord}`;
 }
 
+function MythicComponents({ mythic }: { mythic: MythicSet | null }) {
+  const missing = (mythic?.leads ?? []).filter((lead) => !lead.recovered);
+  return (
+    <div className="mt-3 border-t border-border pt-2">
+      <div className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Missing components</div>
+      {!mythic || mythic.leads.length === 0 ? (
+        <p className="mt-1 text-xs text-fg-subtle">These show up after a logout with the addon.</p>
+      ) : missing.length === 0 ? (
+        <p className="mt-1 text-xs text-fg-muted">All components excavated.</p>
+      ) : (
+        <ul className="mt-1.5 space-y-1.5">
+          {missing.map((lead) => (
+            <li key={lead.antiquityId} className="flex items-start gap-2 text-xs">
+              <GameIcon name={lead.name} icon={lead.icon} size={18} bare />
+              <div className="min-w-0">
+                <div className="text-fg">{lead.name}</div>
+                {lead.hasLead ? (
+                  <div className="text-accent">{lead.zone ? `Lead in hand · Scry in ${lead.zone}` : "Lead in hand"}</div>
+                ) : (
+                  <div className="text-fg-subtle">Lead not found</div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function NewBang({ className = "" }: { className?: string }) {
   return (
     <span
@@ -351,29 +394,70 @@ function NewBang({ className = "" }: { className?: string }) {
   );
 }
 
+function mythicForSet(set: SetWithTotals, mythics: MythicSet[]): MythicSet | null {
+  if (!isMythicCategory(set.category)) return null;
+  return findMythic(mythics, { setId: set.setId, name: set.name }) ?? null;
+}
+
+function useMythicHash(): string | null {
+  const [hash, setHash] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () => {
+      const raw = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+      setHash(raw.startsWith("mythic-") ? raw : null);
+    };
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
+  return hash;
+}
+
 function SetCard({
   set: s,
+  mythic,
+  openLeads,
   newCount,
   pieceIsNew,
   onSeePiece,
 }: {
   set: SetWithTotals;
+  /** Present when this card is a mythic. Null means the leads were not in the snapshot. */
+  mythic: MythicSet | null;
+  openLeads: boolean;
   newCount: number;
   pieceIsNew: (p: { isNew: boolean; pieceKey: string }) => boolean;
   onSeePiece: (key: string) => void;
 }) {
+  const leads = isMythicCategory(s.category);
+  const [open, setOpen] = useState(openLeads);
+  useEffect(() => {
+    if (!openLeads) return;
+    setOpen(true);
+    document.getElementById(mythicAnchor(s.setId))?.scrollIntoView({ block: "center" });
+  }, [openLeads, s.setId]);
   const complete = s.total > 0 && s.collected === s.total;
   const pct = s.total > 0 ? Math.round((s.collected / s.total) * 100) : 0;
 
   return (
     <div
+      id={leads ? mythicAnchor(s.setId) : undefined}
       className={`rounded-xl border bg-surface/70 p-4 transition-colors ${
         complete ? "border-accent/50" : "border-border"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          {s.href ? (
+          {leads ? (
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpen((value) => !value)}
+              className="truncate text-left font-medium text-fg hover:text-accent hover:underline"
+            >
+              {s.name}
+            </button>
+          ) : s.href ? (
             <Link href={s.href} className="truncate font-medium text-fg hover:text-accent hover:underline">
               {s.name}
             </Link>
@@ -395,6 +479,8 @@ function SetCard({
           )}
         </div>
       </div>
+
+      {leads && open ? <MythicComponents mythic={mythic} /> : null}
 
       <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         {s.pieces.map((p, i) => {

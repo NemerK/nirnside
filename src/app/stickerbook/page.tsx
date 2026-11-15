@@ -47,6 +47,7 @@ export default function StickerbookPage() {
           />
         </div>
         <StickerbookGrid
+          mythics={mythics ?? []}
           sets={sets.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }))}
         />
       </>

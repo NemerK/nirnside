@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Character, Wardrobe, WardrobeSetup } from "@/lib/snapshot/schema";
 import { setHref } from "@/lib/db/catalog-queries";
+import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
+import { getAccount } from "@/lib/db/queries";
 import { qualityText } from "@/lib/format";
 import { placeEquipped, tallySets } from "@/lib/characters/loadout";
 import { skillIconByName } from "@/lib/icons/skill-icons";
@@ -24,6 +26,8 @@ export function CharacterLoadout({
 }) {
   const placed = placeEquipped(equipped);
   const sets = tallySets(equipped);
+  const mythics = safeMythics();
+  const setLink = (name: string) => hrefForMythicOrSet(mythics, { name }, setHref({ name }));
   const setup = firstBarSetup(wardrobe);
   const food = setup?.food?.name ? setup.food : firstFood(wardrobe);
   const frontSkills = setup?.bars.find((bar) => bar.bar === "front")?.skills ?? [];
@@ -51,7 +55,7 @@ export function CharacterLoadout({
           {sets.map((set) => (
             <Link
               key={set.name}
-              href={setHref({ name: set.name })}
+              href={setLink(set.name)}
               className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-fg hover:border-border-strong"
             >
               {set.name}
@@ -64,15 +68,15 @@ export function CharacterLoadout({
       <section className="rounded-lg border border-border bg-surface px-3 py-3 sm:px-4">
         <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
           <div className="sm:col-span-2 sm:mx-auto sm:w-1/2">
-            <GearCell slot={armor[0]} />
+            <GearCell slot={armor[0]} setLink={setLink} />
           </div>
           {armor.slice(1).map((slot) => (
-            <GearCell key={slot.label} slot={slot} />
+            <GearCell key={slot.label} slot={slot} setLink={setLink} />
           ))}
         </div>
         <div className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-border pt-3 sm:grid-cols-3">
           {jewelry.map((slot, index) => (
-            <GearCell key={`${slot.label}-${index}`} slot={slot} />
+            <GearCell key={`${slot.label}-${index}`} slot={slot} setLink={setLink} />
           ))}
         </div>
         <div className="mt-3 grid grid-cols-3 divide-x divide-border border-t border-border">
@@ -91,7 +95,7 @@ export function CharacterLoadout({
         </div>
         {food?.name ? (
           <div className="border-t border-border pt-1">
-            <GearCell slot={{ label: "Food", item: foodPiece(food) }} />
+            <GearCell slot={{ label: "Food", item: foodPiece(food) }} setLink={setLink} />
           </div>
         ) : null}
       </section>
@@ -100,14 +104,14 @@ export function CharacterLoadout({
         <section className="rounded-lg border border-border bg-surface px-3 py-2 sm:px-4">
           <h2 className="px-1 pt-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Other</h2>
           {placed.other.map((item) => (
-            <GearCell key={`${item.slot}-${item.name}`} slot={{ label: item.slot || "Equipped", item }} />
+            <GearCell key={`${item.slot}-${item.name}`} slot={{ label: item.slot || "Equipped", item }} setLink={setLink} />
           ))}
         </section>
       ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <WeaponBar title="Front bar" pair={placed.front} skills={frontSkills} />
-        <WeaponBar title="Back bar" pair={placed.back} skills={backSkills} />
+        <WeaponBar title="Front bar" pair={placed.front} skills={frontSkills} setLink={setLink} />
+        <WeaponBar title="Back bar" pair={placed.back} skills={backSkills} setLink={setLink} />
       </div>
       <p className="text-xs text-fg-subtle">
         {barLabel ? `Skills from ${barLabel}.` : "No skill bar in this snapshot."}
@@ -118,7 +122,7 @@ export function CharacterLoadout({
 
 type Slot = { label: string; item?: Worn };
 
-function GearCell({ slot }: { slot: Slot }) {
+function GearCell({ slot, setLink }: { slot: Slot; setLink: (name: string) => string }) {
   const { item, label } = slot;
   const meta = item ? [item.trait, item.enchant, ...item.scribing].filter(Boolean) : [];
   const title = item ? [label, item.name, item.setName, ...meta].filter(Boolean).join(" · ") : label;
@@ -134,7 +138,7 @@ function GearCell({ slot }: { slot: Slot }) {
       <div className="min-w-0">
         <div className="text-[10px] uppercase tracking-wide text-fg-subtle">{label}</div>
         {item?.setName ? (
-          <Link href={setHref({ name: item.setName })} className="hover:underline">
+          <Link href={setLink(item.setName)} className="hover:underline">
             {name}
           </Link>
         ) : (
@@ -162,10 +166,12 @@ function WeaponBar({
   title,
   pair,
   skills,
+  setLink,
 }: {
   title: string;
   pair: { main?: Worn; off?: Worn; rest: Worn[] };
   skills: { name: string; icon?: string | null }[];
+  setLink: (name: string) => string;
 }) {
   const weapons: Slot[] = [
     { label: "Main hand", item: pair.main },
@@ -178,7 +184,7 @@ function WeaponBar({
       <h2 className="px-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{title}</h2>
       <div className="mt-1">
         {weapons.map((slot, index) => (
-          <GearCell key={`${slot.label}-${index}`} slot={slot} />
+          <GearCell key={`${slot.label}-${index}`} slot={slot} setLink={setLink} />
         ))}
       </div>
       {named.length > 0 ? (
@@ -286,4 +292,12 @@ function barCaption(wardrobe: Wardrobe | null | undefined, setup: WardrobeSetup)
     }
   }
   return setup.name || "wardrobe";
+}
+
+function safeMythics() {
+  try {
+    return getAccount()?.mythics ?? [];
+  } catch {
+    return [];
+  }
 }
