@@ -4,6 +4,7 @@ import { setHref } from "@/lib/db/catalog-queries";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import { getAccount } from "@/lib/db/queries";
 import { qualityText } from "@/lib/format";
+import { inferSetName } from "@/lib/catalog/set-brief";
 import { placeEquipped, tallySets } from "@/lib/characters/loadout";
 import { skillIconByName } from "@/lib/icons/skill-icons";
 import { FitScreen } from "./fit-screen";
@@ -25,8 +26,12 @@ export function CharacterLoadout({
   attributes: Character["attributes"];
   wardrobe: Wardrobe | null | undefined;
 }) {
-  const placed = placeEquipped(equipped);
-  const sets = tallySets(equipped);
+  const withSets = equipped.map((item) => ({
+    ...item,
+    setName: item.setName?.trim() || inferSetName(item.name),
+  }));
+  const placed = placeEquipped(withSets);
+  const sets = tallySets(withSets);
   const worn = new Map(sets.map((set) => [set.name, set.count]));
   const mythics = safeMythics();
   const setLink = (name: string) => hrefForMythicOrSet(mythics, { name }, setHref({ name }));
