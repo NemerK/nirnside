@@ -139,15 +139,10 @@ export function StickerbookGrid({ sets, contained = false }: { sets: SetWithTota
   function selectParent(name: string) {
     setParent(name);
     setSub(null);
-    setExpanded((e) => new Set(e).add(name));
+    setExpanded(new Set([name]));
   }
   function toggleExpand(name: string) {
-    setExpanded((e) => {
-      const next = new Set(e);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
+    setExpanded((current) => (current.has(name) ? new Set() : new Set([name])));
   }
 
   const heading =
@@ -229,6 +224,7 @@ export function StickerbookGrid({ sets, contained = false }: { sets: SetWithTota
                         onClick={() => {
                           setParent(p.name);
                           setSub(sn.name);
+                          setExpanded(new Set([p.name]));
                         }}
                         className={`ml-7 flex w-[calc(100%-1.75rem)] items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
                           active ? "bg-accent-soft text-fg" : "text-fg-muted hover:bg-surface-2/50 hover:text-fg"
