@@ -87,6 +87,17 @@ export const Item = z.object({
   stolen: z.boolean().default(false),
   /** Scribing scripts inscribed on this item, if any. */
   scribing: z.array(z.string()).default([]),
+  /**
+   * Backpack filter tab, using the same buckets as the inventory window
+   * (weapons, apparel, jewelry, …). Stable id, not the localized label.
+   * Missing until the addon has classified this stack — never guessed.
+   */
+  bagCategory: z.string().nullable().optional(),
+  /** Subfilter inside that tab (one-handed, light, food, …). */
+  bagSubtype: z.string().nullable().optional(),
+  /** The client's own tab label, when the game string was available. */
+  bagCategoryLabel: z.string().nullable().optional(),
+  bagSubtypeLabel: z.string().nullable().optional(),
 });
 export type Item = z.infer<typeof Item>;
 
@@ -555,6 +566,30 @@ const StickerbookPieces = z.preprocess((v) => {
   return [];
 }, z.array(StickerbookPiece));
 
+/** One lead in a mythic antiquity set. Names come from the client API. */
+export const MythicLead = z.object({
+  antiquityId: z.number().int().nonnegative(),
+  name: z.string(),
+  icon: z.string().nullable().optional(),
+  recovered: z.boolean().default(false),
+  hasLead: z.boolean().default(false),
+  /**
+   * Scrying zone, and only once the client would show it (the lead is in hand).
+   * The drop-site sentence is not in this API.
+   */
+  zone: z.string().nullable().optional(),
+});
+export type MythicLead = z.infer<typeof MythicLead>;
+
+export const MythicSet = z.object({
+  setId: z.number().int().nonnegative(),
+  name: z.string(),
+  icon: z.string().nullable().optional(),
+  collected: z.boolean().default(false),
+  leads: lenientArray(MythicLead).default([]),
+});
+export type MythicSet = z.infer<typeof MythicSet>;
+
 export const StickerbookSet = z.object({
   setId: z.number().int().nonnegative(),
   name: z.string(),
@@ -675,6 +710,12 @@ export const AccountSnapshot = z.object({
    * only ownership, location, and which one is the primary residence.
    */
   houses: lenientArray(House).default([]),
+  /**
+   * Mythic antiquity sets from the client. Each set is the mythic plus its
+   * leads. `collected` is the set recovered in the antiquity codex. Lead drop
+   * writeups are not stored — the client does not publish them.
+   */
+  mythics: lenientArray(MythicSet).default([]),
   /**
    * Collections → Outfit Styles, as the game trees it. Account-wide cosmetics.
    * Not motif craft knowledge, not stickerbook set pieces, not an outfit editor.

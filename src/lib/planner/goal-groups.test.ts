@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { groupPlacedGoals, type GoalCatalog } from "./goal-groups";
+import { groupPlacedGoals, sortTargetsIncompleteFirst, type GoalCatalog } from "./goal-groups";
 
 const catalog: GoalCatalog = {
   lines: [
@@ -89,5 +89,33 @@ describe("groupPlacedGoals", () => {
     assert.equal(groups.length, 1);
     assert.equal(groups[0]?.title, "Arcanist");
     assert.equal(groups[0]?.sections[0]?.title, "Class Mastery");
+  });
+});
+
+describe("sortTargetsIncompleteFirst", () => {
+  it("keeps unfinished targets above completed ones in the same section", () => {
+    const groups = sortTargetsIncompleteFirst([
+      {
+        key: "weapon",
+        title: "Weapon",
+        className: null,
+        sections: [
+          {
+            key: "bow",
+            title: "Bow",
+            items: [
+              { target: "Snipe", row: { mark: { state: "done" } } },
+              { target: "Volley", row: { mark: { state: "short" } } },
+              { target: "Poison Arrow", row: { mark: { state: "done" } } },
+              { target: "Scatter Shot", row: { mark: { state: "unknown" } } },
+            ],
+          },
+        ],
+      },
+    ]);
+    assert.deepEqual(
+      groups[0]?.sections[0]?.items.map((item) => item.target),
+      ["Volley", "Scatter Shot", "Snipe", "Poison Arrow"],
+    );
   });
 });

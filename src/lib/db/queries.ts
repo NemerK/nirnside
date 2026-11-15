@@ -22,6 +22,7 @@ export type AccountMeta = Pick<
   | "completedAchievementIds"
   | "houses"
   | "outfitStyles"
+  | "mythics"
 >;
 
 export function getAccount(): AccountMeta | null {
@@ -297,6 +298,10 @@ export interface ItemFilters {
   owner?: string;
   /** When true, include bags that belonged to deleted (archived) characters. */
   includeArchived?: boolean;
+  /** Backpack-tab id (`weapons`, `apparel`, …). */
+  bagCategory?: string;
+  /** Subfilter id inside that tab (`one-handed`, `food`, …). */
+  bagSubtype?: string;
 }
 
 export function getItems(filters: ItemFilters = {}): Item[] {
@@ -341,6 +346,12 @@ export function getItems(filters: ItemFilters = {}): Item[] {
         !it.ownerCharacter ||
         (!names.has(it.ownerCharacter) && (!it.ownerCharacterId || !ids.has(it.ownerCharacterId))),
     );
+  }
+  if (filters.bagCategory) {
+    items = items.filter((it) => it.bagCategory === filters.bagCategory);
+  }
+  if (filters.bagSubtype) {
+    items = items.filter((it) => it.bagSubtype === filters.bagSubtype);
   }
   return items;
 }

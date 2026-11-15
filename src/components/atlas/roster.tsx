@@ -8,6 +8,7 @@ import {
 import { classColor, classIcon } from "@/lib/classes";
 import { ALLIANCE_ACCENT, timeAgo } from "@/lib/format";
 import { GameIcon } from "../game-icon";
+import { RoleBadge } from "../role-badge";
 import { AtlasEmpty, AtlasMeter, AtlasPage } from "./ui";
 import { RosterList } from "./roster-list";
 
@@ -173,6 +174,9 @@ function WorkspaceCard({ card }: { card: CharacterWorkspaceCard }) {
           {card.classMastery ? (
             <span className="rounded border border-border px-1.5 py-0.5 text-fg-muted">Class Mastery</span>
           ) : null}
+          {card.roles.map((role) => (
+            <RoleBadge key={role.id} role={role} />
+          ))}
         </div>
 
         <div className="mt-4 space-y-2.5">
