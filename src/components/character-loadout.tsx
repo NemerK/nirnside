@@ -4,7 +4,7 @@ import { setHref } from "@/lib/db/catalog-queries";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import { getAccount } from "@/lib/db/queries";
 import { qualityText } from "@/lib/format";
-import { inferSetName } from "@/lib/catalog/set-brief";
+import { indexKnownSets, withResolvedSet, type KnownSet } from "@/lib/catalog/set-brief";
 import { placeEquipped, tallySets } from "@/lib/characters/loadout";
 import { skillIconByName } from "@/lib/icons/skill-icons";
 import { FitScreen } from "./fit-screen";
@@ -21,15 +21,16 @@ export function CharacterLoadout({
   equipped,
   attributes,
   wardrobe,
+  knownSets,
 }: {
   equipped: Character["equipped"];
   attributes: Character["attributes"];
   wardrobe: Wardrobe | null | undefined;
+  /** Every set this account or the catalog already has. */
+  knownSets?: readonly KnownSet[];
 }) {
-  const withSets = equipped.map((item) => ({
-    ...item,
-    setName: item.setName?.trim() || inferSetName(item.name),
-  }));
+  const known = indexKnownSets(knownSets ?? []);
+  const withSets = equipped.map((item) => withResolvedSet(item, known));
   const placed = placeEquipped(withSets);
   const sets = tallySets(withSets);
   const worn = new Map(sets.map((set) => [set.name, set.count]));
@@ -61,7 +62,12 @@ export function CharacterLoadout({
         {sets.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {sets.map((set) => (
-              <SetHover key={set.name} name={set.name} detail={`${set.count} worn`}>
+              <SetHover
+                key={set.name}
+                name={set.name}
+                setId={withSets.find((item) => item.setName === set.name)?.setId}
+                detail={`${set.count} worn`}
+              >
                 <Link
                   href={setLink(set.name)}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
@@ -105,7 +111,7 @@ export function CharacterLoadout({
             </div>
             {food?.name ? (
               <div className="border-t border-border pt-1">
-                <GearCell slot={{ label: "Food", item: foodPiece(food) }} setLink={setLink} worn={worn} />
+                <GearCell slot={{ label: "Food", item: foodPiece(food, known) }} setLink={setLink} worn={worn} />
               </div>
             ) : null}
             {placed.other.length > 0 ? (
@@ -174,7 +180,13 @@ function GearCell({
 
   if (!item) return body;
   return (
-    <SetHover className="block min-w-0" name={item.setName} itemName={item.name} detail={detail || undefined}>
+    <SetHover
+      className="block min-w-0"
+      name={item.setName}
+      setId={item.setId}
+      itemName={item.name}
+      detail={detail || undefined}
+    >
       {body}
     </SetHover>
   );
@@ -261,15 +273,17 @@ function qualityFrame(quality: Worn["quality"]): string {
   }
 }
 
-function foodPiece(food: WardrobeSetup["food"]): Worn | undefined {
+function foodPiece(food: WardrobeSetup["food"], known: ReturnType<typeof indexKnownSets>): Worn | undefined {
   if (!food?.name) return undefined;
+  const resolved = withResolvedSet(food, known);
   return {
     slot: food.slot || "Food",
     bar: null,
     name: food.name,
     icon: food.icon ?? undefined,
     quality: food.quality ?? undefined,
-    setName: food.setName,
+    setName: resolved.setName,
+    setId: resolved.setId,
     trait: food.trait,
     enchant: null,
     scribing: [],

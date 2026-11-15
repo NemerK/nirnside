@@ -1,7 +1,8 @@
 import { Backpack, Coins } from "lucide-react";
 import { getAccount, getArchivedCharacters, getCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
-import { listSetBriefs, setHref } from "@/lib/db/catalog-queries";
-import type { SetBrief } from "@/lib/catalog/set-brief";
+import { setHref } from "@/lib/db/catalog-queries";
+import { loadSetHover } from "@/lib/catalog/hover-sets";
+import { withResolvedSet, type SetBrief } from "@/lib/catalog/set-brief";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
@@ -57,10 +58,13 @@ export default async function InventoryPage({
     alliancePoints: number;
     lastSeen: number | null;
   } | null = null;
+  const hover = loadSetHover();
+  setBriefs = hover.briefs;
   try {
-    items = getItems(filters);
+    const setFilter = filters.setName;
+    items = getItems({ ...filters, setName: undefined }).map((item) => withResolvedSet(item, hover.known));
+    if (setFilter) items = items.filter((item) => item.setName === setFilter);
     mythics = getAccount()?.mythics ?? [];
-    setBriefs = listSetBriefs();
     untagged = items.filter((it) => !it.bagCategory).length;
     const tallied = tallyBagFilters(items);
     bagCounts = tallied.counts;
@@ -68,6 +72,12 @@ export default async function InventoryPage({
     if (bag) items = items.filter((it) => it.bagCategory === bag);
     if (sub) items = items.filter((it) => it.bagSubtype === sub);
     facets = getItemFacets();
+    const setNames = new Set<string>();
+    for (const item of getItems({})) {
+      const name = withResolvedSet(item, hover.known).setName?.trim();
+      if (name) setNames.add(name);
+    }
+    facets = { ...facets, sets: [...setNames].sort((a, b) => a.localeCompare(b, "en")) };
     if (filters.owner) {
       const archived = getArchivedCharacters();
       archivedOwner = archived.some((c) => c.name === filters.owner);

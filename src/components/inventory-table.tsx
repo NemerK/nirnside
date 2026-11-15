@@ -8,7 +8,6 @@ import { SetHover } from "@/components/set-hover";
 import { SortHeader, useSort } from "@/components/sort-header";
 import { locationLabel, qualityText } from "@/lib/format";
 import { bagSubtypeLabel } from "@/lib/inventory/bag-filters";
-import { inferSetName } from "@/lib/catalog/set-brief";
 import { sortRows } from "@/lib/ui/column-sort";
 import type { Item } from "@/lib/snapshot/schema";
 
@@ -36,7 +35,7 @@ function setKey(item: Item): string {
 }
 
 function associatedSet(item: Item): string | null {
-  return item.setName?.trim() || inferSetName(item.name);
+  return item.setName?.trim() || null;
 }
 
 export function InventoryTable({ items, setHrefs }: { items: Item[]; setHrefs: Record<string, string> }) {
@@ -117,14 +116,7 @@ export function InventoryTable({ items, setHrefs }: { items: Item[]; setHrefs: R
                 <td className="px-3 py-2.5 text-fg-muted">{it.ownerCharacter ?? "—"}</td>
                 <td className="px-3 py-2.5 text-fg-muted">
                   {associatedSet(it) ? (
-                    <Link
-                      href={
-                        it.setName?.trim()
-                          ? (setHrefs[setKey(it)] ?? "#")
-                          : `/encyclopedia/sets?search=${encodeURIComponent(associatedSet(it) ?? "")}`
-                      }
-                      className="text-accent hover:underline"
-                    >
+                    <Link href={setHrefs[setKey(it)] ?? "#"} className="text-accent hover:underline">
                       {associatedSet(it)}
                     </Link>
                   ) : (

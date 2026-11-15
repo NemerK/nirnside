@@ -7,6 +7,7 @@ import { stickerbookSeenIds } from "../stickerbook/seen-store";
 import { archivedCharacters, archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
 import { unionCompletedAchievementIds } from "../achievements/pithka";
 import { isExcludedSkillLine, stripVengeanceFromCharacter } from "../catalog/excluded";
+import type { AccountSetFacts } from "../catalog/set-brief";
 
 export type AccountMeta = Pick<
   AccountSnapshot,
@@ -386,6 +387,54 @@ export function getItemsForCharacter(c: Character): Item[] {
     if (it.ownerCharacterId) return it.ownerCharacterId === c.id;
     return it.ownerCharacter === c.name;
   });
+}
+
+function parseAccountBonuses(value: unknown): { pieces: number; text: string }[] {
+  let rows: unknown = value;
+  if (typeof value === "string") {
+    try {
+      rows = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(rows)) return [];
+  const bonuses: { pieces: number; text: string }[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const pieces = Number((row as { pieces?: unknown }).pieces);
+    const text = (row as { text?: unknown }).text;
+    if (!Number.isFinite(pieces) || typeof text !== "string" || text.trim() === "") continue;
+    bonuses.push({ pieces, text: text.trim() });
+  }
+  return bonuses;
+}
+
+/** Every collection set on this account, including bonus lines once a snapshot stored them. */
+export function listAccountSets(): AccountSetFacts[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT setId, name, category,
+              json_extract(json, '$.maxEquip') AS maxEquip,
+              json_extract(json, '$.bonuses') AS bonuses
+       FROM stickerbook`,
+    )
+    .all() as {
+    setId: number;
+    name: string;
+    category: string | null;
+    maxEquip: number | null;
+    bonuses: string | null;
+  }[];
+  return rows
+    .filter((row) => row.name.trim().length > 0)
+    .map((row) => ({
+      name: row.name,
+      setId: row.setId,
+      category: row.category?.trim() || "Unknown",
+      maxEquip: typeof row.maxEquip === "number" && row.maxEquip > 0 ? row.maxEquip : null,
+      bonuses: parseAccountBonuses(row.bonuses),
+    }));
 }
 
 export function getStickerbook(): StickerbookSetView[] {

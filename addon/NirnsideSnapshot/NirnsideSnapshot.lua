@@ -1063,7 +1063,7 @@ local function gatherEquipped()
   for _, e in ipairs(EQUIP_SLOTS) do
     local link = safe(function() return GetItemLink(BAG_WORN, e.slot) end, "")
     if link and link ~= "" then
-      local hasSet, setName = safe(function() return GetItemLinkSetInfo(link, false) end, false)
+      local hasSet, setName, _, _, _, setId = safe(function() return GetItemLinkSetInfo(link, false) end, false)
       local _, _, enchantName = safe(function() return GetItemLinkEnchantInfo(link) end, nil)
       equipped[#equipped + 1] = {
         slot = e.label,
@@ -1073,6 +1073,7 @@ local function gatherEquipped()
         icon = safe(function() return normIcon(GetItemLinkIcon(link)) end, nil),
         quality = qualityString(link),
         setName = hasSet and setName ~= "" and zo_strformat("<<1>>", setName) or nil,
+        setId = hasSet and setId or nil,
         trait = traitString(link),
         enchant = enchantName and enchantName ~= "" and zo_strformat("<<1>>", enchantName) or nil,
         scribing = {},
@@ -1127,12 +1128,13 @@ local function wwResolveGear(gearTable)
     local g = gearTable[entry.slot]
     local link = type(g) == "table" and g.link or nil
     if link and link ~= "" and (g.id == nil or tostring(g.id) ~= "0") then
-      local hasSet, setName = safe(function() return GetItemLinkSetInfo(link, false) end, false)
+      local hasSet, setName, _, _, _, setId = safe(function() return GetItemLinkSetInfo(link, false) end, false)
       pieces[#pieces + 1] = {
         slot = entry.label,
         name = safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, entry.label),
         icon = safe(function() return normIcon(GetItemLinkIcon(link)) end, nil),
         setName = (hasSet and setName ~= "") and zo_strformat("<<1>>", setName) or nil,
+        setId = hasSet and setId or nil,
         trait = traitString(link),
         quality = qualityString(link),
         mythic = (mythicSlot ~= nil and entry.slot == mythicSlot) or false,
@@ -3004,6 +3006,38 @@ local function readStickerPiece(setId, i)
   }
 end
 
+-- Written bonus lines for one set, from a single collection piece link.
+-- GetItemLinkSetBonusInfo returns the piece count and the game's own text.
+-- One link per set is enough: every piece of a set carries the same lines.
+local function bonusesForSet(setId)
+  if not GetItemLinkSetBonusInfo or not GetItemSetCollectionPieceInfo then return nil, nil end
+  local pieceId = safe(function() return GetItemSetCollectionPieceInfo(setId, 1) end, nil)
+  local link = pieceId and pieceItemLink(pieceId) or nil
+  if not link or link == "" then return nil, nil end
+  local hasSet, _, numBonuses, _, maxEquipped = safe(function()
+    return GetItemLinkSetInfo(link, false)
+  end, false)
+  if not hasSet then return nil, nil end
+  local bonuses = {}
+  local count = tonumber(numBonuses) or 0
+  for i = 1, count do
+    local numRequired, description = safe(function()
+      return GetItemLinkSetBonusInfo(link, false, i)
+    end, nil)
+    if type(description) == "string" and description ~= "" then
+      description = zo_strformat("<<1>>", description)
+      local pieces = tonumber(numRequired) or i
+      if description ~= "" and pieces >= 1 then
+        bonuses[#bonuses + 1] = { pieces = pieces, text = description }
+      end
+    end
+  end
+  local maxEquip = tonumber(maxEquipped)
+  if not maxEquip or maxEquip < 1 then maxEquip = nil end
+  if #bonuses == 0 then bonuses = nil end
+  return bonuses, maxEquip
+end
+
 -- Rich per-piece data so the app can show the real item icon + name for each
 -- slot (like the in-game stickerbook), collected or not.
 local function gatherStickerbook()
@@ -3048,7 +3082,8 @@ local function gatherStickerbook()
           local piece = readStickerPiece(setId, i)
           if piece then pieces[#pieces + 1] = piece end
         end
-        sets[#sets + 1] = {
+        local bonuses, maxEquip = bonusesForSet(setId)
+        local entry = {
           setId = setId,
           name = name,
           category = (category and category ~= "") and category or "Unknown",
@@ -3057,6 +3092,9 @@ local function gatherStickerbook()
           subOrder = subOrder,
           pieces = pieces,
         }
+        if bonuses then entry.bonuses = bonuses end
+        if maxEquip then entry.maxEquip = maxEquip end
+        sets[#sets + 1] = entry
       end
       setId = safe(function() return GetNextItemSetCollectionId(setId) end, nil)
     end
