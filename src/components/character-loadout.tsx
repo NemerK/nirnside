@@ -7,7 +7,7 @@ import { qualityText } from "@/lib/format";
 import { indexKnownSets, withResolvedSet, type KnownSet } from "@/lib/catalog/set-brief";
 import { placeEquipped, tallySets } from "@/lib/characters/loadout";
 import { skillIconByName } from "@/lib/icons/skill-icons";
-import { FitScreen } from "./fit-screen";
+import { EsoText } from "./eso-text";
 import { GameIcon } from "./game-icon";
 import { SetHover } from "./set-hover";
 import { SkillHover } from "./skill-hover";
@@ -15,8 +15,9 @@ import { SkillHover } from "./skill-hover";
 type Worn = Character["equipped"][number];
 
 /**
- * Equipment in the game's slot order, packed so the whole sheet fits the
- * window. Hovering a piece opens that set's catalog bonuses.
+ * Equipment in the game's slot order. The type stays at a reading size; a
+ * short window scrolls this pane instead of shrinking the sheet. Hovering a
+ * piece opens that set's catalog bonuses.
  */
 export function CharacterLoadout({
   equipped,
@@ -58,10 +59,9 @@ export function CharacterLoadout({
   ];
 
   return (
-    <FitScreen>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         {sets.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {sets.map((set) => (
               <SetHover
                 key={set.name}
@@ -71,7 +71,7 @@ export function CharacterLoadout({
               >
                 <Link
                   href={setLink(set.name)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-fg hover:border-border-strong"
                 >
                   {set.name}
                   <span className="tabular-nums text-fg-subtle">{set.count}</span>
@@ -81,8 +81,8 @@ export function CharacterLoadout({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-          <section className="rounded-lg border border-border bg-surface px-2 py-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <section className="rounded-lg border border-border bg-surface px-3 py-2.5">
             <div className="grid grid-cols-2 gap-x-2">
               <div className="col-span-2">
                 <GearCell slot={armor[0]} setLink={setLink} worn={worn} />
@@ -104,9 +104,9 @@ export function CharacterLoadout({
                   ["Stamina", attributes.stamina ?? 0, "text-emerald-400"],
                 ] as const
               ).map(([label, value, tone]) => (
-                <div key={label} className="px-1 py-1 text-center">
-                  <div className={`text-sm font-semibold tabular-nums leading-none ${tone}`}>{value}</div>
-                  <div className="text-[9px] uppercase tracking-wide text-fg-subtle">{label}</div>
+                <div key={label} className="px-1 py-1.5 text-center">
+                  <div className={`text-base font-semibold tabular-nums leading-none ${tone}`}>{value}</div>
+                  <div className="mt-1 text-[11px] uppercase tracking-wide text-fg-subtle">{label}</div>
                 </div>
               ))}
             </div>
@@ -131,11 +131,10 @@ export function CharacterLoadout({
           <WeaponBar title="Front bar" pair={placed.front} skills={frontSkills} setLink={setLink} worn={worn} />
           <WeaponBar title="Back bar" pair={placed.back} skills={backSkills} setLink={setLink} worn={worn} />
         </div>
-        <p className="text-[10px] text-fg-subtle">
+        <p className="text-xs text-fg-subtle">
           {barLabel ? `Skills from ${barLabel}.` : "No skill bar in this snapshot."}
         </p>
       </div>
-    </FitScreen>
   );
 }
 
@@ -155,18 +154,18 @@ function GearCell({
   const wornCount = item?.setName ? worn.get(item.setName) : undefined;
   const detail = [...meta, wornCount ? `${wornCount} worn` : null].filter(Boolean).join(" · ");
   const name = item ? (
-    <div className={`truncate text-[11px] leading-tight ${item.quality ? qualityText(item.quality) : "text-fg"}`}>
+    <div className={`line-clamp-2 text-sm leading-snug ${item.quality ? qualityText(item.quality) : "text-fg"}`}>
       {item.name}
     </div>
   ) : (
-    <div className="text-[11px] text-fg-subtle">Empty</div>
+    <div className="text-sm text-fg-subtle">Empty</div>
   );
 
   const body = (
-    <div data-slot={label} className="flex min-w-0 items-center gap-1.5 py-0.5">
+    <div data-slot={label} className="flex min-w-0 items-center gap-2 py-1">
       <SlotFrame item={item} />
       <div className="min-w-0">
-        <div className="text-[9px] uppercase tracking-wide text-fg-subtle">{label}</div>
+        <div className="text-[11px] uppercase tracking-wide text-fg-subtle">{label}</div>
         {item?.setName ? (
           <Link href={setLink(item.setName)} className="hover:underline">
             {name}
@@ -174,7 +173,11 @@ function GearCell({
         ) : (
           name
         )}
-        {meta.length > 0 ? <div className="truncate text-[10px] leading-tight text-fg-muted">{meta.join(" · ")}</div> : null}
+        {meta.length > 0 ? (
+          <div className="line-clamp-2 text-xs leading-snug text-fg-muted">
+            <EsoText text={meta.join(" · ")} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -196,11 +199,11 @@ function GearCell({
 function SlotFrame({ item }: { item?: Worn }) {
   return (
     <span
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded bg-surface-2 ${
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded bg-surface-2 ${
         item ? `border ${qualityFrame(item.quality)}` : "border border-dashed border-border"
       }`}
     >
-      {item ? <GameIcon name={item.name} icon={item.icon} size={22} bare /> : null}
+      {item ? <GameIcon name={item.name} icon={item.icon} size={30} bare /> : null}
     </span>
   );
 }
@@ -224,34 +227,34 @@ function WeaponBar({
     ...pair.rest.map((item) => ({ label: item.slot || "Weapon", item })),
   ];
   return (
-    <section className="rounded-lg border border-border bg-surface px-2 py-2">
-      <h2 className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{title}</h2>
-      <div className="mt-0.5">
+    <section className="rounded-lg border border-border bg-surface px-3 py-2.5">
+      <h2 className="px-0.5 text-xs font-medium uppercase tracking-wide text-fg-subtle">{title}</h2>
+      <div className="mt-1">
         {weapons.map((slot, index) => (
           <GearCell key={`${slot.label}-${index}`} slot={slot} setLink={setLink} worn={worn} />
         ))}
       </div>
-      <ol className="mt-1 space-y-0.5 border-t border-border pt-1">
+      <ol className="mt-1.5 space-y-1 border-t border-border pt-1.5">
         {Array.from({ length: 6 }, (_, index) => skills[index] ?? null).map((skill, index) => {
           const ultimate = index === 5;
           return (
-            <li key={index} className="flex min-w-0 items-center gap-1.5 text-[11px]">
+            <li key={index} className="flex min-w-0 items-center gap-2 text-sm">
               {skill?.name ? (
                 <SkillHover
                   name={skill.name}
                   description={skill.description}
                   source={skill.description?.trim() ? "ingame" : undefined}
                   detail={`${title} · ${ultimate ? "Ultimate" : index + 1}`}
-                  className="flex min-w-0 flex-1 items-center gap-1.5"
+                  className="flex min-w-0 flex-1 items-center gap-2"
                 >
-                  <span className="w-3 shrink-0 tabular-nums text-fg-subtle">{ultimate ? "U" : index + 1}</span>
-                  <GameIcon name={skill.name} icon={skill.icon || skillIconByName(skill.name)} size={16} />
+                  <span className="w-4 shrink-0 tabular-nums text-xs text-fg-subtle">{ultimate ? "U" : index + 1}</span>
+                  <GameIcon name={skill.name} icon={skill.icon || skillIconByName(skill.name)} size={22} />
                   <span className={`min-w-0 truncate text-fg ${ultimate ? "text-q-legendary" : ""}`}>{skill.name}</span>
                 </SkillHover>
               ) : (
                 <>
-                  <span className="w-3 shrink-0 tabular-nums text-fg-subtle">{ultimate ? "U" : index + 1}</span>
-                  <span className="inline-flex h-4 w-4 rounded border border-dashed border-border" />
+                  <span className="w-4 shrink-0 tabular-nums text-xs text-fg-subtle">{ultimate ? "U" : index + 1}</span>
+                  <span className="inline-flex h-5 w-5 rounded border border-dashed border-border" />
                   <span className="min-w-0 truncate text-fg-subtle">{ultimate ? "Ultimate" : "Empty"}</span>
                 </>
               )}
