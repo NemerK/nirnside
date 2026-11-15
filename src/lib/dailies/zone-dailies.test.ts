@@ -53,9 +53,11 @@ describe("zone dailies", () => {
     assert.ok(m, "addon Version must follow major.minor.patch");
     const [major, minor, patch] = m.slice(1).map(Number);
     assert.ok(
-      major > 0 || minor > 9 || patch >= 32,
-      `addon Version must be >= 0.9.32, found ${m[0].trim()}`,
+      major > 0 || minor > 9 || patch >= 34,
+      `addon Version must be >= 0.9.34, found ${m[0].trim()}`,
     );
-    assert.match(txt, /## AddOnVersion: 32/);
+    const addonVersion = /^## AddOnVersion: (\d+)\s*$/m.exec(txt);
+    assert.ok(addonVersion, "AddOnVersion must be a number");
+    assert.ok(Number(addonVersion[1]) >= 34, `AddOnVersion must be >= 34, found ${addonVersion[1]}`);
   });
 });
