@@ -1,6 +1,7 @@
 import { Backpack, Coins } from "lucide-react";
 import { getAccount, getArchivedCharacters, getCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
-import { setHref } from "@/lib/db/catalog-queries";
+import { listSetBriefs, setHref } from "@/lib/db/catalog-queries";
+import type { SetBrief } from "@/lib/catalog/set-brief";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
@@ -13,6 +14,7 @@ import { Card, EmptyState, PageFrame, PageHeader, PageScroll, StickyMenu } from 
 import { formatGold, formatNumber } from "@/lib/format";
 import { tallyBagFilters } from "@/lib/inventory/bag-filters";
 import { InventoryCategories } from "@/components/inventory-categories";
+import { SetCatalogProvider } from "@/components/set-hover";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,7 @@ export default async function InventoryPage({
 
   let items: ReturnType<typeof getItems> = [];
   let mythics: NonNullable<ReturnType<typeof getAccount>>["mythics"] = [];
+  let setBriefs: SetBrief[] = [];
   let bagCounts: ReturnType<typeof tallyBagFilters>["counts"] = {};
   let bagLabels: Record<string, string> = {};
   let untagged = 0;
@@ -57,6 +60,7 @@ export default async function InventoryPage({
   try {
     items = getItems(filters);
     mythics = getAccount()?.mythics ?? [];
+    setBriefs = listSetBriefs();
     untagged = items.filter((it) => !it.bagCategory).length;
     const tallied = tallyBagFilters(items);
     bagCounts = tallied.counts;
@@ -91,6 +95,7 @@ export default async function InventoryPage({
     <ItemsBody
       items={items}
       mythics={mythics}
+      setBriefs={setBriefs}
       ownerWallet={ownerWallet}
       archivedOwner={archivedOwner}
       totalStacks={totalStacks}
@@ -178,6 +183,7 @@ function setHrefsFor(
 function ItemsBody({
   items,
   mythics,
+  setBriefs,
   ownerWallet,
   archivedOwner,
   totalStacks,
@@ -185,6 +191,7 @@ function ItemsBody({
 }: {
   items: ReturnType<typeof getItems>;
   mythics: NonNullable<ReturnType<typeof getAccount>>["mythics"];
+  setBriefs: SetBrief[];
   ownerWallet: {
     name: string;
     gold: number;
@@ -197,6 +204,7 @@ function ItemsBody({
   totalCount: number;
 }) {
   return (
+    <SetCatalogProvider sets={setBriefs}>
     <>
       {ownerWallet && (
         <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
@@ -237,6 +245,7 @@ function ItemsBody({
         </>
       )}
     </>
+    </SetCatalogProvider>
   );
 }
 

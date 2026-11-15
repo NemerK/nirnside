@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Copy, Download, Shirt, Sparkles, Star, Utensils } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import { GameIcon } from "@/components/game-icon";
+import { SetHover } from "@/components/set-hover";
 import type { Wardrobe as WardrobeData, WardrobePage, WardrobeSetup, WardrobeZone } from "@/lib/snapshot/schema";
 import { qualityText } from "@/lib/format";
 import { copySetupImage, downloadSetupImage, type SetupImageMeta } from "@/lib/wardrobe/setup-image";
@@ -71,7 +72,14 @@ function SaveButton({
 
 function GearRow({ piece, hrefForSet }: { piece: WardrobeSetup["gear"][number]; hrefForSet: Record<string, string> }) {
   const setLink = piece.setName ? hrefForSet[piece.setName.toLowerCase()] : undefined;
+  const detail = piece.trait || undefined;
   return (
+    <SetHover
+      className="block min-w-0"
+      name={piece.setName}
+      itemName={piece.name || piece.slot}
+      detail={detail || undefined}
+    >
     <div className="flex items-center gap-2">
       <GameIcon name={piece.name || piece.slot} icon={piece.icon} size={26} />
       <div className="min-w-0">
@@ -93,6 +101,7 @@ function GearRow({ piece, hrefForSet }: { piece: WardrobeSetup["gear"][number]; 
         </div>
       </div>
     </div>
+    </SetHover>
   );
 }
 

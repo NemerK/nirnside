@@ -13,7 +13,7 @@ import { getAccount, getCharacter, getItemsForCharacter } from "@/lib/db/queries
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
 import { skillLineChoices } from "@/lib/planner/data";
-import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
+import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbilityLoreFor, listSetBriefs } from "@/lib/db/catalog-queries";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import type { Character } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
@@ -28,6 +28,7 @@ import { CharacterTabs } from "@/components/character-tabs";
 import { CharacterChampion } from "@/components/character-champion";
 import { CharacterScripts, type CharacterScript } from "@/components/character-scripts";
 import { CharacterLoadout } from "@/components/character-loadout";
+import { SetCatalogProvider } from "@/components/set-hover";
 import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
@@ -203,15 +204,15 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   }
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-5xl">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden">
       <Link
         href={archived ? "/characters#archive" : "/characters"}
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
+        className="mb-3 inline-flex shrink-0 items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" /> {archived ? "Archive" : "All characters"}
       </Link>
 
-      <Card className="mb-4 overflow-hidden">
+      <Card className="mb-3 shrink-0 overflow-hidden">
         <div className="h-0.5" style={{ background: accent }} />
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3">
           <div className="min-w-0">
@@ -290,6 +291,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           </div>
         </Card>
       )}
+      <SetCatalogProvider sets={safe(() => listSetBriefs()) ?? []}>
       <CharacterTabs
         overview={
           <>
@@ -436,6 +438,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         scripts={<CharacterScripts scripts={scriptRows} />}
         champion={<CharacterChampion champion={c.champion} championPoints={c.championPoints} />}
       />
+      </SetCatalogProvider>
     </div>
   );
 }
