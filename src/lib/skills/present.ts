@@ -30,6 +30,7 @@ export type AbilitySlotView = {
   current: boolean;
   icon: string | null;
   description: string;
+  descriptionSource: CatalogSource | "unknown";
   xp: { value: number; max: number } | null;
 };
 
@@ -168,6 +169,7 @@ function presentSlot(slot: MorphSlot, currentSlot: number | null, abilityKnown: 
     current: abilityKnown && currentSlot === slot.slot,
     icon,
     description: merged.description,
+    descriptionSource: merged.source,
     xp: morphSlotPurchased(slot) ? xpProgress(slot) : null,
   };
 }

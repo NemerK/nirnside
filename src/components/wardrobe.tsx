@@ -6,6 +6,7 @@ import { Check, Copy, Download, Shirt, Sparkles, Star, Utensils } from "lucide-r
 import { Badge, Card } from "@/components/ui";
 import { GameIcon } from "@/components/game-icon";
 import { SetHover } from "@/components/set-hover";
+import { SkillHover } from "@/components/skill-hover";
 import type { Wardrobe as WardrobeData, WardrobePage, WardrobeSetup, WardrobeZone } from "@/lib/snapshot/schema";
 import { qualityText } from "@/lib/format";
 import { copySetupImage, downloadSetupImage, type SetupImageMeta } from "@/lib/wardrobe/setup-image";
@@ -118,9 +119,17 @@ function SkillBar({ bar }: { bar: WardrobeSetup["bars"][number] }) {
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {filled.map((s, i) => (
-            <span key={`${s.name}-${i}`} className="flex items-center gap-1" title={s.name}>
+            <SkillHover
+              key={`${s.name}-${i}`}
+              name={s.name}
+              description={s.description}
+              source={s.description?.trim() ? "ingame" : undefined}
+              detail={bar.bar === "front" ? "Front bar" : "Back bar"}
+              labelled
+              className="flex items-center gap-1"
+            >
               <GameIcon name={s.name} icon={s.icon} size={24} />
-            </span>
+            </SkillHover>
           ))}
         </div>
       )}

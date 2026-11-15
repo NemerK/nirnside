@@ -21,6 +21,7 @@ import type { Character, Wardrobe as WardrobeData } from "@/lib/snapshot/schema"
 import { isArchived } from "@/lib/snapshot/roster";
 import { rolesForCharacter } from "@/lib/roles/filter";
 import { presentSkillBook } from "@/lib/skills/present";
+import { briefsFromLore } from "@/lib/skills/skill-brief";
 import { Badge, Card, SectionTitle } from "@/components/ui";
 import { SkillBook } from "@/components/skill-book";
 import { Wardrobe } from "@/components/wardrobe";
@@ -32,6 +33,7 @@ import { CharacterScripts, type CharacterScript } from "@/components/character-s
 import { CharacterLoadout } from "@/components/character-loadout";
 import { SetCatalogProvider } from "@/components/set-hover";
 import { SetHover } from "@/components/set-hover";
+import { SkillCatalogProvider } from "@/components/skill-hover";
 import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
@@ -78,18 +80,33 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     roles = [];
   }
   const accent = ALLIANCE_ACCENT[c.alliance] ?? "var(--accent)";
+  const skillNames: string[] = [];
+  const snapshotSkills: { name: string; description: string }[] = [];
+  const noteSkill = (name?: string | null, description?: string | null) => {
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+    skillNames.push(trimmed);
+    const text = description?.trim();
+    if (text) snapshotSkills.push({ name: trimmed, description: text });
+  };
   let lore = new Map() as ReturnType<typeof catalogAbilityLoreFor>;
   try {
-    const names: string[] = [];
     for (const line of c.skillLines) {
       for (const ability of line.abilities) {
-        if (ability.name) names.push(ability.name);
-        for (const morph of ability.morphs ?? []) {
-          if (morph.name) names.push(morph.name);
+        noteSkill(ability.name, ability.description);
+        for (const morph of ability.morphs ?? []) noteSkill(morph.name, morph.description);
+      }
+    }
+    for (const zone of c.wardrobe?.zones ?? []) {
+      for (const page of zone.pages) {
+        for (const setup of page.setups) {
+          for (const bar of setup.bars) {
+            for (const skill of bar.skills) noteSkill(skill.name, skill.description);
+          }
         }
       }
     }
-    lore = catalogAbilityLoreFor(names);
+    lore = catalogAbilityLoreFor(skillNames);
   } catch {
     lore = new Map();
   }
@@ -207,6 +224,22 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
     }
     lineBook[key] = { maxRank: skillLineCap(goal.target), skills };
   }
+  const linePlanNames: string[] = [];
+  for (const book of Object.values(lineBook)) {
+    for (const skill of book.skills) {
+      if (skill.name) linePlanNames.push(skill.name);
+      for (const morph of skill.morphs) if (morph) linePlanNames.push(morph);
+    }
+  }
+  let skillLore = lore;
+  if (linePlanNames.length > 0) {
+    try {
+      skillLore = new Map([...lore, ...catalogAbilityLoreFor(linePlanNames)]);
+    } catch {
+      skillLore = lore;
+    }
+  }
+  const skillBriefs = briefsFromLore([...skillNames, ...linePlanNames], skillLore, snapshotSkills);
   const abilityByName = new Map(goalIndexes.abilityIndex);
   const abilityPlans: AbilityPlan[] = [];
   for (const goal of goals) {
@@ -305,6 +338,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         </Card>
       )}
       <SetCatalogProvider sets={hover.briefs}>
+      <SkillCatalogProvider skills={skillBriefs}>
       <CharacterTabs
         overview={
           <>
@@ -458,6 +492,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         scripts={<CharacterScripts scripts={scriptRows} />}
         champion={<CharacterChampion champion={c.champion} championPoints={c.championPoints} />}
       />
+      </SkillCatalogProvider>
       </SetCatalogProvider>
     </div>
   );
