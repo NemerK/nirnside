@@ -316,12 +316,18 @@ end
 
 local function classifyBagItem(bagId, slotIndex)
   if type(ZO_ItemFilterUtils) ~= "table" then return nil end
+  -- The game's matcher does not look at the bag slot by itself. It reads
+  -- filterData from GetItemFilterTypeInfo and isJunk, the same fields
+  -- sharedinventory.lua stores on a slot. Without them every tab except
+  -- Junk stays empty.
   local slot = {
     bagId = bagId,
     slotIndex = slotIndex,
     actorCategory = safe(function() return GetItemActorCategory(bagId, slotIndex) end, nil),
+    isJunk = safe(function() return IsItemJunk(bagId, slotIndex) end, false),
+    filterData = safe(function() return { GetItemFilterTypeInfo(bagId, slotIndex) } end, nil),
   }
-  if safe(function() return IsItemJunk(bagId, slotIndex) end, false) then
+  if slot.isJunk then
     local junk = _G["ITEM_TYPE_DISPLAY_CATEGORY_JUNK"]
     return {
       bagCategory = "junk",

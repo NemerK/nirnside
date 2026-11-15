@@ -68,8 +68,8 @@ export function InventoryCategories({
       ) : null}
       {untagged > 0 ? (
         <p className="text-xs text-fg-subtle">
-          {untagged.toLocaleString("en-US")} stacks were saved before inventory tabs. Log out once and they sort
-          into the same tabs as the game.
+          {untagged.toLocaleString("en-US")} stacks are not in a tab yet. Log out once with the updated addon
+          and they sort the same way as the game.
         </p>
       ) : null}
     </div>
