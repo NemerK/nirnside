@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CalendarClock, FlaskConical, Sparkles, Star } from "lucide-react";
 import type { Character } from "@/lib/snapshot/schema";
+import { alignChampionDisciplines } from "@/lib/characters/champion";
+import { getCPStars } from "@/lib/db/catalog-queries";
 import { GameIcon } from "@/components/game-icon";
 import { Badge, Card, ProgressBar, SectionTitle } from "@/components/ui";
 import { plannerScriptIcon } from "@/lib/icons/planner-icons";
@@ -294,8 +296,20 @@ export function KnowledgePanel({ character }: { character: Character }) {
   );
 }
 
+function championCategories(): Map<string, string> {
+  const categories = new Map<string, string>();
+  try {
+    for (const row of getCPStars()) {
+      categories.set(row.entry.name.trim().toLowerCase(), row.entry.category.trim().toLowerCase());
+    }
+  } catch {
+    // Without the catalog the captured names stay as they are.
+  }
+  return categories;
+}
+
 export function ChampionPanel({ character }: { character: Character }) {
-  const disciplines = character.champion;
+  const disciplines = alignChampionDisciplines(character.champion, championCategories());
   const invested = disciplines.reduce(
     (sum, d) => sum + d.stars.reduce((s, star) => s + star.points, 0),
     0,

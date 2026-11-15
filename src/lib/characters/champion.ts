@@ -85,6 +85,45 @@ export function groupChampionStars(
   };
 }
 
+/**
+ * Craft is the green tree and Warfare is the blue one. A snapshot that
+ * asked for stars by discipline id instead of index files each of those
+ * trees under the other name. When the catalog can see that, hand the
+ * stars back. Fitness is the red tree and is left where it is.
+ */
+export function alignChampionDisciplines<T extends { name: string; stars: { name: string }[] }>(
+  disciplines: T[],
+  catalogCategory: ReadonlyMap<string, string>,
+): T[] {
+  const craft = disciplines.find((disc) => keyOf(disc.name) === "craft");
+  const warfare = disciplines.find((disc) => keyOf(disc.name) === "warfare");
+  if (!craft || !warfare) return disciplines;
+
+  let agree = 0;
+  let disagree = 0;
+  for (const star of craft.stars) vote("craft", star.name);
+  for (const star of warfare.stars) vote("warfare", star.name);
+  if (disagree === 0 || disagree <= agree) return disciplines;
+
+  return disciplines.map((disc) => {
+    const key = keyOf(disc.name);
+    if (key === "craft") return { ...disc, stars: warfare.stars };
+    if (key === "warfare") return { ...disc, stars: craft.stars };
+    return disc;
+  });
+
+  function vote(card: "craft" | "warfare", starName: string) {
+    const category = catalogCategory.get(starName.trim().toLowerCase());
+    if (category !== "craft" && category !== "warfare") return;
+    if (category === card) agree += 1;
+    else disagree += 1;
+  }
+}
+
+function keyOf(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 function resolveKind(
   star: ChampionStarView,
   catalogKinds: ReadonlyMap<string, ChampionKind>,

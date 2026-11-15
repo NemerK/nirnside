@@ -1001,9 +1001,13 @@ local function gatherChampion()
       local discId = GetChampionDisciplineId(d)
       local discName = GetChampionDisciplineName(discId)
       local stars = {}
-      local numSkills = GetNumChampionDisciplineSkills(discId)
+      -- The name is looked up by discipline id. The stars are looked up by
+      -- the 1-based index. Those numbers differ, and passing the id here
+      -- files the blue tree under the green name and the green tree under
+      -- the blue name.
+      local numSkills = GetNumChampionDisciplineSkills(d)
       for s = 1, numSkills do
-        local skillId = GetChampionSkillId(discId, s)
+        local skillId = GetChampionSkillId(d, s)
         local spent = GetNumPointsSpentOnChampionSkill(skillId) or 0
         local slot = slotted[skillId]
         if spent > 0 or slot ~= nil then
