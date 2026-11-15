@@ -25,6 +25,14 @@ export function isMythicCategory(category: string | null | undefined): boolean {
   return (category ?? "").toLowerCase().includes("mythic");
 }
 
+/**
+ * The live stickerbook files mythics under Miscellaneous, with Mythics as the
+ * subcategory. Older snapshots used a top-level Mythic Items category.
+ */
+export function isMythicSet(set: { category?: string | null; subcategory?: string | null }): boolean {
+  return isMythicCategory(set.category) || isMythicCategory(set.subcategory);
+}
+
 export function mythicAnchor(setId: number): string {
   return `mythic-${setId}`;
 }
