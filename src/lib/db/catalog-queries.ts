@@ -1,6 +1,7 @@
 import "server-only";
 import { isExcludedCatalogLineId, isExcludedLineName, isExcludedSkillLine } from "../catalog/excluded";
 import { getDb } from "./index";
+import type { SetBrief } from "../catalog/set-brief";
 import type {
   CatalogGrimoire,
   CatalogScript,
@@ -70,6 +71,19 @@ export function catalogCount(domain: CatalogDomain): number {
 // Domain-typed helpers
 export const getSets = (f?: Filters) => query<CatalogSet>("set", f);
 export const getSet = (id: string) => one<CatalogSet>("set", id);
+
+/** Compact set facts for live hover cards. Bonuses stay the catalog's own strings. */
+export function listSetBriefs(): SetBrief[] {
+  return getSets().map(({ entry, source }) => ({
+    id: entry.id,
+    name: entry.name,
+    setId: entry.setId,
+    category: entry.category,
+    maxEquip: entry.maxEquip,
+    source,
+    bonuses: entry.bonuses,
+  }));
+}
 export const getSetByName = (name: string) => byName<CatalogSet>("set", name);
 export const setCategories = () => categories("set");
 

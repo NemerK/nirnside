@@ -6,14 +6,15 @@ import { getAccount } from "@/lib/db/queries";
 import { qualityText } from "@/lib/format";
 import { placeEquipped, tallySets } from "@/lib/characters/loadout";
 import { skillIconByName } from "@/lib/icons/skill-icons";
+import { FitScreen } from "./fit-screen";
 import { GameIcon } from "./game-icon";
+import { SetHover } from "./set-hover";
 
 type Worn = Character["equipped"][number];
 
 /**
- * Equipment in the game's slot order: head, then the body pairs, then
- * necklace and rings. Weapons sit on the front and back bars with the
- * skill icons from the wardrobe snapshot.
+ * Equipment in the game's slot order, packed so the whole sheet fits the
+ * window. Hovering a piece opens that set's catalog bonuses.
  */
 export function CharacterLoadout({
   equipped,
@@ -26,6 +27,7 @@ export function CharacterLoadout({
 }) {
   const placed = placeEquipped(equipped);
   const sets = tallySets(equipped);
+  const worn = new Map(sets.map((set) => [set.name, set.count]));
   const mythics = safeMythics();
   const setLink = (name: string) => hrefForMythicOrSet(mythics, { name }, setHref({ name }));
   const setup = firstBarSetup(wardrobe);
@@ -49,94 +51,110 @@ export function CharacterLoadout({
   ];
 
   return (
-    <div className="space-y-4">
-      {sets.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {sets.map((set) => (
-            <Link
-              key={set.name}
-              href={setLink(set.name)}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-fg hover:border-border-strong"
-            >
-              {set.name}
-              <span className="tabular-nums text-fg-subtle">{set.count}</span>
-            </Link>
-          ))}
-        </div>
-      ) : null}
-
-      <section className="rounded-lg border border-border bg-surface px-3 py-3 sm:px-4">
-        <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
-          <div className="sm:col-span-2 sm:mx-auto sm:w-1/2">
-            <GearCell slot={armor[0]} setLink={setLink} />
-          </div>
-          {armor.slice(1).map((slot) => (
-            <GearCell key={slot.label} slot={slot} setLink={setLink} />
-          ))}
-        </div>
-        <div className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-border pt-3 sm:grid-cols-3">
-          {jewelry.map((slot, index) => (
-            <GearCell key={`${slot.label}-${index}`} slot={slot} setLink={setLink} />
-          ))}
-        </div>
-        <div className="mt-3 grid grid-cols-3 divide-x divide-border border-t border-border">
-          {(
-            [
-              ["Magicka", attributes.magicka ?? 0, "text-sky-300"],
-              ["Health", attributes.health ?? 0, "text-rose-300"],
-              ["Stamina", attributes.stamina ?? 0, "text-emerald-400"],
-            ] as const
-          ).map(([label, value, tone]) => (
-            <div key={label} className="px-2 py-2 text-center">
-              <div className={`text-base font-semibold tabular-nums ${tone}`}>{value}</div>
-              <div className="text-[10px] uppercase tracking-wide text-fg-subtle">{label}</div>
-            </div>
-          ))}
-        </div>
-        {food?.name ? (
-          <div className="border-t border-border pt-1">
-            <GearCell slot={{ label: "Food", item: foodPiece(food) }} setLink={setLink} />
+    <FitScreen>
+      <div className="flex flex-col gap-2">
+        {sets.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {sets.map((set) => (
+              <SetHover key={set.name} name={set.name} detail={`${set.count} worn`}>
+                <Link
+                  href={setLink(set.name)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-fg hover:border-border-strong"
+                >
+                  {set.name}
+                  <span className="tabular-nums text-fg-subtle">{set.count}</span>
+                </Link>
+              </SetHover>
+            ))}
           </div>
         ) : null}
-      </section>
 
-      {placed.other.length > 0 ? (
-        <section className="rounded-lg border border-border bg-surface px-3 py-2 sm:px-4">
-          <h2 className="px-1 pt-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Other</h2>
-          {placed.other.map((item) => (
-            <GearCell key={`${item.slot}-${item.name}`} slot={{ label: item.slot || "Equipped", item }} setLink={setLink} />
-          ))}
-        </section>
-      ) : null}
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <WeaponBar title="Front bar" pair={placed.front} skills={frontSkills} setLink={setLink} />
-        <WeaponBar title="Back bar" pair={placed.back} skills={backSkills} setLink={setLink} />
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+          <section className="rounded-lg border border-border bg-surface px-2 py-2">
+            <div className="grid grid-cols-2 gap-x-2">
+              <div className="col-span-2">
+                <GearCell slot={armor[0]} setLink={setLink} worn={worn} />
+              </div>
+              {armor.slice(1).map((slot) => (
+                <GearCell key={slot.label} slot={slot} setLink={setLink} worn={worn} />
+              ))}
+            </div>
+            <div className="mt-1 grid grid-cols-3 gap-x-1 border-t border-border pt-1">
+              {jewelry.map((slot, index) => (
+                <GearCell key={`${slot.label}-${index}`} slot={slot} setLink={setLink} worn={worn} />
+              ))}
+            </div>
+            <div className="mt-1 grid grid-cols-3 divide-x divide-border border-t border-border">
+              {(
+                [
+                  ["Magicka", attributes.magicka ?? 0, "text-sky-300"],
+                  ["Health", attributes.health ?? 0, "text-rose-300"],
+                  ["Stamina", attributes.stamina ?? 0, "text-emerald-400"],
+                ] as const
+              ).map(([label, value, tone]) => (
+                <div key={label} className="px-1 py-1 text-center">
+                  <div className={`text-sm font-semibold tabular-nums leading-none ${tone}`}>{value}</div>
+                  <div className="text-[9px] uppercase tracking-wide text-fg-subtle">{label}</div>
+                </div>
+              ))}
+            </div>
+            {food?.name ? (
+              <div className="border-t border-border pt-1">
+                <GearCell slot={{ label: "Food", item: foodPiece(food) }} setLink={setLink} worn={worn} />
+              </div>
+            ) : null}
+            {placed.other.length > 0 ? (
+              <div className="border-t border-border pt-1">
+                {placed.other.map((item) => (
+                  <GearCell
+                    key={`${item.slot}-${item.name}`}
+                    slot={{ label: item.slot || "Equipped", item }}
+                    setLink={setLink}
+                    worn={worn}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </section>
+          <WeaponBar title="Front bar" pair={placed.front} skills={frontSkills} setLink={setLink} worn={worn} />
+          <WeaponBar title="Back bar" pair={placed.back} skills={backSkills} setLink={setLink} worn={worn} />
+        </div>
+        <p className="text-[10px] text-fg-subtle">
+          {barLabel ? `Skills from ${barLabel}.` : "No skill bar in this snapshot."}
+        </p>
       </div>
-      <p className="text-xs text-fg-subtle">
-        {barLabel ? `Skills from ${barLabel}.` : "No skill bar in this snapshot."}
-      </p>
-    </div>
+    </FitScreen>
   );
 }
 
 type Slot = { label: string; item?: Worn };
 
-function GearCell({ slot, setLink }: { slot: Slot; setLink: (name: string) => string }) {
+function GearCell({
+  slot,
+  setLink,
+  worn,
+}: {
+  slot: Slot;
+  setLink: (name: string) => string;
+  worn: Map<string, number>;
+}) {
   const { item, label } = slot;
   const meta = item ? [item.trait, item.enchant, ...item.scribing].filter(Boolean) : [];
-  const title = item ? [label, item.name, item.setName, ...meta].filter(Boolean).join(" · ") : label;
+  const wornCount = item?.setName ? worn.get(item.setName) : undefined;
+  const detail = [...meta, wornCount ? `${wornCount} worn` : null].filter(Boolean).join(" · ");
   const name = item ? (
-    <div className={`text-sm leading-snug ${item.quality ? qualityText(item.quality) : "text-fg"}`}>{item.name}</div>
+    <div className={`truncate text-[11px] leading-tight ${item.quality ? qualityText(item.quality) : "text-fg"}`}>
+      {item.name}
+    </div>
   ) : (
-    <div className="text-sm text-fg-subtle">Empty</div>
+    <div className="text-[11px] text-fg-subtle">Empty</div>
   );
 
-  return (
-    <div title={title} data-slot={label} className="flex min-w-0 items-center gap-2.5 px-1 py-1.5">
+  const body = (
+    <div data-slot={label} className="flex min-w-0 items-center gap-1.5 py-0.5">
       <SlotFrame item={item} />
       <div className="min-w-0">
-        <div className="text-[10px] uppercase tracking-wide text-fg-subtle">{label}</div>
+        <div className="text-[9px] uppercase tracking-wide text-fg-subtle">{label}</div>
         {item?.setName ? (
           <Link href={setLink(item.setName)} className="hover:underline">
             {name}
@@ -144,20 +162,27 @@ function GearCell({ slot, setLink }: { slot: Slot; setLink: (name: string) => st
         ) : (
           name
         )}
-        {meta.length > 0 ? <div className="text-xs leading-snug text-fg-muted">{meta.join(" · ")}</div> : null}
+        {meta.length > 0 ? <div className="truncate text-[10px] leading-tight text-fg-muted">{meta.join(" · ")}</div> : null}
       </div>
     </div>
+  );
+
+  if (!item) return body;
+  return (
+    <SetHover className="block min-w-0" name={item.setName} itemName={item.name} detail={detail || undefined}>
+      {body}
+    </SetHover>
   );
 }
 
 function SlotFrame({ item }: { item?: Worn }) {
   return (
     <span
-      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-surface-2 ${
-        item ? `border-2 ${qualityFrame(item.quality)}` : "border border-dashed border-border"
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded bg-surface-2 ${
+        item ? `border ${qualityFrame(item.quality)}` : "border border-dashed border-border"
       }`}
     >
-      {item ? <GameIcon name={item.name} icon={item.icon} size={40} bare /> : null}
+      {item ? <GameIcon name={item.name} icon={item.icon} size={22} bare /> : null}
     </span>
   );
 }
@@ -167,60 +192,45 @@ function WeaponBar({
   pair,
   skills,
   setLink,
+  worn,
 }: {
   title: string;
   pair: { main?: Worn; off?: Worn; rest: Worn[] };
   skills: { name: string; icon?: string | null }[];
   setLink: (name: string) => string;
+  worn: Map<string, number>;
 }) {
   const weapons: Slot[] = [
     { label: "Main hand", item: pair.main },
     { label: "Off hand", item: pair.off },
     ...pair.rest.map((item) => ({ label: item.slot || "Weapon", item })),
   ];
-  const named = skills.filter((skill) => skill.name);
   return (
-    <section className="rounded-lg border border-border bg-surface px-3 py-3 sm:px-4">
-      <h2 className="px-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{title}</h2>
-      <div className="mt-1">
+    <section className="rounded-lg border border-border bg-surface px-2 py-2">
+      <h2 className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">{title}</h2>
+      <div className="mt-0.5">
         {weapons.map((slot, index) => (
-          <GearCell key={`${slot.label}-${index}`} slot={slot} setLink={setLink} />
+          <GearCell key={`${slot.label}-${index}`} slot={slot} setLink={setLink} worn={worn} />
         ))}
       </div>
-      {named.length > 0 ? (
-        <div className="mt-2 border-t border-border px-1 pt-3">
-          <div className="flex flex-wrap items-center gap-1">
-            {Array.from({ length: 6 }, (_, index) => skills[index] ?? null).map((skill, index) => {
-              const ultimate = index === 5;
-              return skill?.name ? (
-                <span
-                  key={`${skill.name}-${index}`}
-                  title={skill.name}
-                  className={ultimate ? "ml-1 rounded-md ring-2 ring-q-legendary/80" : ""}
-                >
-                  <GameIcon name={skill.name} icon={skill.icon || skillIconByName(skill.name)} size={36} />
-                </span>
+      <ol className="mt-1 space-y-0.5 border-t border-border pt-1">
+        {Array.from({ length: 6 }, (_, index) => skills[index] ?? null).map((skill, index) => {
+          const ultimate = index === 5;
+          return (
+            <li key={index} className="flex min-w-0 items-center gap-1.5 text-[11px]">
+              <span className="w-3 shrink-0 tabular-nums text-fg-subtle">{ultimate ? "U" : index + 1}</span>
+              {skill?.name ? (
+                <GameIcon name={skill.name} icon={skill.icon || skillIconByName(skill.name)} size={16} />
               ) : (
-                <span
-                  key={index}
-                  title={ultimate ? "Ultimate" : `Skill ${index + 1}`}
-                  className={`inline-flex h-9 w-9 rounded-md border border-dashed border-border ${ultimate ? "ml-1" : ""}`}
-                />
-              );
-            })}
-          </div>
-          <ol className="mt-2 space-y-0.5">
-            {skills.map((skill, index) =>
-              skill?.name ? (
-                <li key={`${skill.name}-${index}`} className="flex gap-2 text-xs text-fg">
-                  <span className="w-4 shrink-0 tabular-nums text-fg-subtle">{index === 5 ? "U" : index + 1}</span>
-                  <span className="min-w-0">{skill.name}</span>
-                </li>
-              ) : null,
-            )}
-          </ol>
-        </div>
-      ) : null}
+                <span className="inline-flex h-4 w-4 rounded border border-dashed border-border" />
+              )}
+              <span className={`min-w-0 truncate ${skill?.name ? "text-fg" : "text-fg-subtle"} ${ultimate ? "text-q-legendary" : ""}`}>
+                {skill?.name || (ultimate ? "Ultimate" : "Empty")}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }

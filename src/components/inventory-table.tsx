@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Ban, Hand } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
+import { SetHover } from "@/components/set-hover";
 import { SortHeader, useSort } from "@/components/sort-header";
 import { locationLabel, qualityText } from "@/lib/format";
 import { bagSubtypeLabel } from "@/lib/inventory/bag-filters";
@@ -70,6 +71,13 @@ export function InventoryTable({ items, setHrefs }: { items: Item[]; setHrefs: R
                 className="border-b border-border/60 last:border-0 hover:bg-surface-2/50"
               >
                 <td className="px-4 py-2.5">
+                  <SetHover
+                    className="block"
+                    name={it.setName}
+                    setId={it.setId}
+                    itemName={it.name}
+                    detail={[it.trait, it.level ? `CP${it.level}` : null].filter(Boolean).join(" · ") || undefined}
+                  >
                   <div className="flex items-center gap-2">
                     <span className={`font-medium ${qualityText(it.quality)}`}>{it.name}</span>
                     {it.stolen && (
@@ -91,6 +99,7 @@ export function InventoryTable({ items, setHrefs }: { items: Item[]; setHrefs: R
                     </div>
                   ) : null}
                   {it.level && <div className="text-xs text-fg-subtle">CP{it.level}</div>}
+                  </SetHover>
                 </td>
                 <td className="px-3 py-2.5 text-right tabular-nums text-fg-muted">
                   {it.count.toLocaleString("en-US")}

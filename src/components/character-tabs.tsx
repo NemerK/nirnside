@@ -33,8 +33,8 @@ export function CharacterTabs({
   const panels: Record<TabId, ReactNode> = { overview, equipped, setups, targets, scripts, cp: champion };
 
   return (
-    <div>
-      <div role="tablist" aria-label="Character" className="mb-4 flex flex-wrap gap-1 border-b border-border">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div role="tablist" aria-label="Character" className="mb-3 flex shrink-0 flex-wrap gap-1 border-b border-border">
         {TABS.map((item) => {
           const selected = tab === item.id;
           return (
@@ -53,11 +53,18 @@ export function CharacterTabs({
           );
         })}
       </div>
-      {TABS.map((item) => (
-        <div key={item.id} role="tabpanel" hidden={tab !== item.id}>
-          {panels[item.id]}
-        </div>
-      ))}
+      <div className="min-h-0 flex-1">
+        {TABS.map((item) => (
+          <div
+            key={item.id}
+            role="tabpanel"
+            hidden={tab !== item.id}
+            className={item.id === "equipped" ? "h-full min-h-0 overflow-hidden" : "h-full min-h-0 overflow-y-auto"}
+          >
+            {panels[item.id]}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
