@@ -292,12 +292,6 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           <>
             <SkillBook categories={skillBook} lastSeen={c.lastSeen} characterClass={c.class} />
 
-      {c.wardrobe && (c.wardrobe.zones?.length ?? 0) > 0 && (
-        <div className="mt-6">
-          <Wardrobe wardrobe={c.wardrobe} hrefForSet={hrefForSet} characterName={c.name} characterId={c.id} />
-        </div>
-      )}
-
       {archived && (
         <section className="mb-6">
           <SectionTitle>Last-known bags</SectionTitle>
@@ -407,6 +401,9 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
         }
         equipped={
           <CharacterLoadout equipped={c.equipped} attributes={c.attributes} wardrobe={c.wardrobe} />
+        }
+        setups={
+          <Wardrobe wardrobe={c.wardrobe} hrefForSet={hrefForSet} characterName={c.name} characterId={c.id} />
         }
         targets={
           <CharacterGoals

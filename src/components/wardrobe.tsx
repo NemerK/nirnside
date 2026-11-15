@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Check, Copy, Download, Shirt, Sparkles, Star, Utensils } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import { GameIcon } from "@/components/game-icon";
-import { Modal } from "@/components/modal";
 import type { Wardrobe as WardrobeData, WardrobePage, WardrobeSetup, WardrobeZone } from "@/lib/snapshot/schema";
 import { qualityText } from "@/lib/format";
 import { copySetupImage, downloadSetupImage, type SetupImageMeta } from "@/lib/wardrobe/setup-image";
@@ -309,77 +308,64 @@ export function Wardrobe({
   const zones = (wardrobe?.zones ?? []).filter((z) =>
     z.pages.some((p) => p.setups.some((s) => s.name || s.gear.length || s.bars.length)),
   );
-  const [open, setOpen] = useState(false);
   const [zoneTag, setZoneTag] = useState(zones[0]?.tag ?? "");
-  if (!wardrobe || zones.length === 0) return null;
+  if (!wardrobe || zones.length === 0) {
+    return (
+      <p className="text-sm text-fg-muted">
+        No Wizard&apos;s Wardrobe setups for this character. They show up after a logout with that addon installed.
+      </p>
+    );
+  }
   const zone = zones.find((z) => z.tag === zoneTag) ?? zones[0];
   const total = countSetups({ ...wardrobe, zones });
   const character = { id: characterId, name: characterName };
   const scoped = { ...wardrobe, zones };
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg transition hover:border-accent/50 hover:bg-surface-2"
-      >
-        <Sparkles className="h-4 w-4 text-accent" />
-        Wizard&apos;s Wardrobe
-        <span className="text-xs text-fg-subtle">
-          {zones.length} zone{zones.length === 1 ? "" : "s"} · {total} setup{total === 1 ? "" : "s"}
-        </span>
-      </button>
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <Badge tone="muted">
+          <Sparkles className="h-3 w-3" /> Wizard&apos;s Wardrobe
+          {wardrobe.accountWide ? " · account-wide" : ""}
+          <span className="text-fg-subtle">
+            · {zones.length} zone{zones.length === 1 ? "" : "s"} · {total} setup{total === 1 ? "" : "s"}
+          </span>
+        </Badge>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-fg-subtle">Copy an image, or save JSON to share a setup.</span>
+          <SaveButton label="Save all" onSave={() => saveWardrobe("wardrobe", scoped, { character })} />
+        </div>
+      </div>
 
-      {open && (
-        <Modal title="Wizard's Wardrobe" onClose={() => setOpen(false)} maxWidthClass="max-w-4xl">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <Badge tone="muted">
-              <Sparkles className="h-3 w-3" /> From the Wizard&apos;s Wardrobe addon
-              {wardrobe.accountWide ? " · account-wide" : ""}
-            </Badge>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-fg-subtle">Copy an image, or save JSON to share a setup.</span>
-              <SaveButton
-                label="Save all"
-                onSave={() => saveWardrobe("wardrobe", scoped, { character })}
-              />
-            </div>
+      {zones.length > 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1">
+          <div role="tablist" aria-label="Wardrobe zone" className="flex flex-wrap gap-1">
+            {zones.map((z) => (
+              <button
+                key={z.tag}
+                type="button"
+                role="tab"
+                aria-selected={z.tag === zone.tag}
+                onClick={() => setZoneTag(z.tag)}
+                className={`rounded-md px-3 py-1.5 text-sm transition ${
+                  z.tag === zone.tag
+                    ? "bg-accent-soft font-medium text-accent"
+                    : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                }`}
+              >
+                {z.name || z.tag}
+              </button>
+            ))}
           </div>
-
-          {zones.length > 1 && (
-            <div className="mb-3 flex flex-wrap items-center gap-1">
-              <div role="tablist" aria-label="Wardrobe zone" className="flex flex-wrap gap-1">
-                {zones.map((z) => (
-                  <button
-                    key={z.tag}
-                    type="button"
-                    role="tab"
-                    aria-selected={z.tag === zone.tag}
-                    onClick={() => setZoneTag(z.tag)}
-                    className={`rounded-md px-3 py-1.5 text-sm transition ${
-                      z.tag === zone.tag
-                        ? "bg-accent-soft font-medium text-accent"
-                        : "text-fg-muted hover:bg-surface-2 hover:text-fg"
-                    }`}
-                  >
-                    {z.name || z.tag}
-                  </button>
-                ))}
-              </div>
-              <SaveButton
-                label="Save zone"
-                className="ml-auto"
-                onSave={() => saveWardrobe("zone", zone, { character, zone: { tag: zone.tag, name: zone.name } })}
-              />
-            </div>
-          )}
-
-          <div className="max-h-[70vh] overflow-y-auto pr-1">
-            <ZonePanel zone={zone} hrefForSet={hrefForSet} character={character} />
-          </div>
-        </Modal>
+          <SaveButton
+            label="Save zone"
+            className="ml-auto"
+            onSave={() => saveWardrobe("zone", zone, { character, zone: { tag: zone.tag, name: zone.name } })}
+          />
+        </div>
       )}
-    </>
+
+      <ZonePanel zone={zone} hrefForSet={hrefForSet} character={character} />
+    </div>
   );
 }
