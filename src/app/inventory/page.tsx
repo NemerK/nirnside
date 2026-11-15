@@ -10,6 +10,8 @@ import { LookSwitch } from "@/components/look-switch";
 import { AtlasInventoryChrome } from "@/components/atlas/inventory";
 import { Badge, Card, EmptyState, PageFrame, PageHeader, PageScroll, StickyMenu } from "@/components/ui";
 import { formatGold, formatNumber, locationLabel, qualityText } from "@/lib/format";
+import { bagSubtypeLabel, tallyBagFilters } from "@/lib/inventory/bag-filters";
+import { InventoryCategories } from "@/components/inventory-categories";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +30,13 @@ export default async function InventoryPage({
     trait: str(sp.trait),
     owner: str(sp.owner),
   };
+  const bag = str(sp.bag);
+  const sub = str(sp.sub);
 
   let items: ReturnType<typeof getItems> = [];
+  let bagCounts: ReturnType<typeof tallyBagFilters>["counts"] = {};
+  let bagLabels: Record<string, string> = {};
+  let untagged = 0;
   let facets: ReturnType<typeof getItemFacets> = {
     locations: [],
     qualities: [],
@@ -47,6 +54,12 @@ export default async function InventoryPage({
   } | null = null;
   try {
     items = getItems(filters);
+    untagged = items.filter((it) => !it.bagCategory).length;
+    const tallied = tallyBagFilters(items);
+    bagCounts = tallied.counts;
+    bagLabels = tallied.labels;
+    if (bag) items = items.filter((it) => it.bagCategory === bag);
+    if (sub) items = items.filter((it) => it.bagSubtype === sub);
     facets = getItemFacets();
     if (filters.owner) {
       const archived = getArchivedCharacters();
@@ -85,7 +98,12 @@ export default async function InventoryPage({
     <>
       <StickyMenu className="space-y-3">
         <InventoryTabs current={view} />
-        {view === "items" ? <InventoryFilters facets={facets} /> : null}
+        {view === "items" ? (
+          <>
+            <InventoryCategories counts={bagCounts} labels={bagLabels} untagged={untagged} />
+            <InventoryFilters facets={facets} />
+          </>
+        ) : null}
       </StickyMenu>
       {view === "currency" ? (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -101,6 +119,7 @@ export default async function InventoryPage({
     <>
       {view === "items" ? (
         <StickyMenu className="mb-3 space-y-3">
+          <InventoryCategories counts={bagCounts} labels={bagLabels} untagged={untagged} />
           <InventoryFilters facets={facets} />
         </StickyMenu>
       ) : null}
@@ -220,6 +239,13 @@ function ItemsBody({
                             </Badge>
                           )}
                         </div>
+                        {it.bagCategory ? (
+                          <div className="text-xs text-fg-subtle">
+                            {bagSubtypeLabel(it.bagCategory, it.bagSubtype, it.bagSubtypeLabel) ||
+                              it.bagCategoryLabel ||
+                              it.bagCategory}
+                          </div>
+                        ) : null}
                         {it.level && <div className="text-xs text-fg-subtle">CP{it.level}</div>}
                       </td>
                       <td className="px-3 py-2.5 text-right tabular-nums text-fg-muted">

@@ -171,3 +171,18 @@ export function groupPlacedGoals<
   for (const group of ordered) group.sections.sort((a, b) => a.title.localeCompare(b.title));
   return ordered;
 }
+
+/** Within each section, unfinished targets stay above ones already done. */
+export function sortTargetsIncompleteFirst<T extends { row: { mark: { state: string } } }>(
+  groups: GoalGroup<T>[],
+): GoalGroup<T>[] {
+  return groups.map((group) => ({
+    ...group,
+    sections: group.sections.map((section) => ({
+      ...section,
+      items: [...section.items].sort(
+        (a, b) => Number(a.row.mark.state === "done") - Number(b.row.mark.state === "done"),
+      ),
+    })),
+  }));
+}

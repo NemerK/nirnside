@@ -1,5 +1,6 @@
 import { BookMarked } from "lucide-react";
-import { getStickerbook, getStickerbookStats } from "@/lib/db/queries";
+import { getAccount, getStickerbook, getStickerbookStats } from "@/lib/db/queries";
+import { MythicLeads } from "@/components/mythic-leads";
 import { setHref } from "@/lib/db/catalog-queries";
 import { StickerbookGrid } from "@/components/stickerbook-grid";
 import { EmptyState, PageFrame, PageHeader, Stat } from "@/components/ui";
@@ -12,9 +13,11 @@ export const dynamic = "force-dynamic";
 export default function StickerbookPage() {
   let sets: ReturnType<typeof getStickerbook> = [];
   let stats: ReturnType<typeof getStickerbookStats> = { total: 0, collected: 0, sets: 0 };
+  let mythics: NonNullable<ReturnType<typeof getAccount>>["mythics"] = [];
   try {
     sets = getStickerbook();
     stats = getStickerbookStats();
+    mythics = getAccount()?.mythics ?? [];
   } catch {
     // leave defaults
   }
@@ -22,6 +25,8 @@ export default function StickerbookPage() {
   const pct = stats.total ? Math.round((stats.collected / stats.total) * 100) : 0;
   const completeSets = sets.filter((s) => s.total > 0 && s.collected === s.total).length;
   const newPieces = sets.reduce((n, s) => n + s.newCount, 0);
+
+  const mythicBlock = <MythicLeads mythics={mythics ?? []} />;
 
   const body =
     sets.length === 0 ? (
@@ -55,6 +60,7 @@ export default function StickerbookPage() {
             title="Stickerbook"
             subtitle="Your item set collection — what you've reconstructed and what's still missing. New pieces get a gold ! until you hover them."
           />
+          {mythicBlock}
           {body}
         </PageFrame>
       }
@@ -64,6 +70,7 @@ export default function StickerbookPage() {
           subtitle="Set piece reconstruction — collected vs missing, as the game tracks it."
         >
           <AtlasCollectionsLink current="sets" />
+          {mythicBlock}
           {body}
         </AtlasSection>
       }

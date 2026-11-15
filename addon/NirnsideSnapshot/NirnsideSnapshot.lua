@@ -170,6 +170,193 @@ local BAGS = {
   { bag = BAG_VIRTUAL,         location = "craftBag",       accountWide = true  },
 }
 
+-- Backpack tabs, same buckets and order as esoui inventory.lua
+-- (BACKPACK_FILTER_KEYS / BACKPACK_SEARCH_FILTER_KEYS). Matching goes through
+-- ZO_ItemFilterUtils so a new item type lands in the tab the game uses.
+-- If that helper is missing, the fields stay empty — we do not invent a type.
+local BAG_FILTERS = {
+  {
+    id = "weapons",
+    cat = "ITEM_TYPE_DISPLAY_CATEGORY_WEAPONS",
+    any = "EQUIPMENT_FILTER_TYPE_NONE",
+    subs = {
+      { id = "one-handed", key = "EQUIPMENT_FILTER_TYPE_ONE_HANDED" },
+      { id = "two-handed", key = "EQUIPMENT_FILTER_TYPE_TWO_HANDED" },
+      { id = "bow", key = "EQUIPMENT_FILTER_TYPE_BOW" },
+      { id = "destruction-staff", key = "EQUIPMENT_FILTER_TYPE_DESTRO_STAFF" },
+      { id = "restoration-staff", key = "EQUIPMENT_FILTER_TYPE_RESTO_STAFF" },
+    },
+  },
+  {
+    id = "apparel",
+    cat = "ITEM_TYPE_DISPLAY_CATEGORY_ARMOR",
+    any = "EQUIPMENT_FILTER_TYPE_NONE",
+    subs = {
+      { id = "light", key = "EQUIPMENT_FILTER_TYPE_LIGHT" },
+      { id = "medium", key = "EQUIPMENT_FILTER_TYPE_MEDIUM" },
+      { id = "heavy", key = "EQUIPMENT_FILTER_TYPE_HEAVY" },
+      { id = "shield", key = "EQUIPMENT_FILTER_TYPE_SHIELD" },
+    },
+  },
+  {
+    id = "jewelry",
+    cat = "ITEM_TYPE_DISPLAY_CATEGORY_JEWELRY",
+    any = "EQUIPMENT_FILTER_TYPE_NONE",
+    subs = {
+      { id = "neck", key = "EQUIPMENT_FILTER_TYPE_NECK" },
+      { id = "ring", key = "EQUIPMENT_FILTER_TYPE_RING" },
+    },
+  },
+  {
+    id = "consumables",
+    cat = "ITEM_TYPE_DISPLAY_CATEGORY_CONSUMABLE",
+    any = "ITEM_TYPE_DISPLAY_CATEGORY_ALL",
+    subs = {
+      { id = "food", key = "ITEM_TYPE_DISPLAY_CATEGORY_FOOD" },
+      { id = "drink", key = "ITEM_TYPE_DISPLAY_CATEGORY_DRINK" },
+      { id = "recipe", key = "ITEM_TYPE_DISPLAY_CATEGORY_RECIPE" },
+      { id = "potion", key = "ITEM_TYPE_DISPLAY_CATEGORY_POTION" },
+      { id = "poison", key = "ITEM_TYPE_DISPLAY_CATEGORY_POISON" },
+      { id = "style-motif", key = "ITEM_TYPE_DISPLAY_CATEGORY_STYLE_MOTIF" },
+      { id = "master-writ", key = "ITEM_TYPE_DISPLAY_CATEGORY_MASTER_WRIT" },
+      { id = "container", key = "ITEM_TYPE_DISPLAY_CATEGORY_CONTAINER" },
+      { id = "repair", key = "ITEM_TYPE_DISPLAY_CATEGORY_REPAIR_ITEM" },
+      { id = "crown", key = "ITEM_TYPE_DISPLAY_CATEGORY_CROWN_ITEM" },
+      { id = "miscellaneous", key = "ITEM_TYPE_DISPLAY_CATEGORY_MISCELLANEOUS" },
+    },
+  },
+  {
+    id = "materials",
+    cat = "ITEM_TYPE_DISPLAY_CATEGORY_CRAFTING",
+    any = "ITEM_TYPE_DISPLAY_CATEGORY_ALL",
+    subs = {
+      { id = "blacksmithing", key = "ITEM_TYPE_DISPLAY_CATEGORY_BLACKSMITHING" },
+      { id = "clothing", key = "ITEM_TYPE_DISPLAY_CATEGORY_CLOTHING" },
+      { id = "woodworking", key = "ITEM_TYPE_DISPLAY_CATEGORY_WOODWORKING" },
+      { id = "jewelry-crafting", key = "ITEM_TYPE_DISPLAY_CATEGORY_JEWELRYCRAFTING" },
+      { id = "alchemy", key = "ITEM_TYPE_DISPLAY_CATEGORY_ALCHEMY" },
+      { id = "enchanting", key = "ITEM_TYPE_DISPLAY_CATEGORY_ENCHANTING" },
+      { id = "provisioning", key = "ITEM_TYPE_DISPLAY_CATEGORY_PROVISIONING" },
+      { id = "style-material", key = "ITEM_TYPE_DISPLAY_CATEGORY_STYLE_MATERIAL" },
+      { id = "trait", key = "ITEM_TYPE_DISPLAY_CATEGORY_TRAIT_ITEM" },
+      { id = "furnishing-material", key = "ITEM_TYPE_DISPLAY_CATEGORY_FURNISHING_MATERIAL" },
+    },
+  },
+  {
+    id = "furnishings",
+    cat = "ITEM_TYPE_DISPLAY_CATEGORY_FURNISHING",
+    any = "SPECIALIZED_ITEMTYPE_NONE",
+    subs = {
+      { id = "crafting-station", key = "SPECIALIZED_ITEMTYPE_FURNISHING_CRAFTING_STATION" },
+      { id = "target-dummy", key = "SPECIALIZED_ITEMTYPE_FURNISHING_TARGET_DUMMY" },
+      { id = "lighting", key = "SPECIALIZED_ITEMTYPE_FURNISHING_LIGHT" },
+      { id = "seating", key = "SPECIALIZED_ITEMTYPE_FURNISHING_SEATING" },
+      { id = "ornamental", key = "SPECIALIZED_ITEMTYPE_FURNISHING_ORNAMENTAL" },
+    },
+  },
+  {
+    id = "companion",
+    cat = "ITEM_TYPE_DISPLAY_CATEGORY_COMPANION",
+    any = "ITEM_TYPE_DISPLAY_CATEGORY_ALL",
+    subs = {
+      { id = "weapons", key = "ITEM_TYPE_DISPLAY_CATEGORY_WEAPONS" },
+      { id = "apparel", key = "ITEM_TYPE_DISPLAY_CATEGORY_ARMOR" },
+      { id = "jewelry", key = "ITEM_TYPE_DISPLAY_CATEGORY_JEWELRY" },
+    },
+  },
+  {
+    id = "miscellaneous",
+    cat = "ITEM_TYPE_DISPLAY_CATEGORY_MISCELLANEOUS",
+    any = "ITEM_TYPE_DISPLAY_CATEGORY_ALL",
+    subs = {
+      { id = "appearance", key = "ITEM_TYPE_DISPLAY_CATEGORY_APPEARANCE" },
+      { id = "glyph", key = "ITEM_TYPE_DISPLAY_CATEGORY_GLYPH" },
+      { id = "soul-gem", key = "ITEM_TYPE_DISPLAY_CATEGORY_SOUL_GEM" },
+      { id = "siege", key = "ITEM_TYPE_DISPLAY_CATEGORY_SIEGE" },
+      { id = "tool", key = "ITEM_TYPE_DISPLAY_CATEGORY_TOOL" },
+      { id = "trophy", key = "ITEM_TYPE_DISPLAY_CATEGORY_TROPHY" },
+      { id = "lure", key = "ITEM_TYPE_DISPLAY_CATEGORY_LURE" },
+      { id = "trash", key = "ITEM_TYPE_DISPLAY_CATEGORY_TRASH" },
+      { id = "miscellaneous", key = "ITEM_TYPE_DISPLAY_CATEGORY_MISCELLANEOUS" },
+    },
+  },
+}
+
+local function filterString(info)
+  if type(info) == "table" and type(info.filterString) == "string" and info.filterString ~= "" then
+    return info.filterString
+  end
+  return nil
+end
+
+local function categoryLabel(catConst)
+  if catConst == nil or type(ZO_ItemFilterUtils) ~= "table" then return nil end
+  if type(ZO_ItemFilterUtils.GetItemTypeDisplayCategoryFilterDisplayInfo) ~= "function" then return nil end
+  return filterString(safe(function()
+    return ZO_ItemFilterUtils.GetItemTypeDisplayCategoryFilterDisplayInfo(catConst)
+  end, nil))
+end
+
+local function subcategoryLabel(catConst, subConst)
+  if catConst == nil or subConst == nil or type(ZO_ItemFilterUtils) ~= "table" then return nil end
+  if type(ZO_ItemFilterUtils.GetSearchFilterData) ~= "function" then return nil end
+  return filterString(safe(function()
+    return ZO_ItemFilterUtils.GetSearchFilterData(catConst, subConst)
+  end, nil))
+end
+
+local function slotMatches(slot, catConst, subConst)
+  if catConst == nil or subConst == nil then return false end
+  if type(ZO_ItemFilterUtils) ~= "table" then return false end
+  if type(ZO_ItemFilterUtils.IsSlotInItemTypeDisplayCategoryAndSubcategory) ~= "function" then return false end
+  return safe(function()
+    return ZO_ItemFilterUtils.IsSlotInItemTypeDisplayCategoryAndSubcategory(slot, catConst, subConst) and true or false
+  end, false)
+end
+
+local function classifyBagItem(bagId, slotIndex)
+  if type(ZO_ItemFilterUtils) ~= "table" then return nil end
+  local slot = {
+    bagId = bagId,
+    slotIndex = slotIndex,
+    actorCategory = safe(function() return GetItemActorCategory(bagId, slotIndex) end, nil),
+  }
+  if safe(function() return IsItemJunk(bagId, slotIndex) end, false) then
+    local junk = _G["ITEM_TYPE_DISPLAY_CATEGORY_JUNK"]
+    return {
+      bagCategory = "junk",
+      bagCategoryLabel = categoryLabel(junk),
+    }
+  end
+  local companion = slot.actorCategory ~= nil and slot.actorCategory == GAMEPLAY_ACTOR_CATEGORY_COMPANION
+  for _, entry in ipairs(BAG_FILTERS) do
+    if entry.id == "companion" and not companion then
+      -- player gear is never the companion tab
+    elseif entry.id ~= "companion" and companion then
+      -- companion gear stays on the companion tab, as in the inventory window
+    else
+      local catConst = _G[entry.cat]
+      local anyConst = _G[entry.any]
+      if slotMatches(slot, catConst, anyConst) then
+        local found = {
+          bagCategory = entry.id,
+          bagCategoryLabel = categoryLabel(catConst),
+        }
+        for _, sub in ipairs(entry.subs) do
+          local subConst = _G[sub.key]
+          if slotMatches(slot, catConst, subConst) then
+            found.bagSubtype = sub.id
+            found.bagSubtypeLabel = subcategoryLabel(catConst, subConst)
+            break
+          end
+        end
+        return found
+      end
+    end
+  end
+  return nil
+end
+
 local function readItem(bagId, slotIndex, location, owner, ownerId)
   local link = safe(function() return GetItemLink(bagId, slotIndex) end, "")
   if not link or link == "" then return nil end
@@ -195,6 +382,13 @@ local function readItem(bagId, slotIndex, location, owner, ownerId)
     stolen    = safe(function() return IsItemLinkStolen(link) end, false),
     obtainable = true,
   }
+  local bag = safe(function() return classifyBagItem(bagId, slotIndex) end, nil)
+  if type(bag) == "table" then
+    item.bagCategory = bag.bagCategory
+    item.bagSubtype = bag.bagSubtype
+    item.bagCategoryLabel = bag.bagCategoryLabel
+    item.bagSubtypeLabel = bag.bagSubtypeLabel
+  end
   if item.level == 0 then item.level = nil end
   if item.setName then item.setName = zo_strformat("<<1>>", item.setName) end
   return item
@@ -3217,6 +3411,74 @@ local function totalLiveTelVar()
   return total
 end
 
+-- Mythic antiquity sets. Each mythic is a set of leads (five, in the live
+-- game). Names, recovered state, and the scrying zone come from the client
+-- API, so a new mythic appears after the patch and the next logout.
+-- The drop-site sentence the codex never shows is not invented here.
+local function gatherMythics()
+  if type(GetNextAntiquityId) ~= "function" or type(GetAntiquitySetId) ~= "function" then
+    return {}
+  end
+  local mythicQuality = ITEM_DISPLAY_QUALITY_MYTHIC_OVERRIDE
+  if type(mythicQuality) ~= "number" then return {} end
+
+  local sets = {}
+  local id = GetNextAntiquityId()
+  local guard = 0
+  while id and guard < 20000 do
+    guard = guard + 1
+    local current = id
+    id = GetNextAntiquityId(id)
+    safe(function()
+    local setId = GetAntiquitySetId(current)
+    if setId and setId ~= 0 and GetAntiquitySetQuality(setId) == mythicQuality then
+      local set = sets[setId]
+      if not set then
+        set = {
+          setId = setId,
+          name = zo_strformat("<<1>>", GetAntiquitySetName(setId) or ""),
+          icon = normIcon(GetAntiquitySetIcon(setId)),
+          collected = false,
+          leads = {},
+        }
+        sets[setId] = set
+      end
+      local recovered = (GetNumAntiquitiesRecovered(current) or 0) > 0
+      local hasLead = DoesAntiquityHaveLead(current) and true or false
+      local zone = nil
+      if hasLead then
+        local zoneId = GetAntiquityZoneId(current)
+        if zoneId and zoneId ~= 0 then
+          zone = zo_strformat("<<1>>", GetZoneNameById(zoneId) or "")
+          if zone == "" then zone = nil end
+        end
+      end
+      set.leads[#set.leads + 1] = {
+        antiquityId = current,
+        name = zo_strformat("<<1>>", GetAntiquityName(current) or ""),
+        icon = normIcon(GetAntiquityIcon(current)),
+        recovered = recovered,
+        hasLead = hasLead,
+        zone = zone,
+      }
+    end
+    end)
+  end
+
+  local out = {}
+  for _, set in pairs(sets) do
+    local all = #set.leads > 0
+    for _, lead in ipairs(set.leads) do
+      if not lead.recovered then all = false end
+    end
+    set.collected = all
+    table.sort(set.leads, function(a, b) return (a.name or "") < (b.name or "") end)
+    out[#out + 1] = set
+  end
+  table.sort(out, function(a, b) return (a.name or "") < (b.name or "") end)
+  return out
+end
+
 local function takeSnapshot(reason)
   if not sv then return end
   if IsUnitInCombat("player") then
@@ -3257,6 +3519,7 @@ local function takeSnapshot(reason)
   sv.achievements = achNames
   sv.completedAchievementIds = gatherCompletedAchievementIds(charId, achRecords)
   sv.houses = gatherHouses()
+  sv.mythics = safe(function() return gatherMythics() end, {})
   sv.outfitStyles = safe(function() return gatherOutfitStyles() end, {})
 
   upsertCharacter(gatherCharacter())
@@ -3313,6 +3576,7 @@ local function onAddOnLoaded(_, name)
     completedAchievementIds = {},
     characterCompletedIds = {},
     houses = {},
+    mythics = {},
     outfitStyles = {},
     dailyFlags = {},
   })

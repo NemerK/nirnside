@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import type { GoalCardView, GoalRowItem } from "@/lib/goals/views";
 import { TIERS, TIER_LABEL, skillLineTitle, type SkillLineChoice } from "@/lib/goals/types";
-import { groupPlacedGoals, type GoalCatalog } from "@/lib/planner/goal-groups";
+import { groupPlacedGoals, sortTargetsIncompleteFirst, type GoalCatalog } from "@/lib/planner/goal-groups";
 import { Badge, Card, SectionTitle } from "./ui";
 import { AddGoalButton } from "./goal-editor";
 import { GoalCard } from "./goal-card";
@@ -173,10 +173,12 @@ export function CharacterGoals({
         </Card>
       ) : (
         <DenseTargetGroups
-          groups={groupPlacedGoals(
-            rows.map((row) => ({ ...row.goal, row })),
-            catalog ?? { lines: [], abilities: [] },
-            characterClass,
+          groups={sortTargetsIncompleteFirst(
+            groupPlacedGoals(
+              rows.map((row) => ({ ...row.goal, row })),
+              catalog ?? { lines: [], abilities: [] },
+              characterClass,
+            ),
           )}
           getKey={(item) => item.id}
           renderItem={(item) => (

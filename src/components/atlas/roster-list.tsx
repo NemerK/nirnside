@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { GripVertical } from "lucide-react";
+import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { classIcon } from "@/lib/classes";
 import type { CharacterWorkspaceCard, ProgressTally } from "@/lib/characters/workspace";
 import { GameIcon } from "../game-icon";
@@ -39,10 +39,40 @@ function Bar({ tally, unscanned }: { tally: ProgressTally; unscanned?: boolean }
  * Reorderable roster. The grip is the only drag handle so the name stays a link.
  * Order is saved locally and survives the next snapshot.
  */
+type SortKey = "class" | "name" | "role" | "targets" | "research";
+
+function sortValue(card: CharacterWorkspaceCard, key: SortKey): string | number {
+  if (key === "class") return card.className;
+  if (key === "name") return card.name;
+  if (key === "role") return card.roles.map((role) => role.name).join(", ");
+  if (key === "targets") return card.mandatoryTargets.pct;
+  return card.research.pct;
+}
+
 export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
   const [rows, setRows] = useState(cards);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
+
+  function toggleSort(key: SortKey) {
+    setSort((current) => {
+      if (!current || current.key !== key) return { key, dir: "asc" };
+      if (current.dir === "asc") return { key, dir: "desc" };
+      return null;
+    });
+  }
+
+  const shown = useMemo(() => {
+    if (!sort) return rows;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = sortValue(a, sort.key);
+      const bv = sortValue(b, sort.key);
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+  }, [rows, sort]);
 
   async function persist(next: CharacterWorkspaceCard[]) {
     const previous = rows;
@@ -75,14 +105,14 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
         className={`hidden items-center border-b border-border px-2 py-2 text-[11px] font-medium text-fg-subtle sm:grid ${columns}`}
       >
         <span aria-hidden="true" />
-        <span>Class</span>
-        <span>Name</span>
-        <span>Role</span>
-        <span>Targets</span>
-        <span>Research</span>
+        <SortHeader label="Class" sortKey="class" sort={sort} onSort={toggleSort} />
+        <SortHeader label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
+        <SortHeader label="Role" sortKey="role" sort={sort} onSort={toggleSort} />
+        <SortHeader label="Targets" sortKey="targets" sort={sort} onSort={toggleSort} />
+        <SortHeader label="Research" sortKey="research" sort={sort} onSort={toggleSort} />
       </div>
       <ul>
-        {rows.map((card) => (
+        {shown.map((card) => (
           <li
             key={card.id}
             onDragOver={(event) => {
@@ -101,9 +131,10 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
           >
             <button
               type="button"
-              draggable
+              draggable={!sort}
               aria-label={`Drag ${card.name}`}
-              title="Drag to reorder"
+              title={sort ? "Clear the column sort to drag" : "Drag to reorder"}
+              disabled={!!sort}
               onDragStart={(event) => {
                 setDragId(card.id);
                 event.dataTransfer.effectAllowed = "move";
@@ -113,7 +144,9 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
                 setDragId(null);
                 setOverId(null);
               }}
-              className="flex h-8 w-8 cursor-grab items-center justify-center rounded text-fg-subtle hover:bg-surface-2 hover:text-fg active:cursor-grabbing"
+              className={`flex h-8 w-8 items-center justify-center rounded text-fg-subtle hover:bg-surface-2 hover:text-fg ${
+                sort ? "cursor-not-allowed opacity-40" : "cursor-grab active:cursor-grabbing"
+              }`}
             >
               <GripVertical className="h-4 w-4" />
             </button>
@@ -146,5 +179,33 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  sortKey,
+  sort,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: { key: SortKey; dir: "asc" | "desc" } | null;
+  onSort: (key: SortKey) => void;
+}) {
+  const active = sort?.key === sortKey;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      className={`inline-flex items-center gap-1 text-left uppercase tracking-wider ${
+        active ? "text-fg" : "text-fg-subtle hover:text-fg"
+      }`}
+    >
+      {label}
+      {active ? (
+        sort.dir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+      ) : null}
+    </button>
   );
 }
