@@ -179,6 +179,11 @@ export const ChampionStar = z.object({
   name: z.string(),
   points: z.number().int().default(0),
   slotted: z.boolean().default(false),
+  /** 1–4, the circle on that discipline's bar. Older snapshots omit it. */
+  slot: z.number().int().min(1).max(4).optional().catch(undefined),
+  /** Slottable, passive, or a constellation root. Older snapshots omit it. */
+  kind: z.enum(["slottable", "passive", "cluster"]).optional().catch(undefined),
+  icon: z.string().optional(),
 });
 
 export const ChampionDiscipline = z.object({

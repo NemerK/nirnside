@@ -946,9 +946,56 @@ local function gatherSkills(masteriesOut, classMasteryOut, playerClass)
   return lines
 end
 
+-- The champion bar is its own hotbar. There is no IsChampionSkillSlotted
+-- global, so asking for it stored every star as unslotted and the four
+-- circles stayed empty. Read the bar the same way the champion UI does.
+local function championBarSlots()
+  local byId = {}
+  if type(GetAssignableChampionBarStartAndEndSlots) ~= "function" then return byId end
+  if type(GetSlotBoundId) ~= "function" or type(GetSlotType) ~= "function" then return byId end
+  local category = HOTBAR_CATEGORY_CHAMPION
+  local skillType = ACTION_TYPE_CHAMPION_SKILL
+  if not category or not skillType then return byId end
+  local startSlot, endSlot = GetAssignableChampionBarStartAndEndSlots()
+  if type(startSlot) ~= "number" or type(endSlot) ~= "number" then return byId end
+  local knowDiscipline = type(GetRequiredChampionDisciplineIdForSlot) == "function"
+  local position = {}
+  for slot = startSlot, endSlot do
+    local pos = nil
+    if knowDiscipline then
+      local discId = GetRequiredChampionDisciplineIdForSlot(slot, category)
+      local key = discId or 0
+      pos = (position[key] or 0) + 1
+      position[key] = pos
+      if pos > 4 then pos = nil end
+    end
+    if GetSlotType(slot, category) == skillType then
+      local id = GetSlotBoundId(slot, category)
+      if type(id) == "number" and id ~= 0 then
+        byId[id] = pos or true
+      end
+    end
+  end
+  return byId
+end
+
+local function championKind(skillId)
+  if type(IsChampionSkillClusterRoot) == "function" and IsChampionSkillClusterRoot(skillId) then
+    return "cluster"
+  end
+  if type(CanChampionSkillTypeBeSlotted) ~= "function" or type(GetChampionSkillType) ~= "function" then
+    return nil
+  end
+  if CanChampionSkillTypeBeSlotted(GetChampionSkillType(skillId)) then
+    return "slottable"
+  end
+  return "passive"
+end
+
 local function gatherChampion()
   local disciplines = {}
   safe(function()
+    local slotted = safe(championBarSlots, {})
     local numDisc = GetNumChampionDisciplines()
     for d = 1, numDisc do
       local discId = GetChampionDisciplineId(d)
@@ -958,12 +1005,21 @@ local function gatherChampion()
       for s = 1, numSkills do
         local skillId = GetChampionSkillId(discId, s)
         local spent = GetNumPointsSpentOnChampionSkill(skillId) or 0
-        if spent > 0 then
-          stars[#stars + 1] = {
+        local slot = slotted[skillId]
+        if spent > 0 or slot ~= nil then
+          local star = {
             name = zo_strformat("<<1>>", GetChampionSkillName(skillId)),
             points = spent,
-            slotted = safe(function() return IsChampionSkillSlotted and IsChampionSkillSlotted(skillId) or false end, false),
+            slotted = slot ~= nil,
           }
+          if type(slot) == "number" then star.slot = slot end
+          local kind = championKind(skillId)
+          if kind then star.kind = kind end
+          if type(GetChampionSkillIcon) == "function" then
+            local icon = normIcon(GetChampionSkillIcon(skillId))
+            if icon then star.icon = icon end
+          end
+          stars[#stars + 1] = star
         end
       end
       if #stars > 0 then
