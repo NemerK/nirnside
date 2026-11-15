@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { inferSetName, lookupSetBrief, type SetBrief, type SetQuery } from "@/lib/catalog/set-brief";
+import { lookupSetBrief, type SetBrief, type SetQuery } from "@/lib/catalog/set-brief";
 import { SourceBadge, UnverifiedNote } from "./source-badge";
 
 type TipRequest = SetQuery & {
@@ -94,7 +94,7 @@ function SetTipLayer({
 
   if (!tip || !box || typeof document === "undefined") return null;
   const brief = lookupSetBrief(sets, tip.request);
-  const setLabel = brief?.name ?? (tip.request.name?.trim() || inferSetName(tip.request.itemName));
+  const setLabel = brief?.name ?? (tip.request.name?.trim() || null);
   return createPortal(
     <div
       role="tooltip"
@@ -114,7 +114,10 @@ function SetTipLayer({
         {brief ? (
           <>
             <p className="mt-0.5 text-[11px] text-fg-subtle">
-              {brief.category} · up to {brief.maxEquip} {brief.maxEquip === 1 ? "piece" : "pieces"}
+              {brief.category}
+              {brief.maxEquip > 0
+                ? ` · up to ${brief.maxEquip} ${brief.maxEquip === 1 ? "piece" : "pieces"}`
+                : ""}
             </p>
             {brief.bonuses.length === 0 ? (
               <p className="mt-2 text-xs text-fg-muted">Bonuses pending an in-game scan.</p>

@@ -201,6 +201,8 @@ export const EquippedItem = z.object({
   icon: z.string().optional(),
   quality: ItemQuality.optional(),
   setName: z.string().nullable().default(null),
+  /** Game set id, once the snapshot kept it. Older files omit it. */
+  setId: z.number().int().nonnegative().nullable().optional(),
   trait: z.string().nullable().default(null),
   enchant: z.string().nullable().default(null),
   scribing: z.array(z.string()).default([]),
@@ -421,6 +423,8 @@ export const WardrobeGearPiece = z.object({
   name: z.string().default(""),
   icon: z.string().nullable().optional(),
   setName: z.string().nullable().default(null),
+  /** Game set id, once the snapshot kept it. Older files omit it. */
+  setId: z.number().int().nonnegative().nullable().optional(),
   trait: z.string().nullable().default(null),
   quality: ItemQuality.nullable().optional(),
   mythic: z.boolean().default(false),
@@ -606,6 +610,15 @@ export const StickerbookSet = z.object({
   categoryOrder: z.number().default(0),
   subOrder: z.number().default(0),
   pieces: StickerbookPieces.default([]),
+  /**
+   * Bonus lines read from a collection piece link. Missing on snapshots taken
+   * before the addon recorded them — never invented here.
+   */
+  bonuses: z
+    .array(z.object({ pieces: z.number().int().nonnegative(), text: z.string() }))
+    .optional(),
+  /** Max pieces equipped, from GetItemLinkSetInfo. Missing until a snapshot records it. */
+  maxEquip: z.number().int().positive().optional(),
 });
 export type StickerbookSet = z.infer<typeof StickerbookSet>;
 

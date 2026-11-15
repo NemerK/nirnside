@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { inferSetName, lookupSetBrief, type SetBrief } from "./set-brief";
+import {
+  briefsForHover,
+  indexKnownSets,
+  inferSetName,
+  lookupSetBrief,
+  resolveItemSet,
+  type AccountSetFacts,
+  type SetBrief,
+} from "./set-brief";
 
 const sets: SetBrief[] = [
   {
@@ -79,5 +87,122 @@ describe("lookupSetBrief", () => {
     );
     assert.equal(lookupSetBrief(sets, { itemName: "Ring of the Pale Order" })?.id, "set-pale-order");
     assert.equal(lookupSetBrief(sets, { itemName: "Aetheric Lancer Bracers" }), null);
+  });
+});
+
+function manySets(extra: { name: string; setId?: number }[]): ReturnType<typeof indexKnownSets> {
+  const filler = Array.from({ length: 45 }, (_, index) => ({
+    name: `Filler Set ${index + 1}`,
+    setId: 1000 + index,
+  }));
+  return indexKnownSets([...extra, ...filler]);
+}
+
+describe("resolveItemSet", () => {
+  const known = manySets([
+    { name: "Aetheric Lancer", setId: 11 },
+    { name: "Sul-Xan's Torment", setId: 660 },
+    { name: "Slimecraw", setId: 154 },
+    { name: "Velothi Ur-Mage's Amulet", setId: 20 },
+    { name: "Ring of the Pale Order", setId: 574 },
+    { name: "Oakensoul Ring", setId: 21 },
+    { name: "Thrassian Stranglers", setId: 22 },
+    { name: "Spaulder of Ruin", setId: 583 },
+    { name: "Harpooner's Wading Kilt", setId: 23 },
+    { name: "Mother's Sorrow", setId: 209 },
+    { name: "Arms of Relequen", setId: 24 },
+    { name: "Order's Wrath", setId: 25 },
+    { name: "Selene", setId: 26 },
+    { name: "Night Mother", setId: 27 },
+    { name: "Night Mother's Gaze", setId: 28 },
+    { name: "Oakensoul", setId: 29 },
+  ]);
+
+  it("associates every set-name shape, including names that are the whole item", () => {
+    assert.equal(resolveItemSet({ name: "Aetheric Lancer Bracers" }, known).name, "Aetheric Lancer");
+    assert.equal(resolveItemSet({ name: "Aetheric Lancer Jack" }, known).setId, 11);
+    assert.equal(resolveItemSet({ name: "Aetheric Lancer Guards" }, known).name, "Aetheric Lancer");
+    assert.equal(resolveItemSet({ name: "Order's Wrath Girdle" }, known).name, "Order's Wrath");
+    assert.equal(resolveItemSet({ name: "Selene's Mask" }, known).name, "Selene");
+    assert.equal(resolveItemSet({ name: "Slimecraw Epaulets" }, known).name, "Slimecraw");
+    assert.equal(resolveItemSet({ name: "Slimecraw's Helm" }, known).setId, 154);
+    assert.equal(resolveItemSet({ name: "Perfected Helmet of Sul-Xan's Torment" }, known).name, "Sul-Xan's Torment");
+    assert.equal(resolveItemSet({ name: "Perfected Dagger of Sul-Xan's Torment" }, known).setId, 660);
+    assert.equal(resolveItemSet({ name: "Perfected Ring of Sul-Xan's Torment" }, known).name, "Sul-Xan's Torment");
+    assert.equal(resolveItemSet({ name: "Mother's Sorrow Robe" }, known).name, "Mother's Sorrow");
+    assert.equal(resolveItemSet({ name: "Inferno Staff of Mother's Sorrow" }, known).setId, 209);
+    assert.equal(resolveItemSet({ name: "Necklace of Arms of Relequen" }, known).name, "Arms of Relequen");
+    assert.equal(resolveItemSet({ name: "Ring of the Pale Order" }, known).name, "Ring of the Pale Order");
+    assert.equal(resolveItemSet({ name: "Oakensoul Ring" }, known).name, "Oakensoul Ring");
+    assert.equal(resolveItemSet({ name: "Thrassian Stranglers" }, known).setId, 22);
+    assert.equal(resolveItemSet({ name: "Spaulder of Ruin" }, known).name, "Spaulder of Ruin");
+    assert.equal(resolveItemSet({ name: "Harpooner's Wading Kilt" }, known).name, "Harpooner's Wading Kilt");
+    assert.equal(resolveItemSet({ name: "Velothi Ur-Mage's Amulet" }, known).setId, 20);
+    assert.equal(resolveItemSet({ name: "Night Mother's Gaze Helmet" }, known).name, "Night Mother's Gaze");
+    assert.equal(
+      resolveItemSet({ name: "Perfected Helmet of Sul-Xan\u2019s Torment" }, known).name,
+      "Sul-Xan's Torment",
+    );
+  });
+
+  it("does not call a material, a food, or a kit a set once the stickerbook is known", () => {
+    assert.equal(resolveItemSet({ name: "Rubedite Dagger" }, known).name, null);
+    assert.equal(resolveItemSet({ name: "Crown Repair Kit" }, known).name, null);
+    assert.equal(resolveItemSet({ name: "Bewitched Sugar Skulls" }, known).name, null);
+  });
+
+  it("keeps a stored set name and still guesses when almost no sets are known", () => {
+    assert.equal(
+      resolveItemSet({ name: "Aetheric Lancer Bracers", setName: "Order's Wrath" }, known).name,
+      "Order's Wrath",
+    );
+    const tiny = indexKnownSets([{ name: "Coral Riptide", setId: 693 }]);
+    assert.equal(resolveItemSet({ name: "Aetheric Lancer Bracers" }, tiny).name, "Aetheric Lancer");
+    assert.equal(resolveItemSet({ name: "Crown Repair Kit" }, tiny).name, null);
+  });
+});
+
+describe("briefsForHover", () => {
+  it("adds every account set and lets in-game lines replace reference text", () => {
+    const account: AccountSetFacts[] = [
+      {
+        name: "Aetheric Lancer",
+        setId: 11,
+        category: "Dungeons",
+        maxEquip: 5,
+        bonuses: [{ pieces: 2, text: "Adds Critical Chance." }],
+      },
+      {
+        name: "Slimecraw",
+        setId: 154,
+        category: "Dungeons",
+        maxEquip: 2,
+        bonuses: [{ pieces: 1, text: "Adds Critical Chance from the game." }],
+      },
+      {
+        name: "Sul-Xan's Torment",
+        setId: 660,
+        category: "Trials",
+        maxEquip: 5,
+        bonuses: [],
+      },
+    ];
+    const reference: SetBrief[] = sets.map((set) =>
+      set.id === "set-sul-xans-torment"
+        ? { ...set, source: "reference", bonuses: [{ pieces: 5, text: "Reference line." }] }
+        : set,
+    );
+    const briefs = briefsForHover(reference, account);
+    const aetheric = briefs.find((set) => set.name === "Aetheric Lancer");
+    assert.equal(aetheric?.source, "ingame");
+    assert.equal(aetheric?.bonuses[0]?.text, "Adds Critical Chance.");
+    assert.equal(aetheric?.category, "Dungeons");
+    const slimecraw = briefs.filter((set) => set.setId === 154);
+    assert.equal(slimecraw.length, 1);
+    assert.equal(slimecraw[0]?.bonuses[0]?.text, "Adds Critical Chance from the game.");
+    assert.equal(slimecraw[0]?.source, "ingame");
+    const sul = briefs.find((set) => set.id === "set-sul-xans-torment");
+    assert.equal(sul?.bonuses[0]?.text, "Reference line.");
+    assert.equal(sul?.source, "reference");
   });
 });

@@ -20,10 +20,52 @@
 local ADDON_NAME = "NirnsideCatalog"
 local sv
 
+local function packReturns(...)
+  return { n = select("#", ...), ... }
+end
+
+-- Keep every return. Set info and bonus lines are later returns; a single
+-- `local ok, result = pcall(fn)` would drop them.
 local function safe(fn, fallback)
-  local ok, res = pcall(fn)
-  if ok then return res end
-  return fallback
+  local packed = packReturns(pcall(fn))
+  if not packed[1] then return fallback end
+  return unpack(packed, 2, packed.n)
+end
+
+-- The game's own bonus lines for one set, from its first collection piece.
+local function setBonusesFromId(setId)
+  if not GetItemLinkSetBonusInfo or not GetItemSetCollectionPieceInfo then return nil, nil end
+  if not GetItemSetCollectionPieceItemLink then return nil, nil end
+  local pieceId = safe(function() return GetItemSetCollectionPieceInfo(setId, 1) end, nil)
+  if not pieceId then return nil, nil end
+  local link = safe(function() return GetItemSetCollectionPieceItemLink(pieceId, LINK_STYLE_DEFAULT) end, nil)
+  if not link or link == "" then
+    link = safe(function() return GetItemSetCollectionPieceItemLink(pieceId) end, nil)
+  end
+  if not link or link == "" then return nil, nil end
+  local hasSet, _, numBonuses, _, maxEquipped = safe(function()
+    return GetItemLinkSetInfo(link, false)
+  end, false)
+  if not hasSet then return nil, nil end
+  local bonuses = {}
+  for i = 1, (tonumber(numBonuses) or 0) do
+    local numRequired, description = safe(function()
+      return GetItemLinkSetBonusInfo(link, false, i)
+    end, nil)
+    if type(description) == "string" and description ~= "" then
+      description = zo_strformat("<<1>>", description)
+      local pieces = tonumber(numRequired) or i
+      if pieces < 1 then pieces = i end
+      if pieces > 12 then pieces = 12 end
+      if description ~= "" then
+        bonuses[#bonuses + 1] = { pieces = pieces, text = description }
+      end
+    end
+  end
+  local maxEquip = tonumber(maxEquipped)
+  if not maxEquip or maxEquip < 1 or maxEquip > 12 then maxEquip = nil end
+  if #bonuses == 0 then bonuses = nil end
+  return bonuses, maxEquip
 end
 
 local function slug(s)
@@ -227,7 +269,7 @@ local function gatherSkills()
 end
 
 ----------------------------------------------------------------------
--- Item sets (id/name/category; bonuses left to reference via field merge)
+-- Item sets. Bonus lines come from the piece link when the client can read them.
 ----------------------------------------------------------------------
 local function gatherSets()
   local out = {}
@@ -250,15 +292,18 @@ local function gatherSets()
           local link = pieceId and GetItemSetCollectionPieceItemLink(pieceId)
           return link and normIcon(GetItemLinkIcon(link)) or nil
         end, nil)
-        out[#out + 1] = {
+        local bonuses, maxEquip = setBonusesFromId(setId)
+        local row = {
           id = "set-" .. slug(name),
           name = name,
           setId = setId,
           category = category ~= "" and category or "Unknown",
-          bonuses = {},
+          bonuses = bonuses or {},
           icon = icon,
           source = "ingame",
         }
+        if maxEquip then row.maxEquip = maxEquip end
+        out[#out + 1] = row
       end
       setId = safe(function() return GetNextItemSetCollectionId(setId) end, nil)
     end

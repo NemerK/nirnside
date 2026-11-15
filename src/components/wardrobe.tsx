@@ -77,6 +77,7 @@ function GearRow({ piece, hrefForSet }: { piece: WardrobeSetup["gear"][number]; 
     <SetHover
       className="block min-w-0"
       name={piece.setName}
+      setId={piece.setId}
       itemName={piece.name || piece.slot}
       detail={detail || undefined}
     >

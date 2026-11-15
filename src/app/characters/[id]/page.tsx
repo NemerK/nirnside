@@ -10,12 +10,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getAccount, getCharacter, getItemsForCharacter } from "@/lib/db/queries";
+import { loadSetHover } from "@/lib/catalog/hover-sets";
+import { withResolvedSet } from "@/lib/catalog/set-brief";
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
 import { skillLineChoices } from "@/lib/planner/data";
-import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbilityLoreFor, listSetBriefs } from "@/lib/db/catalog-queries";
+import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
-import type { Character } from "@/lib/snapshot/schema";
+import type { Character, Wardrobe as WardrobeData } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { rolesForCharacter } from "@/lib/roles/filter";
 import { presentSkillBook } from "@/lib/skills/present";
@@ -29,6 +31,7 @@ import { CharacterChampion } from "@/components/character-champion";
 import { CharacterScripts, type CharacterScript } from "@/components/character-scripts";
 import { CharacterLoadout } from "@/components/character-loadout";
 import { SetCatalogProvider } from "@/components/set-hover";
+import { SetHover } from "@/components/set-hover";
 import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
@@ -133,17 +136,27 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
   }));
 
   // Cross-link every set worn in a Wizard's Wardrobe setup. Mythics open their
-  // missing leads instead of the encyclopedia.
+  // missing leads instead of the encyclopedia. Names come from the stickerbook
+  // when an older snapshot stored the piece without a set.
   const mythics = safe(() => getAccount()?.mythics ?? []) ?? [];
+  const hover = loadSetHover();
+  const wardrobe = presentWardrobe(c.wardrobe, hover.known);
+  if (archived) {
+    bags = bags.map((item) => withResolvedSet(item, hover.known));
+  }
   const hrefForSet: Record<string, string> = {};
-  for (const zone of c.wardrobe?.zones ?? []) {
+  for (const zone of wardrobe?.zones ?? []) {
     for (const page of zone.pages) {
       for (const setup of page.setups) {
         for (const piece of setup.gear) {
           if (!piece.setName) continue;
           const key = piece.setName.toLowerCase();
           if (hrefForSet[key]) continue;
-          hrefForSet[key] = hrefForMythicOrSet(mythics, { name: piece.setName }, setHref({ name: piece.setName }));
+          hrefForSet[key] = hrefForMythicOrSet(
+            mythics,
+            { name: piece.setName, setId: piece.setId },
+            setHref({ name: piece.setName, setId: piece.setId }),
+          );
         }
       }
     }
@@ -291,7 +304,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           </div>
         </Card>
       )}
-      <SetCatalogProvider sets={safe(() => listSetBriefs()) ?? []}>
+      <SetCatalogProvider sets={hover.briefs}>
       <CharacterTabs
         overview={
           <>
@@ -308,7 +321,9 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
                 {bags.map((it, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
                     <div className="min-w-0">
-                      <div className={`truncate text-sm font-medium ${qualityText(it.quality)}`}>{it.name}</div>
+                      <SetHover name={it.setName} setId={it.setId} itemName={it.name}>
+                        <div className={`truncate text-sm font-medium ${qualityText(it.quality)}`}>{it.name}</div>
+                      </SetHover>
                       <div className="text-xs text-fg-subtle">{locationLabel(it.location)}</div>
                     </div>
                     <span className="shrink-0 tabular-nums text-sm text-fg-muted">
@@ -405,10 +420,15 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
           </>
         }
         equipped={
-          <CharacterLoadout equipped={c.equipped} attributes={c.attributes} wardrobe={c.wardrobe} />
+          <CharacterLoadout
+            equipped={c.equipped}
+            attributes={c.attributes}
+            wardrobe={wardrobe}
+            knownSets={hover.knownList}
+          />
         }
         setups={
-          <Wardrobe wardrobe={c.wardrobe} hrefForSet={hrefForSet} characterName={c.name} characterId={c.id} />
+          <Wardrobe wardrobe={wardrobe} hrefForSet={hrefForSet} characterName={c.name} characterId={c.id} />
         }
         targets={
           <CharacterGoals
@@ -441,6 +461,24 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
       </SetCatalogProvider>
     </div>
   );
+}
+
+function presentWardrobe(wardrobe: WardrobeData | null | undefined, known: ReturnType<typeof loadSetHover>["known"]) {
+  if (!wardrobe) return wardrobe;
+  return {
+    ...wardrobe,
+    zones: wardrobe.zones.map((zone) => ({
+      ...zone,
+      pages: zone.pages.map((page) => ({
+        ...page,
+        setups: page.setups.map((setup) => ({
+          ...setup,
+          gear: setup.gear.map((piece) => withResolvedSet(piece, known)),
+          food: setup.food?.name ? withResolvedSet(setup.food, known) : setup.food,
+        })),
+      })),
+    })),
+  };
 }
 
 function safeList<T>(fn: () => T[]): T[] {
