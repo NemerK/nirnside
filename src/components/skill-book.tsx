@@ -7,6 +7,7 @@ import { Badge, Card, SectionTitle } from "@/components/ui";
 import { GameIcon } from "@/components/game-icon";
 import { SourceBadge } from "@/components/source-badge";
 import { EsoText } from "@/components/eso-text";
+import { SkillHover } from "@/components/skill-hover";
 import type { AbilitySlotView, AbilityView, SkillCategoryView, SkillLineView } from "@/lib/skills/present";
 import { romanRank } from "@/lib/skills/ability";
 import { CLASS_MASTERY_POINTS } from "@/lib/skills/class-mastery";
@@ -138,21 +139,28 @@ function AbilityDetail({
                 key={m.slot}
                 type="button"
                 onClick={() => onPick(m.slot)}
-                className={`flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs ${
+                className={`w-full rounded-lg border text-left text-xs ${
                   active ? "border-accent/60 bg-accent-soft" : "border-border bg-surface hover:border-border-strong"
                 } ${m.purchased ? "" : "opacity-60"}`}
               >
-                <span className={m.purchased ? "" : "grayscale"}>
-                  <GameIcon name={m.name} icon={m.icon ?? ability.icon} size={28} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[10px] uppercase tracking-wider text-fg-subtle">{m.label}</span>
-                  <span className={`block truncate ${m.purchased ? "text-fg" : "text-fg-subtle"}`}>{m.name}</span>
-                  <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                    <RankPips rank={m.rank} />
-                    {!m.purchased && <span className="text-[10px] text-fg-subtle">Not owned</span>}
+                <SkillHover
+                  name={m.name}
+                  description={m.description}
+                  source={m.descriptionSource}
+                  className="flex min-w-0 items-center gap-2 px-2 py-1.5"
+                >
+                  <span className={m.purchased ? "" : "grayscale"}>
+                    <GameIcon name={m.name} icon={m.icon ?? ability.icon} size={28} />
                   </span>
-                </span>
+                  <span className="min-w-0">
+                    <span className="block text-[10px] uppercase tracking-wider text-fg-subtle">{m.label}</span>
+                    <span className={`block truncate ${m.purchased ? "text-fg" : "text-fg-subtle"}`}>{m.name}</span>
+                    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <RankPips rank={m.rank} />
+                      {!m.purchased && <span className="text-[10px] text-fg-subtle">Not owned</span>}
+                    </span>
+                  </span>
+                </SkillHover>
               </button>
             );
           })}
@@ -348,6 +356,8 @@ export function SkillBook({
                         const label = face?.name ?? a.name;
                         const icon = face?.icon || a.icon || a.morphs.find((m) => m.icon)?.icon;
                         const rank = face?.rank ?? a.rank;
+                        const description = face?.description || a.description;
+                        const descriptionSource = face?.description ? face.descriptionSource : a.descriptionSource;
                         return (
                           <li key={`${a.name}-${index}`}>
                             <button
@@ -356,41 +366,46 @@ export function SkillBook({
                                 setAbilityIndex(index);
                                 setMorphSlot(null);
                               }}
-                              className={`flex w-full items-center gap-3 px-3 py-2 text-left ${
-                                selected ? "bg-accent-soft" : "hover:bg-surface-2/60"
-                              }`}
+                              className={`w-full text-left ${selected ? "bg-accent-soft" : "hover:bg-surface-2/60"}`}
                             >
-                              <span className={a.purchased ? "" : "opacity-40 grayscale"}>
-                                <GameIcon name={label} icon={icon} size={36} />
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className={`block truncate text-sm ${a.purchased ? "text-fg" : "text-fg-subtle"}`}>
-                                  {label}
+                              <SkillHover
+                                name={label}
+                                description={description}
+                                source={descriptionSource}
+                                className="flex w-full items-center gap-3 px-3 py-2"
+                              >
+                                <span className={a.purchased ? "" : "opacity-40 grayscale"}>
+                                  <GameIcon name={label} icon={icon} size={36} />
                                 </span>
-                                <span className="text-[11px] text-fg-subtle">
-                                  {a.crafted
-                                    ? a.scribed
-                                      ? "Scribed"
-                                      : a.purchased
-                                        ? "Unlocked"
-                                        : "Locked"
-                                    : a.passive
-                                      ? "Passive"
-                                      : face && face.slot > 0
-                                        ? "Morph"
-                                        : "Base"}
-                                  {!a.purchased && !a.crafted ? " · not purchased" : ""}
+                                <span className="min-w-0 flex-1">
+                                  <span className={`block truncate text-sm ${a.purchased ? "text-fg" : "text-fg-subtle"}`}>
+                                    {label}
+                                  </span>
+                                  <span className="text-[11px] text-fg-subtle">
+                                    {a.crafted
+                                      ? a.scribed
+                                        ? "Scribed"
+                                        : a.purchased
+                                          ? "Unlocked"
+                                          : "Locked"
+                                      : a.passive
+                                        ? "Passive"
+                                        : face && face.slot > 0
+                                          ? "Morph"
+                                          : "Base"}
+                                    {!a.purchased && !a.crafted ? " · not purchased" : ""}
+                                  </span>
                                 </span>
-                              </span>
-                              {a.crafted ? (
-                                <span className="text-[11px] text-fg-subtle">
-                                  {a.scripts.length > 0 ? `${a.scripts.length} scripts` : ""}
-                                </span>
-                              ) : a.passive ? (
-                                <span className="text-xs tabular-nums text-fg-muted">{a.rank}</span>
-                              ) : (
-                                <RankPips rank={rank} />
-                              )}
+                                {a.crafted ? (
+                                  <span className="text-[11px] text-fg-subtle">
+                                    {a.scripts.length > 0 ? `${a.scripts.length} scripts` : ""}
+                                  </span>
+                                ) : a.passive ? (
+                                  <span className="text-xs tabular-nums text-fg-muted">{a.rank}</span>
+                                ) : (
+                                  <RankPips rank={rank} />
+                                )}
+                              </SkillHover>
                             </button>
                           </li>
                         );

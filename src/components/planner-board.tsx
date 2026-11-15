@@ -8,6 +8,7 @@ import { TIERS, TIER_LABEL } from "@/lib/goals/types";
 import type { GoalCardView, GoalMarkView } from "@/lib/goals/views";
 import { Badge, Card, ProgressBar } from "./ui";
 import { GameIcon } from "./game-icon";
+import { SkillHover } from "./skill-hover";
 import { GoalMark } from "./goal-mark";
 import { classIcon } from "@/lib/classes";
 import { abilityTitle, skillLineTitle } from "@/lib/goals/types";
@@ -1129,19 +1130,21 @@ function AbilityMorphRow({
             type="button"
             aria-pressed={selected.has(cell.name)}
             onClick={() => onToggle(cell.name)}
-            className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
+            className={`w-full min-w-0 rounded-md text-left text-sm ${
               selected.has(cell.name) ? "bg-accent-soft" : "hover:bg-surface-2"
             }`}
           >
-            <span
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                selected.has(cell.name) ? "border-accent bg-accent text-accent-fg" : "border-border-strong text-transparent"
-              }`}
-            >
-              <Check className="h-3 w-3" />
-            </span>
-            <EsoMark name={cell.name} icon={cell.icon} size={22} />
-            <span className="min-w-0 truncate text-fg">{cell.name}</span>
+            <SkillHover name={cell.name} className="flex min-w-0 items-center gap-2 px-2 py-1.5">
+              <span
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                  selected.has(cell.name) ? "border-accent bg-accent text-accent-fg" : "border-border-strong text-transparent"
+                }`}
+              >
+                <Check className="h-3 w-3" />
+              </span>
+              <EsoMark name={cell.name} icon={cell.icon} size={22} />
+              <span className="min-w-0 truncate text-fg">{cell.name}</span>
+            </SkillHover>
           </button>
         ) : (
           <div key={`${row.base.name}-open-${index}`} className="rounded-md border border-dashed border-border/50" />

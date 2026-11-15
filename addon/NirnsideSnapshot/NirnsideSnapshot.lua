@@ -1157,10 +1157,13 @@ local function wwResolveBars(skillsTable)
         local abilityId = type(raw) == "table" and raw.id or raw
         abilityId = tonumber(abilityId)
         if abilityId and abilityId > 0 then
-          skills[#skills + 1] = {
+          local skill = {
             name = safe(function() return zo_strformat("<<1>>", GetAbilityName(abilityId)) end, nil),
             icon = safe(function() return normIcon(GetAbilityIcon(abilityId)) end, nil),
           }
+          local desc = abilityDescription(abilityId)
+          if desc and desc ~= "" then skill.description = desc end
+          skills[#skills + 1] = skill
         end
       end
       if #skills > 0 then bars[#bars + 1] = { bar = map[hotbar], skills = skills } end

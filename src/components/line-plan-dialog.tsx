@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/modal";
 import { GameIcon } from "@/components/game-icon";
+import { SkillHover } from "@/components/skill-hover";
 import { Badge } from "@/components/ui";
 import { TIER_LABEL, type GoalTier } from "@/lib/goals/types";
 import {
@@ -69,8 +70,10 @@ export function LinePlanButton({
             <ul className="divide-y divide-border rounded-lg border border-border">
               {result.skills.map((skill) => (
                 <li key={skill.name} className="flex items-center gap-2 px-3 py-1.5">
-                  <GameIcon name={skill.name} icon={skill.icon} size={28} bare />
-                  <span className="min-w-0 flex-1 truncate text-sm text-fg">{skill.name}</span>
+                  <SkillHover name={skill.name} className="flex min-w-0 flex-1 items-center gap-2">
+                    <GameIcon name={skill.name} icon={skill.icon} size={28} bare />
+                    <span className="min-w-0 flex-1 truncate text-sm text-fg">{skill.name}</span>
+                  </SkillHover>
                   <Badge tone={skill.tier === "essential" ? "accent" : "muted"}>{TIER_LABEL[skill.tier]}</Badge>
                 </li>
               ))}

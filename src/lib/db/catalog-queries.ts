@@ -183,6 +183,26 @@ export function catalogAbilityLoreFor(names: Iterable<string>): Map<string, Lore
       rememberSkill(map, entry, row.source);
     }
   }
+  // Bar skills are the slotted morph. The catalog row is filed under the base name.
+  const missing = wanted.filter((name) => !map.has(name.toLowerCase()));
+  for (let i = 0; i < missing.length; i += chunk) {
+    const slice = missing.slice(i, i + chunk);
+    const placeholders = slice.map(() => "?").join(", ");
+    const rows = db
+      .prepare(
+        `SELECT c.json AS json, c.source AS source FROM catalog AS c
+         WHERE c.domain = 'skill' AND EXISTS (
+           SELECT 1 FROM json_each(json_extract(c.json, '$.morphs')) AS morph
+           WHERE lower(json_extract(morph.value, '$.name')) IN (${placeholders})
+         )`,
+      )
+      .all(...slice.map((name) => name.toLowerCase())) as { json: string; source: CatalogSource }[];
+    for (const row of rows) {
+      const entry = JSON.parse(row.json) as CatalogSkill;
+      if (isExcludedCatalogLineId(entry.lineId)) continue;
+      rememberSkill(map, entry, row.source);
+    }
+  }
   return map;
 }
 

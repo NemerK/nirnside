@@ -10,6 +10,7 @@ import { skillIconByName } from "@/lib/icons/skill-icons";
 import { FitScreen } from "./fit-screen";
 import { GameIcon } from "./game-icon";
 import { SetHover } from "./set-hover";
+import { SkillHover } from "./skill-hover";
 
 type Worn = Character["equipped"][number];
 
@@ -213,7 +214,7 @@ function WeaponBar({
 }: {
   title: string;
   pair: { main?: Worn; off?: Worn; rest: Worn[] };
-  skills: { name: string; icon?: string | null }[];
+  skills: { name: string; icon?: string | null; description?: string | null }[];
   setLink: (name: string) => string;
   worn: Map<string, number>;
 }) {
@@ -235,15 +236,25 @@ function WeaponBar({
           const ultimate = index === 5;
           return (
             <li key={index} className="flex min-w-0 items-center gap-1.5 text-[11px]">
-              <span className="w-3 shrink-0 tabular-nums text-fg-subtle">{ultimate ? "U" : index + 1}</span>
               {skill?.name ? (
-                <GameIcon name={skill.name} icon={skill.icon || skillIconByName(skill.name)} size={16} />
+                <SkillHover
+                  name={skill.name}
+                  description={skill.description}
+                  source={skill.description?.trim() ? "ingame" : undefined}
+                  detail={`${title} · ${ultimate ? "Ultimate" : index + 1}`}
+                  className="flex min-w-0 flex-1 items-center gap-1.5"
+                >
+                  <span className="w-3 shrink-0 tabular-nums text-fg-subtle">{ultimate ? "U" : index + 1}</span>
+                  <GameIcon name={skill.name} icon={skill.icon || skillIconByName(skill.name)} size={16} />
+                  <span className={`min-w-0 truncate text-fg ${ultimate ? "text-q-legendary" : ""}`}>{skill.name}</span>
+                </SkillHover>
               ) : (
-                <span className="inline-flex h-4 w-4 rounded border border-dashed border-border" />
+                <>
+                  <span className="w-3 shrink-0 tabular-nums text-fg-subtle">{ultimate ? "U" : index + 1}</span>
+                  <span className="inline-flex h-4 w-4 rounded border border-dashed border-border" />
+                  <span className="min-w-0 truncate text-fg-subtle">{ultimate ? "Ultimate" : "Empty"}</span>
+                </>
               )}
-              <span className={`min-w-0 truncate ${skill?.name ? "text-fg" : "text-fg-subtle"} ${ultimate ? "text-q-legendary" : ""}`}>
-                {skill?.name || (ultimate ? "Ultimate" : "Empty")}
-              </span>
             </li>
           );
         })}

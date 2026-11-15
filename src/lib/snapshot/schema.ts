@@ -433,6 +433,8 @@ export const WardrobeGearPiece = z.object({
 export const WardrobeSkill = z.object({
   name: z.string().default(""),
   icon: z.string().nullable().optional(),
+  /** GetAbilityDescription, once the snapshot kept it. Older files omit it. */
+  description: z.string().optional(),
 });
 
 export const WardrobeBar = z.object({

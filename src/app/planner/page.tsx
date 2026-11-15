@@ -8,6 +8,8 @@ import type { Goal } from "@/lib/goals/types";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { LoadDemoButton } from "@/components/demo-controls";
 import { PlannerBoard, type PlannerChoices } from "@/components/planner-board";
+import { SkillCatalogProvider } from "@/components/skill-hover";
+import { skillBriefsForNames } from "@/lib/skills/hover-skills";
 import { LookSwitch } from "@/components/look-switch";
 import { AtlasSection } from "@/components/atlas/section";
 
@@ -85,7 +87,15 @@ export default function PlannerPage() {
     })),
   };
 
-  const board = <PlannerBoard choices={choices} cards={cards} />;
+  const skillNames = [
+    ...data.abilities.map((ability) => ability.name),
+    ...data.abilityRows.flatMap((row) => [row.base.name, ...row.morphs.map((morph) => morph.name)]),
+  ];
+  const board = (
+    <SkillCatalogProvider skills={skillBriefsForNames(skillNames)}>
+      <PlannerBoard choices={choices} cards={cards} />
+    </SkillCatalogProvider>
+  );
 
   return (
     <LookSwitch
