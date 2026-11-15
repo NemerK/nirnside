@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ChampionStar } from "../snapshot/schema";
-import { groupChampionStars, type ChampionStarView } from "./champion";
+import { alignChampionDisciplines, groupChampionStars, type ChampionStarView } from "./champion";
 
 function star(partial: Partial<ChampionStarView> & Pick<ChampionStarView, "name">): ChampionStarView {
   return { points: 50, slotted: false, ...partial };
@@ -85,6 +85,42 @@ describe("groupChampionStars", () => {
     assert.equal(groups.equipped[0]?.name, "Deadly Aim");
     assert.deepEqual(groups.unlocked, []);
     assert.deepEqual(groups.passives, []);
+  });
+});
+
+describe("alignChampionDisciplines", () => {
+  const catalog = new Map<string, string>([
+    ["deadly aim", "warfare"],
+    ["steed's blessing", "craft"],
+    ["boundless vitality", "fitness"],
+  ]);
+
+  it("moves the blue tree out of the green card and the green tree out of the blue card", () => {
+    const aligned = alignChampionDisciplines(
+      [
+        { name: "Craft", stars: [{ name: "Deadly Aim" }, { name: "Unlisted Blue" }] },
+        { name: "Warfare", stars: [{ name: "Steed's Blessing" }, { name: "Unlisted Green" }] },
+        { name: "Fitness", stars: [{ name: "Boundless Vitality" }] },
+      ],
+      catalog,
+    );
+
+    assert.deepEqual(
+      aligned.map((disc) => [disc.name, disc.stars.map((star) => star.name)]),
+      [
+        ["Craft", ["Steed's Blessing", "Unlisted Green"]],
+        ["Warfare", ["Deadly Aim", "Unlisted Blue"]],
+        ["Fitness", ["Boundless Vitality"]],
+      ],
+    );
+  });
+
+  it("leaves a snapshot that already matches the trees", () => {
+    const disciplines = [
+      { name: "Craft", stars: [{ name: "Steed's Blessing" }] },
+      { name: "Warfare", stars: [{ name: "Deadly Aim" }] },
+    ];
+    assert.equal(alignChampionDisciplines(disciplines, catalog), disciplines);
   });
 });
 

@@ -1,7 +1,12 @@
 import Link from "next/link";
 import type { Character } from "@/lib/snapshot/schema";
 import { getCPStars } from "@/lib/db/catalog-queries";
-import { groupChampionStars, type ChampionKind, type ChampionStarView } from "@/lib/characters/champion";
+import {
+  alignChampionDisciplines,
+  groupChampionStars,
+  type ChampionKind,
+  type ChampionStarView,
+} from "@/lib/characters/champion";
 import { GameIcon } from "@/components/game-icon";
 
 /** Craft, then Warfare, then Fitness — the same left-to-right read as the constellation bar. */
@@ -24,7 +29,7 @@ export function CharacterChampion({
   championPoints: number;
 }) {
   const catalog = cpCatalog();
-  const rows = [...champion]
+  const rows = [...alignChampionDisciplines(champion, catalog.categories)]
     .sort((a, b) => rank(a.name) - rank(b.name))
     .map((disc) => ({
       disc,
@@ -170,17 +175,23 @@ function rank(name: string): number {
   return index < 0 ? ORDER.length : index;
 }
 
-function cpCatalog(): { kinds: Map<string, ChampionKind>; icons: Map<string, string> } {
+function cpCatalog(): {
+  kinds: Map<string, ChampionKind>;
+  icons: Map<string, string>;
+  categories: Map<string, string>;
+} {
   const kinds = new Map<string, ChampionKind>();
   const icons = new Map<string, string>();
+  const categories = new Map<string, string>();
   try {
     for (const row of getCPStars()) {
       const name = row.entry.name.trim().toLowerCase();
       kinds.set(name, row.entry.type);
+      categories.set(name, row.entry.category.trim().toLowerCase());
       if (row.entry.icon) icons.set(name, row.entry.icon);
     }
   } catch {
     // Without the catalog, stars with no kind of their own stay under Unlocked.
   }
-  return { kinds, icons };
+  return { kinds, icons, categories };
 }
