@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { findMythic, hrefForMythicOrSet, isMythicCategory, mythicNameKey } from "./mythic-match";
+import { findMythic, hrefForMythicOrSet, isMythicCategory, isMythicSet, mythicNameKey } from "./mythic-match";
 
 const mythics = [
   { setId: 574, name: "Ring of the Pale Order" },
@@ -25,5 +25,8 @@ describe("findMythic", () => {
     );
     assert.equal(isMythicCategory("Mythic Items"), true);
     assert.equal(isMythicCategory("Trials"), false);
+    assert.equal(isMythicSet({ category: "Miscellaneous", subcategory: "Mythics" }), true);
+    assert.equal(isMythicSet({ category: "Mythic Items", subcategory: null }), true);
+    assert.equal(isMythicSet({ category: "Trials", subcategory: "Dreadsail Reef" }), false);
   });
 });

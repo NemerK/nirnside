@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronRight, Minus, Search } from "lucide-react";
 import type { MythicSet } from "@/lib/snapshot/schema";
 import type { StickerbookSetView } from "@/lib/stickerbook/seen";
-import { findMythic, isMythicCategory, mythicAnchor } from "@/lib/collections/mythic-match";
+import { findMythic, isMythicSet, mythicAnchor } from "@/lib/collections/mythic-match";
 import { GameIcon } from "./game-icon";
 
 type SetWithTotals = StickerbookSetView & { href?: string };
@@ -354,22 +354,25 @@ function pieceLabel(p: { name?: string; type?: string; slot?: string }, setName:
 }
 
 function MythicComponents({ mythic }: { mythic: MythicSet | null }) {
-  const missing = (mythic?.leads ?? []).filter((lead) => !lead.recovered);
+  const leads = [...(mythic?.leads ?? [])].sort((a, b) => Number(a.recovered) - Number(b.recovered));
+  const got = leads.filter((lead) => lead.recovered).length;
   return (
     <div className="mt-3 border-t border-border pt-2">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">Missing components</div>
-      {!mythic || mythic.leads.length === 0 ? (
+      <div className="text-[10px] font-medium uppercase tracking-wide text-fg-subtle">
+        Components{leads.length > 0 ? ` ${got}/${leads.length}` : ""}
+      </div>
+      {leads.length === 0 ? (
         <p className="mt-1 text-xs text-fg-subtle">These show up after a logout with the addon.</p>
-      ) : missing.length === 0 ? (
-        <p className="mt-1 text-xs text-fg-muted">All components excavated.</p>
       ) : (
         <ul className="mt-1.5 space-y-1.5">
-          {missing.map((lead) => (
+          {leads.map((lead) => (
             <li key={lead.antiquityId} className="flex items-start gap-2 text-xs">
               <GameIcon name={lead.name} icon={lead.icon} size={18} bare />
               <div className="min-w-0">
-                <div className="text-fg">{lead.name}</div>
-                {lead.hasLead ? (
+                <div className={lead.recovered ? "text-fg-muted" : "text-fg"}>{lead.name}</div>
+                {lead.recovered ? (
+                  <div className="text-fg-subtle">Excavated</div>
+                ) : lead.hasLead ? (
                   <div className="text-accent">{lead.zone ? `Lead in hand · Scry in ${lead.zone}` : "Lead in hand"}</div>
                 ) : (
                   <div className="text-fg-subtle">Lead not found</div>
@@ -395,8 +398,9 @@ function NewBang({ className = "" }: { className?: string }) {
 }
 
 function mythicForSet(set: SetWithTotals, mythics: MythicSet[]): MythicSet | null {
-  if (!isMythicCategory(set.category)) return null;
-  return findMythic(mythics, { setId: set.setId, name: set.name }) ?? null;
+  if (!isMythicSet(set)) return null;
+  // Stickerbook ids are item-set ids. Mythic ids are antiquity ids. Match the name.
+  return findMythic(mythics, { name: set.name }) ?? null;
 }
 
 function useMythicHash(): string | null {
@@ -429,7 +433,7 @@ function SetCard({
   pieceIsNew: (p: { isNew: boolean; pieceKey: string }) => boolean;
   onSeePiece: (key: string) => void;
 }) {
-  const leads = isMythicCategory(s.category);
+  const leads = isMythicSet(s);
   const [open, setOpen] = useState(openLeads);
   useEffect(() => {
     if (!openLeads) return;
