@@ -25,11 +25,18 @@ local sv -- ZO_SavedVars account-wide handle
 ZO_CreateStringId("SI_KEYBINDINGS_CATEGORY_NIRNSIDE", "Nirnside")
 ZO_CreateStringId("SI_BINDING_NAME_NIRNSIDE_SNAPSHOT", "Save Nirnside snapshot")
 
+local function packReturns(...)
+  return { n = select("#", ...), ... }
+end
+
 -- Wrap a gather step so it can never error the game; return fallback on failure.
+-- `local ok, result = pcall(fn)` drops every return after the first. Set name,
+-- set id, and enchant name are later returns, so a set piece was stored with
+-- no set. Keep the full return list.
 local function safe(fn, fallback)
-  local ok, result = pcall(fn)
-  if ok then return result end
-  return fallback
+  local packed = packReturns(pcall(fn))
+  if not packed[1] then return fallback end
+  return unpack(packed, 2, packed.n)
 end
 
 -- In-game .dds path as ESO returns it (e.g. /esoui/art/icons/ability_x.dds).

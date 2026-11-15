@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { lookupSetBrief, type SetBrief, type SetQuery } from "@/lib/catalog/set-brief";
+import { inferSetName, lookupSetBrief, type SetBrief, type SetQuery } from "@/lib/catalog/set-brief";
 import { SourceBadge, UnverifiedNote } from "./source-badge";
 
 type TipRequest = SetQuery & {
@@ -94,6 +94,7 @@ function SetTipLayer({
 
   if (!tip || !box || typeof document === "undefined") return null;
   const brief = lookupSetBrief(sets, tip.request);
+  const setLabel = brief?.name ?? (tip.request.name?.trim() || inferSetName(tip.request.itemName));
   return createPortal(
     <div
       role="tooltip"
@@ -106,7 +107,7 @@ function SetTipLayer({
       <div className={tip.request.itemName || tip.request.detail ? "mt-2 border-t border-border pt-2" : ""}>
         <div className="flex flex-wrap items-center gap-1.5">
           <p id={labelId} className="text-sm font-medium text-fg">
-            {brief?.name ?? tip.request.name ?? "No set"}
+            {setLabel ?? "No set"}
           </p>
           {brief ? <SourceBadge source={brief.source} /> : null}
         </div>
@@ -133,7 +134,7 @@ function SetTipLayer({
           </>
         ) : (
           <p className="mt-1 text-xs text-fg-muted">
-            {tip.request.name ? "This set is not in the catalog yet." : "This item has no set."}
+            {setLabel ? "This set is not in the catalog yet." : "This item has no set."}
           </p>
         )}
       </div>
