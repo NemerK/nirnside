@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "equipped", label: "Equipped" },
+  { id: "setups", label: "Setups" },
   { id: "targets", label: "Targets" },
   { id: "scripts", label: "Scripts" },
   { id: "cp", label: "Champion Points" },
@@ -12,26 +13,28 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-/** Overview, equipped, targets, scripts, and champion points each stay on their own pane. */
+/** Each part of the character sheet stays on its own pane. */
 export function CharacterTabs({
   overview,
   equipped,
+  setups,
   targets,
   scripts,
   champion,
 }: {
   overview: ReactNode;
   equipped: ReactNode;
+  setups: ReactNode;
   targets: ReactNode;
   scripts: ReactNode;
   champion: ReactNode;
 }) {
   const [tab, setTab] = useState<TabId>("overview");
-  const panels: Record<TabId, ReactNode> = { overview, equipped, targets, scripts, cp: champion };
+  const panels: Record<TabId, ReactNode> = { overview, equipped, setups, targets, scripts, cp: champion };
 
   return (
     <div>
-      <div role="tablist" aria-label="Character" className="mb-4 flex gap-1 border-b border-border">
+      <div role="tablist" aria-label="Character" className="mb-4 flex flex-wrap gap-1 border-b border-border">
         {TABS.map((item) => {
           const selected = tab === item.id;
           return (
