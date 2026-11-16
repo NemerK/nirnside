@@ -97,3 +97,10 @@ export function parseEsoMarkup(input: string): EsoRun[] {
   flush();
   return out;
 }
+
+/** Visible words only, for a native `title` tooltip that cannot take color spans. */
+export function esoPlainText(input: string): string {
+  return parseEsoMarkup(input)
+    .map((run) => run.text)
+    .join("");
+}

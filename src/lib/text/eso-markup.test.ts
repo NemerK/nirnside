@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { parseEsoMarkup } from "./eso-markup";
+import { esoPlainText, parseEsoMarkup } from "./eso-markup";
 
 describe("ESO tooltip markup", () => {
   it("colors |cRRGGBB runs and resets on |r", () => {
@@ -31,5 +31,14 @@ describe("ESO tooltip markup", () => {
 
   it("turns a doubled pipe into one pipe", () => {
     assert.equal(parseEsoMarkup("a || b").map((r) => r.text).join(""), "a | b");
+  });
+
+  it("colors a set-bonus number and can flatten it for a native tooltip", () => {
+    const raw = "Adds |cffffff868|r Maximum Stamina.";
+    const runs = parseEsoMarkup(raw);
+    assert.equal(runs.map((run) => run.text).join(""), "Adds 868 Maximum Stamina.");
+    assert.equal(runs[1]?.color, "#ffffff");
+    assert.equal(runs[1]?.text, "868");
+    assert.equal(esoPlainText(raw), "Adds 868 Maximum Stamina.");
   });
 });

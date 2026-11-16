@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Backpack, BookMarked, MapPin } from "lucide-react";
+import { overlayScannedBonuses } from "@/lib/catalog/set-brief";
 import { getSet } from "@/lib/db/catalog-queries";
 import { setOwnership } from "@/lib/db/overlay";
-import { Badge, Card, PageHeader, ProgressBar } from "@/components/ui";
+import { listAccountSets } from "@/lib/db/queries";
+import { Badge, Card, ProgressBar } from "@/components/ui";
+import { EsoText } from "@/components/eso-text";
 import { GameIcon } from "@/components/game-icon";
 import { SourceBadge, UnverifiedNote } from "@/components/source-badge";
 
@@ -13,7 +16,14 @@ export default async function SetDetailPage({ params }: PageProps<"/encyclopedia
   const { id } = await params;
   const row = safe(() => getSet(decodeURIComponent(id)));
   if (!row) notFound();
-  const { entry: s, source } = row;
+  const { entry: s, source: catalogSource } = row;
+  const account = safe(() => listAccountSets()) ?? [];
+  const scanned = overlayScannedBonuses(
+    { name: s.name, setId: s.setId, bonuses: s.bonuses },
+    catalogSource,
+    account,
+  );
+  const source = scanned.source;
   const own = safe(() => setOwnership(s.name)) ?? { inventoryCount: 0, sticker: null };
 
   return (
@@ -44,16 +54,18 @@ export default async function SetDetailPage({ params }: PageProps<"/encyclopedia
         <div className="md:col-span-2">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Set Bonuses</h2>
           <Card className="p-4">
-            {s.bonuses.length === 0 ? (
+            {scanned.bonuses.length === 0 ? (
               <p className="text-sm text-fg-muted">Bonuses pending in-game scan.</p>
             ) : (
               <ul className="space-y-2.5">
-                {s.bonuses.map((b, i) => (
+                {scanned.bonuses.map((b, i) => (
                   <li key={i} className="flex gap-3">
                     <span className="mt-0.5 flex h-6 w-8 shrink-0 items-center justify-center rounded border border-accent/40 bg-accent-soft text-xs font-semibold text-accent">
                       {b.pieces}
                     </span>
-                    <span className="text-sm text-fg">{b.text}</span>
+                    <span className="text-sm text-fg">
+                      <EsoText text={b.text} />
+                    </span>
                   </li>
                 ))}
               </ul>

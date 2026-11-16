@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   briefsForHover,
   indexKnownSets,
+  overlayScannedBonuses,
   inferSetName,
   lookupSetBrief,
   resolveItemSet,
@@ -204,5 +205,102 @@ describe("briefsForHover", () => {
     const sul = briefs.find((set) => set.id === "set-sul-xans-torment");
     assert.equal(sul?.bonuses[0]?.text, "Reference line.");
     assert.equal(sul?.source, "reference");
+  });
+});
+
+describe("overlayScannedBonuses", () => {
+  const nullArca: AccountSetFacts = {
+    name: "Perfected Slivers of the Null Arca",
+    setId: 900,
+    category: "Trial",
+    maxEquip: 5,
+    bonuses: [
+      { pieces: 2, text: "Adds |cffffff634|r Critical Chance" },
+      { pieces: 5, text: "Adds |cffffff124|r Weapon and Spell Damage" },
+    ],
+  };
+
+  it("fills an empty in-game catalog row from the stickerbook scan", () => {
+    const view = overlayScannedBonuses(
+      { name: nullArca.name, setId: 900, bonuses: [] },
+      "ingame",
+      [nullArca],
+    );
+    assert.equal(view.source, "ingame");
+    assert.equal(view.bonuses.length, 2);
+    assert.equal(view.bonuses[0]?.text, "Adds |cffffff634|r Critical Chance");
+  });
+
+  it("replaces a reference paraphrase with the scanned lines", () => {
+    const view = overlayScannedBonuses(
+      { name: "Slimecraw", setId: 154, bonuses: [{ pieces: 1, text: "Adds Critical Chance." }] },
+      "reference",
+      [
+        {
+          name: "Slimecraw",
+          setId: 154,
+          category: "Dungeons",
+          maxEquip: 2,
+          bonuses: [{ pieces: 1, text: "Adds |cffffff1096|r Critical Chance." }],
+        },
+      ],
+    );
+    assert.equal(view.source, "ingame");
+    assert.equal(view.bonuses[0]?.text, "Adds |cffffff1096|r Critical Chance.");
+  });
+
+  it("keeps in-game catalog lines that are already present", () => {
+    const view = overlayScannedBonuses(
+      { name: "Slimecraw", setId: 154, bonuses: [{ pieces: 1, text: "Catalog line." }] },
+      "ingame",
+      [
+        {
+          name: "Slimecraw",
+          setId: 154,
+          category: "Dungeons",
+          maxEquip: 2,
+          bonuses: [{ pieces: 1, text: "Account line." }],
+        },
+      ],
+    );
+    assert.equal(view.bonuses[0]?.text, "Catalog line.");
+    assert.equal(view.source, "ingame");
+  });
+
+  it("leaves the catalog empty when the scan stored no lines", () => {
+    const view = overlayScannedBonuses({ name: "Coral Riptide", setId: 693, bonuses: [] }, "ingame", [
+      { name: "Coral Riptide", setId: 693, category: "Trial", maxEquip: 5, bonuses: [] },
+    ]);
+    assert.equal(view.bonuses.length, 0);
+    assert.equal(view.source, "ingame");
+  });
+
+  it("matches a perfected name when the catalog has no set id", () => {
+    const view = overlayScannedBonuses({ name: nullArca.name, setId: null, bonuses: [] }, "reference", [
+      {
+        name: "Slivers of the Null Arca",
+        setId: 12,
+        category: "Trial",
+        maxEquip: 5,
+        bonuses: [{ pieces: 5, text: "Base line." }],
+      },
+      nullArca,
+    ]);
+    assert.equal(view.bonuses[0]?.text, "Adds |cffffff634|r Critical Chance");
+    assert.equal(view.source, "ingame");
+  });
+
+  it("uses a same-name scan when the set id row has no lines", () => {
+    const view = overlayScannedBonuses({ name: nullArca.name, setId: 900, bonuses: [] }, "ingame", [
+      { ...nullArca, setId: 900, bonuses: [] },
+      { ...nullArca, setId: 901 },
+    ]);
+    assert.equal(view.bonuses[0]?.text, "Adds |cffffff634|r Critical Chance");
+  });
+
+  it("does not invent lines when the account has no matching set", () => {
+    const view = overlayScannedBonuses({ name: "Missing Set", setId: 1, bonuses: [] }, "ingame", []);
+    assert.deepEqual(view.bonuses, []);
+    assert.equal(view.source, "ingame");
   });
 });

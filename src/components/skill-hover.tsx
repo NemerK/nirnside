@@ -107,7 +107,11 @@ function SkillTip({
         </p>
         {source ? <SourceBadge source={source} /> : null}
       </div>
-      {detail ? <p className="mt-0.5 text-[11px] text-fg-subtle">{detail}</p> : null}
+      {detail ? (
+        <p className="mt-0.5 text-[11px] text-fg-subtle">
+          <EsoText text={detail} />
+        </p>
+      ) : null}
       {description ? (
         <div className="mt-2 text-xs leading-relaxed text-fg">
           <EsoText text={description} />

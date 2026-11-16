@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { lookupSetBrief, type SetBrief, type SetQuery } from "@/lib/catalog/set-brief";
+import { EsoText } from "./eso-text";
 import { SourceBadge, UnverifiedNote } from "./source-badge";
 
 type TipRequest = SetQuery & {
@@ -104,7 +105,11 @@ function SetTipLayer({
       style={{ left: box.left, top: box.top, width: box.width }}
     >
       {tip.request.itemName ? <p className="text-sm font-medium text-fg">{tip.request.itemName}</p> : null}
-      {tip.request.detail ? <p className="text-[11px] text-fg-muted">{tip.request.detail}</p> : null}
+      {tip.request.detail ? (
+        <p className="text-[11px] text-fg-muted">
+          <EsoText text={tip.request.detail} />
+        </p>
+      ) : null}
       <div className={tip.request.itemName || tip.request.detail ? "mt-2 border-t border-border pt-2" : ""}>
         <div className="flex flex-wrap items-center gap-1.5">
           <p id={labelId} className="text-sm font-medium text-fg">
@@ -129,7 +134,9 @@ function SetTipLayer({
                     <span className="mt-0.5 flex h-5 w-6 shrink-0 items-center justify-center rounded border border-accent/40 bg-accent-soft text-[10px] font-semibold text-accent">
                       {bonus.pieces}
                     </span>
-                    <span>{bonus.text}</span>
+                    <span>
+                      <EsoText text={bonus.text} />
+                    </span>
                   </li>
                 ))}
               </ul>
