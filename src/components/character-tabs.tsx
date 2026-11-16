@@ -59,7 +59,7 @@ export function CharacterTabs({
             key={item.id}
             role="tabpanel"
             hidden={tab !== item.id}
-            className={item.id === "equipped" ? "h-full min-h-0 overflow-hidden" : "h-full min-h-0 overflow-y-auto"}
+            className="h-full min-h-0 overflow-y-auto"
           >
             {panels[item.id]}
           </div>
