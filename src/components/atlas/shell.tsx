@@ -21,6 +21,7 @@ import {
 import { ATLAS_NAV, atlasItemVisible } from "@/lib/ia";
 import type { ModuleDef } from "@/lib/modules";
 import { timeAgo } from "@/lib/format";
+import { ActivityReturn } from "../activity-return";
 import { clearLoadingRetry } from "../loading-recovery";
 import { NirnsideMark } from "../nirnside-mark";
 import { NirnsideSettings } from "../nirnside-settings";
@@ -182,7 +183,10 @@ export function AtlasShell({
           )}
         </header>
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-6 md:px-8 md:py-8">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <ActivityReturn />
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Badge, Card, SectionTitle } from "@/components/ui";
@@ -235,10 +235,13 @@ export function SkillBook({
   categories,
   lastSeen,
   characterClass,
+  rememberKey,
 }: {
   categories: SkillCategoryView[];
   lastSeen: number | null;
   characterClass?: string | null;
+  /** Keeps the open line when a link leaves this page and the reader comes back. */
+  rememberKey?: string | null;
 }) {
   const [catName, setCatName] = useState(categories[0]?.name ?? "");
   const category = categories.find((c) => c.name === catName) ?? categories[0];
@@ -247,6 +250,33 @@ export function SkillBook({
     category?.lines.find((l) => l.id === lineId) ?? category?.lines[0];
   const [abilityIndex, setAbilityIndex] = useState(0);
   const [morphSlot, setMorphSlot] = useState<number | null>(null);
+  const [restored, setRestored] = useState(!rememberKey);
+  const storageKey = rememberKey ? `nirnside-skillbook:${rememberKey}` : null;
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (raw) {
+        const saved = JSON.parse(raw) as { cat?: string; line?: string; ability?: number; morph?: number | null };
+        if (typeof saved.cat === "string") setCatName(saved.cat);
+        if (typeof saved.line === "string") setLineId(saved.line);
+        if (typeof saved.ability === "number") setAbilityIndex(saved.ability);
+        if (saved.morph === null || typeof saved.morph === "number") setMorphSlot(saved.morph);
+      }
+    } catch {
+      /* keep the first line */
+    }
+    setRestored(true);
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageKey || !restored) return;
+    sessionStorage.setItem(
+      storageKey,
+      JSON.stringify({ cat: catName, line: lineId, ability: abilityIndex, morph: morphSlot }),
+    );
+  }, [storageKey, restored, catName, lineId, abilityIndex, morphSlot]);
 
   if (categories.length === 0) {
     return (
