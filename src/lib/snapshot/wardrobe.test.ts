@@ -15,6 +15,10 @@ describe("wizard's wardrobe snapshot", () => {
     assert.equal(gen!.name, "General");
     const pageNames = gen!.pages.map((p) => p.name);
     assert.deepEqual(pageNames, ["Tank", "DPS"]);
+    assert.deepEqual(
+      gen!.pages.map((p) => p.id),
+      [1, 2],
+    );
     const tank = gen!.pages.find((p) => p.name === "Tank")!;
     assert.deepEqual(
       tank.setups.map((s) => s.name),

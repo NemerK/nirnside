@@ -1196,18 +1196,35 @@ local function wwResolveFood(foodTable)
   }
 end
 
+-- The name shown in WW's page dropdown. Custom names are stored as-is.
+-- The addon's own default (en) is "Page N"; use that only when none was saved.
+local function wwPageName(pageInfo, pageId)
+  if type(pageInfo) == "table" and type(pageInfo.name) == "string" and pageInfo.name ~= "" then
+    return pageInfo.name
+  end
+  return "Page " .. tostring(pageId)
+end
+
+local function wwPageInfo(pages, tag, pageId)
+  if type(pages) ~= "table" or type(pages[tag]) ~= "table" then return nil end
+  return pages[tag][pageId] or pages[tag][tostring(pageId)]
+end
+
 local function wwBuildZones(setups, pages)
   local zones = {}
   if type(setups) ~= "table" then return zones end
   for tag, pageMap in pairs(setups) do
     if type(pageMap) == "table" then
       local zone = { tag = tag, name = WW_ZONE_NAMES[tag] or tag, pages = {} }
-      for pageId, setupList in pairs(pageMap) do
+      local seen = {}
+      for rawId, setupList in pairs(pageMap) do
         -- pageId 0 is WW's "current page" pointer, not a real page.
-        if type(pageId) == "number" and pageId >= 1 and type(setupList) == "table" then
-          local pageInfo = (type(pages) == "table" and pages[tag] and pages[tag][pageId]) or nil
+        local pageId = tonumber(rawId)
+        if pageId and pageId >= 1 and type(setupList) == "table" then
+          local pageInfo = wwPageInfo(pages, tag, pageId)
           local page = {
-            name = (pageInfo and pageInfo.name) or ("Page " .. tostring(pageId)),
+            id = pageId,
+            name = wwPageName(pageInfo, pageId),
             setups = {},
           }
           for index = 1, #setupList do
@@ -1222,16 +1239,48 @@ local function wwBuildZones(setups, pages)
               }
             end
           end
-          if #page.setups > 0 then zone.pages[#zone.pages + 1] = page end
+          seen[pageId] = true
+          zone.pages[#zone.pages + 1] = page
         end
       end
+      -- A renamed page can exist before any setup is written.
+      if type(pages) == "table" and type(pages[tag]) == "table" then
+        for rawId, pageInfo in pairs(pages[tag]) do
+          local pageId = tonumber(rawId)
+          if pageId and pageId >= 1 and not seen[pageId] and type(pageInfo) == "table" then
+            local name = wwPageName(pageInfo, pageId)
+            if type(pageInfo.name) == "string" and pageInfo.name ~= "" then
+              zone.pages[#zone.pages + 1] = { id = pageId, name = name, setups = {} }
+            end
+          end
+        end
+      end
+      table.sort(zone.pages, function(a, b) return (a.id or 0) < (b.id or 0) end)
       if #zone.pages > 0 then zones[#zones + 1] = zone end
     end
   end
   return zones
 end
 
--- Read this character's Wizard's Wardrobe setups from WW's own SavedVariables.
+-- WW shows whichever storage the page dropdown is bound to: this character,
+-- another character, or the account-wide wardrobe.
+local function wwLookupStore(root, id)
+  if id == nil then return nil, false end
+  if id == "$AccountWide" or tostring(id) == "$AccountWide" then
+    local acc = root["$AccountWide"]
+    if type(acc) == "table" and type(acc.accountWideStorage) == "table" then
+      return acc.accountWideStorage, true
+    end
+    return nil, true
+  end
+  local store = root[id] or root[tostring(id)]
+  if type(store) == "table" and type(store.setups) == "table" then
+    return store, false
+  end
+  return nil, false
+end
+
+-- Read the Wizard's Wardrobe the player currently has open.
 local function gatherWardrobe(charId)
   return safe(function()
     if type(WizardsWardrobeSV) ~= "table" then return nil end
@@ -1239,15 +1288,19 @@ local function gatherWardrobe(charId)
     local root = WizardsWardrobeSV.Default and WizardsWardrobeSV.Default[displayName]
     if type(root) ~= "table" then return nil end
 
-    -- Prefer this character's own storage; fall back to account-wide storage.
-    local store = root[charId]
-    local accountWide = false
+    local rawId = GetCurrentCharacterId and GetCurrentCharacterId() or charId
+    local charStore = root[rawId] or root[tostring(rawId)] or root[charId]
+    local selectedId = rawId
+    if type(charStore) == "table" and charStore.selectedCharacterId ~= nil then
+      selectedId = charStore.selectedCharacterId
+    end
+
+    local store, accountWide = wwLookupStore(root, selectedId)
     if type(store) ~= "table" or type(store.setups) ~= "table" then
-      local acc = root["$AccountWide"]
-      if type(acc) == "table" and type(acc.accountWideStorage) == "table" then
-        store = acc.accountWideStorage
-        accountWide = true
-      end
+      store, accountWide = wwLookupStore(root, rawId or charId)
+    end
+    if type(store) ~= "table" or type(store.setups) ~= "table" then
+      store, accountWide = wwLookupStore(root, "$AccountWide")
     end
     if type(store) ~= "table" or type(store.setups) ~= "table" then return nil end
 

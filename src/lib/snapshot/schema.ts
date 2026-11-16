@@ -452,6 +452,9 @@ export const WardrobeSetup = z.object({
 });
 
 export const WardrobePage = z.object({
+  /** Wizard's Wardrobe page id, 1-based. Older snapshots omit it. */
+  id: z.number().int().positive().optional(),
+  /** The page name from the addon dropdown, unchanged. */
   name: z.string().default(""),
   setups: lenientArray(WardrobeSetup).default([]),
 });

@@ -547,6 +547,7 @@ NirnsideData =
                                     ["pages"] =
                                     {
                                         {
+                                            ["id"] = 1,
                                             ["name"] = "Tank",
                                             ["setups"] =
                                             {
@@ -585,6 +586,7 @@ NirnsideData =
                                             },
                                         },
                                         {
+                                            ["id"] = 2,
                                             ["name"] = "DPS",
                                             ["setups"] =
                                             {
@@ -612,6 +614,7 @@ NirnsideData =
                                     ["pages"] =
                                     {
                                         {
+                                            ["id"] = 1,
                                             ["name"] = "Main",
                                             ["setups"] =
                                             {
