@@ -8,6 +8,7 @@ import { GameIcon } from "@/components/game-icon";
 import { SetHover } from "@/components/set-hover";
 import { SkillHover } from "@/components/skill-hover";
 import type { Wardrobe as WardrobeData, WardrobePage, WardrobeSetup, WardrobeZone } from "@/lib/snapshot/schema";
+import { visibleWardrobePages, wardrobePageKey, wardrobePageTitle } from "@/lib/wardrobe/pages";
 import { qualityText } from "@/lib/format";
 import { copySetupImage, downloadSetupImage, type SetupImageMeta } from "@/lib/wardrobe/setup-image";
 import {
@@ -251,58 +252,41 @@ function SetupCard({
   );
 }
 
-function ZonePanel({
+function PagePanel({
   zone,
+  page,
+  pageName,
   hrefForSet,
   character,
 }: {
   zone: WardrobeZone;
+  page: WardrobePage;
+  pageName: string;
   hrefForSet: Record<string, string>;
   character: WardrobeExportContext["character"];
 }) {
-  const pages = zone.pages.filter((p) => p.setups.some((s) => s.name || s.gear.length || s.bars.length));
-  if (pages.length === 0) return null;
   const zoneCtx = { tag: zone.tag, name: zone.name };
+  if (page.setups.length === 0) {
+    return <p className="text-sm text-fg-muted">No setups on this page.</p>;
+  }
   return (
-    <div className="space-y-4">
-      {pages.map((page, pi) => {
-        const pageName = page.name || `Page ${pi + 1}`;
-        return (
-          <div key={`${page.name}-${pi}`}>
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-sm font-medium text-fg">{pageName}</span>
-              <span className="text-xs text-fg-subtle">
-                {page.setups.length} setup{page.setups.length === 1 ? "" : "s"}
-              </span>
-              <SaveButton
-                label="Save page"
-                className="ml-auto"
-                onSave={() =>
-                  saveWardrobe("page", page, { character, zone: zoneCtx, page: { name: pageName } })
-                }
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {page.setups.map((s, si) => (
-                <SetupCard
-                  key={`${s.name}-${si}`}
-                  setup={s}
-                  hrefForSet={hrefForSet}
-                  meta={{ character: character.name, zone: zone.name || zone.tag, page: pageName }}
-                  onSave={() =>
-                    saveWardrobe("setup", s, {
-                      character,
-                      zone: zoneCtx,
-                      page: { name: pageName },
-                      setup: { name: s.name || `Setup ${si + 1}` },
-                    })
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        );
-      })}
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      {page.setups.map((s, si) => (
+        <SetupCard
+          key={`${s.name}-${si}`}
+          setup={s}
+          hrefForSet={hrefForSet}
+          meta={{ character: character.name, zone: zone.name || zone.tag, page: pageName }}
+          onSave={() =>
+            saveWardrobe("setup", s, {
+              character,
+              zone: zoneCtx,
+              page: { name: pageName },
+              setup: { name: s.name || `Setup ${si + 1}` },
+            })
+          }
+        />
+      ))}
     </div>
   );
 }
@@ -324,10 +308,9 @@ export function Wardrobe({
   characterName?: string;
   characterId?: string | null;
 }) {
-  const zones = (wardrobe?.zones ?? []).filter((z) =>
-    z.pages.some((p) => p.setups.some((s) => s.name || s.gear.length || s.bars.length)),
-  );
+  const zones = (wardrobe?.zones ?? []).filter((z) => visibleWardrobePages(z).length > 0);
   const [zoneTag, setZoneTag] = useState(zones[0]?.tag ?? "");
+  const [pageKey, setPageKey] = useState("");
   if (!wardrobe || zones.length === 0) {
     return (
       <p className="text-sm text-fg-muted">
@@ -335,7 +318,15 @@ export function Wardrobe({
       </p>
     );
   }
-  const zone = zones.find((z) => z.tag === zoneTag) ?? zones[0];
+  const zone = zones.find((z) => z.tag === zoneTag) ?? zones[0]!;
+  const pages = visibleWardrobePages(zone);
+  const selectedIndex = Math.max(
+    0,
+    pages.findIndex((page, index) => wardrobePageKey(zone.tag, page, index) === pageKey),
+  );
+  const page = pages[selectedIndex] ?? pages[0];
+  const pageName = page ? wardrobePageTitle(page, selectedIndex) : "";
+  const selectedKey = page ? wardrobePageKey(zone.tag, page, selectedIndex) : "";
   const total = countSetups({ ...wardrobe, zones });
   const character = { id: characterId, name: characterName };
   const scoped = { ...wardrobe, zones };
@@ -384,7 +375,48 @@ export function Wardrobe({
         </div>
       )}
 
-      <ZonePanel zone={zone} hrefForSet={hrefForSet} character={character} />
+      {page ? (
+        <div>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-fg">
+              <span className="text-fg-subtle">Page</span>
+              <select
+                aria-label="Wardrobe page"
+                value={selectedKey}
+                onChange={(event) => setPageKey(event.target.value)}
+                className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+              >
+                {pages.map((entry, index) => (
+                  <option key={wardrobePageKey(zone.tag, entry, index)} value={wardrobePageKey(zone.tag, entry, index)}>
+                    {wardrobePageTitle(entry, index)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span className="text-xs text-fg-subtle">
+              {page.setups.length} setup{page.setups.length === 1 ? "" : "s"}
+            </span>
+            <SaveButton
+              label="Save page"
+              className="ml-auto"
+              onSave={() =>
+                saveWardrobe("page", page, {
+                  character,
+                  zone: { tag: zone.tag, name: zone.name },
+                  page: { name: pageName },
+                })
+              }
+            />
+          </div>
+          <PagePanel
+            zone={zone}
+            page={page}
+            pageName={pageName}
+            hrefForSet={hrefForSet}
+            character={character}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
