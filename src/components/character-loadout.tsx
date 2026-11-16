@@ -85,7 +85,7 @@ export function CharacterLoadout({
           <section className="rounded-lg border border-border bg-surface px-3 py-2.5">
             <div className="grid grid-cols-2 gap-x-2">
               <div className="col-span-2">
-                <GearCell slot={armor[0]} setLink={setLink} worn={worn} />
+                <GearCell slot={armor[0]} setLink={setLink} worn={worn} centered />
               </div>
               {armor.slice(1).map((slot) => (
                 <GearCell key={slot.label} slot={slot} setLink={setLink} worn={worn} />
@@ -144,10 +144,13 @@ function GearCell({
   slot,
   setLink,
   worn,
+  centered = false,
 }: {
   slot: Slot;
   setLink: (name: string) => string;
   worn: Map<string, number>;
+  /** Head sits in the middle of the paper doll, above the two columns. */
+  centered?: boolean;
 }) {
   const { item, label } = slot;
   const meta = item ? [item.trait, item.enchant, ...item.scribing].filter(Boolean) : [];
@@ -162,9 +165,16 @@ function GearCell({
   );
 
   const body = (
-    <div data-slot={label} className="flex min-w-0 items-center gap-2 py-1">
+    <div
+      data-slot={label}
+      className={
+        centered
+          ? "flex w-fit max-w-full flex-col items-center gap-1 py-1 text-center"
+          : "flex min-w-0 items-center gap-2 py-1"
+      }
+    >
       <SlotFrame item={item} />
-      <div className="min-w-0">
+      <div className={centered ? "max-w-[16rem]" : "min-w-0"}>
         <div className="text-[11px] uppercase tracking-wide text-fg-subtle">{label}</div>
         {item?.setName ? (
           <Link href={setLink(item.setName)} className="hover:underline">
@@ -182,10 +192,10 @@ function GearCell({
     </div>
   );
 
-  if (!item) return body;
+  if (!item) return centered ? <div className="flex justify-center">{body}</div> : body;
   return (
     <SetHover
-      className="block min-w-0"
+      className={centered ? "flex justify-center" : "block min-w-0"}
       name={item.setName}
       setId={item.setId}
       itemName={item.name}
