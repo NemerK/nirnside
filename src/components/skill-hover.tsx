@@ -41,7 +41,7 @@ export function SkillHover({
   return (
     <>
       <span
-        className={className}
+        className={["nirn-tip-target", className].filter(Boolean).join(" ")}
         aria-label={labelled && name?.trim() ? name.trim() : undefined}
         onMouseEnter={(event) => setAnchor(event.currentTarget)}
         onMouseLeave={() => setAnchor(null)}
@@ -98,7 +98,7 @@ function SkillTip({
     <div
       role="tooltip"
       aria-labelledby={labelId}
-      className="pointer-events-none fixed z-50 max-h-[min(24rem,70vh)] overflow-y-auto rounded-lg border border-border bg-surface p-3 shadow-lg"
+      className="nirn-tip pointer-events-none fixed z-50 max-h-[min(24rem,70vh)] overflow-y-auto rounded-lg p-3"
       style={{ left: box.left, top: box.top, width: box.width }}
     >
       <div className="flex flex-wrap items-center gap-1.5">

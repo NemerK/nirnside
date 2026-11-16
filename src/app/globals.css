@@ -296,6 +296,30 @@ body {
   }
 }
 
+/* Floating skill and set cards. The sheet uses the same surface color, so the
+   card needs its own fill, an accent edge, and a shadow or it disappears. */
+.nirn-tip {
+  background: color-mix(in srgb, var(--surface-2) 84%, white 16%);
+  border: 2px solid var(--accent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 22px 48px rgba(0, 0, 0, 0.72);
+}
+.theme-light .nirn-tip {
+  background: #fffdf8;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent),
+    0 16px 36px rgba(42, 35, 24, 0.28);
+}
+.nirn-tip-target {
+  border-radius: 0.5rem;
+}
+.nirn-tip-target:hover,
+.nirn-tip-target:focus-within {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

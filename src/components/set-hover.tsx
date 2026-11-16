@@ -45,10 +45,11 @@ export function SetHover({
   children,
 }: TipRequest & { className?: string; children: ReactNode }) {
   const tip = useContext(TipContext);
-  if (!tip) return <span className={className}>{children}</span>;
+  const frame = ["nirn-tip-target", className].filter(Boolean).join(" ");
+  if (!tip) return <span className={frame}>{children}</span>;
   return (
     <span
-      className={className}
+      className={frame}
       onMouseEnter={(event) => tip.show(event.currentTarget, { name, setId, itemName, detail })}
       onMouseLeave={(event) => tip.hide(event.currentTarget)}
       onFocus={(event) => tip.show(event.currentTarget, { name, setId, itemName, detail })}
@@ -99,7 +100,7 @@ function SetTipLayer({
     <div
       role="tooltip"
       aria-labelledby={labelId}
-      className="pointer-events-none fixed z-50 max-h-[min(24rem,70vh)] overflow-y-auto rounded-lg border border-border bg-surface p-3 shadow-lg"
+      className="nirn-tip pointer-events-none fixed z-50 max-h-[min(24rem,70vh)] overflow-y-auto rounded-lg p-3"
       style={{ left: box.left, top: box.top, width: box.width }}
     >
       {tip.request.itemName ? <p className="text-sm font-medium text-fg">{tip.request.itemName}</p> : null}

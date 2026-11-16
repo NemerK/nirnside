@@ -42,7 +42,6 @@ export function CharacterLoadout({
   const food = setup?.food?.name ? setup.food : firstFood(wardrobe);
   const frontSkills = setup?.bars.find((bar) => bar.bar === "front")?.skills ?? [];
   const backSkills = setup?.bars.find((bar) => bar.bar === "back")?.skills ?? [];
-  const barLabel = setup ? barCaption(wardrobe, setup) : null;
   const armor: Slot[] = [
     { label: "Head", item: placed.head },
     { label: "Shoulders", item: placed.shoulders },
@@ -131,9 +130,6 @@ export function CharacterLoadout({
           <WeaponBar title="Front bar" pair={placed.front} skills={frontSkills} setLink={setLink} worn={worn} />
           <WeaponBar title="Back bar" pair={placed.back} skills={backSkills} setLink={setLink} worn={worn} />
         </div>
-        <p className="text-xs text-fg-subtle">
-          {barLabel ? `Skills from ${barLabel}.` : "No skill bar in this snapshot."}
-        </p>
       </div>
   );
 }
@@ -334,17 +330,6 @@ function firstFood(wardrobe: Wardrobe | null | undefined): WardrobeSetup["food"]
     }
   }
   return null;
-}
-
-function barCaption(wardrobe: Wardrobe | null | undefined, setup: WardrobeSetup): string {
-  for (const zone of wardrobe?.zones ?? []) {
-    for (const page of zone.pages) {
-      if (page.setups.includes(setup)) {
-        return [zone.name, setup.name].filter(Boolean).join(" · ") || "wardrobe";
-      }
-    }
-  }
-  return setup.name || "wardrobe";
 }
 
 function safeMythics() {
