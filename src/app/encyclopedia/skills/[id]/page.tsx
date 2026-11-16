@@ -4,6 +4,7 @@ import { ArrowLeft, Users } from "lucide-react";
 import { getSkillLine, getSkillsForLine } from "@/lib/db/catalog-queries";
 import { charactersKnowingSkill, charactersWithSkillLine } from "@/lib/db/overlay";
 import { Badge, Card } from "@/components/ui";
+import { EsoText } from "@/components/eso-text";
 import { GameIcon } from "@/components/game-icon";
 import { SourceBadge } from "@/components/source-badge";
 import { plannerLineIcon } from "@/lib/icons/planner-icons";
@@ -87,7 +88,11 @@ export default async function SkillLinePage({ params }: PageProps<"/encyclopedia
                         <SourceBadge source={ss} />
                       </span>
                     </div>
-                    {sk.description && <p className="mt-1.5 text-sm text-fg-muted">{sk.description}</p>}
+                    {sk.description ? (
+                      <p className="mt-1.5 text-sm text-fg-muted">
+                        <EsoText text={sk.description} />
+                      </p>
+                    ) : null}
                     {sk.morphs.length > 0 && (
                       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {sk.morphs.map((m, i) => (
@@ -96,7 +101,11 @@ export default async function SkillLinePage({ params }: PageProps<"/encyclopedia
                               <GameIcon name={m.name} icon={m.icon || skillIconByName(m.name) || baseIcon} size={28} />
                               {m.name}
                             </div>
-                            {m.description && <p className="mt-0.5 text-xs text-fg-muted">{m.description}</p>}
+                            {m.description ? (
+                              <p className="mt-0.5 text-xs text-fg-muted">
+                                <EsoText text={m.description} />
+                              </p>
+                            ) : null}
                           </div>
                         ))}
                       </div>

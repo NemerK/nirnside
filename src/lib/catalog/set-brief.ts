@@ -281,6 +281,60 @@ export function briefsForHover(catalog: readonly SetBrief[], account: readonly A
   return out;
 }
 
+/**
+ * One catalog set, with stickerbook lines filled in the same way the hover
+ * card does. An in-game catalog that already has bonus text keeps it. An
+ * empty scan leaves the catalog text, including an empty list.
+ */
+export function overlayScannedBonuses(
+  catalog: {
+    name: string;
+    setId: number | null;
+    bonuses: readonly { pieces: number; text: string }[];
+  },
+  source: CatalogSource,
+  account: readonly AccountSetFacts[],
+): { bonuses: { pieces: number; text: string }[]; source: CatalogSource } {
+  const facts = accountFactsForSet(catalog, account);
+  if (facts && facts.bonuses.length > 0 && (source !== "ingame" || catalog.bonuses.length === 0)) {
+    return {
+      bonuses: facts.bonuses.map((bonus) => ({ pieces: bonus.pieces, text: bonus.text })),
+      source: "ingame",
+    };
+  }
+  return {
+    bonuses: catalog.bonuses.map((bonus) => ({ pieces: bonus.pieces, text: bonus.text })),
+    source,
+  };
+}
+
+function accountFactsForSet(
+  set: { name: string; setId: number | null },
+  account: readonly AccountSetFacts[],
+): AccountSetFacts | null {
+  const byId =
+    set.setId != null && set.setId !== 0 ? account.find((row) => row.setId === set.setId) : undefined;
+  if (byId && byId.bonuses.length > 0) return byId;
+
+  const key = fold(set.name);
+  const exactWithLines = key
+    ? account.find((row) => fold(row.name) === key && row.bonuses.length > 0)
+    : undefined;
+  if (exactWithLines) return exactWithLines;
+  if (byId) return byId;
+  const exact = key ? account.find((row) => fold(row.name) === key) : undefined;
+  if (exact) return exact;
+
+  const norm = normalizeSetName(set.name);
+  if (!norm) return null;
+  const matches = account.filter((row) => normalizeSetName(row.name) === norm);
+  if (matches.length === 0) return null;
+  const withLines = matches.filter((row) => row.bonuses.length > 0);
+  const pool = withLines.length > 0 ? withLines : matches;
+  const perfected = key.startsWith("perfected ");
+  return pool.find((row) => fold(row.name).startsWith("perfected ") === perfected) ?? pool[0] ?? null;
+}
+
 function setNameCandidates(itemName: string | null | undefined): string[] {
   const raw = itemName?.trim();
   if (!raw) return [];

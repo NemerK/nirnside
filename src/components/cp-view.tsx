@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { Star } from "lucide-react";
 import { PageScroll, StickyMenu } from "@/components/ui";
+import { EsoText } from "@/components/eso-text";
+import { esoPlainText } from "@/lib/text/eso-markup";
 
 export interface CPStarLite {
   id: string;
@@ -89,7 +91,11 @@ function Tree({ disciplines, characters }: { disciplines: CPDiscipline[]; charac
                       {s.type}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-fg-muted">{s.description}</p>
+                  {s.description ? (
+                    <p className="mt-1 text-xs text-fg-muted">
+                      <EsoText text={s.description} />
+                    </p>
+                  ) : null}
                   {investedBy.length > 0 && (
                     <div className="mt-1.5 text-[11px] text-fg-subtle">
                       Invested by {investedBy.map((c) => `${c.name} (${c.alloc[s.name.toLowerCase()].points})`).join(", ")}
@@ -209,7 +215,7 @@ function Planner({ disciplines, characters }: { disciplines: CPDiscipline[]; cha
                 return (
                   <div key={s.id} className="rounded-lg border border-border bg-surface/70 p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-fg" title={s.description}>
+                      <span className="text-sm font-medium text-fg" title={s.description ? esoPlainText(s.description) : undefined}>
                         {s.name}
                       </span>
                       <div className="flex items-center gap-1">

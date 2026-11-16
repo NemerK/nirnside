@@ -6,6 +6,7 @@ import { getCPStars } from "@/lib/db/catalog-queries";
 import { GameIcon } from "@/components/game-icon";
 import { Badge, Card, ProgressBar, SectionTitle } from "@/components/ui";
 import { plannerScriptIcon } from "@/lib/icons/planner-icons";
+import { esoPlainText } from "@/lib/text/eso-markup";
 import {
   formatResearchRemaining,
   presentMotifs,
@@ -169,12 +170,16 @@ export function ScribingPanel({ character, scripts }: { character: Character; sc
                 <ul className="space-y-1.5">
                   {list.map((s) =>
                     known.has(s.name.toLowerCase()) ? (
-                      <li key={s.id} className="flex items-center gap-2 text-sm text-fg" title={s.effect}>
+                      <li key={s.id} className="flex items-center gap-2 text-sm text-fg" title={s.effect ? esoPlainText(s.effect) : undefined}>
                         <GameIcon name={s.name} icon={s.icon ?? plannerScriptIcon(s.name)} size={20} bare />
                         <span className="min-w-0 truncate">{s.name}</span>
                       </li>
                     ) : (
-                      <li key={s.id} className="flex items-center gap-2 text-sm text-fg-subtle opacity-70" title={s.effect}>
+                      <li
+                        key={s.id}
+                        className="flex items-center gap-2 text-sm text-fg-subtle opacity-70"
+                        title={s.effect ? esoPlainText(s.effect) : undefined}
+                      >
                         <GameIcon name={s.name} icon={s.icon ?? plannerScriptIcon(s.name)} size={20} bare />
                         <span className="min-w-0 truncate">
                           {s.name} <span className="text-xs">· missing</span>

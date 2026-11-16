@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
+import { EsoText } from "@/components/eso-text";
 import { GameIcon } from "@/components/game-icon";
 import { SortHeader, useSort } from "@/components/sort-header";
 import { PageScroll, StickyMenu } from "@/components/ui";
@@ -127,7 +128,11 @@ export function ScribingMatrix({
           <span className="font-medium">{grim.name}</span>
           <span className="text-sm text-fg-muted">· {grim.skillLine}</span>
         </div>
-        <p className="mt-1 text-sm text-fg-muted">{grim.description}</p>
+        {grim.description ? (
+          <p className="mt-1 text-sm text-fg-muted">
+            <EsoText text={grim.description} />
+          </p>
+        ) : null}
         {!linked && (
           <p className="mt-2 text-xs text-fg-subtle">
             These are the live scripts. This grimoire does not yet list which of them it accepts.
@@ -151,9 +156,21 @@ export function ScribingMatrix({
             {selA ? ` · ${selA.name}` : ""}
           </div>
           <ul className="mt-2 space-y-1 text-sm text-fg-muted">
-            {selF && <li>Focus — {selF.effect}</li>}
-            {selS && <li>Signature — {selS.effect}</li>}
-            {selA && <li>Affix — {selA.effect}</li>}
+            {selF ? (
+              <li>
+                Focus — <EsoText text={selF.effect} />
+              </li>
+            ) : null}
+            {selS ? (
+              <li>
+                Signature — <EsoText text={selS.effect} />
+              </li>
+            ) : null}
+            {selA ? (
+              <li>
+                Affix — <EsoText text={selA.effect} />
+              </li>
+            ) : null}
           </ul>
         </div>
       )}
