@@ -296,20 +296,17 @@ body {
   }
 }
 
-/* Floating skill and set cards. The sheet uses the same surface color, so the
-   card needs its own fill, an accent edge, and a shadow or it disappears. */
+/* Floating skill and set cards. One edge only — a second ring sat on the
+   hovered item's outline and read as two borders. */
 .nirn-tip {
-  background: color-mix(in srgb, var(--surface-2) 84%, white 16%);
-  border: 2px solid var(--accent);
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent),
-    0 22px 48px rgba(0, 0, 0, 0.72);
+  background: color-mix(in srgb, var(--surface-2) 88%, white 12%);
+  border: 1px solid color-mix(in srgb, var(--accent) 65%, var(--border-strong));
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.62);
 }
 .theme-light .nirn-tip {
   background: #fffdf8;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent),
-    0 16px 36px rgba(42, 35, 24, 0.28);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 14px 30px rgba(42, 35, 24, 0.22);
 }
 .nirn-tip-target {
   border-radius: 0.5rem;
