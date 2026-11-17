@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { classIcon } from "@/lib/classes";
 import type { CharacterWorkspaceCard, ProgressTally } from "@/lib/characters/workspace";
+import { GalleryLink } from "../gallery-link";
 import { GameIcon } from "../game-icon";
 import { RoleBadge } from "../role-badge";
 
@@ -49,7 +50,13 @@ function sortValue(card: CharacterWorkspaceCard, key: SortKey): string | number 
   return card.research.pct;
 }
 
-export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
+export function RosterList({
+  cards,
+  photoCounts = {},
+}: {
+  cards: CharacterWorkspaceCard[];
+  photoCounts?: Record<string, number>;
+}) {
   const [rows, setRows] = useState(cards);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -151,10 +158,16 @@ export function RosterList({ cards }: { cards: CharacterWorkspaceCard[] }) {
               <GripVertical className="h-4 w-4" />
             </button>
             <GameIcon name={card.className} icon={classIcon(card.className)} size={28} bare />
-            <Link href={`/characters/${encodeURIComponent(card.id)}`} className="min-w-0">
-              <span className="block truncate text-sm font-medium text-fg hover:text-accent">{card.name}</span>
-              <span className="block truncate text-xs text-fg-subtle sm:hidden">{card.className}</span>
-            </Link>
+            <div className="min-w-0">
+              <Link href={`/characters/${encodeURIComponent(card.id)}`} className="min-w-0">
+                <span className="block truncate text-sm font-medium text-fg hover:text-accent">{card.name}</span>
+                <span className="block truncate text-xs text-fg-subtle sm:hidden">{card.className}</span>
+              </Link>
+              <GalleryLink
+                href={`/characters/${encodeURIComponent(card.id)}/gallery`}
+                count={photoCounts[card.id] ?? 0}
+              />
+            </div>
             <div className="col-span-3 min-w-0 pl-11 sm:col-span-1 sm:pl-0">
               <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle sm:hidden">Role</p>
               {card.roles.length === 0 ? (

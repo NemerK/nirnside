@@ -1,4 +1,6 @@
 import { Landmark, RefreshCw, Star } from "lucide-react";
+import { GalleryLink } from "@/components/gallery-link";
+import { galleryCounts } from "@/lib/db/gallery";
 import { getCharactersFull, getDataSource, getHouses, hasData } from "@/lib/db/queries";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { dailiesHaveAnyScan } from "@/lib/dailies/present";
@@ -16,6 +18,7 @@ export default function HousesPage() {
   const source = safe(() => getDataSource());
   const isSample = source?.kind === "sample";
   const houses = safe(() => getHouses()) ?? [];
+  const photoCounts = safe(() => galleryCounts("house")) ?? new Map<string, number>();
   const characters = liveCharacters(safe(() => getCharactersFull()) ?? []);
   const staleAddon =
     populated && !isSample && houses.length === 0 && characters.some((c) => c.lastSeen != null) && !dailiesHaveAnyScan(characters);
@@ -73,6 +76,12 @@ export default function HousesPage() {
                       )}
                     </div>
                     <p className="mt-0.5 text-sm text-fg-muted">{h.location || "Location unknown"}</p>
+                    <div className="mt-2">
+                      <GalleryLink
+                        href={`/houses/${h.collectibleId}`}
+                        count={photoCounts.get(String(h.collectibleId)) ?? 0}
+                      />
+                    </div>
                   </div>
                 </Card>
               </li>

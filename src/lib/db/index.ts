@@ -162,6 +162,18 @@ function migrate(db: Database.Database) {
       note        TEXT NOT NULL DEFAULT '',
       createdAt   INTEGER NOT NULL
     );
+
+    -- Player photos for a character or an owned house. Not game data;
+    -- a snapshot re-import must not wipe them. Files live beside the db.
+    CREATE TABLE IF NOT EXISTS gallery_photos (
+      id         TEXT PRIMARY KEY,
+      ownerKind  TEXT NOT NULL,
+      ownerId    TEXT NOT NULL,
+      ext        TEXT NOT NULL,
+      bytes      INTEGER NOT NULL,
+      createdAt  INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_gallery_owner ON gallery_photos(ownerKind, ownerId, createdAt);
   `);
   migrateCharacterRolesToMany(db);
   migrateGoalsTable(db);

@@ -5,16 +5,19 @@ import type { Role } from "@/lib/roles/types";
 import { isArchived } from "@/lib/snapshot/roster";
 import { ALLIANCE_ACCENT, formatGold, timeAgo } from "@/lib/format";
 import { Badge } from "./ui";
+import { GalleryLink } from "./gallery-link";
 import { RolePicker } from "./role-picker";
 
 export function CharacterCard({
   character: c,
   assigned = [],
   roles,
+  photoCount = 0,
 }: {
   character: Character;
   assigned?: Role[];
   roles?: Role[];
+  photoCount?: number;
 }) {
   const accent = ALLIANCE_ACCENT[c.alliance] ?? "var(--accent)";
   const seen = c.lastSeen;
@@ -75,11 +78,16 @@ export function CharacterCard({
           {seen ? <span className="shrink-0 tabular-nums text-fg-muted">{formatGold(c.gold ?? 0)}</span> : null}
         </div>
       </Link>
-      {roles && (
-        <div className="px-4 pb-3">
-          <RolePicker characterId={c.id} assigned={assigned} roles={roles} />
+      {!archived || roles ? (
+        <div className="flex items-center justify-between gap-2 px-4 pb-3">
+          {!archived ? (
+            <GalleryLink href={`/characters/${encodeURIComponent(c.id)}/gallery`} count={photoCount} />
+          ) : (
+            <span />
+          )}
+          {roles ? <RolePicker characterId={c.id} assigned={assigned} roles={roles} /> : null}
         </div>
-      )}
+      ) : null}
     </article>
   );
 }
