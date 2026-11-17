@@ -1,5 +1,6 @@
 import { Users } from "lucide-react";
 import { getArchivedCharacters, getCharacters, getCharactersFull } from "@/lib/db/queries";
+import { galleryCounts } from "@/lib/db/gallery";
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
 import type { RoleAssignments } from "@/lib/roles/types";
@@ -51,6 +52,7 @@ export default async function CharactersPage({
   const source = full.length > 0 ? full : characters;
   const cards = presentCharacterWorkspaceCards(source, goals, indexes, assignments, roles);
   const ordered = applyRosterOrder(cards, safe(() => getRosterOrder()) ?? []);
+  const photoCounts = Object.fromEntries(safe(() => galleryCounts("character")) ?? []);
 
   const classic =
     characters.length === 0 && archived.length === 0 ? (
@@ -91,6 +93,7 @@ export default async function CharactersPage({
           archived={archived}
           roles={roles}
           assignments={assignments}
+          photoCounts={photoCounts}
         />
       </PageFrame>
     );
@@ -104,6 +107,7 @@ export default async function CharactersPage({
           sort={sort}
           view={view}
           accountCP={accountCP}
+          photoCounts={photoCounts}
           action={<RoleManagerButton roles={roles} />}
         />
       }

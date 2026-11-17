@@ -44,6 +44,7 @@ next-env.d.ts
 /data/*.db
 /data/*.db-shm
 /data/*.db-wal
+/data/gallery/
 
 # self-update bookkeeping (machine-local)
 .nirnside-revision

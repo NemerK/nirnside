@@ -15,11 +15,13 @@ export function CharacterRoster({
   archived = [],
   roles,
   assignments,
+  photoCounts = {},
 }: {
   characters: Character[];
   archived?: Character[];
   roles: Role[];
   assignments: RoleAssignments;
+  photoCounts?: Record<string, number>;
 }) {
   const [q, setQ] = useState("");
   const [className, setClassName] = useState("");
@@ -108,6 +110,7 @@ export function CharacterRoster({
               character={c}
               assigned={rolesForCharacter(c.id, roles, assignments)}
               roles={roles}
+              photoCount={photoCounts[c.id] ?? 0}
             />
           ))}
         </div>

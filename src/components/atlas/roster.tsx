@@ -7,6 +7,7 @@ import {
 } from "@/lib/characters/workspace";
 import { classColor, classIcon } from "@/lib/classes";
 import { ALLIANCE_ACCENT, timeAgo } from "@/lib/format";
+import { GalleryLink } from "../gallery-link";
 import { GameIcon } from "../game-icon";
 import { RoleBadge } from "../role-badge";
 import { AtlasEmpty, AtlasMeter, AtlasPage } from "./ui";
@@ -38,12 +39,14 @@ export function AtlasRoster({
   sort = "progress",
   view = "cards",
   accountCP = 0,
+  photoCounts = {},
   action,
 }: {
   cards: CharacterWorkspaceCard[];
   sort?: RosterSort;
   view?: RosterView;
   accountCP?: number;
+  photoCounts?: Record<string, number>;
   action?: ReactNode;
 }) {
   const sorted = sortCards(cards, sort);
@@ -108,11 +111,11 @@ export function AtlasRoster({
         </AtlasEmpty>
       ) : (
         view === "list" ? (
-          <RosterList cards={cards} />
+          <RosterList cards={cards} photoCounts={photoCounts} />
         ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {sorted.map((card) => (
-            <WorkspaceCard key={card.id} card={card} />
+            <WorkspaceCard key={card.id} card={card} photoCount={photoCounts[card.id] ?? 0} />
           ))}
         </div>
         )
@@ -121,7 +124,7 @@ export function AtlasRoster({
   );
 }
 
-function WorkspaceCard({ card }: { card: CharacterWorkspaceCard }) {
+function WorkspaceCard({ card, photoCount }: { card: CharacterWorkspaceCard; photoCount: number }) {
   const accent = ALLIANCE_ACCENT[card.alliance] ?? "var(--accent)";
   const overall = overallWorkspacePct(card);
 
@@ -201,6 +204,9 @@ function WorkspaceCard({ card }: { card: CharacterWorkspaceCard }) {
             : `Snapshot ${timeAgo(card.lastSeen)}`}
         </p>
       </Link>
+      <div className="border-t border-border px-4 py-2">
+        <GalleryLink href={`/characters/${encodeURIComponent(card.id)}/gallery`} count={photoCount} />
+      </div>
     </article>
   );
 }

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { GalleryLink } from "@/components/gallery-link";
+import { galleryCounts } from "@/lib/db/gallery";
 import { Star } from "lucide-react";
 import type { MythicSet } from "@/lib/snapshot/schema";
 import type { CollectionTab, CollectionsPresent } from "@/lib/collections/present";
@@ -96,6 +98,12 @@ function StylesPane({ collections, motifKeys }: { collections: CollectionsPresen
 
 function HousesPane({ collections }: { collections: CollectionsPresent }) {
   const { rows, total } = collections.houses;
+  let photoCounts = new Map<string, number>();
+  try {
+    photoCounts = galleryCounts("house");
+  } catch {
+    photoCounts = new Map();
+  }
   if (total === 0) {
     return (
       <AtlasEmpty title="No houses unlocked">
@@ -122,6 +130,12 @@ function HousesPane({ collections }: { collections: CollectionsPresent }) {
               ) : null}
             </div>
             <p className="mt-0.5 truncate text-xs text-fg-muted">{house.location || "Location unknown"}</p>
+            <div className="mt-1.5">
+              <GalleryLink
+                href={`/houses/${house.collectibleId}`}
+                count={photoCounts.get(String(house.collectibleId)) ?? 0}
+              />
+            </div>
           </div>
         </li>
       ))}
