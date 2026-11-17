@@ -81,7 +81,13 @@ export function CharacterCard({
       {!archived || roles ? (
         <div className="flex items-center justify-between gap-2 px-4 pb-3">
           {!archived ? (
-            <GalleryLink href={`/characters/${encodeURIComponent(c.id)}/gallery`} count={photoCount} />
+            <GalleryLink
+              kind="character"
+              ownerId={c.id}
+              title={c.name}
+              detail={`${c.race} ${c.class}`}
+              count={photoCount}
+            />
           ) : (
             <span />
           )}

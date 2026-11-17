@@ -132,7 +132,10 @@ function HousesPane({ collections }: { collections: CollectionsPresent }) {
             <p className="mt-0.5 truncate text-xs text-fg-muted">{house.location || "Location unknown"}</p>
             <div className="mt-1.5">
               <GalleryLink
-                href={`/houses/${house.collectibleId}`}
+                kind="house"
+                ownerId={String(house.collectibleId)}
+                title={house.name}
+                detail={house.location || "Owned house"}
                 count={photoCounts.get(String(house.collectibleId)) ?? 0}
               />
             </div>

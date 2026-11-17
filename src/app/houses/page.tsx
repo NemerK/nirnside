@@ -78,7 +78,10 @@ export default function HousesPage() {
                     <p className="mt-0.5 text-sm text-fg-muted">{h.location || "Location unknown"}</p>
                     <div className="mt-2">
                       <GalleryLink
-                        href={`/houses/${h.collectibleId}`}
+                        kind="house"
+                        ownerId={String(h.collectibleId)}
+                        title={h.name}
+                        detail={h.location || "Owned house"}
                         count={photoCounts.get(String(h.collectibleId)) ?? 0}
                       />
                     </div>

@@ -164,7 +164,10 @@ export function RosterList({
                 <span className="block truncate text-xs text-fg-subtle sm:hidden">{card.className}</span>
               </Link>
               <GalleryLink
-                href={`/characters/${encodeURIComponent(card.id)}/gallery`}
+                kind="character"
+                ownerId={card.id}
+                title={card.name}
+                detail={`${card.race} ${card.className}`}
                 count={photoCounts[card.id] ?? 0}
               />
             </div>
