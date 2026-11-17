@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Copy, Download, Shirt, Sparkles, Star, Utensils } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
@@ -311,15 +311,48 @@ export function Wardrobe({
   const zones = (wardrobe?.zones ?? []).filter((z) => visibleWardrobePages(z).length > 0);
   const [zoneTag, setZoneTag] = useState(zones[0]?.tag ?? "");
   const [pageKey, setPageKey] = useState("");
-  if (!wardrobe || zones.length === 0) {
+  const [restored, setRestored] = useState(!characterId);
+  const zone = zones.find((z) => z.tag === zoneTag) ?? zones[0];
+  const pages = zone ? visibleWardrobePages(zone) : [];
+  const storageKey = characterId ? `nirnside-wardrobe:${characterId}` : null;
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (raw) {
+        const saved = JSON.parse(raw) as { zone?: string; page?: string };
+        if (typeof saved.zone === "string" && saved.zone) setZoneTag(saved.zone);
+        if (typeof saved.page === "string") setPageKey(saved.page);
+      }
+    } catch {
+      /* keep the first page */
+    }
+    setRestored(true);
+  }, [storageKey]);
+
+  const savedPageKey = (() => {
+    if (!zone) return "";
+    const index = Math.max(
+      0,
+      pages.findIndex((page, i) => wardrobePageKey(zone.tag, page, i) === pageKey),
+    );
+    const current = pages[index] ?? pages[0];
+    return current ? wardrobePageKey(zone.tag, current, index) : "";
+  })();
+
+  useEffect(() => {
+    if (!storageKey || !restored || !zone) return;
+    sessionStorage.setItem(storageKey, JSON.stringify({ zone: zone.tag, page: savedPageKey }));
+  }, [storageKey, restored, zone, savedPageKey]);
+
+  if (!wardrobe || !zone || zones.length === 0) {
     return (
       <p className="text-sm text-fg-muted">
         No Wizard&apos;s Wardrobe setups for this character. They show up after a logout with that addon installed.
       </p>
     );
   }
-  const zone = zones.find((z) => z.tag === zoneTag) ?? zones[0]!;
-  const pages = visibleWardrobePages(zone);
   const selectedIndex = Math.max(
     0,
     pages.findIndex((page, index) => wardrobePageKey(zone.tag, page, index) === pageKey),

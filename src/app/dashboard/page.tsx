@@ -372,6 +372,7 @@ function progressPanel(
           )}
           lastSeen={character.lastSeen ?? null}
           characterClass={character.class}
+          rememberKey={character.id}
         />
       );
     }

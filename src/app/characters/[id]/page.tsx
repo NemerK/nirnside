@@ -28,6 +28,7 @@ import { Wardrobe } from "@/components/wardrobe";
 import { RolePicker } from "@/components/role-picker";
 import { CharacterGoals } from "@/components/goals-board";
 import { CharacterTabs } from "@/components/character-tabs";
+import { characterTab } from "@/lib/characters/sheet-tab";
 import { CharacterChampion } from "@/components/character-champion";
 import { CharacterScripts, type CharacterScript } from "@/components/character-scripts";
 import { CharacterLoadout } from "@/components/character-loadout";
@@ -52,8 +53,10 @@ function skillLineHref(name: string, className?: string | null): string | null {
 
 export const dynamic = "force-dynamic";
 
-export default async function CharacterPage({ params }: PageProps<"/characters/[id]">) {
+export default async function CharacterPage({ params, searchParams }: PageProps<"/characters/[id]">) {
   const { id } = await params;
+  const sp = await searchParams;
+  const initialTab = characterTab(typeof sp.tab === "string" ? sp.tab : undefined);
   let c: Character | null = null;
   try {
     c = getCharacter(decodeURIComponent(id));
@@ -340,9 +343,15 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
       <SetCatalogProvider sets={hover.briefs}>
       <SkillCatalogProvider skills={skillBriefs}>
       <CharacterTabs
+        initialTab={initialTab}
         overview={
           <>
-            <SkillBook categories={skillBook} lastSeen={c.lastSeen} characterClass={c.class} />
+            <SkillBook
+              categories={skillBook}
+              lastSeen={c.lastSeen}
+              characterClass={c.class}
+              rememberKey={c.id}
+            />
 
       {archived && (
         <section className="mb-6">

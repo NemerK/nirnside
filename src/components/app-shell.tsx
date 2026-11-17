@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ActivityReturn } from "./activity-return";
 import { clearLoadingRetry } from "./loading-recovery";
 import { NirnsideMark } from "./nirnside-mark";
 import { NirnsideSettings } from "./nirnside-settings";
@@ -186,7 +187,10 @@ export function AppShell({
           )}
         </header>
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-6 md:px-8 md:py-8">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <ActivityReturn />
+            {children}
+          </div>
         </main>
       </div>
     </div>
