@@ -75,7 +75,7 @@ function SkillTip({
     const place = () => {
       const rect = anchor.getBoundingClientRect();
       const width = 360;
-      const margin = 8;
+      const margin = 12;
       let left = rect.right + margin;
       if (left + width > window.innerWidth - margin) left = rect.left - width - margin;
       if (left < margin) left = Math.max(margin, window.innerWidth - width - margin);
@@ -98,28 +98,30 @@ function SkillTip({
     <div
       role="tooltip"
       aria-labelledby={labelId}
-      className="nirn-tip pointer-events-none fixed z-50 max-h-[min(24rem,70vh)] overflow-y-auto rounded-lg p-3"
+      className="nirn-tip pointer-events-none fixed z-50 rounded-lg"
       style={{ left: box.left, top: box.top, width: box.width }}
     >
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="max-h-[min(24rem,70vh)] overflow-y-auto p-3">
+        <div className="flex flex-wrap items-center gap-1.5">
         <p id={labelId} className="text-sm font-medium text-fg">
           {name}
         </p>
-        {source ? <SourceBadge source={source} /> : null}
-      </div>
-      {detail ? (
-        <p className="mt-0.5 text-[11px] text-fg-subtle">
-          <EsoText text={detail} />
-        </p>
-      ) : null}
-      {description ? (
-        <div className="mt-2 text-xs leading-relaxed text-fg">
-          <EsoText text={description} />
+          {source ? <SourceBadge source={source} /> : null}
         </div>
-      ) : (
-        <p className="mt-2 text-xs text-fg-muted">Description not captured yet.</p>
-      )}
-      {source ? <UnverifiedNote source={source} /> : null}
+        {detail ? (
+          <p className="mt-0.5 text-[11px] text-fg-subtle">
+            <EsoText text={detail} />
+          </p>
+        ) : null}
+        {description ? (
+          <div className="mt-2 text-xs leading-relaxed text-fg">
+            <EsoText text={description} />
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-fg-muted">Description not captured yet.</p>
+        )}
+        {source ? <UnverifiedNote source={source} /> : null}
+      </div>
     </div>,
     document.body,
   );

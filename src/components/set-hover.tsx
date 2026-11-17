@@ -76,7 +76,7 @@ function SetTipLayer({
     const place = () => {
       const rect = tip.anchor.getBoundingClientRect();
       const width = 320;
-      const margin = 8;
+      const margin = 12;
       let left = rect.right + margin;
       if (left + width > window.innerWidth - margin) left = rect.left - width - margin;
       if (left < margin) left = Math.max(margin, window.innerWidth - width - margin);
@@ -101,16 +101,17 @@ function SetTipLayer({
     <div
       role="tooltip"
       aria-labelledby={labelId}
-      className="nirn-tip pointer-events-none fixed z-50 max-h-[min(24rem,70vh)] overflow-y-auto rounded-lg p-3"
+      className="nirn-tip pointer-events-none fixed z-50 rounded-lg"
       style={{ left: box.left, top: box.top, width: box.width }}
     >
-      {tip.request.itemName ? <p className="text-sm font-medium text-fg">{tip.request.itemName}</p> : null}
-      {tip.request.detail ? (
-        <p className="text-[11px] text-fg-muted">
-          <EsoText text={tip.request.detail} />
-        </p>
-      ) : null}
-      <div className={tip.request.itemName || tip.request.detail ? "mt-2 border-t border-border pt-2" : ""}>
+      <div className="max-h-[min(24rem,70vh)] overflow-y-auto p-3">
+        {tip.request.itemName ? <p className="text-sm font-medium text-fg">{tip.request.itemName}</p> : null}
+        {tip.request.detail ? (
+          <p className="text-[11px] text-fg-muted">
+            <EsoText text={tip.request.detail} />
+          </p>
+        ) : null}
+        <div className={tip.request.itemName || tip.request.detail ? "mt-2 border-t border-border pt-2" : ""}>
         <div className="flex flex-wrap items-center gap-1.5">
           <p id={labelId} className="text-sm font-medium text-fg">
             {setLabel ?? "No set"}
@@ -148,6 +149,7 @@ function SetTipLayer({
             {setLabel ? "This set is not in the catalog yet." : "This item has no set."}
           </p>
         )}
+        </div>
       </div>
     </div>,
     document.body,
