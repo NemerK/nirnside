@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { LivingHomeView } from "@/components/living-home";
-import { classIcon } from "@/lib/classes";
+import { classColor, classIcon } from "@/lib/classes";
 import { canonicalizeCurrencies } from "@/lib/currencies";
 import { getAccount, getCharactersFull, getHouses } from "@/lib/db/queries";
 import { timeAgo } from "@/lib/format";
@@ -28,9 +28,12 @@ export default function LivingHomePage() {
   const wallet = canonicalizeCurrencies(account.currencies);
   const championPoints = characters.reduce((max, character) => Math.max(max, character.championPoints ?? 0), 0);
   const iconByClass: Record<string, string> = {};
+  const colorByClass: Record<string, string> = {};
   for (const character of characters) {
     const icon = classIcon(character.class);
+    const color = classColor(character.class);
     if (icon) iconByClass[character.class] = icon;
+    if (color) colorByClass[character.class] = color;
   }
 
   return (
@@ -42,6 +45,7 @@ export default function LivingHomePage() {
       championPoints={championPoints}
       model={model}
       iconByClass={iconByClass}
+      colorByClass={colorByClass}
       currencies={{
         gold: gold.total,
         telVar: accountTelVar({ characters, legacyTelVar: account.currencies?.telVar }),

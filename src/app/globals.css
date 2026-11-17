@@ -344,6 +344,29 @@ body {
   }
 }
 
+/* The personal home. A letter, not a panel. */
+.nirn-living-script {
+  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+}
+.nirn-living-face {
+  animation: nirn-living-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes nirn-living-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nirn-living-face {
+    animation: none;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
