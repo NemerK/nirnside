@@ -1,10 +1,10 @@
-import { Landmark, RefreshCw, Star } from "lucide-react";
+import { Images, Landmark, RefreshCw, Star } from "lucide-react";
 import { GalleryLink } from "@/components/gallery-link";
 import { galleryCounts } from "@/lib/db/gallery";
 import { getCharactersFull, getDataSource, getHouses, hasData } from "@/lib/db/queries";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { dailiesHaveAnyScan } from "@/lib/dailies/present";
-import { Card, PageFrame, PageHeader, PageScroll, Stat, EmptyState } from "@/components/ui";
+import { PageFrame, PageHeader, PageScroll, Stat, EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
 import { GameIcon } from "@/components/game-icon";
 import { LookSwitch } from "@/components/look-switch";
@@ -62,33 +62,38 @@ export default function HousesPage() {
       ) : (
         <PageScroll>
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {sorted.map((h) => (
-              <li key={h.collectibleId}>
-                <Card className="flex items-start gap-3 p-3">
-                  <GameIcon name={h.name} icon={h.icon ?? undefined} size={48} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h2 className="font-medium text-fg">{h.name}</h2>
-                      {h.primary && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-accent/40 bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent">
-                          <Star className="h-3 w-3" /> Primary
-                        </span>
-                      )}
+            {sorted.map((h) => {
+              const photos = photoCounts.get(String(h.collectibleId)) ?? 0;
+              return (
+                <li key={h.collectibleId}>
+                  <GalleryLink
+                    kind="house"
+                    ownerId={String(h.collectibleId)}
+                    title={h.name}
+                    detail={h.location || "Owned house"}
+                    count={photos}
+                    className="flex items-start gap-3 rounded-xl border border-border bg-surface/70 p-3 transition-colors hover:border-accent/50 hover:bg-surface-2"
+                  >
+                    <GameIcon name={h.name} icon={h.icon ?? undefined} size={48} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h2 className="font-medium text-fg">{h.name}</h2>
+                        {h.primary && (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-accent/40 bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent">
+                            <Star className="h-3 w-3" /> Primary
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-sm text-fg-muted">{h.location || "Location unknown"}</p>
+                      <p className="mt-2 inline-flex items-center gap-1 text-xs text-fg-muted">
+                        <Images className="h-3.5 w-3.5" />
+                        {photos > 0 ? `Gallery · ${photos}` : "Gallery"}
+                      </p>
                     </div>
-                    <p className="mt-0.5 text-sm text-fg-muted">{h.location || "Location unknown"}</p>
-                    <div className="mt-2">
-                      <GalleryLink
-                        kind="house"
-                        ownerId={String(h.collectibleId)}
-                        title={h.name}
-                        detail={h.location || "Owned house"}
-                        count={photoCounts.get(String(h.collectibleId)) ?? 0}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              </li>
-            ))}
+                  </GalleryLink>
+                </li>
+              );
+            })}
           </ul>
         </PageScroll>
       )}
