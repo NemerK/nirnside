@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getSkillLine, getSkillsForLine } from "@/lib/db/catalog-queries";
-import { charactersKnowingSkill, charactersWithSkillLine } from "@/lib/db/overlay";
+import { charactersKnowingSkill } from "@/lib/db/overlay";
+import { getCharactersFull } from "@/lib/db/queries";
+import { liveCharacters } from "@/lib/snapshot/roster";
 import { Badge, Card } from "@/components/ui";
 import { EsoText } from "@/components/eso-text";
 import { GameIcon } from "@/components/game-icon";
+import { SkillLineRoster } from "@/components/skill-line-roster";
 import { SourceBadge } from "@/components/source-badge";
 import { plannerLineIcon } from "@/lib/icons/planner-icons";
 import { resolveSkillIcon, skillIconByName } from "@/lib/icons/skill-icons";
+import { CLASS_MASTERY_POINTS, isClassMasteryLineName } from "@/lib/skills/class-mastery";
+import { skillLineCap } from "@/lib/skills/line-cap";
+import { skillLineRoster } from "@/lib/skills/line-roster";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +26,24 @@ export default async function SkillLinePage({ params }: PageProps<"/encyclopedia
   if (!row) notFound();
   const { entry: line, source } = row;
   const skills = safe(() => getSkillsForLine(line.id)) ?? [];
-  const knownBy = safe(() => charactersWithSkillLine(line.name)) ?? [];
+  const classMastery = isClassMasteryLineName(line.name);
+  const roster = skillLineRoster(
+    { name: line.name, className: line.className, classMastery },
+    skills.map(({ entry }) => ({
+      id: entry.id,
+      name: entry.name,
+      type: entry.type,
+      morphs: entry.morphs.map((morph) => morph.name),
+    })),
+    (safe(() => liveCharacters(getCharactersFull())) ?? []).map((character) => ({
+      id: character.id,
+      name: character.name,
+      className: character.class,
+      archivedAt: character.archivedAt,
+      skillLines: character.skillLines,
+    })),
+    classMastery ? CLASS_MASTERY_POINTS : skillLineCap(line.name),
+  );
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -51,19 +74,11 @@ export default async function SkillLinePage({ params }: PageProps<"/encyclopedia
           <Badge tone="muted">{line.category}</Badge>
           {line.className && <Badge tone="muted">{line.className}</Badge>}
         </div>
-        {knownBy.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-fg-muted">
-            <Users className="h-4 w-4 text-accent" /> Discovered by:
-            {knownBy.map((c) => (
-              <Link key={c.id} href={`/characters/${encodeURIComponent(c.id)}`} className="text-accent hover:underline">
-                {c.name} ({c.detail})
-              </Link>
-            ))}
-          </div>
-        )}
           </div>
         </div>
       </Card>
+
+      <SkillLineRoster rows={roster} />
 
       {skills.length === 0 ? (
         <Card className="px-4 py-8 text-center text-sm text-fg-muted">
