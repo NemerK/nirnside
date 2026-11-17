@@ -1,22 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { GameIcon } from "@/components/game-icon";
+import { ALLIANCE_ACCENT, formatNumber } from "@/lib/format";
 import type { LivingFace, LivingGuild, LivingHome } from "@/lib/home/living";
-import { formatGold, formatNumber } from "@/lib/format";
 
 const LINE_KEY = "nirnside-home-line";
 
 const SMALL = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
-const STAGE = ["", "the first", "the second", "the third", "the fourth", "the fifth"];
 
 export function LivingHomeView({
   accountName,
   region,
   esoPlus,
   snapshot,
-  championPoints,
   model,
   iconByClass,
   colorByClass,
@@ -26,7 +24,6 @@ export function LivingHomeView({
   region: string;
   esoPlus: boolean;
   snapshot: string | null;
-  championPoints: number;
   model: LivingHome;
   iconByClass: Record<string, string>;
   colorByClass: Record<string, string>;
@@ -41,11 +38,10 @@ export function LivingHomeView({
 }) {
   const [faceId, setFaceId] = useState(model.faceId);
   const [line, setLine] = useState("");
-  const [purse, setPurse] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   const face = model.faces.find((item) => item.id === faceId) ?? model.faces[0] ?? null;
-  const color = face ? colorByClass[face.className] : undefined;
-  const others = model.faces.filter((item) => item.id !== face?.id);
+  const color = face ? (colorByClass[face.className] ?? "var(--accent)") : "var(--accent)";
+  const alliance = face ? (ALLIANCE_ACCENT[face.alliance] ?? color) : color;
 
   useEffect(() => {
     setLine(window.localStorage.getItem(LINE_KEY) ?? "");
@@ -63,168 +59,283 @@ export function LivingHomeView({
     const observer = new ResizeObserver(fit);
     observer.observe(parent);
     return () => observer.disconnect();
-  }, [line]);
+  }, [line, face?.id]);
 
   function writeLine(next: string) {
     setLine(next);
     window.localStorage.setItem(LINE_KEY, next);
   }
 
-  const signature = [
-    accountName,
-    region,
-    esoPlus ? "ESO+" : null,
-    championPoints > 0 ? `CP ${championPoints.toLocaleString("en-US")}` : null,
-    snapshot,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
   return (
-    <div className="relative mx-auto w-full max-w-2xl py-2 sm:py-8">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-10 -top-6 h-56 w-56 rounded-full blur-3xl transition-all duration-700"
-        style={{ background: color ?? "transparent", opacity: color ? 0.22 : 0 }}
-      />
-
-      <label className="relative block">
-        <span className="sr-only">A line only you write</span>
-        <textarea
-          ref={field}
-          rows={1}
-          value={line}
-          onChange={(event) => writeLine(event.target.value)}
-          placeholder="What this week is for"
-          style={{ caretColor: color }}
-          className="nirn-living-script w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-3xl leading-tight text-fg italic placeholder:text-fg-subtle/80 focus:outline-none sm:text-4xl"
-        />
-      </label>
-
-      {face ? (
-        <article key={face.id} className="nirn-living-face relative mt-12">
-          <div className="flex items-center gap-4">
-            <GameIcon name={face.className} icon={iconByClass[face.className]} size={64} bare lit />
-            <h1
-              className="nirn-living-script text-5xl leading-[0.95] tracking-tight sm:text-6xl"
-              style={{ color: color ?? "var(--fg)" }}
+    <div className="mx-auto w-full max-w-4xl">
+      <article className="nirn-profile">
+        {face ? (
+          <div key={face.id} className="nirn-living-face">
+            <header
+              className="nirn-profile-banner"
+              style={{ "--profile": color, "--alliance": alliance } as CSSProperties}
             >
-              {face.name}
-            </h1>
+              <GameIcon
+                name=""
+                icon={iconByClass[face.className]}
+                size={92}
+                bare
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 opacity-30 sm:right-10"
+              />
+            </header>
+
+            <div className="px-5 pb-6 sm:px-8">
+              <Avatar face={face} color={color} icon={iconByClass[face.className]} />
+
+              <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
+                    <Link href={`/characters/${encodeURIComponent(face.id)}`} className="hover:underline">
+                      {face.name}
+                    </Link>
+                  </h1>
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted">
+                    <span>{accountName}</span>
+                    <span aria-hidden>·</span>
+                    <span>{region}</span>
+                    {esoPlus ? (
+                      <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-accent-fg">
+                        ESO+
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+              </div>
+
+              <label className="mt-4 flex items-start gap-2.5">
+                <span className="sr-only">Status</span>
+                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
+                <textarea
+                  ref={field}
+                  rows={1}
+                  value={line}
+                  onChange={(event) => writeLine(event.target.value)}
+                  placeholder="Set a status"
+                  style={{ caretColor: color }}
+                  className="w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-base leading-6 text-fg placeholder:text-fg-subtle focus:outline-none"
+                />
+              </label>
+
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {roles(face, color, alliance).map((role) => (
+                  <li
+                    key={role.label}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-bg px-2.5 py-1 text-xs font-medium text-fg ring-1 ring-border"
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ background: role.color }} aria-hidden />
+                    {role.label}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <Showcase title="Now">
+                  <Now face={face} color={color} icon={iconByClass[face.className]} />
+                </Showcase>
+                {model.house ? (
+                  <Showcase title="Home">
+                    <p className="text-lg font-semibold leading-snug text-fg">{model.house.name}</p>
+                    {model.house.location ? <p className="mt-1 text-sm text-fg-muted">{model.house.location}</p> : null}
+                    {model.house.others > 0 ? (
+                      <p className="mt-3 text-sm text-fg-subtle">
+                        {model.house.others < SMALL.length ? SMALL[model.house.others] : model.house.others} more{" "}
+                        {model.house.others === 1 ? "house" : "houses"}
+                      </p>
+                    ) : null}
+                  </Showcase>
+                ) : null}
+                {face.sets.length > 0 ? (
+                  <Showcase title="Wearing" className="sm:col-span-2">
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                      {face.sets.map((set) => (
+                        <li
+                          key={set}
+                          className="rounded-lg bg-bg px-3 py-3 text-base font-medium text-fg ring-1 ring-border"
+                          style={{ boxShadow: `inset 3px 0 0 ${color}` }}
+                        >
+                          {set}
+                        </li>
+                      ))}
+                    </ul>
+                  </Showcase>
+                ) : null}
+              </div>
+
+              {model.guilds.length > 0 ? (
+                <div className="mt-3">
+                  <Showcase title="Guilds">
+                    <ul className="flex flex-wrap gap-2">
+                      {model.guilds.map((guild) => (
+                        <GuildChip key={guild.name} guild={guild} color={color} />
+                      ))}
+                    </ul>
+                  </Showcase>
+                </div>
+              ) : null}
+            </div>
           </div>
-          <div className="mt-8 max-w-lg space-y-4 text-lg leading-8 text-fg">
-            <p>{[presence(face), face.progress ? progressSentence(face.progress) : null, face.wearing].filter(Boolean).join(" ")}</p>
-            {face.open ? <p className="text-fg-muted">{face.open}</p> : null}
-            {model.house ? <p>{houseSentence(model.house)}</p> : null}
+        ) : (
+          <p className="px-6 py-16 text-fg-muted">No characters in this snapshot yet.</p>
+        )}
+
+        {model.faces.length > 1 ? (
+          <div className="border-t border-border px-5 py-4 sm:px-8">
+            <h2 className="text-xs font-medium text-fg-subtle">Roster</h2>
+            <div className="mt-3 flex gap-4 overflow-x-auto pb-1">
+              {model.faces.map((item) => {
+                const selected = item.id === face?.id;
+                const itemColor = colorByClass[item.className] ?? "var(--accent)";
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setFaceId(item.id)}
+                    className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center"
+                  >
+                    <span
+                      className="grid h-14 w-14 place-items-center rounded-full bg-bg"
+                      style={{ boxShadow: selected ? `0 0 0 2px var(--surface), 0 0 0 4px ${itemColor}` : "inset 0 0 0 1px var(--border)" }}
+                    >
+                      <GameIcon name={item.className} icon={iconByClass[item.className]} size={36} bare lit={selected} />
+                    </span>
+                    <span className={`line-clamp-2 text-[11px] leading-tight ${selected ? "font-medium text-fg" : "text-fg-subtle"}`}>
+                      {item.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </article>
-      ) : (
-        <p className="relative mt-12 text-lg text-fg-muted">No characters in this snapshot yet.</p>
-      )}
-
-      {others.length > 0 ? (
-        <p className="relative mt-12 text-lg leading-8 text-fg-muted">
-          Also <AlsoNames faces={others} colorByClass={colorByClass} onPick={setFaceId} />.
-        </p>
-      ) : null}
-
-      {model.guilds.length > 0 ? (
-        <p className="relative mt-6 max-w-lg text-base leading-7 text-fg-muted">{guildsSentence(model.guilds)}</p>
-      ) : null}
-
-      <div className="relative mt-10">
-        <button type="button" onClick={() => setPurse((open) => !open)} className="text-left text-sm text-fg-subtle hover:text-fg">
-          {formatGold(currencies.gold)} in the purse.
-        </button>
-        {purse ? (
-          <p className="mt-2 max-w-md text-sm leading-7 text-fg-muted">
-            Tel Var {formatNumber(currencies.telVar)}. Alliance Points {formatNumber(currencies.alliancePoints)}. Writ vouchers{" "}
-            {formatNumber(currencies.writVouchers)}. Transmute crystals {formatNumber(currencies.transmuteCrystals)}. Undaunted keys{" "}
-            {formatNumber(currencies.undauntedKeys)}.
-          </p>
         ) : null}
-      </div>
 
-      <p className="relative mt-16 text-xs text-fg-subtle">
-        {signature}
-        {" · "}
-        <Link href="/" className="hover:text-fg">
-          The ledger
-        </Link>
-      </p>
+        <div className="border-t border-border px-5 py-4 sm:px-8">
+          <Showcase title="Purse">
+            <p className="text-2xl font-semibold tabular-nums tracking-tight text-fg">
+              {formatNumber(currencies.gold)} <span className="text-base font-medium text-fg-muted">gold</span>
+            </p>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-5">
+              <PurseStat label="Tel Var" value={currencies.telVar} />
+              <PurseStat label="Alliance Points" value={currencies.alliancePoints} />
+              <PurseStat label="Writ vouchers" value={currencies.writVouchers} />
+              <PurseStat label="Crystals" value={currencies.transmuteCrystals} />
+              <PurseStat label="Undaunted keys" value={currencies.undauntedKeys} />
+            </dl>
+          </Showcase>
+          <p className="mt-4 text-xs text-fg-subtle">
+            {[accountName, snapshot].filter(Boolean).join(" · ")}
+            {" · "}
+            <Link href="/" className="hover:text-fg">
+              The ledger
+            </Link>
+          </p>
+        </div>
+      </article>
     </div>
   );
 }
 
-function AlsoNames({
-  faces,
-  colorByClass,
-  onPick,
-}: {
-  faces: LivingFace[];
-  colorByClass: Record<string, string>;
-  onPick: (id: string) => void;
-}) {
-  return faces.map((face, index) => {
-    const last = index === faces.length - 1;
-    const joiner = index === 0 ? null : last ? (faces.length === 2 ? " and " : ", and ") : ", ";
-    return (
-      <span key={face.id}>
-        {joiner}
-        <button
-          type="button"
-          onClick={() => onPick(face.id)}
-          className="nirn-living-script italic hover:underline"
-          style={{ color: colorByClass[face.className] ?? "var(--fg)" }}
-        >
-          {face.name}
-        </button>
-      </span>
-    );
-  });
-}
-
-function presence(face: LivingFace): string {
-  const notes: string[] = [];
-  for (const mark of face.marks) {
-    const stage = mark.match(/^Vampire, stage (\d+)$/);
-    if (stage) {
-      const n = Number(stage[1]);
-      notes.push(n > 0 && n < STAGE.length ? `a vampire in ${STAGE[n]} stage` : `a vampire in stage ${stage[1]}`);
-    } else if (mark === "Vampire") notes.push("a vampire");
-    else if (mark === "Werewolf") notes.push("a werewolf");
-    else if (mark === "Class mastery") notes.push("class mastery in hand");
-    else notes.push(`under ${mark}`);
-  }
-  const who = `${face.race} ${face.className} of the ${face.alliance}`;
-  return notes.length > 0 ? `${who}, ${notes.join(", ")}.` : `${who}.`;
-}
-
-function progressSentence(progress: NonNullable<LivingFace["progress"]>): string {
-  if (progress.label === "Level") return `Level ${progress.rank}, not yet 50.`;
-  const left = progress.total - progress.rank;
-  if (left <= 0) return `${progress.label} is finished.`;
-  if (left < SMALL.length) return `${SMALL[left]} ${left === 1 ? "rank" : "ranks"} left on ${progress.label}.`;
-  return `${left} ranks left on ${progress.label}.`;
-}
-
-function houseSentence(house: NonNullable<LivingHome["house"]>): string {
-  const place = house.location ? `${house.name}, on ${house.location}` : house.name;
-  const others =
-    house.others > 0
-      ? ` ${house.others < SMALL.length ? SMALL[house.others] : house.others} more ${house.others === 1 ? "house" : "houses"} besides.`
-      : "";
-  return `Home is ${place}.${others}`;
-}
-
-function guildsSentence(guilds: LivingGuild[]): string {
+function Avatar({ face, color, icon }: { face: LivingFace; color: string; icon?: string }) {
+  const leveling = face.level > 0 && face.level < 50;
+  const pct = leveling ? Math.round((face.level / 50) * 100) : 100;
+  const badge = leveling ? String(face.level) : face.championPoints > 0 ? formatNumber(face.championPoints) : null;
   return (
-    guilds
-      .map((guild) => {
-        const rank = guild.rank?.trim();
-        const who = rank ? `${rank} of ${guild.name}` : guild.name;
-        return guild.trader ? `${who}, the one with a trader` : who;
-      })
-      .join(". ") + "."
+    <div className="relative -mt-12 h-[104px] w-[104px] sm:-mt-14">
+      <div
+        className="grid h-full w-full place-items-center rounded-full"
+        style={{
+          background: `conic-gradient(from -90deg, ${color} ${pct}%, color-mix(in srgb, ${color} 28%, transparent) ${pct}%)`,
+          padding: 3,
+        }}
+      >
+        <div className="grid h-full w-full place-items-center rounded-full bg-surface p-1">
+          <div className="grid h-full w-full place-items-center rounded-full bg-[#14121a]">
+            <GameIcon name={face.className} icon={icon} size={64} bare lit />
+          </div>
+        </div>
+      </div>
+      {badge ? (
+        <span
+          className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-0.5 text-[11px] font-bold leading-none tabular-nums"
+          style={{ background: color, color: "#1a140c" }}
+        >
+          {badge}
+        </span>
+      ) : null}
+    </div>
   );
+}
+
+function Now({ face, color, icon }: { face: LivingFace; color: string; icon?: string }) {
+  const progress = face.progress;
+  return (
+    <div className="space-y-4">
+      {progress ? (
+        <div className="flex items-center gap-3">
+          <GameIcon name={face.className} icon={icon} size={44} bare />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold text-fg">{progress.label}</p>
+            <p className="text-sm tabular-nums text-fg-muted">
+              {progress.rank} / {progress.total}
+            </p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
+              <div className="h-full rounded-full" style={{ width: `${Math.round((progress.rank / progress.total) * 100)}%`, background: color }} />
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {face.activity ? (
+        <div className={progress ? "border-t border-border pt-3" : ""}>
+          <p className="font-medium text-fg">{face.activity.title}</p>
+          <p className="mt-0.5 text-sm text-fg-muted">{face.activity.detail}</p>
+        </div>
+      ) : null}
+      {!progress && !face.activity ? <p className="text-sm text-fg-muted">Nothing open on this character.</p> : null}
+    </div>
+  );
+}
+
+function Showcase({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
+  return (
+    <section className={`overflow-hidden rounded-xl bg-bg ring-1 ring-border ${className}`}>
+      <h2 className="border-b border-border bg-bg-elev px-3 py-2 text-xs font-medium text-fg-muted">{title}</h2>
+      <div className="p-3">{children}</div>
+    </section>
+  );
+}
+
+function GuildChip({ guild, color }: { guild: LivingGuild; color: string }) {
+  const rank = guild.rank?.trim();
+  return (
+    <li className="inline-flex items-center gap-2 rounded-full bg-bg px-3 py-1.5 text-sm ring-1 ring-border">
+      <span className="h-2 w-2 rounded-full" style={{ background: guild.trader ? "var(--accent)" : color }} aria-hidden />
+      {rank ? <span className="text-fg-subtle">{rank}</span> : null}
+      <span className="font-medium text-fg">{guild.name}</span>
+      {guild.trader ? <span className="text-xs text-accent">Trader</span> : null}
+    </li>
+  );
+}
+
+function PurseStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <dt className="text-[11px] text-fg-subtle">{label}</dt>
+      <dd className="tabular-nums text-sm font-medium text-fg">{formatNumber(value)}</dd>
+    </div>
+  );
+}
+
+function roles(face: LivingFace, color: string, alliance: string): { label: string; color: string }[] {
+  const list: { label: string; color: string }[] = [
+    { label: face.race, color: "var(--fg-subtle)" },
+    { label: face.className, color },
+    { label: face.alliance, color: alliance },
+  ];
+  for (const mark of face.marks) list.push({ label: mark, color });
+  return list;
 }

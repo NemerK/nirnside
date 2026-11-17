@@ -10,6 +10,7 @@ export interface LivingFace {
   race: string;
   alliance: string;
   level: number;
+  championPoints: number;
   /** Class icon path, when we know one. */
   icon?: string;
   marks: string[];
@@ -17,6 +18,10 @@ export interface LivingFace {
   progress: { label: string; rank: number; total: number } | null;
   /** A quest still in motion, or the fact this character has never logged out. */
   open: string | null;
+  /** The same fact, split so a profile can show a title and a detail. */
+  activity: { title: string; detail: string } | null;
+  /** Up to two worn set names, in the order they appear on the character. */
+  sets: string[];
   wearing: string | null;
 }
 
@@ -42,6 +47,7 @@ type FaceSource = Pick<
   | "race"
   | "alliance"
   | "level"
+  | "championPoints"
   | "mundus"
   | "vampire"
   | "werewolf"
@@ -96,9 +102,11 @@ function faceOf(character: FaceSource, cap: LivingCap): LivingFace {
     race: character.race,
     alliance: character.alliance,
     level: character.level,
+    championPoints: character.championPoints,
     marks,
     progress: focusProgress(character, cap),
-    open: openLine(character),
+    ...openFact(character),
+    sets: wornSets(character),
     wearing: wearingLine(character),
   };
 }
@@ -125,7 +133,7 @@ function focusProgress(character: FaceSource, cap: LivingCap): LivingFace["progr
   return null;
 }
 
-function openLine(character: FaceSource): string | null {
+function openFact(character: FaceSource): Pick<LivingFace, "open" | "activity"> {
   const dailies = character.dailies;
   if (dailies) {
     const named = [
@@ -133,32 +141,52 @@ function openLine(character: FaceSource): string | null {
       ...dailies.pledges.map((pledge) => questText(pledge.dungeon?.trim() || pledge.giverName, pledge.status, "pledge")),
       ...dailies.writs.map((writ) => questText(writ.name, writ.status, "writ")),
       ...dailies.worldBosses.map((boss) => questText(boss.name, boss.status, "zone")),
-    ].filter((line): line is { order: number; text: string } => line != null);
+    ].filter((line): line is QuestLine => line != null);
     named.sort((a, b) => a.order - b.order);
-    if (named[0]) return named[0].text;
+    const best = named[0];
+    if (best) return { open: best.sentence, activity: { title: best.title, detail: best.detail } };
   }
-  if (character.lastSeen == null) return "Has not logged out since the addon was installed.";
-  return null;
+  if (character.lastSeen == null) {
+    return {
+      open: "Has not logged out since the addon was installed.",
+      activity: { title: "Not logged out yet", detail: "Since the addon was installed" },
+    };
+  }
+  return { open: null, activity: null };
 }
 
-function questText(name: string, status: string, kind: "zone" | "pledge" | "writ"): { order: number; text: string } | null {
+interface QuestLine {
+  order: number;
+  title: string;
+  detail: string;
+  sentence: string;
+}
+
+function questText(name: string, status: string, kind: "zone" | "pledge" | "writ"): QuestLine | null {
   const title = name.trim();
   if (!title) return null;
+  const heading = kind === "pledge" ? `${title} pledge` : title;
+  const order = kind === "zone" ? 0 : kind === "pledge" ? 2 : 4;
   if (status === "accepted") {
-    const text =
-      kind === "pledge"
-        ? `${title} pledge is accepted and not finished.`
-        : `${title} is accepted and not finished.`;
-    return { order: kind === "zone" ? 0 : kind === "pledge" ? 2 : 4, text };
+    return {
+      order,
+      title: heading,
+      detail: "Accepted and not finished",
+      sentence: kind === "pledge" ? `${title} pledge is accepted and not finished.` : `${title} is accepted and not finished.`,
+    };
   }
   if (status === "ready") {
-    const text = kind === "pledge" ? `${title} pledge is ready to turn in.` : `${title} is ready.`;
-    return { order: kind === "zone" ? 1 : kind === "pledge" ? 3 : 5, text };
+    return {
+      order: order + 1,
+      title: heading,
+      detail: kind === "pledge" ? "Ready to turn in" : "Ready",
+      sentence: kind === "pledge" ? `${title} pledge is ready to turn in.` : `${title} is ready.`,
+    };
   }
   return null;
 }
 
-function wearingLine(character: FaceSource): string | null {
+function wornSets(character: FaceSource): string[] {
   const sets: string[] = [];
   for (const item of character.equipped) {
     const name = item.setName?.trim();
@@ -166,6 +194,11 @@ function wearingLine(character: FaceSource): string | null {
     sets.push(name);
     if (sets.length === 2) break;
   }
+  return sets;
+}
+
+function wearingLine(character: FaceSource): string | null {
+  const sets = wornSets(character);
   if (sets.length === 0) return null;
   if (sets.length === 1) return `Wearing ${sets[0]}.`;
   return `Wearing ${sets[0]} and ${sets[1]}.`;

@@ -26,7 +26,6 @@ export default function LivingHomePage() {
     legacyGold: account.gold,
   });
   const wallet = canonicalizeCurrencies(account.currencies);
-  const championPoints = characters.reduce((max, character) => Math.max(max, character.championPoints ?? 0), 0);
   const iconByClass: Record<string, string> = {};
   const colorByClass: Record<string, string> = {};
   for (const character of characters) {
@@ -42,7 +41,6 @@ export default function LivingHomePage() {
       region={account.region}
       esoPlus={account.esoPlus}
       snapshot={account.lastSnapshot ? `Snapshot ${timeAgo(account.lastSnapshot)}` : null}
-      championPoints={championPoints}
       model={model}
       iconByClass={iconByClass}
       colorByClass={colorByClass}

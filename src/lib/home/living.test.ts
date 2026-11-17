@@ -115,6 +115,7 @@ describe("living home", () => {
       cap,
     );
     assert.equal(withQuest.faces[0]?.open, "Sinking Summerset is accepted and not finished.");
+    assert.deepEqual(withQuest.faces[0]?.activity, { title: "Sinking Summerset", detail: "Accepted and not finished" });
 
     const unseen = livingHome([character({ id: "bakes", name: "Bakes-Sweet-Rolls" })], [], cap);
     assert.equal(unseen.faces[0]?.open, "Has not logged out since the addon was installed.");
@@ -143,5 +144,6 @@ describe("living home", () => {
     assert.equal(home.house?.location, "Artaeum");
     assert.equal(home.house?.others, 1);
     assert.equal(home.faces[0]?.wearing, "Wearing Coral Riptide and Slimecraw.");
+    assert.deepEqual(home.faces[0]?.sets, ["Coral Riptide", "Slimecraw"]);
   });
 });
