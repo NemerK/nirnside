@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Users } from "lucide-react";
 import { Badge, Card, ProgressBar } from "@/components/ui";
 import type { CharacterLineProgress } from "@/lib/skills/line-roster";
 
@@ -35,13 +34,8 @@ function abilityText(ability: CharacterLineProgress["abilities"][number]): strin
 
 export function SkillLineRoster({ rows }: { rows: CharacterLineProgress[] }) {
   return (
-    <section className="mb-8">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-          <Users className="h-3.5 w-3.5" /> Your characters
-        </h2>
-        {rows.length > 0 ? <span className="text-xs text-fg-subtle">{summary(rows)}</span> : null}
-      </div>
+    <section>
+      {rows.length > 0 ? <p className="mb-3 text-xs text-fg-subtle">{summary(rows)}</p> : null}
       {rows.length === 0 ? (
         <Card className="px-4 py-6 text-sm text-fg-muted">No characters on this account yet.</Card>
       ) : (
