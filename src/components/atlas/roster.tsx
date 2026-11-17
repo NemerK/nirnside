@@ -205,7 +205,13 @@ function WorkspaceCard({ card, photoCount }: { card: CharacterWorkspaceCard; pho
         </p>
       </Link>
       <div className="border-t border-border px-4 py-2">
-        <GalleryLink href={`/characters/${encodeURIComponent(card.id)}/gallery`} count={photoCount} />
+        <GalleryLink
+          kind="character"
+          ownerId={card.id}
+          title={card.name}
+          detail={`${card.race} ${card.className}`}
+          count={photoCount}
+        />
       </div>
     </article>
   );

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GalleryLink } from "@/components/gallery-link";
 import { galleryCounts } from "@/lib/db/gallery";
-import { Star } from "lucide-react";
+import { Images, Star } from "lucide-react";
 import type { MythicSet } from "@/lib/snapshot/schema";
 import type { CollectionTab, CollectionsPresent } from "@/lib/collections/present";
 import { setHref } from "@/lib/db/catalog-queries";
@@ -117,28 +117,38 @@ function HousesPane({ collections }: { collections: CollectionsPresent }) {
   }
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {rows.map((house) => (
-        <li key={house.collectibleId} className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3 py-2.5">
-          <GameIcon name={house.name} icon={house.icon ?? undefined} size={40} />
-          <div className="min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-medium text-fg">{house.name}</p>
-              {house.primary ? (
-                <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-accent">
-                  <Star className="h-3 w-3" /> Primary
-                </span>
-              ) : null}
-            </div>
-            <p className="mt-0.5 truncate text-xs text-fg-muted">{house.location || "Location unknown"}</p>
-            <div className="mt-1.5">
-              <GalleryLink
-                href={`/houses/${house.collectibleId}`}
-                count={photoCounts.get(String(house.collectibleId)) ?? 0}
-              />
-            </div>
-          </div>
-        </li>
-      ))}
+      {rows.map((house) => {
+        const photos = photoCounts.get(String(house.collectibleId)) ?? 0;
+        return (
+          <li key={house.collectibleId}>
+            <GalleryLink
+              kind="house"
+              ownerId={String(house.collectibleId)}
+              title={house.name}
+              detail={house.location || "Owned house"}
+              count={photos}
+              className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3 py-2.5 transition-colors hover:border-accent/50 hover:bg-surface-2"
+            >
+              <GameIcon name={house.name} icon={house.icon ?? undefined} size={40} />
+              <div className="min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-medium text-fg">{house.name}</p>
+                  {house.primary ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-accent">
+                      <Star className="h-3 w-3" /> Primary
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-0.5 truncate text-xs text-fg-muted">{house.location || "Location unknown"}</p>
+                <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-fg-muted">
+                  <Images className="h-3.5 w-3.5" />
+                  {photos > 0 ? `Gallery · ${photos}` : "Gallery"}
+                </p>
+              </div>
+            </GalleryLink>
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ImagePlus, X } from "lucide-react";
 import { GALLERY_MAX_BYTES, GALLERY_MAX_PHOTOS, type GalleryKind } from "@/lib/gallery/rules";
@@ -8,7 +9,7 @@ import { GALLERY_MAX_BYTES, GALLERY_MAX_PHOTOS, type GalleryKind } from "@/lib/g
 export function GalleryBoard({
   kind,
   ownerId,
-  photos,
+  photos: initialPhotos,
 }: {
   kind: GalleryKind;
   ownerId: string;
@@ -16,11 +17,23 @@ export function GalleryBoard({
 }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
+  const [photos, setPhotos] = useState(initialPhotos);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const full = photos.length >= GALLERY_MAX_PHOTOS;
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      setOpen(null);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   function url(photoId: string) {
     return `/api/gallery/${kind}/${encodeURIComponent(ownerId)}/${photoId}`;
@@ -49,12 +62,14 @@ export function GalleryBoard({
       body.append("photo", file);
       try {
         const res = await fetch(`/api/gallery/${kind}/${encodeURIComponent(ownerId)}`, { method: "POST", body });
-        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-        if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: string; photo?: { id: string } } | null;
+        if (!res.ok || !payload?.photo) {
           notes.push(payload?.error || `Could not add ${file.name}.`);
           if (payload?.error?.includes("20 photos")) break;
           continue;
         }
+        const added = payload.photo;
+        setPhotos((current) => [...current, { id: added.id }]);
         room -= 1;
       } catch {
         notes.push(`Could not add ${file.name}.`);
@@ -72,7 +87,11 @@ export function GalleryBoard({
       const res = await fetch(url(photoId), { method: "DELETE" });
       const payload = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) setError(payload?.error || "Could not remove that photo.");
-      else setPending(null);
+      else {
+        setPhotos((current) => current.filter((photo) => photo.id !== photoId));
+        setPending(null);
+        if (open === url(photoId)) setOpen(null);
+      }
     } catch {
       setError("Could not remove that photo.");
     } finally {
@@ -157,23 +176,32 @@ export function GalleryBoard({
           })}
         </ul>
       )}
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          onClick={() => setOpen(null)}
-        >
-          <button
-            type="button"
-            onClick={() => setOpen(null)}
-            className="absolute right-4 top-4 rounded-lg border border-white/20 p-2 text-white"
-            aria-label="Close photo"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={open} alt="" className="max-h-full max-w-full object-contain" onClick={(event) => event.stopPropagation()} />
-        </div>
-      ) : null}
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              data-gallery-photo
+              className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4"
+              onClick={() => setOpen(null)}
+            >
+              <button
+                type="button"
+                onClick={() => setOpen(null)}
+                className="absolute right-4 top-4 rounded-lg border border-white/20 p-2 text-white"
+                aria-label="Close photo"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={open}
+                alt=""
+                className="max-h-full max-w-full object-contain"
+                onClick={(event) => event.stopPropagation()}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

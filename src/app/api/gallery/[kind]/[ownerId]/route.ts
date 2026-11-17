@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
-import { addGalleryPhoto } from "@/lib/db/gallery";
+import { addGalleryPhoto, listGalleryPhotos } from "@/lib/db/gallery";
 import { gallerySubject } from "@/lib/gallery/subject";
 import { GALLERY_MAX_BYTES, GalleryError } from "@/lib/gallery/rules";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+export async function GET(_req: Request, ctx: { params: Promise<{ kind: string; ownerId: string }> }) {
+  const { kind, ownerId } = await ctx.params;
+  const subject = gallerySubject(kind, ownerId);
+  if (!subject) return NextResponse.json({ error: "That gallery does not exist." }, { status: 404 });
+  const photos = listGalleryPhotos(subject.kind, subject.id).map((photo) => ({ id: photo.id }));
+  return NextResponse.json({ photos });
+}
 
 export async function POST(req: Request, ctx: { params: Promise<{ kind: string; ownerId: string }> }) {
   const { kind, ownerId } = await ctx.params;

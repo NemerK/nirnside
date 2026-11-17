@@ -317,6 +317,33 @@ body {
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 
+/* Gallery dialog. The veil settles first, then the sheet rises into place. */
+.nirn-gallery-veil {
+  animation: nirn-gallery-veil 220ms ease-out both;
+}
+.nirn-gallery-sheet {
+  transform-origin: center bottom;
+  animation: nirn-gallery-rise 460ms cubic-bezier(0.16, 1, 0.3, 1) 70ms both;
+}
+@keyframes nirn-gallery-veil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes nirn-gallery-rise {
+  from {
+    transform: translateY(84px) scale(0.96);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nirn-gallery-veil,
+  .nirn-gallery-sheet {
+    animation: none;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
