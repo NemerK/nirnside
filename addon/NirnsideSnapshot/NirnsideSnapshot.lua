@@ -404,6 +404,11 @@ local function readItem(bagId, slotIndex, location, owner, ownerId)
   end
   if item.level == 0 then item.level = nil end
   if item.setName then item.setName = zo_strformat("<<1>>", item.setName) end
+  -- The piece name is often just the set ("Slivers of the Null Arca") or a
+  -- medium piece word the planner must not guess ("Guards"). The equip type
+  -- is what says these are pants.
+  local typeLabel = pieceTypeInfo(link)
+  if typeLabel and typeLabel ~= "" then item.equipSlot = typeLabel end
   return item
 end
 
@@ -3038,6 +3043,7 @@ local function readStickerPiece(setId, i)
 
   local link = pieceItemLink(pieceId)
   local linkName = link and safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, nil) or nil
+  local pieceItemId = link and safe(function() return GetItemLinkItemId(link) end, nil) or nil
   local icon = link and safe(function() return stickerNormIcon(GetItemLinkIcon(link)) end, nil) or nil
   local typeLabel, weight
   if link then typeLabel, weight = pieceTypeInfo(link) end
@@ -3057,6 +3063,7 @@ local function readStickerPiece(setId, i)
     type = (typeLabel and typeLabel ~= "") and typeLabel or fallback,
     weight = weight,
     name = name,
+    itemId = pieceItemId,
     icon = icon,
     collected = collected,
   }

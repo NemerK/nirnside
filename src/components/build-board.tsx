@@ -345,6 +345,7 @@ function SlotCard({ label, piece, blocked = false }: { label: string; piece: Pla
           <>
             <p className="truncate text-sm text-fg">{piece.setName}</p>
             <p className={`truncate text-xs ${sourceClass(piece)}`}>{sourceSummary(piece.source)}</p>
+            {piece.aside ? <p className="mt-0.5 text-xs leading-snug text-fg-muted">{piece.aside}</p> : null}
           </>
         ) : (
           <p className="text-sm text-fg-subtle">{blocked ? "Blocked" : "Empty"}</p>

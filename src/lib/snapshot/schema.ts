@@ -554,6 +554,8 @@ export const StickerbookPiece = z.object({
   weight: z.string().nullable().default(null),
   /** The actual item name for this piece, e.g. "Ancient Dragonguard Helm". */
   name: z.string().default(""),
+  /** Same itemId as the bag copy, once a snapshot recorded the collection link. */
+  itemId: z.number().int().nonnegative().optional(),
   /** In-game .dds icon path for the piece's item, resolved by GameIcon. */
   icon: z.string().nullable().default(null),
   collected: z.boolean().default(false),

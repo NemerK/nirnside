@@ -11,6 +11,7 @@ import {
   isDivinesTrait,
   kindFromPiece,
   kindsForCategory,
+  resolveOwnedPiece,
   setMatchKeys,
   setsShareKey,
   weaponTypeFromPiece,
@@ -112,6 +113,17 @@ export function loadBuildPage(): BuildPageData {
 
   sets.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
 
+  const book = sticker.flatMap((row) =>
+    row.pieces.map((piece) => ({
+      setId: row.setId,
+      keys: setMatchKeys(row.name),
+      name: piece.name,
+      slot: piece.slot,
+      type: piece.type,
+      itemId: piece.itemId ?? null,
+    })),
+  );
+
   const owned: OwnedGear[] = [];
   const bagOnly = new Map<
     string,
@@ -127,10 +139,15 @@ export function loadBuildPage(): BuildPageData {
   >();
   for (const item of getItems()) {
     if (!item.setName) continue;
-    const kind = pieceKind(item.equipSlot ?? "", "", item.name);
-    if (!kind) continue;
+    const keys = setMatchKeys(item.setName);
+    const pieces = book.filter(
+      (piece) => (item.setId != null && item.setId > 0 && piece.setId === item.setId) || setsShareKey(piece.keys, keys),
+    );
+    const resolved = resolveOwnedPiece({ name: item.name, itemId: item.itemId, equipSlot: item.equipSlot }, pieces);
+    if (!resolved) continue;
+    const kind = resolved.kind;
     const gear: OwnedGear = {
-      keys: setMatchKeys(item.setName),
+      keys,
       setId: item.setId ?? null,
       itemName: item.name,
       kind,
@@ -138,7 +155,7 @@ export function loadBuildPage(): BuildPageData {
       location: item.location,
       owner: item.ownerCharacter,
       icon: item.icon ?? null,
-      weapon: weaponTypeFromPiece(item.equipSlot ?? "", "", item.name),
+      weapon: resolved.weapon,
     };
     owned.push(gear);
     const set = sets.find(

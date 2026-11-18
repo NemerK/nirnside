@@ -43,8 +43,6 @@ export function reconstructionCost(collected: number, total: number): number | n
 /** Trait change at the transmute station. Fixed in the live game. */
 export const TRAIT_CHANGE_CRYSTALS = 50;
 
-const TWO_HAND = ["staff", "bow", "greatsword", "battle axe", "battleaxe", "maul"];
-
 /**
  * Map a stickerbook piece or bag item onto a planner slot kind.
  *
@@ -69,24 +67,134 @@ export function kindFromPiece(slot: string, type: string, name: string): SlotKin
   return labeled ?? named ?? genericWeapon(`${slot} ${type} ${name}`);
 }
 
+/**
+ * The game's own piece names, longest first.
+ *
+ * Light, medium, and heavy do not share words. Legs are Breeches, Guards, or
+ * Greaves. Shoulders are Epaulets, Arm Cops, or Pauldrons. A set name such as
+ * "Slivers of the Null Arca" contains none of these, so it must not pick a slot.
+ * "Null Arca Guards" does: Guards are medium legs.
+ */
+const PIECE_PHRASES: ReadonlyArray<readonly [string, SlotKind]> = [
+  ["arm cops", "shoulders"],
+  ["epaulets", "shoulders"],
+  ["epaulet", "shoulders"],
+  ["pauldrons", "shoulders"],
+  ["pauldron", "shoulders"],
+  ["spaulders", "shoulders"],
+  ["spaulder", "shoulders"],
+  ["shoulders", "shoulders"],
+  ["shoulder", "shoulders"],
+  ["warmasks", "head"],
+  ["warmask", "head"],
+  ["helmets", "head"],
+  ["helmet", "head"],
+  ["circlets", "head"],
+  ["circlet", "head"],
+  ["helms", "head"],
+  ["helm", "head"],
+  ["cowls", "head"],
+  ["cowl", "head"],
+  ["hoods", "head"],
+  ["hood", "head"],
+  ["masks", "head"],
+  ["mask", "head"],
+  ["hats", "head"],
+  ["hat", "head"],
+  ["head", "head"],
+  ["cuirasses", "chest"],
+  ["cuirass", "chest"],
+  ["jerkins", "chest"],
+  ["jerkin", "chest"],
+  ["robes", "chest"],
+  ["robe", "chest"],
+  ["jacks", "chest"],
+  ["jack", "chest"],
+  ["chest", "chest"],
+  ["gauntlets", "hands"],
+  ["gauntlet", "hands"],
+  ["bracers", "hands"],
+  ["bracer", "hands"],
+  ["gloves", "hands"],
+  ["glove", "hands"],
+  ["hands", "hands"],
+  ["girdles", "waist"],
+  ["girdle", "waist"],
+  ["sashes", "waist"],
+  ["sash", "waist"],
+  ["belts", "waist"],
+  ["belt", "waist"],
+  ["waist", "waist"],
+  ["breeches", "legs"],
+  ["greaves", "legs"],
+  ["guards", "legs"],
+  ["legs", "legs"],
+  ["sabatons", "feet"],
+  ["sabaton", "feet"],
+  ["treaders", "feet"],
+  ["shoes", "feet"],
+  ["shoe", "feet"],
+  ["boots", "feet"],
+  ["boot", "feet"],
+  ["feet", "feet"],
+  ["foot", "feet"],
+  ["necklaces", "neck"],
+  ["necklace", "neck"],
+  ["amulets", "neck"],
+  ["amulet", "neck"],
+  ["chokers", "neck"],
+  ["choker", "neck"],
+  ["torcs", "neck"],
+  ["torc", "neck"],
+  ["necks", "neck"],
+  ["neck", "neck"],
+  ["rings", "ring"],
+  ["ring", "ring"],
+  ["restoration staff", "twoHand"],
+  ["healing staff", "twoHand"],
+  ["inferno staff", "twoHand"],
+  ["fire staff", "twoHand"],
+  ["lightning staff", "twoHand"],
+  ["ice staff", "twoHand"],
+  ["frost staff", "twoHand"],
+  ["greatsword", "twoHand"],
+  ["battle axe", "twoHand"],
+  ["battleaxe", "twoHand"],
+  ["maul", "twoHand"],
+  ["shields", "shield"],
+  ["shield", "shield"],
+  ["bows", "twoHand"],
+  ["bow", "twoHand"],
+  ["staves", "twoHand"],
+  ["staff", "twoHand"],
+  ["two-handed", "twoHand"],
+  ["two hand", "twoHand"],
+  ["daggers", "oneHand"],
+  ["dagger", "oneHand"],
+  ["maces", "oneHand"],
+  ["mace", "oneHand"],
+  ["hammers", "oneHand"],
+  ["hammer", "oneHand"],
+  ["axes", "oneHand"],
+  ["axe", "oneHand"],
+  ["swords", "oneHand"],
+  ["sword", "oneHand"],
+  ["main hand", "oneHand"],
+  ["off hand", "oneHand"],
+  ["one-handed", "oneHand"],
+  ["one hand", "oneHand"],
+];
+
+function mentions(blob: string, phrase: string): boolean {
+  const body = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${body}\\b`, "i").test(blob);
+}
+
 function specificKind(text: string): SlotKind | null {
   const blob = text.toLowerCase();
   if (!blob.trim()) return null;
-  if (/\bnecks?\b|\bnecklaces?\b|\bamulets?\b|\bchokers?\b|\btorcs?\b/.test(blob)) return "neck";
-  if (/\brings?\b/.test(blob)) return "ring";
-  if (/\bshoulders?\b|\bspaulders?\b|\bpauldrons?\b|\bepaulets?\b/.test(blob)) return "shoulders";
-  if (/(?:warmasks?|\bmasks?|\bheads?|\bhelms?|\bhelmets?|\bhats?|\bcowls?|\bhoods?|\bcirclets?)\b/.test(blob)) {
-    return "head";
-  }
-  if (/\bchests?\b|\bcuirasses?\b|\brobes?\b|\bjacks?\b/.test(blob)) return "chest";
-  if (/\bhands\b|\bgloves?\b|\bgauntlets?\b|\bbracers?\b/.test(blob)) return "hands";
-  if (/\bwaists?\b|\bbelts?\b|\bgirdles?\b|\bsashes?\b|\bkilts?\b/.test(blob)) return "waist";
-  if (/\blegs?\b|\bgreaves\b|\bbreeches\b/.test(blob)) return "legs";
-  if (/\bfeet\b|\bfoot\b|\bshoes?\b|\bboots?\b|\bsabatons?\b|\btreaders\b/.test(blob)) return "feet";
-  if (/\bshields?\b/.test(blob)) return "shield";
-  if (TWO_HAND.some((word) => blob.includes(word)) || /\btwo[\s-]?hand/.test(blob)) return "twoHand";
-  if (/\bmain\s*hand\b|\boff\s*hand\b|\bone[\s-]?hand|\bdaggers?\b|\baxes?\b|\bmaces?\b|\bswords?\b/.test(blob)) {
-    return "oneHand";
+  for (const [phrase, kind] of PIECE_PHRASES) {
+    if (mentions(blob, phrase)) return kind;
   }
   return null;
 }
@@ -94,6 +202,66 @@ function specificKind(text: string): SlotKind | null {
 /** A bare "Weapon" label, once staves and bows have already been claimed. */
 function genericWeapon(text: string): SlotKind | null {
   return /\bweapons?\b/.test(text.toLowerCase()) ? "oneHand" : null;
+}
+
+/** One stickerbook piece, already labeled by the game with a slot and a type. */
+export interface CatalogPiece {
+  name: string;
+  slot: string;
+  type: string;
+  itemId?: number | null;
+}
+
+function kindFromWeapon(weapon: FrontWeapon): SlotKind {
+  if (weapon === "shield") return "shield";
+  return isTwoHandedWeapon(weapon) ? "twoHand" : "oneHand";
+}
+
+function labeledPiece(slot: string, type: string, name: string): { kind: SlotKind; weapon: FrontWeapon | null } | null {
+  const weapon = weaponTypeFromPiece(slot, type, name);
+  const kind = kindFromPiece(slot, type, name) ?? (weapon ? kindFromWeapon(weapon) : null);
+  if (!kind) return null;
+  return { kind, weapon };
+}
+
+/**
+ * Which slot an owned item fills.
+ *
+ * The equip type written by the addon wins. Otherwise the stickerbook piece
+ * with the same item id, or the same unique name, supplies the slot the game
+ * gave that piece. The item name is only the last resort, and only when it
+ * uses a real piece word such as Guards.
+ */
+export function resolveOwnedPiece(
+  item: { name: string; itemId?: number | null; equipSlot?: string | null },
+  pieces: readonly CatalogPiece[],
+): { kind: SlotKind; weapon: FrontWeapon | null } | null {
+  if (item.equipSlot?.trim()) {
+    const fromSlot = labeledPiece(item.equipSlot, "", "");
+    if (fromSlot) return fromSlot;
+  }
+  const id = item.itemId ?? 0;
+  if (id > 0) {
+    const byId = agree(pieces.filter((piece) => piece.itemId === id));
+    if (byId) return byId;
+  }
+  const wanted = item.name.trim().toLowerCase();
+  if (wanted) {
+    const byName = agree(pieces.filter((piece) => piece.name.trim().toLowerCase() === wanted));
+    if (byName) return byName;
+  }
+  return labeledPiece("", "", item.name);
+}
+
+function agree(pieces: readonly CatalogPiece[]): { kind: SlotKind; weapon: FrontWeapon | null } | null {
+  const resolved = pieces
+    .map((piece) => labeledPiece(piece.slot, piece.type, ""))
+    .filter((row): row is { kind: SlotKind; weapon: FrontWeapon | null } => row != null);
+  if (resolved.length === 0) return null;
+  const kind = resolved[0]!.kind;
+  const weapon = resolved[0]!.weapon;
+  if (resolved.some((row) => row.kind !== kind || row.weapon !== weapon)) return null;
+  return { kind, weapon };
 }
 
 const BODY_SLOTS: readonly SlotKind[] = ["chest", "hands", "waist", "legs", "feet"];
