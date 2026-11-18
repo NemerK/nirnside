@@ -478,53 +478,56 @@ function SetPicker({
         </div>
       ) : null}
       {footer}
-      <input
-        value={open ? query : selected ?? ""}
-        placeholder="Search sets"
-        onFocus={() => {
-          setOpen(true);
-          setQuery("");
-        }}
-        onBlur={() => {
-          window.setTimeout(() => setOpen(false), 150);
-        }}
-        onChange={(event) => {
-          setOpen(true);
-          setQuery(event.target.value);
-        }}
-        className="w-full rounded-lg border border-border bg-surface-2/40 px-2 py-1.5 text-sm text-fg outline-none focus:border-accent"
-      />
+      <div className="relative">
+        <input
+          value={open ? query : selected ?? ""}
+          placeholder="Search sets"
+          onFocus={() => {
+            setOpen(true);
+            setQuery("");
+          }}
+          onBlur={() => {
+            window.setTimeout(() => setOpen(false), 150);
+          }}
+          onChange={(event) => {
+            setOpen(true);
+            setQuery(event.target.value);
+          }}
+          className="w-full rounded-lg border border-border bg-surface-2/40 px-2 py-1.5 text-sm text-fg outline-none focus:border-accent"
+        />
+        {open ? (
+          <ul className="absolute left-0 right-0 top-full z-40 mt-1 max-h-60 overflow-auto rounded-lg border border-border bg-bg-elev shadow-lg">
+            {shown.length === 0 ? (
+              <li className="px-2 py-1.5 text-xs text-fg-muted">No sets match.</li>
+            ) : (
+              shown.map((option) => (
+                <li key={`${option.setId}-${option.name}`}>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      onPick(option);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                    className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-surface-2"
+                  >
+                    <span className="text-sm text-fg">{option.name}</span>
+                    <span className="text-[11px] text-fg-subtle">
+                      {option.category}
+                      {option.total > 0 ? ` · ${option.collected}/${option.total} collected` : ""}
+                    </span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : null}
+      </div>
       {selected ? (
         <button type="button" onClick={() => onPick(null)} className="mt-1 text-xs text-fg-muted hover:text-fg">
           Clear
         </button>
-      ) : null}
-      {open ? (
-        <ul className="mt-2 max-h-48 overflow-auto rounded-lg border border-border">
-          {shown.length === 0 ? (
-            <li className="px-2 py-1.5 text-xs text-fg-muted">No sets match.</li>
-          ) : (
-            shown.map((option) => (
-              <li key={`${option.setId}-${option.name}`}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onPick(option);
-                    setOpen(false);
-                    setQuery("");
-                  }}
-                  className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-surface-2"
-                >
-                  <span className="text-sm text-fg">{option.name}</span>
-                  <span className="text-[11px] text-fg-subtle">
-                    {option.category}
-                    {option.total > 0 ? ` · ${option.collected}/${option.total} collected` : ""}
-                  </span>
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
       ) : null}
     </div>
   );
