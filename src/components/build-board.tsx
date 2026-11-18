@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { arrange, type ArrangeSet, type FrontBarWeapons, type GearRole, type PlacedPiece, sourceSummary } from "@/lib/builds/arrange";
 import { GameIcon } from "@/components/game-icon";
 import type { BuildPageData, BuildSetOption } from "@/lib/builds/options";
@@ -530,9 +530,57 @@ function SetPicker({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const shown = options
-    .filter((option) => option.name.toLowerCase().includes(query.trim().toLowerCase()))
-    .slice(0, 40);
+  const [active, setActive] = useState(0);
+  const listId = useId();
+  const listRef = useRef<HTMLUListElement>(null);
+  const shown = useMemo(
+    () => options.filter((option) => option.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 40),
+    [options, query],
+  );
+  const cursor = shown.length === 0 ? -1 : Math.min(active, shown.length - 1);
+
+  useEffect(() => {
+    if (!open || cursor < 0) return;
+    listRef.current?.querySelector<HTMLElement>(`[data-index="${cursor}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [open, cursor, shown]);
+
+  function choose(option: BuildSetOption) {
+    onPick(option);
+    setOpen(false);
+    setQuery("");
+    setActive(0);
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen(true);
+      if (shown.length === 0) return;
+      setActive(Math.min(shown.length - 1, (cursor < 0 ? 0 : cursor) + 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setOpen(true);
+      if (shown.length === 0) return;
+      setActive(Math.max(0, (cursor < 0 ? 0 : cursor) - 1));
+      return;
+    }
+    if (event.key === "Enter") {
+      const option = cursor >= 0 ? shown[cursor] : undefined;
+      if (!open || !option) return;
+      event.preventDefault();
+      choose(option);
+      return;
+    }
+    if (event.key === "Escape" && open) {
+      event.preventDefault();
+      setOpen(false);
+      setQuery("");
+      setActive(0);
+    }
+  }
+
   return (
     <div className="rounded-lg border border-border bg-surface p-3">
       <div className="text-sm font-medium text-fg">{label}</div>
@@ -564,9 +612,16 @@ function SetPicker({
         <input
           value={open ? query : selected ?? ""}
           placeholder="Search sets"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={open && cursor >= 0 ? `${listId}-opt-${cursor}` : undefined}
+          autoComplete="off"
           onFocus={() => {
             setOpen(true);
             setQuery("");
+            setActive(0);
           }}
           onBlur={() => {
             window.setTimeout(() => setOpen(false), 150);
@@ -574,25 +629,35 @@ function SetPicker({
           onChange={(event) => {
             setOpen(true);
             setQuery(event.target.value);
+            setActive(0);
           }}
+          onKeyDown={onKeyDown}
           className="w-full rounded-lg border border-border bg-surface-2/40 px-2 py-1.5 text-sm text-fg outline-none focus:border-accent"
         />
         {open ? (
-          <ul className="absolute left-0 right-0 top-full z-40 mt-1 max-h-60 overflow-auto rounded-lg border border-border bg-bg-elev shadow-lg">
+          <ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            className="absolute left-0 right-0 top-full z-40 mt-1 max-h-60 overflow-auto rounded-lg border border-border bg-bg-elev shadow-lg"
+          >
             {shown.length === 0 ? (
               <li className="px-2 py-1.5 text-xs text-fg-muted">No sets match.</li>
             ) : (
-              shown.map((option) => (
-                <li key={`${option.setId}-${option.name}`}>
+              shown.map((option, index) => (
+                <li key={`${option.setId}-${option.name}`} role="presentation">
                   <button
                     type="button"
+                    id={`${listId}-opt-${index}`}
+                    role="option"
+                    data-index={index}
+                    aria-selected={index === cursor}
                     onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => {
-                      onPick(option);
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                    className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-surface-2"
+                    onMouseEnter={() => setActive(index)}
+                    onClick={() => choose(option)}
+                    className={`flex w-full flex-col px-2 py-1.5 text-left ${
+                      index === cursor ? "bg-accent-soft" : "hover:bg-surface-2"
+                    }`}
                   >
                     <span className="text-sm text-fg">{option.name}</span>
                     <span className="text-[11px] text-fg-subtle">
