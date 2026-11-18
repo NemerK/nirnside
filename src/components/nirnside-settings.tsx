@@ -21,6 +21,7 @@ import {
 import { Modal } from "./modal";
 import { NirnsideMark } from "./nirnside-mark";
 import { LookToggle } from "./look-toggle";
+import { ProfileSettings } from "./profile-settings";
 import type { ModuleDef } from "@/lib/modules";
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
@@ -102,10 +103,10 @@ export function NirnsideSettings({
           <div className="mb-4 flex items-center gap-3">
             <NirnsideMark className="h-9 w-9 shrink-0 rounded-lg" />
             <p className="text-sm text-fg-muted">
-              Choose what Nirnside shows you. Hidden modules leave the sidebar — nothing is
-              deleted, and the page still works if you open it directly.
+              Your profile, the look of the app, and which pages stay in the sidebar. Pictures stay on this machine.
             </p>
           </div>
+          <ProfileSettings />
           <div className="mb-4 rounded-lg border border-border bg-surface-2/40 p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Look</p>
             <LookToggle />

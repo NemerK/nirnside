@@ -18,6 +18,8 @@ export function LivingHomeView({
   model,
   iconByClass,
   colorByClass,
+  portraitUrl,
+  bannerUrl,
   currencies,
 }: {
   accountName: string;
@@ -27,6 +29,8 @@ export function LivingHomeView({
   model: LivingHome;
   iconByClass: Record<string, string>;
   colorByClass: Record<string, string>;
+  portraitUrl: string | null;
+  bannerUrl: string | null;
   currencies: {
     gold: number;
     telVar: number;
@@ -75,17 +79,22 @@ export function LivingHomeView({
               className="nirn-profile-banner"
               style={{ "--profile": color, "--alliance": alliance } as CSSProperties}
             >
-              <GameIcon
-                name=""
-                icon={iconByClass[face.className]}
-                size={92}
-                bare
-                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 opacity-30 sm:right-10"
-              />
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <GameIcon
+                  name=""
+                  icon={iconByClass[face.className]}
+                  size={92}
+                  bare
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 opacity-30 sm:right-10"
+                />
+              )}
             </header>
 
             <div className="px-5 pb-6 sm:px-8">
-              <Avatar face={face} color={color} icon={iconByClass[face.className]} />
+              <Avatar face={face} color={color} icon={iconByClass[face.className]} portraitUrl={portraitUrl} />
 
               <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
                 <div className="min-w-0">
@@ -234,7 +243,7 @@ export function LivingHomeView({
   );
 }
 
-function Avatar({ face, color, icon }: { face: LivingFace; color: string; icon?: string }) {
+function Avatar({ face, color, icon, portraitUrl }: { face: LivingFace; color: string; icon?: string; portraitUrl: string | null }) {
   const leveling = face.level > 0 && face.level < 50;
   const pct = leveling ? Math.round((face.level / 50) * 100) : 100;
   const badge = leveling ? String(face.level) : face.championPoints > 0 ? formatNumber(face.championPoints) : null;
@@ -248,8 +257,13 @@ function Avatar({ face, color, icon }: { face: LivingFace; color: string; icon?:
         }}
       >
         <div className="grid h-full w-full place-items-center rounded-full bg-surface p-1">
-          <div className="grid h-full w-full place-items-center rounded-full bg-[#14121a]">
-            <GameIcon name={face.className} icon={icon} size={64} bare lit />
+          <div className="grid h-full w-full place-items-center overflow-hidden rounded-full bg-[#14121a]">
+            {portraitUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={portraitUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <GameIcon name={face.className} icon={icon} size={64} bare lit />
+            )}
           </div>
         </div>
       </div>

@@ -3,6 +3,8 @@ import { classColor, classIcon } from "@/lib/classes";
 import { canonicalizeCurrencies } from "@/lib/currencies";
 import { getAccount, getCharactersFull, getHouses } from "@/lib/db/queries";
 import { timeAgo } from "@/lib/format";
+import { profileMedia } from "@/lib/db/profile";
+import { profileImageUrl } from "@/lib/profile/media";
 import { livingHome, withGuilds } from "@/lib/home/living";
 import { skillLineCap } from "@/lib/skills/line-cap";
 import { accountAlliancePoints, accountTelVar, goldBreakdown, liveCharacters } from "@/lib/snapshot/roster";
@@ -24,6 +26,7 @@ export function LivingHomeScreen() {
     legacyGold: account.gold,
   });
   const wallet = canonicalizeCurrencies(account.currencies);
+  const pictures = safe(() => profileMedia()) ?? { avatar: null, banner: null };
   const iconByClass: Record<string, string> = {};
   const colorByClass: Record<string, string> = {};
   for (const character of characters) {
@@ -42,6 +45,8 @@ export function LivingHomeScreen() {
       model={model}
       iconByClass={iconByClass}
       colorByClass={colorByClass}
+      portraitUrl={pictures.avatar != null ? profileImageUrl("avatar", pictures.avatar) : null}
+      bannerUrl={pictures.banner != null ? profileImageUrl("banner", pictures.banner) : null}
       currencies={{
         gold: gold.total,
         telVar: accountTelVar({ characters, legacyTelVar: account.currencies?.telVar }),

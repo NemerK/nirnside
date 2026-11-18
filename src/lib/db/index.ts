@@ -174,6 +174,15 @@ function migrate(db: Database.Database) {
       createdAt  INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_gallery_owner ON gallery_photos(ownerKind, ownerId, createdAt);
+
+    -- The player's own profile picture and banner. Not game data;
+    -- a snapshot re-import must not wipe them. Files live beside the db.
+    CREATE TABLE IF NOT EXISTS profile_media (
+      kind      TEXT PRIMARY KEY,
+      ext       TEXT NOT NULL,
+      bytes     INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL
+    );
   `);
   migrateCharacterRolesToMany(db);
   migrateGoalsTable(db);

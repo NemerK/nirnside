@@ -35,11 +35,11 @@ describe("planner icons", () => {
   it("gives each Class Mastery the crest of its class", () => {
     assert.equal(
       plannerLineIcon({ name: "Class Mastery", className: "Dragonknight" }),
-      "/esoui/art/icons/class/class_dragonknight.dds",
+      "/esoui/art/icons/class/gamepad/gp_class_dragonknight.dds",
     );
     assert.equal(
       plannerLineIcon({ name: "Class Mastery", className: "Nightblade" }),
-      "/esoui/art/icons/class/class_nightblade.dds",
+      "/esoui/art/icons/class/gamepad/gp_class_nightblade.dds",
     );
   });
 
@@ -58,7 +58,7 @@ describe("planner icons", () => {
         lineName: "Class Mastery",
         className: "Dragonknight",
       }),
-      "/esoui/art/icons/class/class_dragonknight.dds",
+      "/esoui/art/icons/class/gamepad/gp_class_dragonknight.dds",
     );
     assert.equal(plannerAbilityIcon({ name: "Inexorable Descent", lineName: "Ardent Flame" }), null);
   });
