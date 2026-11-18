@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { arrange, sourceSummary, type ArrangeSet, type GearRole, type PlacedPiece } from "@/lib/builds/arrange";
+import { GameIcon } from "@/components/game-icon";
 import type { BuildPageData, BuildSetOption } from "@/lib/builds/options";
 import { emptyBuild, type SavedBuild } from "@/lib/builds/saved";
 import { isMonsterSet, kindsForRole } from "@/lib/builds/slots";
@@ -69,6 +70,7 @@ function toArrange(option: BuildSetOption, role: GearRole, pieces: number): Arra
     pieces,
     kinds: kindsForRole(role, option.kinds, option.name),
     collectedKinds: option.collectedKinds,
+    icons: option.icons,
     collected: option.collected,
     total: option.total,
     crafted: option.crafted,
@@ -80,12 +82,6 @@ function sourceClass(piece: PlacedPiece): string {
   if (piece.source.kind === "farm") return "text-danger";
   if (piece.source.kind === "owned" && piece.source.traitChangeCrystals == null) return "text-ok";
   return "text-accent";
-}
-
-function barLabel(style: "twohand" | "dual" | "shield", which: "Front" | "Back"): string {
-  if (style === "dual") return `${which} bar is two one-hand weapons`;
-  if (style === "shield") return `${which} bar is a weapon and shield`;
-  return `${which} bar is a two-hander`;
 }
 
 export function BuildBoard({ data }: { data: BuildPageData }) {
@@ -285,13 +281,6 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
             <Count label="Craft" value={tally.craft} className="text-accent" />
             <Count label="Not obtained" value={tally.farm} className="text-danger" />
           </div>
-          {draft.frontName || draft.backName ? (
-            <p className="text-sm text-fg-muted">
-              {[draft.frontName ? barLabel(chosen.frontStyle, "Front") : null, draft.backName ? barLabel(chosen.backStyle, "Back") : null]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          ) : null}
           {chosen.short.length > 0 ? (
             <p className="text-sm text-danger">
               {chosen.short.map((row) => `${row.setName} wears ${row.have} of ${row.want}`).join(" · ")}
@@ -323,21 +312,28 @@ function Count({ label, value, className }: { label: string; value: number; clas
 
 function SlotCard({ label, piece }: { label: string; piece: PlacedPiece | null }) {
   return (
-    <div className="rounded-lg border border-border bg-surface px-3 py-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-xs uppercase tracking-wide text-fg-subtle">{label}</span>
-        {piece ? <span className="text-xs text-fg-subtle">{roleLabel(piece.role)}</span> : null}
-      </div>
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
       {piece ? (
-        <>
-          <p className="mt-1 text-sm font-medium text-fg">{piece.setName}</p>
-          <p className={`text-sm ${sourceClass(piece)}`}>{sourceSummary(piece.source)}</p>
-          {piece.why ? <p className="mt-1 text-xs text-fg-muted">{piece.why}</p> : null}
-          {piece.aside ? <p className="mt-1 text-xs text-fg-muted">{piece.aside}</p> : null}
-        </>
+        <GameIcon name={piece.setName} icon={piece.icon} size={36} />
       ) : (
-        <p className="mt-1 text-sm text-fg-subtle">Empty</p>
+        <span className="h-9 w-9 shrink-0 rounded-md border border-border bg-surface-2/40" aria-hidden />
       )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-[11px] uppercase tracking-wide text-fg-subtle">{label}</span>
+          {piece && roleLabel(piece.role).toLowerCase() !== label.toLowerCase() ? (
+            <span className="text-[10px] uppercase tracking-wide text-fg-subtle">{roleLabel(piece.role)}</span>
+          ) : null}
+        </div>
+        {piece ? (
+          <>
+            <p className="truncate text-sm text-fg">{piece.setName}</p>
+            <p className={`truncate text-xs ${sourceClass(piece)}`}>{sourceSummary(piece.source)}</p>
+          </>
+        ) : (
+          <p className="text-sm text-fg-subtle">Empty</p>
+        )}
+      </div>
     </div>
   );
 }
