@@ -150,6 +150,28 @@ function isGitClone(root) {
   return existsSync(join(root, ".git")) && git(root, ["rev-parse", "--is-inside-work-tree"]).status === 0;
 }
 
+/** Commit feed, used when the REST API is rate-limited. Same shape the app banner reads. */
+function shaFromCommitFeed(body) {
+  const grit = body.match(/Grit::Commit\/([0-9a-f]{40})/i);
+  return grit?.[1] ?? null;
+}
+
+async function remoteSha(repo, ref) {
+  try {
+    const commit = await githubJson(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(ref)}`);
+    if (typeof commit.sha === "string" && commit.sha.trim()) return commit.sha.trim();
+  } catch {
+    /* The hourly API allowance is easy to spend. The public feed still has the commit. */
+  }
+  const res = await fetch(`https://github.com/${repo}/commits/${encodeURIComponent(ref)}.atom`, {
+    headers: { "User-Agent": "nirnside-self-update", Accept: "application/atom+xml" },
+  });
+  if (!res.ok) throw new Error(`GitHub ${res.status} for the ${ref} commit feed`);
+  const sha = shaFromCommitFeed(await res.text());
+  if (!sha) throw new Error(`The ${ref} commit feed had no commit.`);
+  return sha;
+}
+
 async function githubJson(url) {
   const res = await fetch(url, {
     headers: {
@@ -256,8 +278,7 @@ async function updateFromGit(root) {
 
 async function updateFromZip(root, repo, ref) {
   log(`Checking GitHub ${repo}@${ref}…`);
-  const commit = await githubJson(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(ref)}`);
-  const sha = commit.sha;
+  const sha = await remoteSha(repo, ref);
   const prev = readRevision(root);
   if (prev?.sha === sha) {
     log(`Already up to date (${sha.slice(0, 7)}).`);

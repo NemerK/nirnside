@@ -87,8 +87,9 @@ function restartOutsideJob(): boolean {
   return false;
 }
 
-export async function GET() {
-  return NextResponse.json(await getUpdateStatus());
+export async function GET(request: Request) {
+  const fresh = new URL(request.url).searchParams.has("fresh");
+  return NextResponse.json(await getUpdateStatus(process.cwd(), Date.now(), { fresh }));
 }
 
 export async function POST() {

@@ -513,6 +513,36 @@ func TestUpdatePendingZip(t *testing.T) {
 	}
 }
 
+func TestUpdatePendingZipUsesCommitFeedWhenRateLimited(t *testing.T) {
+	dir := t.TempDir()
+	const head = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "rate limit", http.StatusForbidden)
+	}))
+	defer srv.Close()
+	previous := commitFeed
+	commitFeed = func(repo, ref string) (string, error) {
+		if repo != "NemerK/nirnside" || ref != "main" {
+			t.Fatalf("unexpected feed %s %s", repo, ref)
+		}
+		return `<id>tag:github.com,2008:Grit::Commit/` + head + `</id>`, nil
+	}
+	t.Cleanup(func() { commitFeed = previous })
+
+	if err := os.WriteFile(filepath.Join(dir, revisionName), []byte(`{"sha":"def456"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !updatePendingZip(dir, "http://"+srv.Listener.Addr().String()) {
+		t.Fatal("a rate-limited API must still notice a newer commit on the public feed")
+	}
+	if err := os.WriteFile(filepath.Join(dir, revisionName), []byte(`{"sha":"`+head+`"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if updatePendingZip(dir, "http://"+srv.Listener.Addr().String()) {
+		t.Fatal("a matching feed commit must not count as pending")
+	}
+}
+
 func TestClaimUpdate(t *testing.T) {
 	in := newInstaller()
 	if _, errMsg := in.claimUpdate(); errMsg == "" {

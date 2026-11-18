@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -42,22 +44,85 @@ func updatePendingGit(root string) bool {
 }
 
 func updatePendingZip(root, apiBase string) bool {
-	client := &http.Client{Timeout: 10 * time.Second}
-	res, err := client.Get(apiBase + "/repos/" + updateRepo(root) + "/commits/" + updateRef(root))
-	if err != nil {
+	sha, ok := remoteZipSha(apiBase, updateRepo(root), updateRef(root))
+	if !ok {
 		return false
 	}
+	return sha != revisionSha(filepath.Join(root, revisionName))
+}
+
+var commitFeed = func(repo, ref string) (string, error) {
+	if !feedNameOK(repo) || !feedNameOK(ref) {
+		return "", fmt.Errorf("bad update channel")
+	}
+	client := &http.Client{Timeout: 10 * time.Second}
+	res, err := client.Get("https://github.com/" + repo + "/commits/" + ref + ".atom")
+	if err != nil {
+		return "", err
+	}
 	defer res.Body.Close()
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("commit feed %d", res.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+var commitInFeed = regexp.MustCompile(`Grit::Commit/([0-9a-fA-F]{40})`)
+
+func feedNameOK(value string) bool {
+	if value == "" || strings.Contains(value, "..") {
 		return false
+	}
+	slashes := 0
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-':
+		case r == '/':
+			slashes++
+			if slashes > 1 {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+/** The commit the next launch would apply. A rate-limited API falls through to the public commit feed. */
+func remoteZipSha(apiBase, repo, ref string) (string, bool) {
+	client := &http.Client{Timeout: 10 * time.Second}
+	res, err := client.Get(apiBase + "/repos/" + repo + "/commits/" + ref)
+	if err != nil {
+		return "", false
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests {
+		body, feedErr := commitFeed(repo, ref)
+		if feedErr != nil {
+			return "", false
+		}
+		match := commitInFeed.FindStringSubmatch(body)
+		if match == nil {
+			return "", false
+		}
+		return match[1], true
+	}
+	if res.StatusCode != http.StatusOK {
+		return "", false
 	}
 	var commit struct {
 		Sha string `json:"sha"`
 	}
-	if json.NewDecoder(res.Body).Decode(&commit) != nil || commit.Sha == "" {
-		return false
+	if json.NewDecoder(res.Body).Decode(&commit) != nil {
+		return "", false
 	}
-	return commit.Sha != revisionSha(filepath.Join(root, revisionName))
+	sha := strings.TrimSpace(commit.Sha)
+	return sha, sha != ""
 }
 
 /** The update channel ref (nirnside-channel.json), mirroring self-update.mjs. */
