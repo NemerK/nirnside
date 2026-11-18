@@ -22,6 +22,8 @@ export interface ArrangeSet {
   kinds: SlotKind[];
   /** Kinds with at least one collected stickerbook piece. */
   collectedKinds: SlotKind[];
+  /** In-game icon path for a stickerbook piece of that slot, when the snapshot has one. */
+  icons?: Partial<Record<SlotKind, string>>;
   collected: number;
   total: number;
   crafted: boolean;
@@ -36,6 +38,8 @@ export interface OwnedGear {
   trait: string | null;
   location: string;
   owner: string | null;
+  /** In-game icon path from the bag item, when the snapshot recorded one. */
+  icon?: string | null;
 }
 
 export interface CrafterLine {
@@ -53,6 +57,7 @@ export type PieceSource =
   | {
       kind: "owned";
       itemName: string;
+      icon: string | null;
       trait: string | null;
       divines: boolean;
       location: string;
@@ -67,9 +72,12 @@ export type PieceSource =
 export interface PlacedPiece {
   slot: string;
   label: string;
+  kind: SlotKind;
   pieces: number;
   role: GearRole;
   setName: string;
+  /** Game icon for this piece: the owned item's, or the stickerbook piece's. */
+  icon: string | null;
   source: PieceSource;
   /** True when the piece sits in the group the player asked for. */
   preferred: boolean;
@@ -196,50 +204,42 @@ function fallbackChoice(set: ArrangeSet, kind: SlotKind, crafters: Crafter[]): C
   return options[0]!;
 }
 
+function ownedSource(
+  item: OwnedGear,
+  trait: { divines: boolean; traitChangeCrystals: number | null },
+): Extract<PieceSource, { kind: "owned" }> {
+  return {
+    kind: "owned",
+    itemName: item.itemName,
+    icon: item.icon ?? null,
+    trait: item.trait,
+    divines: trait.divines,
+    location: item.location,
+    owner: item.owner,
+    traitChangeCrystals: trait.traitChangeCrystals,
+  };
+}
+
 function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Crafter[]): Choice {
   const divine = isDivinesTrait(item.trait);
   if (!wantsDivines(kind) || divine) {
     return {
       cost: OWNED_DIVINES,
       item: index,
-      source: {
-        kind: "owned",
-        itemName: item.itemName,
-        trait: item.trait,
-        divines: divine || !wantsDivines(kind),
-        location: item.location,
-        owner: item.owner,
-        traitChangeCrystals: null,
-      },
+      source: ownedSource(item, { divines: divine || !wantsDivines(kind), traitChangeCrystals: null }),
     };
   }
   if (divinesKnown(kind, crafters)) {
     return {
       cost: TRAIT_CHANGE_CRYSTALS,
       item: index,
-      source: {
-        kind: "owned",
-        itemName: item.itemName,
-        trait: item.trait,
-        divines: true,
-        location: item.location,
-        owner: item.owner,
-        traitChangeCrystals: TRAIT_CHANGE_CRYSTALS,
-      },
+      source: ownedSource(item, { divines: true, traitChangeCrystals: TRAIT_CHANGE_CRYSTALS }),
     };
   }
   return {
     cost: OWNED_AS_IS,
     item: index,
-    source: {
-      kind: "owned",
-      itemName: item.itemName,
-      trait: item.trait,
-      divines: false,
-      location: item.location,
-      owner: item.owner,
-      traitChangeCrystals: null,
-    },
+    source: ownedSource(item, { divines: false, traitChangeCrystals: null }),
   };
 }
 
@@ -320,18 +320,13 @@ function placeWhere(source: Extract<PieceSource, { kind: "owned" }>): string {
 
 export function sourceSummary(source: PieceSource): string {
   if (source.kind === "owned") {
-    const who = source.owner ? `${source.owner} · ` : "";
+    const who = source.location === "worn" && source.owner ? `${source.owner} · ` : "";
     const trait = source.trait ? ` · ${source.trait}` : "";
-    const change = source.traitChangeCrystals ? ` · change to Divines (${source.traitChangeCrystals} crystals)` : "";
-    return `${who}${locationLabel(source.location)}${trait}${change}`;
+    return `${who}${locationLabel(source.location)}${trait}`;
   }
-  if (source.kind === "craft") return `Craft on ${source.crafter} · ${source.trait}`;
-  if (source.kind === "transmute") {
-    const crystals = source.crystals == null ? "crystal cost not in this snapshot" : `${source.crystals} crystals`;
-    const trait = source.trait ? ` · ${source.trait}` : source.divines ? "" : " · Divines is not researched";
-    return `Stickerbook · ${crystals}${trait}`;
-  }
-  return "Not obtained yet";
+  if (source.kind === "craft") return `Craft · ${source.trait}`;
+  if (source.kind === "transmute") return source.crystals == null ? "Stickerbook" : `${source.crystals} crystals`;
+  return "Not obtained";
 }
 
 function unit(id: string, label: string, kind: SlotKind, preferred: Unit["preferred"], pieces = 1): Unit {
@@ -659,12 +654,15 @@ export function arrange(sets: ArrangeSet[], owned: OwnedGear[], crafters: Crafte
     );
     group.slots.forEach((slot, index) => {
       const source = priced.sources[index]!;
+      const ownedIcon = source.kind === "owned" ? source.icon : null;
       placed.push({
         slot: slot.unit.id,
         label: slot.unit.label,
+        kind: slot.unit.kind,
         pieces: slot.unit.pieces,
         role: slot.set.role,
         setName: slot.set.name,
+        icon: ownedIcon || slot.set.icons?.[slot.unit.kind] || null,
         source,
         preferred: slot.preferred,
         why: slot.preferred ? null : whyOff(slot.set, source),

@@ -10,6 +10,8 @@ export interface BuildSetOption {
   keys: string[];
   kinds: SlotKind[];
   collectedKinds: SlotKind[];
+  /** In-game icon path per slot, from the stickerbook piece or an owned item. */
+  icons: Partial<Record<SlotKind, string>>;
   collected: number;
   total: number;
   crafted: boolean;

@@ -31,11 +31,13 @@ export function loadBuildPage(): BuildPageData {
     const mythic = isMythicSet(row);
     const kinds: SlotKind[] = [];
     const collectedKinds: SlotKind[] = [];
+    const icons: Partial<Record<SlotKind, string>> = {};
     for (const piece of row.pieces) {
       const kind = pieceKind(piece.slot, piece.type, piece.name);
       if (!kind) continue;
       if (!kinds.includes(kind)) kinds.push(kind);
       if (piece.collected && !collectedKinds.includes(kind)) collectedKinds.push(kind);
+      if (piece.icon && (piece.collected || !icons[kind])) icons[kind] = piece.icon;
     }
     if (kinds.length === 0 && mythic) {
       const inferred = pieceKind("", "", row.name);
@@ -59,6 +61,7 @@ export function loadBuildPage(): BuildPageData {
       keys: setMatchKeys(row.name),
       kinds: mythic ? kinds.slice(0, 1) : kinds,
       collectedKinds: mythic ? collectedKinds.slice(0, 1) : collectedKinds,
+      icons,
       collected: row.collected,
       total: row.total,
       crafted,
@@ -84,6 +87,7 @@ export function loadBuildPage(): BuildPageData {
       keys,
       kinds: mythic ? (mythicKind ? [mythicKind] : []) : kindsForCategory(entry.entry.category, null),
       collectedKinds: [],
+      icons: entry.entry.icon && mythicKind ? { [mythicKind]: entry.entry.icon } : {},
       collected: 0,
       total: 0,
       crafted,
@@ -96,7 +100,10 @@ export function loadBuildPage(): BuildPageData {
   sets.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
 
   const owned: OwnedGear[] = [];
-  const bagOnly = new Map<string, { name: string; setId: number; keys: string[]; kinds: SlotKind[]; weaponOnly: boolean }>();
+  const bagOnly = new Map<
+    string,
+    { name: string; setId: number; keys: string[]; kinds: SlotKind[]; icons: Partial<Record<SlotKind, string>>; weaponOnly: boolean }
+  >();
   for (const item of getItems()) {
     if (!item.setName) continue;
     const kind = pieceKind(item.equipSlot ?? "", "", item.name);
@@ -109,6 +116,7 @@ export function loadBuildPage(): BuildPageData {
       trait: item.trait,
       location: item.location,
       owner: item.ownerCharacter,
+      icon: item.icon ?? null,
     };
     owned.push(gear);
     const set = sets.find(
@@ -116,6 +124,7 @@ export function loadBuildPage(): BuildPageData {
     );
     if (set) {
       if (!set.kinds.includes(kind)) set.kinds.push(kind);
+      if (item.icon && !set.icons[kind]) set.icons[kind] = item.icon;
       continue;
     }
     const id = gear.keys[0] ?? item.setName;
@@ -124,9 +133,11 @@ export function loadBuildPage(): BuildPageData {
       setId: gear.setId ?? 0,
       keys: gear.keys,
       kinds: [],
+      icons: {},
       weaponOnly: true,
     };
     if (!bag.kinds.includes(kind)) bag.kinds.push(kind);
+    if (item.icon && !bag.icons[kind]) bag.icons[kind] = item.icon;
     if (kind !== "oneHand" && kind !== "twoHand" && kind !== "shield") bag.weaponOnly = false;
     bagOnly.set(id, bag);
   }
@@ -139,6 +150,7 @@ export function loadBuildPage(): BuildPageData {
       keys: bag.keys,
       kinds,
       collectedKinds: [],
+      icons: bag.icons,
       collected: 0,
       total: 0,
       crafted: false,

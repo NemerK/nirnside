@@ -30,6 +30,7 @@ function set(partial: Partial<ArrangeSet> & Pick<ArrangeSet, "role" | "name">): 
     pieces,
     kinds: partial.kinds ?? ALL,
     collectedKinds: partial.collectedKinds ?? [],
+    icons: partial.icons,
     collected: partial.collected ?? 0,
     total: partial.total ?? 0,
     crafted: partial.crafted ?? false,
@@ -320,6 +321,35 @@ describe("arrange", () => {
     assert.equal(result.frontStyle, "dual");
     assert.equal(slot(result.placed, "frontMain").source.kind, "owned");
     assert.equal(slot(result.placed, "frontOff").source.kind, "owned");
+  });
+
+  it("shows the owned item's icon, and the stickerbook icon when the piece is reconstructed", () => {
+    const ownedIcon = "/esoui/art/icons/gear_owned_chest.dds";
+    const bookIcon = "/esoui/art/icons/gear_book_chest.dds";
+    const worn = arrange(
+      [set({ role: "body", name: "Null Arca", kinds: ["chest"], pieces: 1, icons: { chest: bookIcon } })],
+      [{ ...own("Null Arca", "chest", "Divines"), icon: ownedIcon }],
+      [],
+    );
+    assert.equal(slot(worn.placed, "chest").icon, ownedIcon);
+    const rebuilt = arrange(
+      [
+        set({
+          role: "body",
+          name: "Null Arca",
+          kinds: ["chest"],
+          pieces: 1,
+          collected: 22,
+          total: 22,
+          collectedKinds: ["chest"],
+          icons: { chest: bookIcon },
+        }),
+      ],
+      [],
+      [],
+    );
+    assert.equal(slot(rebuilt.placed, "chest").icon, bookIcon);
+    assert.equal(slot(rebuilt.placed, "chest").source.kind, "transmute");
   });
 
   it("does not wear one ring on both ring slots", () => {
