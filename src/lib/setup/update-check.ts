@@ -21,7 +21,19 @@ export interface UpdateStatus {
 }
 
 const CACHE_MS = 60_000;
-let cache: { at: number; status: UpdateStatus } | null = null;
+const FAILED_CACHE_MS = 5_000;
+let cache: { at: number; ttl: number; status: UpdateStatus } | null = null;
+
+/** Last successful head for a channel, plus the feed validator, so a later check can be a 304. */
+const remoteMemory = new Map<string, { etag: string | null; sha: string | null }>();
+
+/** First commit in GitHub's public commit feed. The REST API is not used: an open window would spend its hourly allowance. */
+export function shaFromCommitFeed(body: string): string | null {
+  const grit = body.match(/Grit::Commit\/([0-9a-f]{40})/i);
+  if (grit?.[1]) return grit[1];
+  const json = body.match(/"sha"\s*:\s*"([0-9a-f]{7,40})"/i);
+  return json?.[1] ?? null;
+}
 
 function gitLine(root: string, args: string[]): string | null {
   const result = spawnSync("git", args, {
@@ -35,33 +47,54 @@ function gitLine(root: string, args: string[]): string | null {
   return line || null;
 }
 
-async function githubSha(repo: string, ref: string): Promise<string | null> {
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
+function channelOk(repo: string, ref: string): boolean {
+  return /^[\w.-]+\/[\w.-]+$/.test(repo) && /^[\w.-]+$/.test(ref);
+}
+
+/**
+ * The commit a zip install would apply. Uses GitHub's public commit feed, with
+ * If-None-Match, because api.github.com allows 60 unauthenticated requests an
+ * hour and this window asks more often than that. A refusal used to look like
+ * "no update" until the process was restarted.
+ */
+async function remoteHead(repo: string, ref: string): Promise<string | null> {
+  if (!channelOk(repo, ref)) return null;
+  const key = `${repo}@${ref}`;
+  const memory = remoteMemory.get(key) ?? { etag: null, sha: null };
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(ref)}`, {
-      headers: {
-        "User-Agent": "nirnside-self-update",
-        Accept: "application/vnd.github+json",
-      },
+    const headers: Record<string, string> = {
+      "User-Agent": "nirnside-self-update",
+      Accept: "application/atom+xml",
+    };
+    if (memory.etag) headers["If-None-Match"] = memory.etag;
+    const res = await fetch(`https://github.com/${repo}/commits/${encodeURIComponent(ref)}.atom`, {
+      headers,
       signal: AbortSignal.timeout(8000),
       cache: "no-store",
     });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { sha?: string };
-    const sha = body.sha?.trim() || "";
-    return sha || null;
+    if (res.status === 304) return memory.sha;
+    if (!res.ok) return memory.sha;
+    const sha = shaFromCommitFeed(await res.text());
+    if (!sha) return memory.sha;
+    remoteMemory.set(key, { etag: res.headers.get("etag"), sha });
+    return sha;
   } catch {
-    return null;
+    return memory.sha;
   }
 }
 
 /**
  * Compare this install with the commit the next launch would apply.
- * Git clones track origin/main (what self-update pulls). Zip installs track
- * the GitHub channel. Failures read as "no update", same as the launcher.
+ * Git clones ask origin/main. Zip installs, and a git install whose git
+ * command failed, read the public commit feed. A feed that cannot be reached
+ * keeps the last head it saw, so a blip does not hide an update already found.
  */
-export async function getUpdateStatus(root = process.cwd(), now = Date.now()): Promise<UpdateStatus> {
-  if (cache && now - cache.at < CACHE_MS && cache.status.bootedAt === bootedAt) {
+export async function getUpdateStatus(
+  root = process.cwd(),
+  now = Date.now(),
+  options?: { fresh?: boolean },
+): Promise<UpdateStatus> {
+  if (!options?.fresh && cache && now - cache.at < cache.ttl && cache.status.bootedAt === bootedAt) {
     return cache.status;
   }
   const info = getUpdateInfo();
@@ -76,7 +109,9 @@ export async function getUpdateStatus(root = process.cwd(), now = Date.now()): P
     ref = "main";
   } else if (!info.skipped) {
     ref = info.ref && info.ref !== "this git branch" ? info.ref : "main";
-    remote = await githubSha(info.repo, ref);
+  }
+  if (!remote && !info.skipped) {
+    remote = await remoteHead(info.repo, ref);
   }
 
   const available = isUpdateAvailable(current, remote, info.skipped);
@@ -91,6 +126,6 @@ export async function getUpdateStatus(root = process.cwd(), now = Date.now()): P
     launcherUrl: launcherOrigin(process.env.NIRNSIDE_LAUNCHER_URL),
     bootedAt,
   };
-  cache = { at: now, status };
+  cache = { at: now, ttl: remote ? CACHE_MS : FAILED_CACHE_MS, status };
   return status;
 }

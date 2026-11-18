@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { NirnsideMark } from "./nirnside-mark";
 
 interface UpdateStatus {
@@ -32,6 +33,7 @@ const POLL_MS = 60_000;
  * reloads once a new process answers.
  */
 export function AppUpdate() {
+  const path = usePathname();
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [phase, setPhase] = useState<"idle" | "updating">("idle");
   const [watching, setWatching] = useState(false);
@@ -44,9 +46,9 @@ export function AppUpdate() {
   useEffect(() => {
     if (phase === "updating") return;
     let timer = 0;
-    const load = async () => {
+    const load = async (fresh: boolean) => {
       try {
-        const res = await fetch("/api/update", { cache: "no-store" });
+        const res = await fetch(fresh ? "/api/update?fresh=1" : "/api/update", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as UpdateStatus;
         if (boot.current == null && data.bootedAt) boot.current = data.bootedAt;
@@ -55,17 +57,17 @@ export function AppUpdate() {
         /* Offline or restarting. The last answer stays put. */
       }
     };
-    void load();
+    void load(true);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void load();
+      if (document.visibilityState === "visible") void load(true);
     };
     document.addEventListener("visibilitychange", onVisible);
-    timer = window.setInterval(() => void load(), POLL_MS);
+    timer = window.setInterval(() => void load(false), POLL_MS);
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [phase]);
+  }, [phase, path]);
 
   useEffect(() => {
     if (!watching || error) return;
