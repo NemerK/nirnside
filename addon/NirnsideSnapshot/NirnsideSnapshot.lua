@@ -3043,6 +3043,7 @@ local function readStickerPiece(setId, i)
 
   local link = pieceItemLink(pieceId)
   local linkName = link and safe(function() return zo_strformat("<<1>>", GetItemLinkName(link)) end, nil) or nil
+  local pieceItemId = link and safe(function() return GetItemLinkItemId(link) end, nil) or nil
   local icon = link and safe(function() return stickerNormIcon(GetItemLinkIcon(link)) end, nil) or nil
   local typeLabel, weight
   if link then typeLabel, weight = pieceTypeInfo(link) end
@@ -3062,6 +3063,7 @@ local function readStickerPiece(setId, i)
     type = (typeLabel and typeLabel ~= "") and typeLabel or fallback,
     weight = weight,
     name = name,
+    itemId = pieceItemId,
     icon = icon,
     collected = collected,
   }

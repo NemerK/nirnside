@@ -7,6 +7,7 @@ import {
   kindFromPiece,
   kindsForRole,
   reconstructionCost,
+  resolveOwnedPiece,
   setMatchKeys,
   weaponTypeFromPiece,
   type FrontWeapon,
@@ -136,6 +137,74 @@ describe("reconstruction cost", () => {
     assert.equal(kindFromPiece("", "", "Slivers of the Null Arca Guards"), "legs");
     assert.equal(kindFromPiece("", "", "Slivers of the Null Arca Arm Cops"), "shoulders");
     assert.equal(kindFromPiece("Medium Legs", "", "Slivers of the Null Arca"), "legs");
+    assert.equal(kindFromPiece("", "", "Slivers of the Null Arca"), null);
+    assert.equal(kindFromPiece("", "", "Vestment of Olorime"), null);
+  });
+
+  it("knows every armor word the game uses for the three weights", () => {
+    const lines: Array<[string, SlotKind]> = [
+      ["Hat", "head"],
+      ["Helmet", "head"],
+      ["Helm", "head"],
+      ["Epaulets", "shoulders"],
+      ["Arm Cops", "shoulders"],
+      ["Pauldron", "shoulders"],
+      ["Robe", "chest"],
+      ["Jerkin", "chest"],
+      ["Jack", "chest"],
+      ["Cuirass", "chest"],
+      ["Gloves", "hands"],
+      ["Bracers", "hands"],
+      ["Gauntlets", "hands"],
+      ["Sash", "waist"],
+      ["Belt", "waist"],
+      ["Girdle", "waist"],
+      ["Breeches", "legs"],
+      ["Guards", "legs"],
+      ["Greaves", "legs"],
+      ["Shoes", "feet"],
+      ["Boots", "feet"],
+      ["Sabatons", "feet"],
+      ["Necklace", "neck"],
+      ["Ring", "ring"],
+      ["Dagger", "oneHand"],
+      ["Axe", "oneHand"],
+      ["Mace", "oneHand"],
+      ["Sword", "oneHand"],
+      ["Greatsword", "twoHand"],
+      ["Battle Axe", "twoHand"],
+      ["Maul", "twoHand"],
+      ["Bow", "twoHand"],
+      ["Inferno Staff", "twoHand"],
+      ["Ice Staff", "twoHand"],
+      ["Lightning Staff", "twoHand"],
+      ["Restoration Staff", "twoHand"],
+      ["Shield", "shield"],
+    ];
+    for (const [name, kind] of lines) {
+      assert.equal(kindFromPiece("", "", name), kind, name);
+    }
+  });
+
+  it("uses the stickerbook slot when the item name is not a piece word", () => {
+    const vestment = [{ name: "Vestment of Olorime", slot: "Chest", type: "Light Chest" }];
+    assert.equal(resolveOwnedPiece({ name: "Vestment of Olorime", equipSlot: null }, vestment)?.kind, "chest");
+    const ambiguous = [
+      { name: "Perfected Slivers of the Null Arca", slot: "Chest", type: "Medium Chest" },
+      { name: "Perfected Slivers of the Null Arca", slot: "Ring", type: "Ring" },
+    ];
+    assert.equal(resolveOwnedPiece({ name: "Perfected Slivers of the Null Arca", equipSlot: null }, ambiguous), null);
+    assert.equal(
+      resolveOwnedPiece({ name: "Perfected Slivers of the Null Arca", equipSlot: "Medium Legs" }, ambiguous)?.kind,
+      "legs",
+    );
+    assert.equal(
+      resolveOwnedPiece(
+        { name: "Something Else", itemId: 184201, equipSlot: null },
+        [{ name: "Null Arca Guards", slot: "Legs", type: "Medium Legs", itemId: 184201 }],
+      )?.kind,
+      "legs",
+    );
   });
 
   it("treats a head-and-shoulders dungeon set as a monster set", () => {
