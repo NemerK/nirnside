@@ -1,28 +1,10 @@
 import Link from "next/link";
 import { Download, MonitorSmartphone, Users } from "lucide-react";
-import {
-  getAccount,
-  getArchivedCharacters,
-  getAutoSetup,
-  getCharacters,
-  getCharactersFull,
-  getCompletedAchievementIds,
-  getHouses,
-  getOutfitStyles,
-  getStickerbookStats,
-} from "@/lib/db/queries";
+import { LivingHomeScreen } from "@/components/living-home-screen";
+import { getAccount, getAutoSetup } from "@/lib/db/queries";
 import { candidatePaths, seesWindowsDocuments } from "@/lib/snapshot/locate";
-import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
-import { canonicalizeCurrencies } from "@/lib/currencies";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { LoadDemoButton } from "@/components/demo-controls";
-import { LookSwitch } from "@/components/look-switch";
-import { AccountOverview, AtlasHome } from "@/components/atlas/home";
-import { presentAchievements } from "@/lib/achievements/present";
-
-import { presentOutfitStyles, summarizeAccountKnowledge } from "@/lib/knowledge/present";
-import { liveCharacters } from "@/lib/snapshot/roster";
-import { disabledModuleSet } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
 
@@ -38,88 +20,7 @@ export default function HomePage() {
       />
     );
 
-  const characters = safe(() => getCharacters()) ?? [];
-  const archived = safe(() => getArchivedCharacters()) ?? [];
-  const sticker = safe(() => getStickerbookStats()) ?? { total: 0, collected: 0, sets: 0 };
-  // Champion Points are account-wide, so show one number for the whole account.
-  const accountCP = characters.reduce((m, c) => Math.max(m, c.championPoints ?? 0), 0);
-  const gold = goldBreakdown({
-    characters,
-    bankGold: account.currencies?.bankGold ?? 0,
-    legacyGold: account.gold,
-  });
-  const telVar = accountTelVar({
-    characters,
-    legacyTelVar: account.currencies?.telVar,
-  });
-  const alliancePoints = accountAlliancePoints({
-    characters,
-    legacyAlliancePoints: account.currencies?.alliancePoints,
-  });
-
-  const houses = safe(() => getHouses()) ?? [];
-  const knowledge = summarizeAccountKnowledge(liveCharacters(safe(() => getCharactersFull()) ?? []));
-  const styles = presentOutfitStyles(safe(() => getOutfitStyles()) ?? []);
-  const pithka = presentAchievements({
-    completedIds: safe(() => getCompletedAchievementIds()) ?? [],
-  }).pithka;
-  // Setup can turn modules off (e.g. a finished stickerbook). A turned-off
-  // module keeps working at its URL — it just stops taking space on Home.
-  const off = safe(() => disabledModuleSet()) ?? new Set<string>();
-  const show = (module: string) => !off.has(module);
-
-  const sharedWallet = canonicalizeCurrencies(account.currencies);
-  const overview = {
-    account: {
-      displayName: account.displayName,
-      region: account.region,
-      esoPlus: account.esoPlus,
-      lastSnapshot: account.lastSnapshot,
-      guilds: account.guilds ?? [],
-    },
-    stats: {
-      characterCount: characters.length,
-      archivedCount: archived.length,
-      accountCP,
-      stickerCollected: sticker.collected,
-      stickerTotal: sticker.total,
-      housesCount: houses.length,
-      knowledge,
-      stylesUnlocked: styles.unlocked,
-      stylesTotal: styles.total,
-      pithkaDone: pithka.done,
-      pithkaTotal: pithka.total,
-      showCharacters: show("characters"),
-      showStickerbook: show("stickerbook"),
-      showStyles: show("styles"),
-      showHouses: show("houses"),
-      showKnowledge: show("knowledge"),
-      showAchievements: show("achievements"),
-    },
-    currencies: {
-      gold: gold.total,
-      telVar,
-      alliancePoints,
-      writVouchers: sharedWallet.writVouchers ?? 0,
-      transmuteCrystals: sharedWallet.transmuteCrystals ?? 0,
-      undauntedKeys: sharedWallet.undauntedKeys ?? 0,
-    },
-  };
-
-  const classic = (
-    <div className="mx-auto max-w-6xl">
-      <AccountOverview {...overview} />
-    </div>
-  );
-
-  return (
-    <LookSwitch
-      classic={classic}
-      atlas={
-        <AtlasHome {...overview} />
-      }
-    />
-  );
+  return <LivingHomeScreen />;
 }
 
 // Link straight at the .exe so a click downloads it — GitHub hides release

@@ -8,7 +8,7 @@ import type { ModuleDef } from "@/lib/modules";
 
 /**
  * Setup → Modules: choose which parts of Nirnside you currently see. A module
- * turned off here disappears from the sidebar and the Home dashboard; its page
+ * turned off here disappears from the sidebar; its page
  * keeps working if you open it directly, and no data is ever deleted.
  */
 export function ModulesPanel({ modules, disabled }: { modules: ModuleDef[]; disabled: string[] }) {
@@ -46,7 +46,7 @@ export function ModulesPanel({ modules, disabled }: { modules: ModuleDef[]; disa
     <Card className="p-5">
       <div className="mb-1 text-sm font-medium text-fg">Modules</div>
       <p className="mb-4 text-sm text-fg-muted">
-        Turn off what you&apos;re done with. Hidden modules leave the sidebar and the Home dashboard — nothing is
+        Turn off what you&apos;re done with. Hidden modules leave the sidebar — nothing is
         deleted, and the page still works if you open it directly.
       </p>
       <ul className="divide-y divide-border">

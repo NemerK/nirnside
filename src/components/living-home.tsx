@@ -227,13 +227,7 @@ export function LivingHomeView({
               <PurseStat label="Undaunted keys" value={currencies.undauntedKeys} />
             </dl>
           </Showcase>
-          <p className="mt-4 text-xs text-fg-subtle">
-            {[accountName, snapshot].filter(Boolean).join(" · ")}
-            {" · "}
-            <Link href="/" className="hover:text-fg">
-              The ledger
-            </Link>
-          </p>
+          <p className="mt-4 text-xs text-fg-subtle">{[accountName, snapshot].filter(Boolean).join(" · ")}</p>
         </div>
       </article>
     </div>

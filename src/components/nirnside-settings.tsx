@@ -39,7 +39,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
 
 /**
  * The "Nirnside settings" button: one place to choose what the app shows.
- * Turning a module off only hides it (sidebar + Home) — nothing is deleted and
+ * Turning a module off only hides it from the sidebar — nothing is deleted and
  * the page keeps working at its URL.
  */
 export function NirnsideSettings({
@@ -102,7 +102,7 @@ export function NirnsideSettings({
           <div className="mb-4 flex items-center gap-3">
             <NirnsideMark className="h-9 w-9 shrink-0 rounded-lg" />
             <p className="text-sm text-fg-muted">
-              Choose what Nirnside shows you. Hidden modules leave the sidebar and the Home dashboard — nothing is
+              Choose what Nirnside shows you. Hidden modules leave the sidebar — nothing is
               deleted, and the page still works if you open it directly.
             </p>
           </div>
