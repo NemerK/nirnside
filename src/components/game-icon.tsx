@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type SyntheticEvent } from "react";
 import { iconImageUrls } from "@/lib/icons/sources";
 
 /**
@@ -59,20 +59,59 @@ export function GameIcon({
     setAttempt(0);
   }
   const src = icon === forIcon ? urls[attempt] : urls[0];
+  const [drawn, setDrawn] = useState<string | null>(null);
+  const [drawnFor, setDrawnFor] = useState<string | null>(null);
+  const display = drawnFor === src ? (drawn ?? src) : src;
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  if (src) {
+  function sharpen(img: HTMLImageElement) {
+    if (!src || src.startsWith("data:")) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const target = Math.round(size * dpr);
+    // Large slots (the profile crest) need a bitmap that covers the device
+    // pixels. Otherwise a small source is stretched and the edges break up.
+    if (size < 48 || img.naturalWidth === 0 || img.naturalWidth >= target) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = target;
+    canvas.height = target;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, target, target);
+    try {
+      setDrawnFor(src);
+      setDrawn(canvas.toDataURL("image/png"));
+    } catch {
+      // A cross-origin fallback cannot be read back. Leave the original.
+    }
+  }
+
+  useEffect(() => {
+    const img = imgRef.current;
+    // A cached crest can finish loading before hydration attaches onLoad.
+    if (img?.complete) sharpen(img);
+    // sharpen closes over the current source and size; re-run when those change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, size]);
+
+  if (src && display) {
     const img = (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         key={src}
-        src={src}
+        src={display}
         alt={name}
         width={size}
         height={size}
         loading="lazy"
         decoding="async"
         fetchPriority="low"
-        onError={() => setAttempt((n) => n + 1)}
+        ref={imgRef}
+        onError={() => {
+          if (display === src) setAttempt((n) => n + 1);
+        }}
+        onLoad={(event: SyntheticEvent<HTMLImageElement>) => sharpen(event.currentTarget)}
         className={`shrink-0 ${bare ? "object-contain" : "rounded-md border border-border bg-surface-2 object-cover"} ${className}`}
         style={{ width: size, height: size }}
       />
@@ -85,7 +124,7 @@ export function GameIcon({
           {
             width: size,
             height: size,
-            "--icon-mask": `url("${src}")`,
+            "--icon-mask": `url("${display}")`,
           } as CSSProperties
         }
       >

@@ -11,15 +11,20 @@ export const ESO_CLASSES = [
 
 export type EsoClass = (typeof ESO_CLASSES)[number];
 
-/** In-game class icon (.dds) per class, served through our icon proxy. */
+/**
+ * In-game class crest per class, served through our icon proxy.
+ * The keyboard set (`class_<name>.dds`) is 32×32 and turns into blocks
+ * when the profile draws it large. The gamepad set is the same symbol at
+ * 64×64, which is the sharpest class crest the game ships.
+ */
 export const CLASS_ICONS: Record<string, string> = {
-  Dragonknight: "/esoui/art/icons/class/class_dragonknight.dds",
-  Sorcerer: "/esoui/art/icons/class/class_sorcerer.dds",
-  Nightblade: "/esoui/art/icons/class/class_nightblade.dds",
-  Templar: "/esoui/art/icons/class/class_templar.dds",
-  Warden: "/esoui/art/icons/class/class_warden.dds",
-  Necromancer: "/esoui/art/icons/class/class_necromancer.dds",
-  Arcanist: "/esoui/art/icons/class/class_arcanist.dds",
+  Dragonknight: "/esoui/art/icons/class/gamepad/gp_class_dragonknight.dds",
+  Sorcerer: "/esoui/art/icons/class/gamepad/gp_class_sorcerer.dds",
+  Nightblade: "/esoui/art/icons/class/gamepad/gp_class_nightblade.dds",
+  Templar: "/esoui/art/icons/class/gamepad/gp_class_templar.dds",
+  Warden: "/esoui/art/icons/class/gamepad/gp_class_warden.dds",
+  Necromancer: "/esoui/art/icons/class/gamepad/gp_class_necromancer.dds",
+  Arcanist: "/esoui/art/icons/class/gamepad/gp_class_arcanist.dds",
 };
 
 export function classIcon(className: string): string | undefined {
