@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "./index";
 import { emptyBuild, type SavedBuild } from "../builds/saved";
+import { isTwoHandedWeapon, parseFrontWeapon } from "../builds/slots";
 
 function db() {
   return getDb();
@@ -25,6 +26,8 @@ function rowToBuild(row: { id: string; name: string; json: string; createdAt: nu
     parsed = {};
   }
   const base = emptyBuild();
+  const frontMain = parseFrontWeapon(typeof parsed.frontMain === "string" ? parsed.frontMain : "");
+  const frontOff = parseFrontWeapon(typeof parsed.frontOff === "string" ? parsed.frontOff : "");
   return {
     id: row.id,
     name: row.name,
@@ -38,6 +41,8 @@ function rowToBuild(row: { id: string; name: string; json: string; createdAt: nu
     mythicName: text(parsed.mythicName),
     frontSetId: num(parsed.frontSetId),
     frontName: text(parsed.frontName),
+    frontMain,
+    frontOff: frontMain && !isTwoHandedWeapon(frontMain) && frontOff && !isTwoHandedWeapon(frontOff) ? frontOff : null,
     backSetId: num(parsed.backSetId),
     backName: text(parsed.backName),
   };

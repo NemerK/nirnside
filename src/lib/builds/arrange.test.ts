@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { arrange, type ArrangeSet, type Crafter, type OwnedGear, type PlacedPiece } from "./arrange";
-import { gearSetKey, isMonsterSet, kindFromPiece, kindsForRole, reconstructionCost, setMatchKeys, type SlotKind } from "./slots";
+import {
+  gearSetKey,
+  isMonsterSet,
+  kindFromPiece,
+  kindsForRole,
+  reconstructionCost,
+  setMatchKeys,
+  weaponTypeFromPiece,
+  type FrontWeapon,
+  type SlotKind,
+} from "./slots";
 
 const ALL: SlotKind[] = [
   "head",
@@ -31,6 +41,8 @@ function set(partial: Partial<ArrangeSet> & Pick<ArrangeSet, "role" | "name">): 
     kinds: partial.kinds ?? ALL,
     collectedKinds: partial.collectedKinds ?? [],
     icons: partial.icons,
+    collectedWeapons: partial.collectedWeapons,
+    weaponIcons: partial.weaponIcons,
     collected: partial.collected ?? 0,
     total: partial.total ?? 0,
     crafted: partial.crafted ?? false,
@@ -38,8 +50,15 @@ function set(partial: Partial<ArrangeSet> & Pick<ArrangeSet, "role" | "name">): 
   };
 }
 
-function own(name: string, kind: SlotKind, trait: string, location = "bank", owner = "Faris"): OwnedGear {
-  return { keys: setMatchKeys(name), setId: null, itemName: `${name} ${kind}`, kind, trait, location, owner };
+function own(
+  name: string,
+  kind: SlotKind,
+  trait: string,
+  location = "bank",
+  owner = "Faris",
+  weapon?: FrontWeapon,
+): OwnedGear {
+  return { keys: setMatchKeys(name), setId: null, itemName: `${name} ${kind}`, kind, trait, location, owner, weapon };
 }
 
 function slot(placed: PlacedPiece[], id: string): PlacedPiece {
@@ -417,5 +436,123 @@ describe("arrange", () => {
       result.short.find((row) => row.role === "body" || row.role === "front" || row.role === "mythic"),
       undefined,
     );
+  });
+});
+
+describe("front-bar weapons", () => {
+  it("reads the weapon type from the addon type string", () => {
+    assert.equal(weaponTypeFromPiece("Slot 12", "Inferno Staff", "Corpseburster"), "inferno");
+    assert.equal(weaponTypeFromPiece("Two Hand", "Bow", "Deadly Strike Bow"), "bow");
+    assert.equal(weaponTypeFromPiece("Two Hand", "Battle Axe", "Turning Tide"), "battleAxe");
+    assert.equal(weaponTypeFromPiece("Two Hand", "Greatsword", "Turning Tide"), "greatsword");
+    assert.equal(weaponTypeFromPiece("Main Hand", "Dagger", "Coral Riptide"), "dagger");
+    assert.equal(weaponTypeFromPiece("Off Hand", "Axe", "Coral Riptide"), "axe");
+    assert.equal(weaponTypeFromPiece("Off Hand", "Shield", "Coral Riptide"), "shield");
+    assert.equal(weaponTypeFromPiece("Slot 3", "Heavy Chest", "Null Arca"), null);
+  });
+
+  it("blocks the off hand when the front bar is a staff, bow, or two-hander", () => {
+    const result = arrange(
+      [
+        set({
+          role: "front",
+          name: "Corpseburster",
+          kinds: ["twoHand", "neck", "ring"],
+          pieces: 5,
+          collected: 3,
+          total: 12,
+          collectedKinds: ["twoHand"],
+          collectedWeapons: ["inferno"],
+        }),
+      ],
+      [],
+      [],
+      { main: "inferno", off: null },
+    );
+    const weapons = result.placed.filter((piece) => piece.slot.startsWith("front"));
+    assert.deepEqual(
+      weapons.map((piece) => piece.slot),
+      ["frontBar"],
+    );
+    assert.equal(weapons[0]?.label, "Inferno Staff");
+    assert.equal(weapons[0]?.pieces, 2);
+    assert.equal(weapons[0]?.source.kind, "transmute");
+    assert.equal(result.frontStyle, "twohand");
+  });
+
+  it("wears a dagger and an axe as two different front-bar items", () => {
+    const result = arrange(
+      [
+        set({
+          role: "front",
+          name: "Coral Riptide",
+          kinds: ["oneHand", "neck", "ring"],
+          pieces: 5,
+          collected: 4,
+          total: 12,
+          collectedKinds: ["oneHand"],
+          collectedWeapons: ["dagger", "axe"],
+        }),
+      ],
+      [
+        own("Coral Riptide", "oneHand", "Nirnhoned", "worn", "Faris", "dagger"),
+        own("Coral Riptide", "oneHand", "Sharpened", "bank", "Faris", "axe"),
+      ],
+      [],
+      { main: "dagger", off: "axe" },
+    );
+    const main = slot(result.placed, "frontMain");
+    const off = slot(result.placed, "frontOff");
+    assert.equal(main.label, "Dagger");
+    assert.equal(off.label, "Axe");
+    assert.equal(main.source.kind, "owned");
+    assert.equal(off.source.kind, "owned");
+    assert.equal(main.source.kind === "owned" && main.source.trait, "Nirnhoned");
+    assert.equal(off.source.kind === "owned" && off.source.trait, "Sharpened");
+    assert.equal(result.placed.some((piece) => piece.slot === "frontBar"), false);
+  });
+
+  it("does not fill an axe slot with the only owned dagger", () => {
+    const result = arrange(
+      [
+        set({
+          role: "front",
+          name: "Coral Riptide",
+          kinds: ["oneHand"],
+          pieces: 2,
+          collected: 1,
+          total: 12,
+          collectedKinds: ["oneHand"],
+          collectedWeapons: ["dagger"],
+        }),
+      ],
+      [own("Coral Riptide", "oneHand", "Nirnhoned", "worn", "Faris", "dagger")],
+      [],
+      { main: "dagger", off: "axe" },
+    );
+    assert.equal(slot(result.placed, "frontMain").source.kind, "owned");
+    assert.equal(slot(result.placed, "frontOff").source.kind, "farm");
+  });
+
+  it("reconstructs a second dagger when that piece is in the stickerbook", () => {
+    const result = arrange(
+      [
+        set({
+          role: "front",
+          name: "Coral Riptide",
+          kinds: ["oneHand"],
+          pieces: 2,
+          collected: 1,
+          total: 12,
+          collectedKinds: ["oneHand"],
+          collectedWeapons: ["dagger"],
+        }),
+      ],
+      [own("Coral Riptide", "oneHand", "Nirnhoned", "worn", "Faris", "dagger")],
+      [],
+      { main: "dagger", off: "dagger" },
+    );
+    assert.equal(slot(result.placed, "frontMain").source.kind, "owned");
+    assert.equal(slot(result.placed, "frontOff").source.kind, "transmute");
   });
 });

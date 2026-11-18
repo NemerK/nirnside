@@ -1,6 +1,6 @@
 import type { Crafter, OwnedGear } from "./arrange";
 import type { SavedBuild } from "./saved";
-import type { SlotKind } from "./slots";
+import type { FrontWeapon, SlotKind } from "./slots";
 
 /** One set the picker can offer. Built on the server from the stickerbook and catalog. */
 export interface BuildSetOption {
@@ -12,6 +12,9 @@ export interface BuildSetOption {
   collectedKinds: SlotKind[];
   /** In-game icon path per slot, from the stickerbook piece or an owned item. */
   icons: Partial<Record<SlotKind, string>>;
+  /** Weapon types with a collected stickerbook piece. */
+  collectedWeapons: FrontWeapon[];
+  weaponIcons: Partial<Record<FrontWeapon, string>>;
   collected: number;
   total: number;
   crafted: boolean;
