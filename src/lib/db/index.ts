@@ -163,6 +163,15 @@ function migrate(db: Database.Database) {
       createdAt   INTEGER NOT NULL
     );
 
+    -- Player-authored gear builds. Not game data; a snapshot re-import
+    -- must not wipe them. The json is the chosen sets and piece counts.
+    CREATE TABLE IF NOT EXISTS gear_builds (
+      id        TEXT PRIMARY KEY,
+      name      TEXT NOT NULL,
+      json      TEXT NOT NULL,
+      createdAt INTEGER NOT NULL
+    );
+
     -- Player photos for a character or an owned house. Not game data;
     -- a snapshot re-import must not wipe them. Files live beside the db.
     CREATE TABLE IF NOT EXISTS gallery_photos (

@@ -39,6 +39,12 @@ export const TOGGLEABLE_MODULES: ModuleDef[] = [
     description: "Set essential, optional and completionist targets for the account, a role, a class, or one character.",
   },
   {
+    id: "builds",
+    label: "Builds",
+    href: "/builds",
+    description: "Slot body, monster, mythic, front bar and back bar from what this account already owns.",
+  },
+  {
     id: "characters",
     label: "Characters",
     href: "/characters",
