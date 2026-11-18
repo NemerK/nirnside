@@ -13,6 +13,16 @@ import {
   type FrontWeapon,
   type SlotKind,
 } from "./slots";
+import {
+  isBodyArmor,
+  researchLineNames,
+  sameTrait,
+  setAllowsWeight,
+  traitFor,
+  weightLabel,
+  type ArmorWeight,
+  type TraitPlan,
+} from "./traits";
 
 export type GearRole = "body" | "monster" | "mythic" | "front" | "back";
 
@@ -35,6 +45,12 @@ export interface ArrangeSet {
   total: number;
   crafted: boolean;
   traitsNeeded: number | null;
+  /**
+   * Body-armor weights this set can be. Unset means the caller has not
+   * classified it, so a chosen weight is not blocked. An empty list means
+   * no armor weight was scanned.
+   */
+  armorWeights?: readonly ArmorWeight[] | null;
 }
 
 export interface OwnedGear {
@@ -49,12 +65,16 @@ export interface OwnedGear {
   icon?: string | null;
   /** Dagger, inferno staff, shield, and so on. Absent when the item name did not say. */
   weapon?: FrontWeapon | null;
+  /** Light, medium, or heavy when the piece name or the game type said so. */
+  weight?: ArmorWeight | null;
 }
 
 export interface CrafterLine {
   name: string;
   known: number;
   divines: boolean;
+  /** Trait names this character has researched on the line. Absent on older fixtures, which only record Divines. */
+  traits?: readonly string[];
 }
 
 export interface Crafter {
@@ -71,12 +91,15 @@ export type PieceSource =
       divines: boolean;
       location: string;
       owner: string | null;
-      /** Set when the owned piece is not Divines and we change it at the station. */
+      /** Set when the owned piece is not the trait we want and we change it at the station. */
       traitChangeCrystals: number | null;
+      /** The trait the change is aiming for. */
+      wantedTrait?: string | null;
+      weight?: ArmorWeight | null;
     }
-  | { kind: "craft"; trait: string; crafter: string }
-  | { kind: "transmute"; crystals: number | null; trait: string | null; divines: boolean }
-  | { kind: "farm" };
+  | { kind: "craft"; trait: string; crafter: string; weight?: ArmorWeight | null }
+  | { kind: "transmute"; crystals: number | null; trait: string | null; divines: boolean; weight?: ArmorWeight | null }
+  | { kind: "farm"; note?: string | null };
 
 export interface PlacedPiece {
   slot: string;
@@ -93,6 +116,8 @@ export interface PlacedPiece {
   why: string | null;
   /** An owned piece we did not use because another route costs fewer crystals. */
   aside: string | null;
+  /** The weight this armor piece actually is. Null for jewelry, weapons, and unknown pieces. */
+  weight: ArmorWeight | null;
 }
 
 export interface ArrangeResult {
@@ -166,6 +191,17 @@ function lineFor(crafter: Crafter, kind: SlotKind, weapon?: FrontWeapon): Crafte
   return best;
 }
 
+function knowsTrait(line: CrafterLine, trait: string): boolean {
+  if (line.traits) return line.traits.some((known) => sameTrait(known, trait));
+  return sameTrait(trait, "Divines") && line.divines;
+}
+
+interface Goal {
+  plan: TraitPlan;
+  set: ArrangeSet;
+  slotId: string | null;
+}
+
 function divineCrafter(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], weapon?: FrontWeapon): Crafter | null {
   if (!set.crafted || set.traitsNeeded == null) return null;
   let best: { crafter: Crafter; known: number } | null = null;
@@ -174,6 +210,27 @@ function divineCrafter(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], wea
     if (!line || line.known < set.traitsNeeded) continue;
     if (wantsDivines(kind) && !line.divines) continue;
     if (!best || line.known > best.known) best = { crafter, known: line.known };
+  }
+  return best?.crafter ?? null;
+}
+
+function traitCrafter(goal: Goal, kind: SlotKind, crafters: Crafter[], weapon?: FrontWeapon): Crafter | null {
+  const set = goal.set;
+  if (!set.crafted || set.traitsNeeded == null) return null;
+  const wanted = traitFor(goal.plan, goal.slotId, kind, set.role);
+  if (!wanted) return null;
+  if (isBodyArmor(kind) && !setAllowsWeight(set.armorWeights, goal.plan.weight)) return null;
+  const names = researchLineNames(kind, isBodyArmor(kind) ? goal.plan.weight : null, weapon ? weaponResearchLine(weapon) : null);
+  let best: { crafter: Crafter; known: number } | null = null;
+  for (const crafter of crafters) {
+    const lines =
+      names.length > 0
+        ? crafter.lines.filter((line) => names.includes(line.name.trim().toLowerCase()))
+        : crafter.lines.filter((line) => lineMatchesKind(line.name, kind));
+    for (const line of lines) {
+      if (line.known < set.traitsNeeded || !knowsTrait(line, wanted)) continue;
+      if (!best || line.known > best.known) best = { crafter, known: line.known };
+    }
   }
   return best?.crafter ?? null;
 }
@@ -197,31 +254,55 @@ function weaponCollected(set: ArrangeSet, kind: SlotKind, weapon?: FrontWeapon):
   return set.collectedKinds.includes(kind);
 }
 
-function fallbackChoice(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], weapon?: FrontWeapon): Choice {
-  const crafter = divineCrafter(set, kind, crafters, weapon);
+function weightBlocked(goal: Goal, kind: SlotKind): boolean {
+  if (goal.set.role === "mythic" || !isBodyArmor(kind)) return false;
+  return !setAllowsWeight(goal.set.armorWeights, goal.plan.weight);
+}
+
+function weightNote(set: ArrangeSet): string {
+  const weights = set.armorWeights ?? [];
+  if (weights.length === 1) return `${set.name} is ${weightLabel(weights[0]!)} armor.`;
+  if (weights.length > 1) return `${set.name} is ${weights.map(weightLabel).join(" or ")} armor.`;
+  return `${set.name} has no armor weight in the collection.`;
+}
+
+function fallbackChoice(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], weapon?: FrontWeapon, goal?: Goal | null): Choice {
+  if (goal && weightBlocked(goal, kind)) {
+    return { cost: FARM, item: null, source: { kind: "farm", note: weightNote(set) } };
+  }
+  const wanted = goal ? traitFor(goal.plan, goal.slotId, kind, set.role) : null;
+  const crafter = goal ? traitCrafter(goal, kind, crafters, weapon) : divineCrafter(set, kind, crafters, weapon);
   const collected = weaponCollected(set, kind, weapon);
   const crystals = collected ? reconstructionCost(set.collected, set.total) : null;
   const divine = wantsDivines(kind) && divinesKnown(kind, crafters);
+  const pieceWeight = goal && isBodyArmor(kind) && set.role !== "mythic" ? goal.plan.weight : null;
   const options: Choice[] = [];
   if (crafter) {
     options.push({
       cost: CRAFT,
       item: null,
-      source: { kind: "craft", trait: wantsDivines(kind) ? "Divines" : "a researched trait", crafter: crafter.name },
+      source: {
+        kind: "craft",
+        trait: goal ? (wanted ?? "a researched trait") : wantsDivines(kind) ? "Divines" : "a researched trait",
+        crafter: crafter.name,
+        weight: pieceWeight,
+      },
     });
   }
   if (collected) {
     // Unknown totals still mean "in the stickerbook". Rank them between a
     // known 25 and a farm, and do not print a made-up crystal count.
-    const cost = crystals == null ? 60 : divine || !wantsDivines(kind) ? crystals : crystals + 20;
+    // A chosen trait is what reconstruction makes, so it does not add a penalty.
+    const cost = crystals == null ? 60 : goal || divine || !wantsDivines(kind) ? crystals : crystals + 20;
     options.push({
       cost,
       item: null,
       source: {
         kind: "transmute",
         crystals,
-        trait: wantsDivines(kind) ? (divine ? "Divines" : null) : null,
-        divines: divine || !wantsDivines(kind),
+        trait: goal ? wanted : wantsDivines(kind) ? (divine ? "Divines" : null) : null,
+        divines: goal ? sameTrait(wanted, "Divines") : divine || !wantsDivines(kind),
+        weight: pieceWeight,
       },
     });
   }
@@ -232,7 +313,7 @@ function fallbackChoice(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], we
 
 function ownedSource(
   item: OwnedGear,
-  trait: { divines: boolean; traitChangeCrystals: number | null },
+  trait: { divines: boolean; traitChangeCrystals: number | null; wantedTrait?: string | null; weight?: ArmorWeight | null },
 ): Extract<PieceSource, { kind: "owned" }> {
   return {
     kind: "owned",
@@ -243,10 +324,40 @@ function ownedSource(
     location: item.location,
     owner: item.owner,
     traitChangeCrystals: trait.traitChangeCrystals,
+    wantedTrait: trait.wantedTrait,
+    weight: trait.weight,
   };
 }
 
-function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Crafter[]): Choice {
+function ownedWeightBlocks(item: OwnedGear, kind: SlotKind, goal: Goal): boolean {
+  if (goal.set.role === "mythic" || !isBodyArmor(kind)) return false;
+  if (!item.weight) return false;
+  return item.weight !== goal.plan.weight;
+}
+
+function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Crafter[], goal?: Goal | null): Choice | null {
+  if (goal && (weightBlocked(goal, kind) || ownedWeightBlocks(item, kind, goal))) return null;
+  const wanted = goal ? traitFor(goal.plan, goal.slotId, kind, goal.set.role) : null;
+  if (goal) {
+    const weight = isBodyArmor(kind) && goal.set.role !== "mythic" ? (item.weight ?? null) : null;
+    if (!wanted || sameTrait(item.trait, wanted)) {
+      return {
+        cost: OWNED_DIVINES,
+        item: index,
+        source: ownedSource(item, { divines: sameTrait(item.trait, "Divines"), traitChangeCrystals: null, wantedTrait: wanted, weight }),
+      };
+    }
+    return {
+      cost: TRAIT_CHANGE_CRYSTALS,
+      item: index,
+      source: ownedSource(item, {
+        divines: sameTrait(wanted, "Divines"),
+        traitChangeCrystals: TRAIT_CHANGE_CRYSTALS,
+        wantedTrait: wanted,
+        weight,
+      }),
+    };
+  }
   const divine = isDivinesTrait(item.trait);
   if (!wantsDivines(kind) || divine) {
     return {
@@ -273,16 +384,22 @@ function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Cr
  * Give each slot the cheapest real source, and never use one physical item twice.
  * Owned pieces are taken only when they beat crafting, reconstructing, or farming.
  */
+function goalFor(plan: TraitPlan | null | undefined, set: ArrangeSet, slotId: string | null): Goal | null {
+  if (!plan) return null;
+  return { plan, set, slotId };
+}
+
 function allocate(
   set: ArrangeSet,
   units: Unit[],
   owned: OwnedGear[],
   crafters: Crafter[],
+  plan?: TraitPlan | null,
 ): { cost: number; sources: PieceSource[]; used: OwnedGear[] } {
   const mine = owned
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => sameSet(set, item));
-  const fallbacks = units.map((unit) => fallbackChoice(set, unit.kind, crafters, unit.weapon));
+  const fallbacks = units.map((unit) => fallbackChoice(set, unit.kind, crafters, unit.weapon, goalFor(plan, set, unit.id)));
   const used = new Set<number>();
   const chosen: (Choice | null)[] = units.map(() => null);
 
@@ -291,7 +408,8 @@ function allocate(
     mine.forEach(({ item, index }) => {
       if (item.kind !== unit.kind) return;
       if (unit.weapon && item.weapon !== unit.weapon) return;
-      const choice = itemChoice(item, index, unit.kind, crafters);
+      const choice = itemChoice(item, index, unit.kind, crafters, goalFor(plan, set, unit.id));
+      if (!choice) return;
       const save = fallbacks[unitIndex]!.cost - choice.cost;
       if (save > 0) offers.push({ unit: unitIndex, choice, save });
     });
@@ -323,21 +441,44 @@ function asideFor(
   owned: OwnedGear[],
   used: readonly OwnedGear[],
   crafters: Crafter[],
+  plan?: TraitPlan | null,
 ): string | null {
   if (source.kind === "owned") return null;
-  const leftover = owned.filter((item) => sameSet(set, item) && item.kind === unit.kind && !used.includes(item));
+  const leftover = owned.filter(
+    (item) => sameSet(set, item) && item.kind === unit.kind && !used.includes(item) && (!unit.weapon || item.weapon === unit.weapon),
+  );
   if (leftover.length === 0) return null;
+  const goal = goalFor(plan, set, unit.id);
+  if (goal && isBodyArmor(unit.kind) && set.role !== "mythic" && setAllowsWeight(set.armorWeights, goal.plan.weight)) {
+    const wrong = leftover.filter((item) => item.weight && item.weight !== goal.plan.weight);
+    const usable = leftover.filter((item) => !item.weight || item.weight === goal.plan.weight);
+    if (usable.length === 0 && wrong[0]?.weight) {
+      const where = `${wrong[0].owner ? `${wrong[0].owner} · ` : ""}${locationLabel(wrong[0].location)} · ${wrong[0].itemName}`;
+      return `${where} is ${weightLabel(wrong[0].weight)}. That weight cannot be changed, so this piece is made as ${weightLabel(goal.plan.weight)}.`;
+    }
+  }
   const item = leftover
-    .map((entry) => itemChoice(entry, 0, unit.kind, crafters))
+    .map((entry) => itemChoice(entry, 0, unit.kind, crafters, goal))
+    .filter((choice): choice is Choice => choice != null)
     .sort((a, b) => a.cost - b.cost)[0];
   if (!item || item.source.kind !== "owned") return null;
   const where = placeWhere(item.source);
   if (item.source.traitChangeCrystals) {
     const crystals = source.kind === "transmute" ? source.crystals : null;
     const via = crystals == null ? "reconstructing it" : `reconstructing it (${crystals} crystals)`;
-    return `${where} is ${item.source.trait ?? "another trait"}. Changing that trait is ${item.source.traitChangeCrystals} crystals, so ${via} is cheaper.`;
+    const target = item.source.wantedTrait ? ` to ${item.source.wantedTrait}` : "";
+    return `${where} is ${item.source.trait ?? "another trait"}. Changing that trait${target} is ${item.source.traitChangeCrystals} crystals, so ${via} is cheaper.`;
   }
   return null;
+}
+
+function placedWeight(set: ArrangeSet, unit: Unit, source: PieceSource, plan: TraitPlan | null): ArmorWeight | null {
+  if (!isBodyArmor(unit.kind)) return null;
+  if (set.role === "mythic") return set.armorWeights?.[0] ?? null;
+  if (source.kind === "owned") return source.weight ?? null;
+  if (!plan) return null;
+  if (!setAllowsWeight(set.armorWeights, plan.weight)) return set.armorWeights?.length === 1 ? (set.armorWeights[0] ?? null) : null;
+  return plan.weight;
 }
 
 function placeWhere(source: Extract<PieceSource, { kind: "owned" }>): string {
@@ -348,12 +489,25 @@ function placeWhere(source: Extract<PieceSource, { kind: "owned" }>): string {
 export function sourceSummary(source: PieceSource): string {
   if (source.kind === "owned") {
     const who = source.owner ? `${source.owner} · ` : "";
-    const trait = source.trait ? ` · ${source.trait}` : "";
-    return `${who}${locationLabel(source.location)}${trait}`;
+    const trait = source.traitChangeCrystals
+      ? ` · ${source.trait ?? "another trait"} → ${source.wantedTrait ?? "chosen trait"} · ${source.traitChangeCrystals} crystals`
+      : source.trait
+        ? ` · ${source.trait}`
+        : "";
+    const weight = source.weight ? ` · ${weightLabel(source.weight)}` : "";
+    return `${who}${locationLabel(source.location)}${trait}${weight}`;
   }
-  if (source.kind === "craft") return `Craft · ${source.trait}`;
-  if (source.kind === "transmute") return source.crystals == null ? "Stickerbook" : `${source.crystals} crystals`;
-  return "Not obtained";
+  if (source.kind === "craft") {
+    const weight = source.weight ? ` · ${weightLabel(source.weight)}` : "";
+    return `Craft · ${source.trait}${weight}`;
+  }
+  if (source.kind === "transmute") {
+    const crystals = source.crystals == null ? "Stickerbook" : `${source.crystals} crystals`;
+    const trait = source.trait ? ` · ${source.trait}` : "";
+    const weight = source.weight ? ` · ${weightLabel(source.weight)}` : "";
+    return `${crystals}${trait}${weight}`;
+  }
+  return source.note ?? "Not obtained";
 }
 
 function unit(
@@ -521,18 +675,26 @@ interface KindPrice {
   items: number[];
 }
 
-function priceBook(set: ArrangeSet, owned: OwnedGear[], crafters: Crafter[]): Map<SlotKind, KindPrice> {
+function priceBook(
+  set: ArrangeSet,
+  owned: OwnedGear[],
+  crafters: Crafter[],
+  plan?: TraitPlan | null,
+  slotId: string | null = null,
+): Map<SlotKind, KindPrice> {
   const book = new Map<SlotKind, KindPrice>();
   const kinds = new Set<SlotKind>(set.kinds);
   for (const item of owned) {
     if (sameSet(set, item)) kinds.add(item.kind);
   }
   for (const kind of kinds) {
-    const fallback = fallbackChoice(set, kind, crafters).cost;
+    const goal = goalFor(plan, set, slotId);
+    const fallback = fallbackChoice(set, kind, crafters, undefined, goal).cost;
     const items = owned
       .filter((item) => sameSet(set, item) && item.kind === kind)
-      .map((item, index) => itemChoice(item, index, kind, crafters).cost)
-      .filter((cost) => cost < fallback)
+      .map((item, index) => itemChoice(item, index, kind, crafters, goal))
+      .filter((choice): choice is Choice => choice != null && choice.cost < fallback)
+      .map((choice) => choice.cost)
       .sort((a, b) => a - b);
     book.set(kind, { fallback, items });
   }
@@ -563,6 +725,7 @@ export function arrange(
   owned: OwnedGear[],
   crafters: Crafter[],
   frontWeapons: FrontBarWeapons | null = null,
+  plan: TraitPlan | null = null,
 ): ArrangeResult {
   const body = sets.find((set) => set.role === "body");
   const front = sets.find((set) => set.role === "front");
@@ -580,9 +743,11 @@ export function arrange(
   if (backs.length === 0) backs.push("twohand");
 
   const books = new Map<string, Map<SlotKind, KindPrice>>();
+  const backBooks = new Map<string, Map<SlotKind, KindPrice>>();
   for (const set of sets) {
     const id = setIdentity(set);
-    if (!books.has(id)) books.set(id, priceBook(set, owned, crafters));
+    if (!books.has(id)) books.set(id, priceBook(set, owned, crafters, plan));
+    if (!backBooks.has(id)) backBooks.set(id, priceBook(set, owned, crafters, plan, "backBar"));
   }
 
   const bodyId = body ? setIdentity(body) : "";
@@ -619,7 +784,7 @@ export function arrange(
         if (group.set.role !== "body" && group.set.role !== "front") {
           fixedShort += Math.max(0, group.set.pieces - have);
         }
-        if (specific.length > 0) fixedCost += allocate(group.set, specific, owned, crafters).cost;
+        if (specific.length > 0) fixedCost += allocate(group.set, specific, owned, crafters, plan).cost;
         const counts = id === bodyId || (samePool && id === bodyId) ? bodyBase : id === frontId ? frontBase : null;
         if (counts) {
           for (const slot of plain) {
@@ -627,7 +792,8 @@ export function arrange(
             if (index >= 0) counts[index] = (counts[index] ?? 0) + 1;
           }
         } else if (plain.length > 0) {
-          fixedCost += bookCost(books.get(id) ?? new Map(), plain);
+          const book = group.set.role === "back" ? backBooks.get(id) : books.get(id);
+          fixedCost += bookCost(book ?? new Map(), plain);
         }
       }
 
@@ -725,6 +891,7 @@ export function arrange(
       group.slots.map((slot) => slot.unit),
       owned,
       crafters,
+      plan,
     );
     group.slots.forEach((slot, index) => {
       const source = priced.sources[index]!;
@@ -740,7 +907,8 @@ export function arrange(
         source,
         preferred: slot.preferred,
         why: slot.preferred ? null : whyOff(slot.set, source),
-        aside: asideFor(slot.set, slot.unit, source, owned, priced.used, crafters),
+        aside: asideFor(slot.set, slot.unit, source, owned, priced.used, crafters, plan),
+        weight: placedWeight(slot.set, slot.unit, source, plan),
       });
     });
   }

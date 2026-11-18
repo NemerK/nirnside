@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { arrange, sourceSummary, type ArrangeSet, type Crafter, type OwnedGear, type PlacedPiece } from "./arrange";
+import { defaultTraitPlan, sameTrait, weightFromPieceName, weightsForSet, type ArmorWeight, type TraitPlan } from "./traits";
 import {
   gearSetKey,
   isMonsterSet,
@@ -48,6 +49,7 @@ function set(partial: Partial<ArrangeSet> & Pick<ArrangeSet, "role" | "name">): 
     total: partial.total ?? 0,
     crafted: partial.crafted ?? false,
     traitsNeeded: partial.traitsNeeded ?? null,
+    armorWeights: partial.armorWeights,
   };
 }
 
@@ -644,5 +646,335 @@ describe("front-bar weapons", () => {
     );
     assert.equal(slot(result.placed, "frontMain").source.kind, "owned");
     assert.equal(slot(result.placed, "frontOff").source.kind, "transmute");
+  });
+});
+
+function plan(partial: Partial<TraitPlan> = {}): TraitPlan {
+  return { ...defaultTraitPlan(), ...partial };
+}
+
+function weighted(gear: OwnedGear, weight: ArmorWeight): OwnedGear {
+  return { ...gear, weight };
+}
+
+describe("trait and armor weight", () => {
+  it("reads piece words and trait spellings the way the game writes them", () => {
+    assert.equal(weightFromPieceName("Null Arca Guards"), "medium");
+    assert.equal(weightFromPieceName("Ancient Dragonguard Helm"), "heavy");
+    assert.equal(weightFromPieceName("Ancient Dragonguard Hat"), "light");
+    assert.equal(weightFromPieceName("Deadly Strike Helmet"), "medium");
+    assert.equal(sameTrait("Well-fitted", "Well fitted"), true);
+    assert.equal(sameTrait("Divines", "infused"), false);
+    assert.deepEqual(weightsForSet({ crafted: false, mythic: false, monster: false, category: "Cyrodiil", seen: ["medium"] }), [
+      "light",
+      "medium",
+      "heavy",
+    ]);
+    assert.deepEqual(weightsForSet({ crafted: false, mythic: false, monster: true, category: "Monster", seen: ["medium"] }), [
+      "light",
+      "medium",
+      "heavy",
+    ]);
+    assert.deepEqual(weightsForSet({ crafted: false, mythic: false, monster: false, category: "Trials", seen: ["heavy", "light"] }), [
+      "light",
+      "medium",
+      "heavy",
+    ]);
+    assert.deepEqual(weightsForSet({ crafted: false, mythic: false, monster: false, category: "Trials", seen: ["light"] }), ["light"]);
+    assert.deepEqual(weightsForSet({ crafted: false, mythic: true, monster: false, category: "Mythic", seen: ["light"] }), ["light"]);
+    assert.deepEqual(weightsForSet({ crafted: false, mythic: false, monster: false, category: "Trials", seen: [] }), []);
+  });
+
+  it("wears the chosen weight and leaves a different weight of the same piece", () => {
+    const result = arrange(
+      [
+        set({
+          role: "body",
+          name: "Deadly Strike",
+          kinds: ["chest"],
+          pieces: 1,
+          collected: 5,
+          total: 5,
+          collectedKinds: ["chest"],
+          armorWeights: ["light", "medium", "heavy"],
+        }),
+      ],
+      [weighted(own("Deadly Strike", "chest", "Divines", "worn", "Faris"), "medium"), weighted(own("Deadly Strike", "chest", "Divines", "bank", "Faris"), "light")],
+      [],
+      null,
+      plan({ weight: "medium" }),
+    );
+    const chest = slot(result.placed, "chest");
+    assert.equal(chest.source.kind, "owned");
+    assert.equal(chest.weight, "medium");
+    assert.match(sourceSummary(chest.source), /Medium/);
+    assert.equal(chest.source.kind === "owned" && chest.source.itemName.endsWith("chest"), true);
+  });
+
+  it("reconstructs the chosen trait when that is cheaper than changing the owned piece", () => {
+    const result = arrange(
+      [
+        set({
+          role: "body",
+          name: "Deadly Strike",
+          kinds: ["chest"],
+          pieces: 1,
+          collected: 5,
+          total: 5,
+          collectedKinds: ["chest"],
+          armorWeights: ["medium"],
+        }),
+      ],
+      [weighted(own("Deadly Strike", "chest", "Infused", "worn", "Faris"), "medium")],
+      [],
+      null,
+      plan({ weight: "medium", armorTrait: "Divines" }),
+    );
+    const chest = slot(result.placed, "chest");
+    assert.equal(chest.source.kind, "transmute");
+    assert.equal(chest.source.kind === "transmute" && chest.source.crystals, 25);
+    assert.equal(chest.weight, "medium");
+    assert.match(sourceSummary(chest.source), /Divines/);
+    assert.match(sourceSummary(chest.source), /Medium/);
+    assert.match(chest.aside ?? "", /Infused/);
+    assert.match(chest.aside ?? "", /50/);
+    assert.match(chest.aside ?? "", /Divines/);
+  });
+
+  it("changes an owned trait for 50 crystals without that trait being researched", () => {
+    const result = arrange(
+      [
+        set({
+          role: "body",
+          name: "Deadly Strike",
+          kinds: ["chest"],
+          pieces: 1,
+          collected: 1,
+          total: 22,
+          collectedKinds: ["chest"],
+          armorWeights: ["medium"],
+        }),
+      ],
+      [weighted(own("Deadly Strike", "chest", "Infused", "worn", "Faris"), "medium")],
+      [],
+      null,
+      plan({ weight: "medium", armorTrait: "Divines" }),
+    );
+    const chest = slot(result.placed, "chest");
+    assert.equal(chest.source.kind, "owned");
+    assert.equal(chest.source.kind === "owned" && chest.source.traitChangeCrystals, 50);
+    assert.match(sourceSummary(chest.source), /Infused → Divines/);
+  });
+
+  it("does not invent a weight the set cannot be", () => {
+    const result = arrange(
+      [
+        set({
+          role: "body",
+          name: "Lucent Echoes",
+          kinds: ["chest"],
+          pieces: 1,
+          collected: 1,
+          total: 3,
+          collectedKinds: ["chest"],
+          armorWeights: ["light"],
+        }),
+      ],
+      [weighted(own("Lucent Echoes", "chest", "Divines", "worn", "Faris"), "light")],
+      [],
+      null,
+      plan({ weight: "heavy", armorTrait: "Divines" }),
+    );
+    const chest = slot(result.placed, "chest");
+    assert.equal(chest.source.kind, "farm");
+    assert.match(sourceSummary(chest.source), /Light armor/);
+    assert.equal(chest.weight, "light");
+  });
+
+  it("reconstructs a monster piece in the chosen weight when the owned copy is another weight", () => {
+    const result = arrange(
+      [
+        set({
+          role: "monster",
+          name: "Slimecraw",
+          kinds: ["head"],
+          pieces: 1,
+          collected: 2,
+          total: 2,
+          collectedKinds: ["head"],
+          armorWeights: ["light", "medium", "heavy"],
+        }),
+      ],
+      [weighted(own("Slimecraw", "head", "Divines", "worn", "Faris"), "medium")],
+      [],
+      null,
+      plan({ weight: "light", armorTrait: "Divines" }),
+    );
+    const head = slot(result.placed, "head");
+    assert.equal(head.source.kind, "transmute");
+    assert.equal(head.weight, "light");
+    assert.match(head.aside ?? "", /medium/i);
+    assert.match(head.aside ?? "", /light/i);
+  });
+
+  it("crafts the weight whose research line knows the trait", () => {
+    const robeOnly: Crafter[] = [
+      {
+        name: "Faris",
+        lines: [
+          { name: "Robe", known: 9, divines: true, traits: ["Divines"] },
+          { name: "Jack", known: 9, divines: false, traits: ["Infused"] },
+        ],
+      },
+    ];
+    const order = set({
+      role: "body",
+      name: "Order's Wrath",
+      kinds: ["chest"],
+      pieces: 1,
+      crafted: true,
+      traitsNeeded: 3,
+      armorWeights: ["light", "medium", "heavy"],
+    });
+    const missed = arrange([order], [], robeOnly, null, plan({ weight: "medium", armorTrait: "Divines" }));
+    assert.equal(slot(missed.placed, "chest").source.kind, "farm");
+
+    const jack: Crafter[] = [{ name: "Faris", lines: [{ name: "Jack", known: 9, divines: true, traits: ["Divines"] }] }];
+    const made = arrange([order], [], jack, null, plan({ weight: "medium", armorTrait: "Divines" }));
+    const chest = slot(made.placed, "chest");
+    assert.equal(chest.source.kind, "craft");
+    assert.match(sourceSummary(chest.source), /Divines/);
+    assert.match(sourceSummary(chest.source), /Medium/);
+    assert.equal(chest.weight, "medium");
+  });
+
+  it("uses the jewelry trait, and never treats Divines as the jewelry goal", () => {
+    const ready = arrange(
+      [set({ role: "front", name: "Coral Riptide", kinds: ["neck"], pieces: 1, collected: 12, total: 12, collectedKinds: ["neck"] })],
+      [own("Coral Riptide", "neck", "Bloodthirsty", "worn", "Faris")],
+      [],
+      null,
+      plan({ jewelryTrait: "Bloodthirsty" }),
+    );
+    const neckReady = slot(ready.placed, "neck");
+    assert.equal(neckReady.source.kind, "owned");
+    if (neckReady.source.kind !== "owned") return;
+    assert.equal(neckReady.source.traitChangeCrystals, null);
+
+    const changed = arrange(
+      [set({ role: "front", name: "Coral Riptide", kinds: ["neck"], pieces: 1, collected: 1, total: 12, collectedKinds: ["neck"] })],
+      [own("Coral Riptide", "neck", "Arcane", "bank", "Faris")],
+      [],
+      null,
+      plan({ jewelryTrait: "Bloodthirsty" }),
+    );
+    const neck = slot(changed.placed, "neck");
+    assert.equal(neck.source.kind, "owned");
+    assert.equal(neck.source.kind === "owned" && neck.source.traitChangeCrystals, 50);
+    assert.match(sourceSummary(neck.source), /Arcane → Bloodthirsty/);
+  });
+
+  it("keeps front and back weapon traits separate", () => {
+    const result = arrange(
+      [
+        set({
+          role: "front",
+          name: "Coral Riptide",
+          kinds: ["twoHand"],
+          pieces: 2,
+          collected: 4,
+          total: 12,
+          collectedKinds: ["twoHand"],
+          collectedWeapons: ["inferno"],
+        }),
+        set({
+          role: "back",
+          name: "Turning Tide",
+          kinds: ["twoHand"],
+          pieces: 2,
+          collected: 3,
+          total: 12,
+          collectedKinds: ["twoHand"],
+          collectedWeapons: ["bow"],
+        }),
+      ],
+      [own("Coral Riptide", "twoHand", "Precise", "worn", "Faris", "inferno"), own("Turning Tide", "twoHand", "Precise", "worn", "Faris", "bow")],
+      [],
+      { main: "inferno", off: null },
+      plan({ frontTrait: "Infused", backTrait: "Precise" }),
+    );
+    const front = slot(result.placed, "frontBar");
+    const back = slot(result.placed, "backBar");
+    assert.equal(front.source.kind, "owned");
+    assert.equal(back.source.kind, "owned");
+    if (front.source.kind !== "owned" || back.source.kind !== "owned") return;
+    assert.equal(front.source.traitChangeCrystals, 50);
+    assert.match(sourceSummary(front.source), /Precise → Infused/);
+    assert.equal(back.source.traitChangeCrystals, null);
+  });
+
+  it("does not explain a different weapon on the slot that was asked for", () => {
+    const result = arrange(
+      [
+        set({
+          role: "front",
+          name: "Coral Riptide",
+          kinds: ["twoHand"],
+          pieces: 2,
+          collected: 1,
+          total: 12,
+          collectedKinds: ["twoHand"],
+          collectedWeapons: ["bow"],
+        }),
+      ],
+      [own("Coral Riptide", "twoHand", "Infused", "backpack", "Sings-With-Shadows", "bow")],
+      [],
+      { main: "inferno", off: null },
+      plan({ frontTrait: "Precise" }),
+    );
+    const staff = slot(result.placed, "frontBar");
+    assert.equal(staff.source.kind, "farm");
+    assert.equal(staff.aside, null);
+  });
+
+  it("labels an uncollected piece with the weight the build asked for", () => {
+    const result = arrange(
+      [
+        set({
+          role: "body",
+          name: "Deadly Strike",
+          kinds: ["chest"],
+          pieces: 1,
+          armorWeights: ["light", "medium", "heavy"],
+        }),
+      ],
+      [],
+      [],
+      null,
+      plan({ weight: "light" }),
+    );
+    assert.equal(slot(result.placed, "chest").weight, "light");
+  });
+
+  it("wears a mythic as it is, whatever trait and weight the build asked for", () => {
+    const result = arrange(
+      [
+        set({
+          role: "mythic",
+          name: "Ring of the Pale Order",
+          kinds: ["ring"],
+          collected: 1,
+          total: 1,
+          collectedKinds: ["ring"],
+        }),
+      ],
+      [own("Pale Order", "ring", "Bloodthirsty", "worn", "Rosaria")],
+      [],
+      null,
+      plan({ jewelryTrait: "Infused", weight: "heavy" }),
+    );
+    const ring = result.placed.find((piece) => piece.role === "mythic");
+    assert.equal(ring?.source.kind, "owned");
+    assert.equal(ring?.weight, null);
   });
 });

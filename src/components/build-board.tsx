@@ -4,7 +4,8 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { arrange, type ArrangeSet, type FrontBarWeapons, type GearRole, type PlacedPiece, sourceSummary } from "@/lib/builds/arrange";
 import { GameIcon } from "@/components/game-icon";
 import type { BuildPageData, BuildSetOption } from "@/lib/builds/options";
-import { emptyBuild, type SavedBuild } from "@/lib/builds/saved";
+import { emptyBuild, traitPlanOf, type SavedBuild } from "@/lib/builds/saved";
+import { ARMOR_TRAITS, ARMOR_WEIGHTS, JEWELRY_TRAITS, WEAPON_TRAITS, weightLabel, type ArmorWeight } from "@/lib/builds/traits";
 import {
   FRONT_MAIN_WEAPONS,
   FRONT_OFF_WEAPONS,
@@ -97,6 +98,7 @@ function toArrange(option: BuildSetOption, role: GearRole, pieces: number): Arra
     total: option.total,
     crafted: option.crafted,
     traitsNeeded: option.traitsNeeded,
+    armorWeights: option.armorWeights,
   };
 }
 
@@ -129,13 +131,20 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
     const weapons: FrontBarWeapons | null = draft.frontMain
       ? { main: draft.frontMain, off: isTwoHandedWeapon(draft.frontMain) ? null : draft.frontOff }
       : null;
-    return arrange(sets, data.owned, data.crafters, weapons);
+    return arrange(sets, data.owned, data.crafters, weapons, traitPlanOf(draft));
   }, [data, draft]);
 
   const tally = useMemo(() => {
     const counts = { owned: 0, transmute: 0, craft: 0, farm: 0 };
-    for (const piece of chosen.placed) counts[piece.source.kind === "owned" ? "owned" : piece.source.kind] += 1;
-    return counts;
+    const weights = new Map<ArmorWeight, number>();
+    for (const piece of chosen.placed) {
+      counts[piece.source.kind === "owned" ? "owned" : piece.source.kind] += 1;
+      if (piece.weight) weights.set(piece.weight, (weights.get(piece.weight) ?? 0) + 1);
+    }
+    const weightLine = ARMOR_WEIGHTS.filter((row) => weights.has(row.id))
+      .map((row) => `${weights.get(row.id)} ${weightLabel(row.id).toLowerCase()}`)
+      .join(" · ");
+    return { counts, weightLine };
   }, [chosen]);
 
   function selectSaved(build: SavedBuild) {
@@ -266,6 +275,8 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
         ))}
       </div>
 
+      <TraitPlanBar draft={draft} onChange={setDraft} />
+
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
           <span className="text-fg-muted">Build name</span>
@@ -300,10 +311,11 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-3 text-sm">
-            <Count label="Already made" value={tally.owned} className="text-ok" />
-            <Count label="Transmute" value={tally.transmute} className="text-accent" />
-            <Count label="Craft" value={tally.craft} className="text-accent" />
-            <Count label="Not obtained" value={tally.farm} className="text-danger" />
+            <Count label="Already made" value={tally.counts.owned} className="text-ok" />
+            <Count label="Transmute" value={tally.counts.transmute} className="text-accent" />
+            <Count label="Craft" value={tally.counts.craft} className="text-accent" />
+            <Count label="Not obtained" value={tally.counts.farm} className="text-danger" />
+            {tally.weightLine ? <span className="rounded-lg border border-border bg-surface-2/40 px-3 py-1.5 text-fg">{tally.weightLine}</span> : null}
           </div>
           {chosen.short.length > 0 ? (
             <p className="text-sm text-danger">
@@ -314,6 +326,81 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
       )}
       <PaperDoll placed={chosen.placed} />
     </div>
+  );
+}
+
+function TraitPlanBar({ draft, onChange }: { draft: SavedBuild; onChange: (next: SavedBuild) => void }) {
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-col gap-1 text-sm">
+        <span className="text-fg-muted">Armor weight</span>
+        <div className="flex overflow-hidden rounded-lg border border-border">
+          {ARMOR_WEIGHTS.map((row) => (
+            <button
+              key={row.id}
+              type="button"
+              onClick={() => onChange({ ...draft, weight: row.id })}
+              className={`px-3 py-1.5 text-sm ${draft.weight === row.id ? "bg-accent-soft text-accent" : "text-fg-muted hover:text-fg"}`}
+            >
+              {row.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <TraitSelect
+        label="Armor trait"
+        value={draft.armorTrait}
+        options={ARMOR_TRAITS}
+        onChange={(armorTrait) => onChange({ ...draft, armorTrait })}
+      />
+      <TraitSelect
+        label="Jewelry trait"
+        value={draft.jewelryTrait}
+        options={JEWELRY_TRAITS}
+        onChange={(jewelryTrait) => onChange({ ...draft, jewelryTrait })}
+      />
+      <TraitSelect
+        label="Front weapons"
+        value={draft.frontTrait}
+        options={WEAPON_TRAITS}
+        onChange={(frontTrait) => onChange({ ...draft, frontTrait })}
+      />
+      <TraitSelect
+        label="Back weapons"
+        value={draft.backTrait}
+        options={WEAPON_TRAITS}
+        onChange={(backTrait) => onChange({ ...draft, backTrait })}
+      />
+    </div>
+  );
+}
+
+function TraitSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex min-w-36 flex-col gap-1 text-sm">
+      <span className="text-fg-muted">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="rounded-lg border border-border bg-surface px-3 py-2 text-fg outline-none focus:border-accent"
+      >
+        {options.map((trait) => (
+          <option key={trait} value={trait}>
+            {trait}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -416,7 +503,10 @@ function SlotCard({
       )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-          <span className="text-[11px] uppercase tracking-wide text-fg-subtle">{label}</span>
+          <span className="text-[11px] uppercase tracking-wide text-fg-subtle">
+            {label}
+            {piece?.weight ? ` · ${weightLabel(piece.weight)}` : ""}
+          </span>
           {piece && roleLabel(piece.role).toLowerCase() !== label.toLowerCase() ? (
             <span className="text-[10px] uppercase tracking-wide text-fg-subtle">{roleLabel(piece.role)}</span>
           ) : null}
@@ -426,6 +516,9 @@ function SlotCard({
             <p className="line-clamp-2 text-sm leading-snug text-fg">{piece.setName}</p>
             {detail ? <p className="truncate text-xs text-fg-muted">{detail}</p> : null}
             <p className={`line-clamp-2 text-xs leading-snug ${sourceClass(piece)}`}>{sourceSummary(piece.source)}</p>
+            {piece.kind === "shield" && piece.role !== "mythic" ? (
+              <p className="text-xs leading-snug text-fg-muted">Shields use the armor trait.</p>
+            ) : null}
             {piece.aside ? <p className="mt-0.5 text-xs leading-snug text-fg-muted">{piece.aside}</p> : null}
           </>
         ) : (

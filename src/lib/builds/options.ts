@@ -1,6 +1,7 @@
 import type { Crafter, OwnedGear } from "./arrange";
 import type { SavedBuild } from "./saved";
 import type { FrontWeapon, SlotKind } from "./slots";
+import type { ArmorWeight } from "./traits";
 
 /** One set the picker can offer. Built on the server from the stickerbook and catalog. */
 export interface BuildSetOption {
@@ -21,6 +22,8 @@ export interface BuildSetOption {
   traitsNeeded: number | null;
   maxEquip: number | null;
   mythic: boolean;
+  /** Body weights this set can be made in. Empty when no armor weight was scanned. */
+  armorWeights: ArmorWeight[];
 }
 
 export interface BuildPageData {

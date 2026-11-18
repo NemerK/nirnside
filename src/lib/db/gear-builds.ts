@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getDb } from "./index";
 import { emptyBuild, type SavedBuild } from "../builds/saved";
 import { isTwoHandedWeapon, parseFrontWeapon } from "../builds/slots";
+import { ARMOR_TRAITS, defaultTraitPlan, isArmorWeight, JEWELRY_TRAITS, WEAPON_TRAITS, type ArmorWeight } from "../builds/traits";
 
 function db() {
   return getDb();
@@ -28,6 +29,8 @@ function rowToBuild(row: { id: string; name: string; json: string; createdAt: nu
   const base = emptyBuild();
   const frontMain = parseFrontWeapon(typeof parsed.frontMain === "string" ? parsed.frontMain : "");
   const frontOff = parseFrontWeapon(typeof parsed.frontOff === "string" ? parsed.frontOff : "");
+  const plan = defaultTraitPlan();
+  const weight: ArmorWeight = isArmorWeight(parsed.weight) ? parsed.weight : plan.weight;
   return {
     id: row.id,
     name: row.name,
@@ -45,7 +48,18 @@ function rowToBuild(row: { id: string; name: string; json: string; createdAt: nu
     frontOff: frontMain && !isTwoHandedWeapon(frontMain) && frontOff && !isTwoHandedWeapon(frontOff) ? frontOff : null,
     backSetId: num(parsed.backSetId),
     backName: text(parsed.backName),
+    weight,
+    armorTrait: listed(parsed.armorTrait, ARMOR_TRAITS, plan.armorTrait),
+    jewelryTrait: listed(parsed.jewelryTrait, JEWELRY_TRAITS, plan.jewelryTrait),
+    frontTrait: listed(parsed.frontTrait, WEAPON_TRAITS, plan.frontTrait),
+    backTrait: listed(parsed.backTrait, WEAPON_TRAITS, plan.backTrait),
   };
+}
+
+function listed(value: unknown, allowed: readonly string[], fallback: string): string {
+  const name = text(value);
+  if (!name) return fallback;
+  return allowed.find((trait) => trait.toLowerCase() === name.toLowerCase()) ?? fallback;
 }
 
 export function listGearBuilds(): SavedBuild[] {

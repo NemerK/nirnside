@@ -9,6 +9,7 @@ import type { BuildPageData, BuildSetOption } from "./options";
 import {
   isCraftedCategory,
   isDivinesTrait,
+  isMonsterSet,
   kindFromPiece,
   kindsForCategory,
   resolveOwnedPiece,
@@ -18,11 +19,17 @@ import {
   type FrontWeapon,
   type SlotKind,
 } from "./slots";
+import { isBodyArmor, weightFromPieceName, weightFromText, weightsForSet, type ArmorWeight } from "./traits";
 
 export type { BuildPageData, BuildSetOption };
 
 function pieceKind(slot: string, type: string, name: string): SlotKind | null {
   return kindFromPiece(slot, type, name);
+}
+
+function armorWeightOf(kind: SlotKind | null, weight: string | null, type: string, name: string): ArmorWeight | null {
+  if (!kind || !isBodyArmor(kind)) return null;
+  return weightFromText(weight) ?? weightFromText(type) ?? weightFromPieceName(name);
 }
 
 export function loadBuildPage(): BuildPageData {
@@ -37,8 +44,11 @@ export function loadBuildPage(): BuildPageData {
     const icons: Partial<Record<SlotKind, string>> = {};
     const collectedWeapons = new Set<FrontWeapon>();
     const weaponIcons: Partial<Record<FrontWeapon, string>> = {};
+    const seenWeights: ArmorWeight[] = [];
     for (const piece of row.pieces) {
       const kind = pieceKind(piece.slot, piece.type, piece.name);
+      const weight = armorWeightOf(kind, piece.weight, piece.type, piece.name);
+      if (weight) seenWeights.push(weight);
       const weapon = weaponTypeFromPiece(piece.slot, piece.type, piece.name);
       if (weapon) {
         if (piece.collected) collectedWeapons.add(weapon);
@@ -80,6 +90,13 @@ export function loadBuildPage(): BuildPageData {
       traitsNeeded: crafted ? (match?.entry.traitsNeeded ?? null) : null,
       maxEquip: row.maxEquip ?? match?.entry.maxEquip ?? null,
       mythic,
+      armorWeights: weightsForSet({
+        crafted,
+        mythic,
+        monster: isMonsterSet({ mythic, category: row.category, kinds }),
+        category: row.category,
+        seen: seenWeights,
+      }),
     });
   }
 
@@ -92,12 +109,14 @@ export function loadBuildPage(): BuildPageData {
     const crafted = isCraftedCategory(entry.entry.category);
     if (!crafted && !mythic) continue;
     const mythicKind = mythic ? pieceKind("", "", entry.entry.name) : null;
+    const catalogKinds = mythic ? (mythicKind ? [mythicKind] : []) : kindsForCategory(entry.entry.category, null);
+    const mythicWeight = mythic ? armorWeightOf(mythicKind, null, "", entry.entry.name) : null;
     sets.push({
       setId: entry.entry.setId ?? 0,
       name: entry.entry.name,
       category: entry.entry.category,
       keys,
-      kinds: mythic ? (mythicKind ? [mythicKind] : []) : kindsForCategory(entry.entry.category, null),
+      kinds: catalogKinds,
       collectedKinds: [],
       icons: entry.entry.icon && mythicKind ? { [mythicKind]: entry.entry.icon } : {},
       collectedWeapons: [],
@@ -108,6 +127,13 @@ export function loadBuildPage(): BuildPageData {
       traitsNeeded: entry.entry.traitsNeeded,
       maxEquip: entry.entry.maxEquip,
       mythic,
+      armorWeights: weightsForSet({
+        crafted,
+        mythic,
+        monster: isMonsterSet({ mythic, category: entry.entry.category, kinds: catalogKinds }),
+        category: entry.entry.category,
+        seen: mythicWeight ? [mythicWeight] : [],
+      }),
     });
   }
 
@@ -135,6 +161,7 @@ export function loadBuildPage(): BuildPageData {
       icons: Partial<Record<SlotKind, string>>;
       weaponIcons: Partial<Record<FrontWeapon, string>>;
       weaponOnly: boolean;
+      weights: ArmorWeight[];
     }
   >();
   for (const item of getItems()) {
@@ -146,6 +173,16 @@ export function loadBuildPage(): BuildPageData {
     const resolved = resolveOwnedPiece({ name: item.name, itemId: item.itemId, equipSlot: item.equipSlot }, pieces);
     if (!resolved) continue;
     const kind = resolved.kind;
+    const linked = pieces.find(
+      (piece) =>
+        ((item.itemId ?? 0) > 0 && piece.itemId === item.itemId) ||
+        (item.name.trim() !== "" && piece.name.trim().toLowerCase() === item.name.trim().toLowerCase()),
+    );
+    const weight = isBodyArmor(kind)
+      ? (weightFromText(item.equipSlot) ??
+        weightFromPieceName(item.name) ??
+        (linked ? (weightFromText(linked.type) ?? weightFromPieceName(linked.name)) : null))
+      : null;
     const gear: OwnedGear = {
       keys,
       setId: item.setId ?? null,
@@ -156,6 +193,7 @@ export function loadBuildPage(): BuildPageData {
       owner: item.ownerCharacter,
       icon: item.icon ?? null,
       weapon: resolved.weapon,
+      weight,
     };
     owned.push(gear);
     const set = sets.find(
@@ -176,7 +214,9 @@ export function loadBuildPage(): BuildPageData {
       icons: {},
       weaponIcons: {},
       weaponOnly: true,
+      weights: [],
     };
+    if (weight) bag.weights.push(weight);
     if (!bag.kinds.includes(kind)) bag.kinds.push(kind);
     if (item.icon && !bag.icons[kind]) bag.icons[kind] = item.icon;
     if (gear.weapon && item.icon && !bag.weaponIcons[gear.weapon]) bag.weaponIcons[gear.weapon] = item.icon;
@@ -201,6 +241,13 @@ export function loadBuildPage(): BuildPageData {
       traitsNeeded: null,
       maxEquip: bag.weaponOnly ? 2 : 5,
       mythic: false,
+      armorWeights: weightsForSet({
+        crafted: false,
+        mythic: false,
+        monster: isMonsterSet({ mythic: false, category: "", kinds }),
+        category: "",
+        seen: bag.weights,
+      }),
     });
   }
   sets.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
@@ -215,6 +262,7 @@ export function loadBuildPage(): BuildPageData {
           name: line.name,
           known: line.traits.filter((trait) => trait.known).length,
           divines: line.traits.some((trait) => trait.known && isDivinesTrait(trait.name)),
+          traits: line.traits.filter((trait) => trait.known).map((trait) => trait.name),
         });
       }
     }
