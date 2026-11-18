@@ -1,17 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { arrange, sourceSummary, type ArrangeSet, type GearRole, type PlacedPiece } from "@/lib/builds/arrange";
+import { arrange, type ArrangeSet, type FrontBarWeapons, type GearRole, type PlacedPiece, sourceSummary } from "@/lib/builds/arrange";
 import { GameIcon } from "@/components/game-icon";
 import type { BuildPageData, BuildSetOption } from "@/lib/builds/options";
 import { emptyBuild, type SavedBuild } from "@/lib/builds/saved";
-import { isMonsterSet, kindsForRole } from "@/lib/builds/slots";
+import {
+  FRONT_MAIN_WEAPONS,
+  FRONT_OFF_WEAPONS,
+  isMonsterSet,
+  isTwoHandedWeapon,
+  kindsForRole,
+  parseFrontWeapon,
+} from "@/lib/builds/slots";
 
 const ROLES: { role: GearRole; label: string; hint: string }[] = [
   { role: "body", label: "Body", hint: "Chest, legs, shoes, belt, gloves" },
   { role: "monster", label: "Monster", hint: "Head, and shoulders when you wear two" },
   { role: "mythic", label: "Mythic", hint: "One item, on its own slot. A ring leaves the other ring free." },
-  { role: "front", label: "Front", hint: "Front-bar weapons, then jewelry" },
+  { role: "front", label: "Front", hint: "Weapons you choose, then jewelry" },
   { role: "back", label: "Back bar", hint: "Usually an arena two-hander" },
 ];
 
@@ -71,6 +78,8 @@ function toArrange(option: BuildSetOption, role: GearRole, pieces: number): Arra
     kinds: kindsForRole(role, option.kinds, option.name),
     collectedKinds: option.collectedKinds,
     icons: option.icons,
+    collectedWeapons: option.collectedWeapons,
+    weaponIcons: option.weaponIcons,
     collected: option.collected,
     total: option.total,
     crafted: option.crafted,
@@ -104,7 +113,10 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
     if (mythic) sets.push(toArrange(mythic, "mythic", 1));
     if (front) sets.push(toArrange(front, "front", pieceCount("front", front, draft.monsterPieces)));
     if (back) sets.push(toArrange(back, "back", pieceCount("back", back, draft.monsterPieces)));
-    return arrange(sets, data.owned, data.crafters);
+    const weapons: FrontBarWeapons | null = draft.frontMain
+      ? { main: draft.frontMain, off: isTwoHandedWeapon(draft.frontMain) ? null : draft.frontOff }
+      : null;
+    return arrange(sets, data.owned, data.crafters, weapons);
   }, [data, draft]);
 
   const tally = useMemo(() => {
@@ -229,6 +241,7 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
             selected={selectedName(draft, role)}
             options={optionsFor(role, data.sets)}
             onPick={(option) => pick(role, option)}
+            footer={role === "front" ? <FrontWeapons draft={draft} onChange={setDraft} /> : undefined}
             pieces={
               role === "monster"
                 ? {
@@ -295,6 +308,9 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
               .map((piece) => (
                 <SlotCard key={piece.slot} label={piece.label} piece={piece} />
               ))}
+            {draft.frontMain && isTwoHandedWeapon(draft.frontMain) && chosen.placed.some((piece) => piece.slot === "frontBar") ? (
+              <SlotCard label="Off hand" piece={null} blocked />
+            ) : null}
           </div>
         </section>
       )}
@@ -310,7 +326,7 @@ function Count({ label, value, className }: { label: string; value: number; clas
   );
 }
 
-function SlotCard({ label, piece }: { label: string; piece: PlacedPiece | null }) {
+function SlotCard({ label, piece, blocked = false }: { label: string; piece: PlacedPiece | null; blocked?: boolean }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
       {piece ? (
@@ -331,7 +347,7 @@ function SlotCard({ label, piece }: { label: string; piece: PlacedPiece | null }
             <p className={`truncate text-xs ${sourceClass(piece)}`}>{sourceSummary(piece.source)}</p>
           </>
         ) : (
-          <p className="text-sm text-fg-subtle">Empty</p>
+          <p className="text-sm text-fg-subtle">{blocked ? "Blocked" : "Empty"}</p>
         )}
       </div>
     </div>
@@ -346,6 +362,73 @@ function roleLabel(role: GearRole): string {
   return "Back bar";
 }
 
+function FrontWeapons({
+  draft,
+  onChange,
+}: {
+  draft: SavedBuild;
+  onChange: (next: SavedBuild) => void;
+}) {
+  const main = draft.frontMain;
+  const twoHanded = main != null && isTwoHandedWeapon(main);
+  const setMain = (value: string) => {
+    const next = parseFrontWeapon(value);
+    if (!next) {
+      onChange({ ...draft, frontMain: null, frontOff: null });
+      return;
+    }
+    if (isTwoHandedWeapon(next)) {
+      onChange({ ...draft, frontMain: next, frontOff: null });
+      return;
+    }
+    const off = draft.frontOff && !isTwoHandedWeapon(draft.frontOff) ? draft.frontOff : next;
+    onChange({ ...draft, frontMain: next, frontOff: off });
+  };
+  const setOff = (value: string) => {
+    const next = parseFrontWeapon(value);
+    if (!next || isTwoHandedWeapon(next)) return;
+    onChange({ ...draft, frontOff: next });
+  };
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      <label className="block text-xs text-fg-muted">
+        Main hand
+        <select
+          value={main ?? ""}
+          onChange={(event) => setMain(event.target.value)}
+          className="mt-1 w-full rounded-lg border border-border bg-bg px-2 py-1.5 text-sm text-fg"
+        >
+          <option value="">Any</option>
+          {FRONT_MAIN_WEAPONS.map((weapon) => (
+            <option key={weapon.id} value={weapon.id}>
+              {weapon.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={`block text-xs ${twoHanded ? "text-fg-subtle" : "text-fg-muted"}`}>
+        Off hand
+        <select
+          value={twoHanded ? "" : (draft.frontOff ?? "")}
+          disabled={!main || twoHanded}
+          onChange={(event) => setOff(event.target.value)}
+          className="mt-1 w-full rounded-lg border border-border bg-bg px-2 py-1.5 text-sm text-fg disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {twoHanded ? <option value="">Blocked</option> : null}
+          {!main ? <option value="">Any</option> : null}
+          {main && !twoHanded
+            ? FRONT_OFF_WEAPONS.map((weapon) => (
+                <option key={weapon.id} value={weapon.id}>
+                  {weapon.label}
+                </option>
+              ))
+            : null}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 function SetPicker({
   label,
   hint,
@@ -353,6 +436,7 @@ function SetPicker({
   options,
   onPick,
   pieces,
+  footer,
 }: {
   label: string;
   hint: string;
@@ -360,6 +444,7 @@ function SetPicker({
   options: BuildSetOption[];
   onPick: (option: BuildSetOption | null) => void;
   pieces?: { count: 1 | 2; max: number; onChange: (count: 1 | 2) => void };
+  footer?: React.ReactNode;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -392,53 +477,57 @@ function SetPicker({
           })}
         </div>
       ) : null}
-      <input
-        value={open ? query : selected ?? ""}
-        placeholder="Search sets"
-        onFocus={() => {
-          setOpen(true);
-          setQuery("");
-        }}
-        onBlur={() => {
-          window.setTimeout(() => setOpen(false), 150);
-        }}
-        onChange={(event) => {
-          setOpen(true);
-          setQuery(event.target.value);
-        }}
-        className="w-full rounded-lg border border-border bg-surface-2/40 px-2 py-1.5 text-sm text-fg outline-none focus:border-accent"
-      />
+      {footer}
+      <div className="relative">
+        <input
+          value={open ? query : selected ?? ""}
+          placeholder="Search sets"
+          onFocus={() => {
+            setOpen(true);
+            setQuery("");
+          }}
+          onBlur={() => {
+            window.setTimeout(() => setOpen(false), 150);
+          }}
+          onChange={(event) => {
+            setOpen(true);
+            setQuery(event.target.value);
+          }}
+          className="w-full rounded-lg border border-border bg-surface-2/40 px-2 py-1.5 text-sm text-fg outline-none focus:border-accent"
+        />
+        {open ? (
+          <ul className="absolute left-0 right-0 top-full z-40 mt-1 max-h-60 overflow-auto rounded-lg border border-border bg-bg-elev shadow-lg">
+            {shown.length === 0 ? (
+              <li className="px-2 py-1.5 text-xs text-fg-muted">No sets match.</li>
+            ) : (
+              shown.map((option) => (
+                <li key={`${option.setId}-${option.name}`}>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      onPick(option);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                    className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-surface-2"
+                  >
+                    <span className="text-sm text-fg">{option.name}</span>
+                    <span className="text-[11px] text-fg-subtle">
+                      {option.category}
+                      {option.total > 0 ? ` · ${option.collected}/${option.total} collected` : ""}
+                    </span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : null}
+      </div>
       {selected ? (
         <button type="button" onClick={() => onPick(null)} className="mt-1 text-xs text-fg-muted hover:text-fg">
           Clear
         </button>
-      ) : null}
-      {open ? (
-        <ul className="mt-2 max-h-48 overflow-auto rounded-lg border border-border">
-          {shown.length === 0 ? (
-            <li className="px-2 py-1.5 text-xs text-fg-muted">No sets match.</li>
-          ) : (
-            shown.map((option) => (
-              <li key={`${option.setId}-${option.name}`}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onPick(option);
-                    setOpen(false);
-                    setQuery("");
-                  }}
-                  className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-surface-2"
-                >
-                  <span className="text-sm text-fg">{option.name}</span>
-                  <span className="text-[11px] text-fg-subtle">
-                    {option.category}
-                    {option.total > 0 ? ` · ${option.collected}/${option.total} collected` : ""}
-                  </span>
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
       ) : null}
     </div>
   );

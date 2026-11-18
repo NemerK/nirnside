@@ -1,12 +1,16 @@
 import {
   isDivinesTrait,
+  isTwoHandedWeapon,
   lineMatchesKind,
   locationLabel,
   reconstructionCost,
   setsShareKey,
   TRAIT_CHANGE_CRYSTALS,
   wantsDivines,
+  weaponLabel,
+  weaponResearchLine,
   type BarStyle,
+  type FrontWeapon,
   type SlotKind,
 } from "./slots";
 
@@ -24,6 +28,9 @@ export interface ArrangeSet {
   collectedKinds: SlotKind[];
   /** In-game icon path for a stickerbook piece of that slot, when the snapshot has one. */
   icons?: Partial<Record<SlotKind, string>>;
+  /** Weapon types with a collected stickerbook piece. */
+  collectedWeapons?: readonly FrontWeapon[];
+  weaponIcons?: Partial<Record<FrontWeapon, string>>;
   collected: number;
   total: number;
   crafted: boolean;
@@ -40,6 +47,8 @@ export interface OwnedGear {
   owner: string | null;
   /** In-game icon path from the bag item, when the snapshot recorded one. */
   icon?: string | null;
+  /** Dagger, inferno staff, shield, and so on. Absent when the item name did not say. */
+  weapon?: FrontWeapon | null;
 }
 
 export interface CrafterLine {
@@ -99,6 +108,14 @@ interface Unit {
   kind: SlotKind;
   pieces: number;
   preferred: "body" | "front" | "either";
+  /** When set, only an item of this weapon counts as already made. */
+  weapon?: FrontWeapon;
+}
+
+/** The weapons the player asked for on the front bar. A two-hander has no off hand. */
+export interface FrontBarWeapons {
+  main: FrontWeapon;
+  off: FrontWeapon | null;
 }
 
 const SLOT_ORDER = [
@@ -138,20 +155,22 @@ function canWear(set: ArrangeSet | undefined, kind: SlotKind): boolean {
   return !!set && set.kinds.includes(kind);
 }
 
-function lineFor(crafter: Crafter, kind: SlotKind): CrafterLine | null {
+function lineFor(crafter: Crafter, kind: SlotKind, weapon?: FrontWeapon): CrafterLine | null {
   let best: CrafterLine | null = null;
+  const wanted = weapon ? weaponResearchLine(weapon) : null;
   for (const line of crafter.lines) {
-    if (!lineMatchesKind(line.name, kind)) continue;
+    const name = line.name.trim().toLowerCase();
+    if (wanted ? name !== wanted : !lineMatchesKind(line.name, kind)) continue;
     if (!best || line.known > best.known) best = line;
   }
   return best;
 }
 
-function divineCrafter(set: ArrangeSet, kind: SlotKind, crafters: Crafter[]): Crafter | null {
+function divineCrafter(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], weapon?: FrontWeapon): Crafter | null {
   if (!set.crafted || set.traitsNeeded == null) return null;
   let best: { crafter: Crafter; known: number } | null = null;
   for (const crafter of crafters) {
-    const line = lineFor(crafter, kind);
+    const line = lineFor(crafter, kind, weapon);
     if (!line || line.known < set.traitsNeeded) continue;
     if (wantsDivines(kind) && !line.divines) continue;
     if (!best || line.known > best.known) best = { crafter, known: line.known };
@@ -171,9 +190,16 @@ interface Choice {
   item: number | null;
 }
 
-function fallbackChoice(set: ArrangeSet, kind: SlotKind, crafters: Crafter[]): Choice {
-  const crafter = divineCrafter(set, kind, crafters);
-  const collected = set.collectedKinds.includes(kind);
+function weaponCollected(set: ArrangeSet, kind: SlotKind, weapon?: FrontWeapon): boolean {
+  if (!weapon) return set.collectedKinds.includes(kind);
+  if (set.total > 0 && set.collected >= set.total) return true;
+  if (set.collectedWeapons) return set.collectedWeapons.includes(weapon);
+  return set.collectedKinds.includes(kind);
+}
+
+function fallbackChoice(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], weapon?: FrontWeapon): Choice {
+  const crafter = divineCrafter(set, kind, crafters, weapon);
+  const collected = weaponCollected(set, kind, weapon);
   const crystals = collected ? reconstructionCost(set.collected, set.total) : null;
   const divine = wantsDivines(kind) && divinesKnown(kind, crafters);
   const options: Choice[] = [];
@@ -256,7 +282,7 @@ function allocate(
   const mine = owned
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => sameSet(set, item));
-  const fallbacks = units.map((unit) => fallbackChoice(set, unit.kind, crafters));
+  const fallbacks = units.map((unit) => fallbackChoice(set, unit.kind, crafters, unit.weapon));
   const used = new Set<number>();
   const chosen: (Choice | null)[] = units.map(() => null);
 
@@ -264,6 +290,7 @@ function allocate(
   units.forEach((unit, unitIndex) => {
     mine.forEach(({ item, index }) => {
       if (item.kind !== unit.kind) return;
+      if (unit.weapon && item.weapon !== unit.weapon) return;
       const choice = itemChoice(item, index, unit.kind, crafters);
       const save = fallbacks[unitIndex]!.cost - choice.cost;
       if (save > 0) offers.push({ unit: unitIndex, choice, save });
@@ -329,8 +356,33 @@ export function sourceSummary(source: PieceSource): string {
   return "Not obtained";
 }
 
-function unit(id: string, label: string, kind: SlotKind, preferred: Unit["preferred"], pieces = 1): Unit {
-  return { id, label, kind, pieces, preferred };
+function unit(
+  id: string,
+  label: string,
+  kind: SlotKind,
+  preferred: Unit["preferred"],
+  pieces = 1,
+  weapon?: FrontWeapon,
+): Unit {
+  return { id, label, kind, pieces, preferred, weapon };
+}
+
+/** The player's front-bar weapons. A two-hander, staff, or bow is one item. */
+export function frontWeaponUnits(choice: FrontBarWeapons): Unit[] {
+  if (isTwoHandedWeapon(choice.main)) {
+    return [unit("frontBar", weaponLabel(choice.main), "twoHand", "front", 2, choice.main)];
+  }
+  const off = choice.off && !isTwoHandedWeapon(choice.off) ? choice.off : choice.main;
+  return [
+    unit("frontMain", weaponLabel(choice.main), "oneHand", "front", 1, choice.main),
+    unit("frontOff", weaponLabel(off), off === "shield" ? "shield" : "oneHand", "front", 1, off),
+  ];
+}
+
+function frontWeaponStyle(choice: FrontBarWeapons): BarStyle {
+  if (isTwoHandedWeapon(choice.main)) return "twohand";
+  const off = choice.off && !isTwoHandedWeapon(choice.off) ? choice.off : choice.main;
+  return off === "shield" ? "shield" : "dual";
 }
 
 function bodyUnits(): Unit[] {
@@ -382,7 +434,12 @@ interface Fixed {
   role: GearRole;
 }
 
-function lockFixed(sets: ArrangeSet[], frontStyle: BarStyle, backStyle: BarStyle): { flex: Unit[]; fixed: Fixed[] } {
+function lockFixed(
+  sets: ArrangeSet[],
+  frontStyle: BarStyle,
+  backStyle: BarStyle,
+  frontWeapons: FrontBarWeapons | null,
+): { flex: Unit[]; fixed: Fixed[] } {
   const flex = bodyUnits();
   const fixed: Fixed[] = [];
   const mythic = sets.find((set) => set.role === "mythic");
@@ -409,7 +466,11 @@ function lockFixed(sets: ArrangeSet[], frontStyle: BarStyle, backStyle: BarStyle
     for (const slot of barUnits("back", backStyle)) fixed.push({ unit: slot, role: "back" });
   }
   const front = sets.find((set) => set.role === "front");
-  if (front && styleFits(front, frontStyle)) flex.push(...barUnits("front", frontStyle));
+  if (front && frontWeapons) {
+    for (const slot of frontWeaponUnits(frontWeapons)) fixed.push({ unit: slot, role: "front" });
+  } else if (front && styleFits(front, frontStyle)) {
+    flex.push(...barUnits("front", frontStyle));
+  }
   return { flex, fixed };
 }
 
@@ -497,13 +558,21 @@ function bookCost(book: Map<SlotKind, KindPrice>, units: Unit[]): number {
  * reconstruction, wins. A tie stays on the default: body on the five body
  * slots, weapons and jewelry on the front bar.
  */
-export function arrange(sets: ArrangeSet[], owned: OwnedGear[], crafters: Crafter[]): ArrangeResult {
+export function arrange(
+  sets: ArrangeSet[],
+  owned: OwnedGear[],
+  crafters: Crafter[],
+  frontWeapons: FrontBarWeapons | null = null,
+): ArrangeResult {
   const body = sets.find((set) => set.role === "body");
   const front = sets.find((set) => set.role === "front");
   const back = sets.find((set) => set.role === "back");
-  const fronts: BarStyle[] = !front
-    ? ["twohand"]
-    : (["twohand", "dual", "shield"] as const).filter((style) => styleFits(front, style));
+  const chosenWeapons = front && frontWeapons ? frontWeapons : null;
+  const fronts: BarStyle[] = chosenWeapons
+    ? [frontWeaponStyle(chosenWeapons)]
+    : !front
+      ? ["twohand"]
+      : (["twohand", "dual", "shield"] as const).filter((style) => styleFits(front, style));
   const backs: BarStyle[] = !back
     ? ["twohand"]
     : (["twohand", "dual", "shield"] as const).filter((style) => styleFits(back, style));
@@ -525,7 +594,7 @@ export function arrange(sets: ArrangeSet[], owned: OwnedGear[], crafters: Crafte
 
   for (const frontStyle of fronts) {
     for (const backStyle of backs) {
-      const { flex, fixed } = lockFixed(sets, frontStyle, backStyle);
+      const { flex, fixed } = lockFixed(sets, frontStyle, backStyle, chosenWeapons);
       const kindOf = flex.map((slot) => KIND_LIST.indexOf(slot.kind));
       const prefOf = flex.map((slot) => (slot.preferred === "body" ? 0 : slot.preferred === "front" ? 1 : -1));
       const bodyBase = new Int16Array(KIND_LIST.length);
@@ -541,19 +610,24 @@ export function arrange(sets: ArrangeSet[], owned: OwnedGear[], crafters: Crafte
         group.units.push(entry.unit);
         fixedGroups.set(id, group);
       }
+      let fixedFrontPieces = 0;
       for (const [id, group] of fixedGroups) {
+        const plain = group.units.filter((slot) => !slot.weapon);
+        const specific = group.units.filter((slot) => slot.weapon);
         const have = group.units.reduce((sum, slot) => sum + slot.pieces, 0);
+        if (group.set.role === "front") fixedFrontPieces += have;
         if (group.set.role !== "body" && group.set.role !== "front") {
           fixedShort += Math.max(0, group.set.pieces - have);
         }
+        if (specific.length > 0) fixedCost += allocate(group.set, specific, owned, crafters).cost;
         const counts = id === bodyId || (samePool && id === bodyId) ? bodyBase : id === frontId ? frontBase : null;
         if (counts) {
-          for (const slot of group.units) {
+          for (const slot of plain) {
             const index = KIND_LIST.indexOf(slot.kind);
             if (index >= 0) counts[index] = (counts[index] ?? 0) + 1;
           }
-        } else {
-          fixedCost += bookCost(books.get(id) ?? new Map(), group.units);
+        } else if (plain.length > 0) {
+          fixedCost += bookCost(books.get(id) ?? new Map(), plain);
         }
       }
 
@@ -614,7 +688,7 @@ export function arrange(sets: ArrangeSet[], owned: OwnedGear[], crafters: Crafte
           assigned[index] = -1;
         }
       };
-      walk(0, 0, 0);
+      walk(0, 0, fixedFrontPieces);
       if (!winner || bestScore < winner.score) {
         winner = { score: bestScore, frontStyle, backStyle, flex, fixed, assigned: bestAssigned };
       }
@@ -662,7 +736,7 @@ export function arrange(sets: ArrangeSet[], owned: OwnedGear[], crafters: Crafte
         pieces: slot.unit.pieces,
         role: slot.set.role,
         setName: slot.set.name,
-        icon: ownedIcon || slot.set.icons?.[slot.unit.kind] || null,
+        icon: ownedIcon || (slot.unit.weapon ? slot.set.weaponIcons?.[slot.unit.weapon] : null) || slot.set.icons?.[slot.unit.kind] || null,
         source,
         preferred: slot.preferred,
         why: slot.preferred ? null : whyOff(slot.set, source),

@@ -13,6 +13,8 @@ import {
   kindsForCategory,
   setMatchKeys,
   setsShareKey,
+  weaponTypeFromPiece,
+  type FrontWeapon,
   type SlotKind,
 } from "./slots";
 
@@ -32,8 +34,15 @@ export function loadBuildPage(): BuildPageData {
     const kinds: SlotKind[] = [];
     const collectedKinds: SlotKind[] = [];
     const icons: Partial<Record<SlotKind, string>> = {};
+    const collectedWeapons = new Set<FrontWeapon>();
+    const weaponIcons: Partial<Record<FrontWeapon, string>> = {};
     for (const piece of row.pieces) {
       const kind = pieceKind(piece.slot, piece.type, piece.name);
+      const weapon = weaponTypeFromPiece(piece.slot, piece.type, piece.name);
+      if (weapon) {
+        if (piece.collected) collectedWeapons.add(weapon);
+        if (piece.icon && (piece.collected || !weaponIcons[weapon])) weaponIcons[weapon] = piece.icon;
+      }
       if (!kind) continue;
       if (!kinds.includes(kind)) kinds.push(kind);
       if (piece.collected && !collectedKinds.includes(kind)) collectedKinds.push(kind);
@@ -62,6 +71,8 @@ export function loadBuildPage(): BuildPageData {
       kinds: mythic ? kinds.slice(0, 1) : kinds,
       collectedKinds: mythic ? collectedKinds.slice(0, 1) : collectedKinds,
       icons,
+      collectedWeapons: [...collectedWeapons],
+      weaponIcons,
       collected: row.collected,
       total: row.total,
       crafted,
@@ -88,6 +99,8 @@ export function loadBuildPage(): BuildPageData {
       kinds: mythic ? (mythicKind ? [mythicKind] : []) : kindsForCategory(entry.entry.category, null),
       collectedKinds: [],
       icons: entry.entry.icon && mythicKind ? { [mythicKind]: entry.entry.icon } : {},
+      collectedWeapons: [],
+      weaponIcons: {},
       collected: 0,
       total: 0,
       crafted,
@@ -102,7 +115,15 @@ export function loadBuildPage(): BuildPageData {
   const owned: OwnedGear[] = [];
   const bagOnly = new Map<
     string,
-    { name: string; setId: number; keys: string[]; kinds: SlotKind[]; icons: Partial<Record<SlotKind, string>>; weaponOnly: boolean }
+    {
+      name: string;
+      setId: number;
+      keys: string[];
+      kinds: SlotKind[];
+      icons: Partial<Record<SlotKind, string>>;
+      weaponIcons: Partial<Record<FrontWeapon, string>>;
+      weaponOnly: boolean;
+    }
   >();
   for (const item of getItems()) {
     if (!item.setName) continue;
@@ -117,6 +138,7 @@ export function loadBuildPage(): BuildPageData {
       location: item.location,
       owner: item.ownerCharacter,
       icon: item.icon ?? null,
+      weapon: weaponTypeFromPiece(item.equipSlot ?? "", "", item.name),
     };
     owned.push(gear);
     const set = sets.find(
@@ -125,6 +147,7 @@ export function loadBuildPage(): BuildPageData {
     if (set) {
       if (!set.kinds.includes(kind)) set.kinds.push(kind);
       if (item.icon && !set.icons[kind]) set.icons[kind] = item.icon;
+      if (gear.weapon && item.icon && !set.weaponIcons[gear.weapon]) set.weaponIcons[gear.weapon] = item.icon;
       continue;
     }
     const id = gear.keys[0] ?? item.setName;
@@ -134,10 +157,12 @@ export function loadBuildPage(): BuildPageData {
       keys: gear.keys,
       kinds: [],
       icons: {},
+      weaponIcons: {},
       weaponOnly: true,
     };
     if (!bag.kinds.includes(kind)) bag.kinds.push(kind);
     if (item.icon && !bag.icons[kind]) bag.icons[kind] = item.icon;
+    if (gear.weapon && item.icon && !bag.weaponIcons[gear.weapon]) bag.weaponIcons[gear.weapon] = item.icon;
     if (kind !== "oneHand" && kind !== "twoHand" && kind !== "shield") bag.weaponOnly = false;
     bagOnly.set(id, bag);
   }
@@ -151,6 +176,8 @@ export function loadBuildPage(): BuildPageData {
       kinds,
       collectedKinds: [],
       icons: bag.icons,
+      collectedWeapons: [],
+      weaponIcons: bag.weaponIcons,
       collected: 0,
       total: 0,
       crafted: false,
