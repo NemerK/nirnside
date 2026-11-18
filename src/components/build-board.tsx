@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { arrange, sourceSummary, type ArrangeSet, type GearRole, type PlacedPiece } from "@/lib/builds/arrange";
 import type { BuildPageData, BuildSetOption } from "@/lib/builds/options";
 import { emptyBuild, type SavedBuild } from "@/lib/builds/saved";
+import { isMonsterSet, kindsForRole } from "@/lib/builds/slots";
 
 const ROLES: { role: GearRole; label: string; hint: string }[] = [
   { role: "body", label: "Body", hint: "Chest, legs, shoes, belt, gloves" },
@@ -30,9 +31,7 @@ const DOLL_LABEL: Record<(typeof DOLL)[number], string> = {
 
 function optionsFor(role: GearRole, sets: BuildSetOption[]): BuildSetOption[] {
   if (role === "mythic") return sets.filter((set) => set.mythic);
-  if (role === "monster") {
-    return sets.filter((set) => !set.mythic && set.category.toLowerCase().includes("monster"));
-  }
+  if (role === "monster") return sets.filter((set) => isMonsterSet(set));
   if (role === "back") {
     return sets.filter(
       (set) =>
@@ -68,7 +67,7 @@ function toArrange(option: BuildSetOption, role: GearRole, pieces: number): Arra
     setId: option.setId > 0 ? option.setId : null,
     keys: option.keys,
     pieces,
-    kinds: role === "mythic" ? option.kinds.slice(0, 1) : option.kinds,
+    kinds: kindsForRole(role, option.kinds, option.name),
     collectedKinds: option.collectedKinds,
     collected: option.collected,
     total: option.total,
@@ -234,27 +233,18 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
             selected={selectedName(draft, role)}
             options={optionsFor(role, data.sets)}
             onPick={(option) => pick(role, option)}
+            pieces={
+              role === "monster"
+                ? {
+                    count: draft.monsterPieces,
+                    max: findOption(data.sets, draft.monsterSetId, draft.monsterName)?.maxEquip ?? 2,
+                    onChange: (count) => setDraft((current) => ({ ...current, monsterPieces: count })),
+                  }
+                : undefined
+            }
           />
         ))}
       </div>
-
-      {draft.monsterName ? (
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-fg-muted">Monster pieces</span>
-          {([1, 2] as const).map((count) => (
-            <button
-              key={count}
-              type="button"
-              onClick={() => setDraft((current) => ({ ...current, monsterPieces: count }))}
-              className={`rounded-lg border px-3 py-1 ${
-                draft.monsterPieces === count ? "border-accent/40 bg-accent-soft text-accent" : "border-border text-fg-muted"
-              }`}
-            >
-              {count}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
@@ -366,12 +356,14 @@ function SetPicker({
   selected,
   options,
   onPick,
+  pieces,
 }: {
   label: string;
   hint: string;
   selected: string | null;
   options: BuildSetOption[];
   onPick: (option: BuildSetOption | null) => void;
+  pieces?: { count: 1 | 2; max: number; onChange: (count: 1 | 2) => void };
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -382,6 +374,28 @@ function SetPicker({
     <div className="rounded-lg border border-border bg-surface p-3">
       <div className="text-sm font-medium text-fg">{label}</div>
       <p className="mb-2 text-xs text-fg-muted">{hint}</p>
+      {pieces ? (
+        <div className="mb-2 flex items-center gap-2 text-xs">
+          <span className="text-fg-muted">Pieces</span>
+          {([1, 2] as const).map((count) => {
+            const disabled = count > pieces.max;
+            const active = !disabled && Math.min(pieces.count, pieces.max) === count;
+            return (
+              <button
+                key={count}
+                type="button"
+                disabled={disabled}
+                onClick={() => pieces.onChange(count)}
+                className={`rounded-md border px-2.5 py-0.5 ${
+                  active ? "border-accent/40 bg-accent-soft text-accent" : "border-border text-fg-muted"
+                } disabled:opacity-40`}
+              >
+                {count}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       <input
         value={open ? query : selected ?? ""}
         placeholder="Search sets"
