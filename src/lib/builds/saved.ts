@@ -1,4 +1,5 @@
 import type { FrontWeapon } from "./slots";
+import { defaultTraitPlan, type ArmorWeight, type TraitPlan } from "./traits";
 
 /** A gear build the player saved. Not part of the ESO snapshot. */
 export interface SavedBuild {
@@ -20,6 +21,11 @@ export interface SavedBuild {
   frontOff: FrontWeapon | null;
   backSetId: number | null;
   backName: string | null;
+  weight: ArmorWeight;
+  armorTrait: string;
+  jewelryTrait: string;
+  frontTrait: string;
+  backTrait: string;
 }
 
 export function emptyBuild(): Omit<SavedBuild, "id" | "name" | "createdAt"> {
@@ -37,5 +43,17 @@ export function emptyBuild(): Omit<SavedBuild, "id" | "name" | "createdAt"> {
     frontOff: null,
     backSetId: null,
     backName: null,
+    ...defaultTraitPlan(),
+  };
+}
+
+export function traitPlanOf(build: TraitPlan): TraitPlan {
+  const base = defaultTraitPlan();
+  return {
+    weight: build.weight ?? base.weight,
+    armorTrait: build.armorTrait || base.armorTrait,
+    jewelryTrait: build.jewelryTrait || base.jewelryTrait,
+    frontTrait: build.frontTrait || base.frontTrait,
+    backTrait: build.backTrait || base.backTrait,
   };
 }
