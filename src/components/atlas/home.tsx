@@ -113,6 +113,11 @@ export function AccountOverview({
           {account.esoPlus ? " · ESO+" : ""}
           {account.lastSnapshot ? ` · Snapshot ${timeAgo(account.lastSnapshot)}` : ""}
         </p>
+        <p className="mt-2 text-sm">
+          <Link href="/living" className="text-accent hover:underline">
+            A more personal home
+          </Link>
+        </p>
       </header>
 
       <section className="rounded-lg border border-border bg-surface p-3">
