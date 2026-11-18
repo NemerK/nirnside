@@ -15,27 +15,40 @@ import {
 } from "@/lib/builds/slots";
 
 const ROLES: { role: GearRole; label: string; hint: string }[] = [
-  { role: "body", label: "Body", hint: "Chest, legs, shoes, belt, gloves" },
+  { role: "body", label: "Body", hint: "Chest, hands, waist, legs, and feet" },
   { role: "monster", label: "Monster", hint: "Head, and shoulders when you wear two" },
   { role: "mythic", label: "Mythic", hint: "One item, on its own slot. A ring leaves the other ring free." },
   { role: "front", label: "Front", hint: "Weapons you choose, then jewelry" },
   { role: "back", label: "Back bar", hint: "Usually an arena two-hander" },
 ];
 
-const DOLL = ["head", "shoulders", "chest", "hands", "waist", "legs", "feet", "neck", "ring1", "ring2"] as const;
+/** Armor, then jewelry, in the order the inventory paper doll uses. */
+const ARMOR = [
+  { id: "head", label: "Head" },
+  { id: "shoulders", label: "Shoulders" },
+  { id: "chest", label: "Chest" },
+  { id: "hands", label: "Hands" },
+  { id: "waist", label: "Waist" },
+  { id: "legs", label: "Legs" },
+  { id: "feet", label: "Feet" },
+] as const;
 
-const DOLL_LABEL: Record<(typeof DOLL)[number], string> = {
-  head: "Head",
-  shoulders: "Shoulders",
-  chest: "Chest",
-  hands: "Gloves",
-  waist: "Belt",
-  legs: "Legs",
-  feet: "Shoes",
-  neck: "Necklace",
-  ring1: "Ring",
-  ring2: "Ring",
-};
+const JEWELRY = [
+  { id: "neck", label: "Necklace" },
+  { id: "ring1", label: "Ring" },
+  { id: "ring2", label: "Ring" },
+] as const;
+
+const PLACED_IDS = new Set<string>([
+  ...ARMOR.map((slot) => slot.id),
+  ...JEWELRY.map((slot) => slot.id),
+  "frontBar",
+  "frontMain",
+  "frontOff",
+  "backBar",
+  "backMain",
+  "backOff",
+]);
 
 function optionsFor(role: GearRole, sets: BuildSetOption[]): BuildSetOption[] {
   if (role === "mythic") return sets.filter((set) => set.mythic);
@@ -206,8 +219,6 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
     }
   }
 
-  const bySlot = new Map(chosen.placed.map((piece) => [piece.slot, piece]));
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-2">
@@ -287,7 +298,7 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
       {chosen.placed.length === 0 ? (
         <p className="text-sm text-fg-muted">Choose a set to see where each piece goes.</p>
       ) : (
-        <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-3 text-sm">
             <Count label="Already made" value={tally.owned} className="text-ok" />
             <Count label="Transmute" value={tally.transmute} className="text-accent" />
@@ -299,21 +310,9 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
               {chosen.short.map((row) => `${row.setName} wears ${row.have} of ${row.want}`).join(" · ")}
             </p>
           ) : null}
-          <div className="grid gap-2 sm:grid-cols-2">
-            {DOLL.map((id) => (
-              <SlotCard key={id} label={DOLL_LABEL[id]} piece={bySlot.get(id) ?? null} />
-            ))}
-            {chosen.placed
-              .filter((piece) => !DOLL.includes(piece.slot as (typeof DOLL)[number]))
-              .map((piece) => (
-                <SlotCard key={piece.slot} label={piece.label} piece={piece} />
-              ))}
-            {draft.frontMain && isTwoHandedWeapon(draft.frontMain) && chosen.placed.some((piece) => piece.slot === "frontBar") ? (
-              <SlotCard label="Off hand" piece={null} blocked />
-            ) : null}
-          </div>
-        </section>
+        </div>
       )}
+      <PaperDoll placed={chosen.placed} />
     </div>
   );
 }
@@ -326,16 +325,97 @@ function Count({ label, value, className }: { label: string; value: number; clas
   );
 }
 
-function SlotCard({ label, piece, blocked = false }: { label: string; piece: PlacedPiece | null; blocked?: boolean }) {
+function PaperDoll({ placed }: { placed: PlacedPiece[] }) {
+  const bySlot = new Map(placed.map((piece) => [piece.slot, piece]));
+  const front = weaponBar(bySlot, "front");
+  const back = weaponBar(bySlot, "back");
+  const extra = placed.filter((piece) => !PLACED_IDS.has(piece.slot));
+  const [head, ...armor] = ARMOR;
+
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)_minmax(0,1fr)]">
+      <section className="rounded-lg border border-border bg-surface px-3 py-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="col-span-2">
+            <SlotCard label={head.label} piece={bySlot.get(head.id) ?? null} />
+          </div>
+          {armor.map((slot) => (
+            <SlotCard key={slot.id} label={slot.label} piece={bySlot.get(slot.id) ?? null} />
+          ))}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2 border-t border-border pt-2">
+          {JEWELRY.map((slot) => (
+            <SlotCard key={slot.id} label={slot.label} piece={bySlot.get(slot.id) ?? null} />
+          ))}
+        </div>
+      </section>
+      <WeaponColumn title="Front bar" bar={front} />
+      <WeaponColumn title="Back bar" bar={back} />
+      {extra.length > 0 ? (
+        <div className="grid gap-2 lg:col-span-3 sm:grid-cols-2">
+          {extra.map((piece) => (
+            <SlotCard key={piece.slot} label={piece.label} piece={piece} detail={weaponDetail(piece)} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function WeaponColumn({ title, bar }: { title: string; bar: WeaponBarSlots }) {
+  return (
+    <section className="rounded-lg border border-border bg-surface px-3 py-2.5">
+      <h2 className="px-0.5 text-xs font-medium uppercase tracking-wide text-fg-subtle">{title}</h2>
+      <div className="mt-2 flex flex-col gap-2">
+        <SlotCard label="Main hand" piece={bar.main} detail={weaponDetail(bar.main)} />
+        <SlotCard label="Off hand" piece={bar.blocked ? null : bar.off} detail={bar.blocked ? null : weaponDetail(bar.off)} blocked={bar.blocked} />
+      </div>
+    </section>
+  );
+}
+
+interface WeaponBarSlots {
+  main: PlacedPiece | null;
+  off: PlacedPiece | null;
+  blocked: boolean;
+}
+
+function weaponBar(bySlot: Map<string, PlacedPiece>, bar: "front" | "back"): WeaponBarSlots {
+  const twoHand = bySlot.get(bar === "front" ? "frontBar" : "backBar") ?? null;
+  if (twoHand) return { main: twoHand, off: null, blocked: true };
+  return {
+    main: bySlot.get(bar === "front" ? "frontMain" : "backMain") ?? null,
+    off: bySlot.get(bar === "front" ? "frontOff" : "backOff") ?? null,
+    blocked: false,
+  };
+}
+
+/** A chosen weapon type, such as Inferno Staff. Generic bar names stay on the slot label. */
+function weaponDetail(piece: PlacedPiece | null): string | null {
+  if (!piece || /\b(hand|bar)\b/i.test(piece.label)) return null;
+  return piece.label;
+}
+
+function SlotCard({
+  label,
+  piece,
+  detail,
+  blocked = false,
+}: {
+  label: string;
+  piece: PlacedPiece | null;
+  detail?: string | null;
+  blocked?: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-bg px-3 py-2">
       {piece ? (
         <GameIcon name={piece.setName} icon={piece.icon} size={36} />
       ) : (
         <span className="h-9 w-9 shrink-0 rounded-md border border-border bg-surface-2/40" aria-hidden />
       )}
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2">
           <span className="text-[11px] uppercase tracking-wide text-fg-subtle">{label}</span>
           {piece && roleLabel(piece.role).toLowerCase() !== label.toLowerCase() ? (
             <span className="text-[10px] uppercase tracking-wide text-fg-subtle">{roleLabel(piece.role)}</span>
@@ -343,8 +423,9 @@ function SlotCard({ label, piece, blocked = false }: { label: string; piece: Pla
         </div>
         {piece ? (
           <>
-            <p className="truncate text-sm text-fg">{piece.setName}</p>
-            <p className={`truncate text-xs ${sourceClass(piece)}`}>{sourceSummary(piece.source)}</p>
+            <p className="line-clamp-2 text-sm leading-snug text-fg">{piece.setName}</p>
+            {detail ? <p className="truncate text-xs text-fg-muted">{detail}</p> : null}
+            <p className={`line-clamp-2 text-xs leading-snug ${sourceClass(piece)}`}>{sourceSummary(piece.source)}</p>
             {piece.aside ? <p className="mt-0.5 text-xs leading-snug text-fg-muted">{piece.aside}</p> : null}
           </>
         ) : (
