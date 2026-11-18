@@ -247,6 +247,9 @@ describe("arrange", () => {
       assert.equal(piece.setName, "Null Arca");
       assert.equal(piece.source.kind, "farm");
     }
+    assert.equal(slot(result.placed, "hands").label, "Hands");
+    assert.equal(slot(result.placed, "waist").label, "Waist");
+    assert.equal(slot(result.placed, "feet").label, "Feet");
     for (const id of ["neck", "ring1", "ring2", "frontBar"]) {
       const piece = slot(result.placed, id);
       assert.equal(piece.setName, "Corpseburster");
