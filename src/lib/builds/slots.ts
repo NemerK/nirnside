@@ -74,14 +74,14 @@ function specificKind(text: string): SlotKind | null {
   if (!blob.trim()) return null;
   if (/\bnecks?\b|\bnecklaces?\b|\bamulets?\b|\bchokers?\b|\btorcs?\b/.test(blob)) return "neck";
   if (/\brings?\b/.test(blob)) return "ring";
-  if (/\bshoulders?\b|\bspaulders?\b|\bpauldrons?\b|\bepaulets?\b/.test(blob)) return "shoulders";
+  if (/\bshoulders?\b|\bspaulders?\b|\bpauldrons?\b|\bepaulets?\b|\barm cops\b/.test(blob)) return "shoulders";
   if (/(?:warmasks?|\bmasks?|\bheads?|\bhelms?|\bhelmets?|\bhats?|\bcowls?|\bhoods?|\bcirclets?)\b/.test(blob)) {
     return "head";
   }
   if (/\bchests?\b|\bcuirasses?\b|\brobes?\b|\bjacks?\b/.test(blob)) return "chest";
   if (/\bhands\b|\bgloves?\b|\bgauntlets?\b|\bbracers?\b/.test(blob)) return "hands";
   if (/\bwaists?\b|\bbelts?\b|\bgirdles?\b|\bsashes?\b|\bkilts?\b/.test(blob)) return "waist";
-  if (/\blegs?\b|\bgreaves\b|\bbreeches\b/.test(blob)) return "legs";
+  if (/\blegs?\b|\bgreaves\b|\bbreeches\b|\bguards\b/.test(blob)) return "legs";
   if (/\bfeet\b|\bfoot\b|\bshoes?\b|\bboots?\b|\bsabatons?\b|\btreaders\b/.test(blob)) return "feet";
   if (/\bshields?\b/.test(blob)) return "shield";
   if (TWO_HAND.some((word) => blob.includes(word)) || /\btwo[\s-]?hand/.test(blob)) return "twoHand";

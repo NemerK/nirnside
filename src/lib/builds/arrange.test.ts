@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { arrange, type ArrangeSet, type Crafter, type OwnedGear, type PlacedPiece } from "./arrange";
+import { arrange, sourceSummary, type ArrangeSet, type Crafter, type OwnedGear, type PlacedPiece } from "./arrange";
 import {
   gearSetKey,
   isMonsterSet,
@@ -132,6 +132,10 @@ describe("reconstruction cost", () => {
     assert.equal(kindFromPiece("Slot 12", "Inferno Staff", "Corpseburster"), "twoHand");
     assert.equal(kindFromPiece("Weapon", "", "Deadly Strike Bow"), "twoHand");
     assert.equal(kindFromPiece("", "", "Huntsman's Warmask"), "head");
+    assert.equal(kindFromPiece("", "", "Null Arca Guards"), "legs");
+    assert.equal(kindFromPiece("", "", "Slivers of the Null Arca Guards"), "legs");
+    assert.equal(kindFromPiece("", "", "Slivers of the Null Arca Arm Cops"), "shoulders");
+    assert.equal(kindFromPiece("Medium Legs", "", "Slivers of the Null Arca"), "legs");
   });
 
   it("treats a head-and-shoulders dungeon set as a monster set", () => {
@@ -311,6 +315,20 @@ describe("arrange", () => {
     assert.match(chest.aside ?? "", /Infused/);
     assert.match(chest.aside ?? "", /Faris/);
     assert.match(chest.aside ?? "", /Worn/);
+  });
+
+  it("names the character who has a backpack piece", () => {
+    const result = arrange(
+      [set({ role: "body", name: "Null Arca", kinds: ["legs"], pieces: 1, collected: 22, total: 22, collectedKinds: ["legs"] })],
+      [own("Null Arca", "legs", "Divines", "backpack", "Faris")],
+      divines,
+    );
+    const legs = slot(result.placed, "legs");
+    assert.equal(legs.source.kind, "owned");
+    assert.equal(
+      sourceSummary(legs.source),
+      "Faris · Backpack · Divines",
+    );
   });
 
   it("lets a shoulder mythic take the shoulder and leaves the monster one piece short", () => {

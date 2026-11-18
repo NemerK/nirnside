@@ -404,6 +404,11 @@ local function readItem(bagId, slotIndex, location, owner, ownerId)
   end
   if item.level == 0 then item.level = nil end
   if item.setName then item.setName = zo_strformat("<<1>>", item.setName) end
+  -- The piece name is often just the set ("Slivers of the Null Arca") or a
+  -- medium piece word the planner must not guess ("Guards"). The equip type
+  -- is what says these are pants.
+  local typeLabel = pieceTypeInfo(link)
+  if typeLabel and typeLabel ~= "" then item.equipSlot = typeLabel end
   return item
 end
 

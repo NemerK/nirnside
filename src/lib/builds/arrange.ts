@@ -347,7 +347,7 @@ function placeWhere(source: Extract<PieceSource, { kind: "owned" }>): string {
 
 export function sourceSummary(source: PieceSource): string {
   if (source.kind === "owned") {
-    const who = source.location === "worn" && source.owner ? `${source.owner} · ` : "";
+    const who = source.owner ? `${source.owner} · ` : "";
     const trait = source.trait ? ` · ${source.trait}` : "";
     return `${who}${locationLabel(source.location)}${trait}`;
   }
