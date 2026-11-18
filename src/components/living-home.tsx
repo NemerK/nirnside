@@ -195,7 +195,7 @@ export function LivingHomeView({
         {model.faces.length > 1 ? (
           <div className="border-t border-border px-5 py-4 sm:px-8">
             <h2 className="text-xs font-medium text-fg-subtle">Roster</h2>
-            <div className="mt-3 flex gap-4 overflow-x-auto pb-1">
+            <div className="mt-3 flex gap-4 overflow-x-auto px-1 py-2">
               {model.faces.map((item) => {
                 const selected = item.id === face?.id;
                 const itemColor = colorByClass[item.className] ?? "var(--accent)";
@@ -248,7 +248,7 @@ function Avatar({ face, color, icon, portraitUrl }: { face: LivingFace; color: s
   const pct = leveling ? Math.round((face.level / 50) * 100) : 100;
   const badge = leveling ? String(face.level) : face.championPoints > 0 ? formatNumber(face.championPoints) : null;
   return (
-    <div className="relative -mt-12 h-[104px] w-[104px] sm:-mt-14">
+    <div className="relative z-10 -mt-12 h-[104px] w-[104px] sm:-mt-14">
       <div
         className="grid h-full w-full place-items-center rounded-full"
         style={{
