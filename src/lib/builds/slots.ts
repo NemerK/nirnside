@@ -47,35 +47,98 @@ const TWO_HAND = ["staff", "bow", "greatsword", "battle axe", "battleaxe", "maul
 
 /**
  * Map a stickerbook piece or bag item onto a planner slot kind.
- * "Main Hand" / "Off Hand" / "Two Hand" are weapons. Only the armor slot
- * named Hand or Hands is gloves.
+ *
+ * The addon stores the collection-slot string in `slot` ("Head", or "Slot 3"
+ * when the client string is missing) and the real item type in `type`
+ * ("Heavy Chest", "Inferno Staff", "Necklace"). Armor and jewelry live in
+ * that type, so both fields are read. The item name is only a fallback: a
+ * set name must not reclassify every piece.
+ *
+ * "Main Hand" / "Off Hand" / "Two Hand" are weapons. Only Hands, gloves,
+ * gauntlets, or bracers are the glove slot.
  */
 export function kindFromPiece(slot: string, type: string, name: string): SlotKind | null {
-  const slotL = slot.toLowerCase().trim();
-  const blob = `${type} ${name}`.toLowerCase();
-  if (slotL.includes("neck")) return "neck";
-  if (slotL.includes("ring")) return "ring";
-  if (slotL.includes("shoulder")) return "shoulders";
-  if (slotL === "head" || slotL.includes("helm")) return "head";
-  if (slotL.includes("chest")) return "chest";
-  if (slotL === "hands" || slotL === "hand" || slotL.includes("glove")) return "hands";
-  if (slotL.includes("waist") || slotL.includes("belt")) return "waist";
-  if (slotL.includes("leg")) return "legs";
-  if (slotL.includes("feet") || slotL.includes("foot") || slotL.includes("shoe") || slotL.includes("boot")) {
-    return "feet";
+  const labeled = specificKind(`${slot} ${type}`);
+  // Armor and jewelry on the slot or type win. A shield named on the item
+  // still beats an "Off Hand" label, and a bow beats a bare "Weapon" label.
+  if (labeled && labeled !== "oneHand" && labeled !== "twoHand") return labeled;
+  const named = specificKind(name);
+  if (named === "shield") return "shield";
+  if (labeled === "twoHand" || named === "twoHand") return "twoHand";
+  if (labeled === "oneHand" || named === "oneHand") return "oneHand";
+  return labeled ?? named ?? genericWeapon(`${slot} ${type} ${name}`);
+}
+
+function specificKind(text: string): SlotKind | null {
+  const blob = text.toLowerCase();
+  if (!blob.trim()) return null;
+  if (/\bnecks?\b|\bnecklaces?\b|\bamulets?\b|\bchokers?\b|\btorcs?\b/.test(blob)) return "neck";
+  if (/\brings?\b/.test(blob)) return "ring";
+  if (/\bshoulders?\b|\bspaulders?\b|\bpauldrons?\b|\bepaulets?\b/.test(blob)) return "shoulders";
+  if (/(?:warmasks?|\bmasks?|\bheads?|\bhelms?|\bhelmets?|\bhats?|\bcowls?|\bhoods?|\bcirclets?)\b/.test(blob)) {
+    return "head";
   }
-  if (blob.includes("shield")) return "shield";
-  if (TWO_HAND.some((word) => blob.includes(word)) || slotL.includes("two")) return "twoHand";
-  if (
-    slotL.includes("main") ||
-    slotL.includes("off") ||
-    slotL.includes("weapon") ||
-    slotL.includes("one") ||
-    ["dagger", "axe", "mace", "sword"].some((word) => blob.includes(word))
-  ) {
+  if (/\bchests?\b|\bcuirasses?\b|\brobes?\b|\bjacks?\b/.test(blob)) return "chest";
+  if (/\bhands\b|\bgloves?\b|\bgauntlets?\b|\bbracers?\b/.test(blob)) return "hands";
+  if (/\bwaists?\b|\bbelts?\b|\bgirdles?\b|\bsashes?\b|\bkilts?\b/.test(blob)) return "waist";
+  if (/\blegs?\b|\bgreaves\b|\bbreeches\b/.test(blob)) return "legs";
+  if (/\bfeet\b|\bfoot\b|\bshoes?\b|\bboots?\b|\bsabatons?\b|\btreaders\b/.test(blob)) return "feet";
+  if (/\bshields?\b/.test(blob)) return "shield";
+  if (TWO_HAND.some((word) => blob.includes(word)) || /\btwo[\s-]?hand/.test(blob)) return "twoHand";
+  if (/\bmain\s*hand\b|\boff\s*hand\b|\bone[\s-]?hand|\bdaggers?\b|\baxes?\b|\bmaces?\b|\bswords?\b/.test(blob)) {
     return "oneHand";
   }
   return null;
+}
+
+/** A bare "Weapon" label, once staves and bows have already been claimed. */
+function genericWeapon(text: string): SlotKind | null {
+  return /\bweapons?\b/.test(text.toLowerCase()) ? "oneHand" : null;
+}
+
+const BODY_SLOTS: readonly SlotKind[] = ["chest", "hands", "waist", "legs", "feet"];
+const WEAPON_SLOTS: readonly SlotKind[] = ["oneHand", "twoHand", "shield"];
+
+/**
+ * Slots a chosen role is allowed to fill.
+ *
+ * Body always includes the five body slots, and front always includes weapons
+ * and jewelry, even when the stickerbook only recorded weapons (a perfected
+ * trial set, or a piece whose slot label did not parse). The set's own kinds
+ * stay in the list so an owned necklace can still be used.
+ */
+export function kindsForRole(
+  role: "body" | "monster" | "mythic" | "front" | "back",
+  known: readonly SlotKind[],
+  name = "",
+): SlotKind[] {
+  if (role === "mythic") {
+    const kind = known[0] ?? kindFromPiece("", "", name);
+    return kind ? [kind] : [];
+  }
+  if (role === "monster") return ["head", "shoulders"];
+  if (role === "back") {
+    const weapons = known.filter((kind) => WEAPON_SLOTS.includes(kind));
+    return weapons.length > 0 ? weapons : [...WEAPON_SLOTS];
+  }
+  const defaults: readonly SlotKind[] =
+    role === "body" ? BODY_SLOTS : [...WEAPON_SLOTS, "neck", "ring", ...BODY_SLOTS];
+  const kinds = [...known];
+  for (const kind of defaults) {
+    if (!kinds.includes(kind)) kinds.push(kind);
+  }
+  return kinds;
+}
+
+/**
+ * Monster sets are the head-and-shoulders sets. On a live account they sit
+ * under Dungeons, named for the dungeon, so the category rarely contains the
+ * word "monster".
+ */
+export function isMonsterSet(set: { mythic: boolean; category: string; kinds: readonly SlotKind[] }): boolean {
+  if (set.mythic) return false;
+  if (set.category.toLowerCase().includes("monster")) return true;
+  return set.kinds.length > 0 && set.kinds.every((kind) => kind === "head" || kind === "shoulders");
 }
 
 /** Names the research grid uses for one slot, across the three armor weights and weapons. */

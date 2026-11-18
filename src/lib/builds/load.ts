@@ -37,6 +37,10 @@ export function loadBuildPage(): BuildPageData {
       if (!kinds.includes(kind)) kinds.push(kind);
       if (piece.collected && !collectedKinds.includes(kind)) collectedKinds.push(kind);
     }
+    if (kinds.length === 0 && mythic) {
+      const inferred = pieceKind("", "", row.name);
+      if (inferred) kinds.push(inferred);
+    }
     if (kinds.length === 0 && !mythic) {
       for (const kind of kindsForCategory(row.category, row.subcategory)) {
         if (!kinds.includes(kind)) kinds.push(kind);
@@ -72,12 +76,13 @@ export function loadBuildPage(): BuildPageData {
     const mythic = isMythicSet(entry.entry);
     const crafted = isCraftedCategory(entry.entry.category);
     if (!crafted && !mythic) continue;
+    const mythicKind = mythic ? pieceKind("", "", entry.entry.name) : null;
     sets.push({
       setId: entry.entry.setId ?? 0,
       name: entry.entry.name,
       category: entry.entry.category,
       keys,
-      kinds: mythic ? [] : kindsForCategory(entry.entry.category, null),
+      kinds: mythic ? (mythicKind ? [mythicKind] : []) : kindsForCategory(entry.entry.category, null),
       collectedKinds: [],
       collected: 0,
       total: 0,

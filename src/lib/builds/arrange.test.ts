@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { arrange, type ArrangeSet, type Crafter, type OwnedGear, type PlacedPiece } from "./arrange";
-import { gearSetKey, kindFromPiece, reconstructionCost, setMatchKeys, type SlotKind } from "./slots";
+import { gearSetKey, isMonsterSet, kindFromPiece, kindsForRole, reconstructionCost, setMatchKeys, type SlotKind } from "./slots";
 
 const ALL: SlotKind[] = [
   "head",
@@ -97,6 +97,43 @@ describe("reconstruction cost", () => {
     assert.equal(kindFromPiece("Two Hand", "", "Deadly Strike Bow"), "twoHand");
     assert.equal(kindFromPiece("Off Hand", "", "Coral Riptide Shield"), "shield");
     assert.equal(kindFromPiece("Hands", "Medium Hands", "Coral Riptide Bracers"), "hands");
+  });
+
+  it("reads armor and jewelry from the item type when the slot label is only a number", () => {
+    assert.equal(kindFromPiece("Slot 3", "Heavy Chest", "Perfected Slivers of the Null Arca"), "chest");
+    assert.equal(kindFromPiece("Slot 1", "Medium Head", "Huntsman's Warmask"), "head");
+    assert.equal(kindFromPiece("Slot 2", "Medium Shoulders", "Slimecraw"), "shoulders");
+    assert.equal(kindFromPiece("Slot 4", "Medium Hands", "Corpseburster"), "hands");
+    assert.equal(kindFromPiece("Slot 5", "Heavy Waist", "Corpseburster"), "waist");
+    assert.equal(kindFromPiece("Slot 6", "Heavy Legs", "Corpseburster"), "legs");
+    assert.equal(kindFromPiece("Slot 7", "Heavy Feet", "Corpseburster"), "feet");
+    assert.equal(kindFromPiece("Slot 8", "Necklace", "Perfected Slivers of the Null Arca"), "neck");
+    assert.equal(kindFromPiece("Slot 9", "Ring", "Perfected Slivers of the Null Arca"), "ring");
+    assert.equal(kindFromPiece("Slot 12", "Inferno Staff", "Corpseburster"), "twoHand");
+    assert.equal(kindFromPiece("Weapon", "", "Deadly Strike Bow"), "twoHand");
+    assert.equal(kindFromPiece("", "", "Huntsman's Warmask"), "head");
+  });
+
+  it("treats a head-and-shoulders dungeon set as a monster set", () => {
+    assert.equal(
+      isMonsterSet({ mythic: false, category: "Dungeons · Shipwright's Regret", kinds: ["head", "shoulders"] }),
+      true,
+    );
+    assert.equal(isMonsterSet({ mythic: false, category: "Monster Sets", kinds: ["head"] }), true);
+    assert.equal(
+      isMonsterSet({ mythic: false, category: "Trials · Dreadsail Reef", kinds: ["chest", "twoHand", "neck", "ring"] }),
+      false,
+    );
+    assert.equal(isMonsterSet({ mythic: true, category: "Mythic Items", kinds: ["head"] }), false);
+  });
+
+  it("still fills the body when the stickerbook only listed weapons", () => {
+    assert.deepEqual(kindsForRole("mythic", [], "Huntsman's Warmask"), ["head"]);
+    assert.deepEqual(kindsForRole("monster", ["head"]), ["head", "shoulders"]);
+    const body = kindsForRole("body", ["twoHand", "neck", "ring"]);
+    const front = kindsForRole("front", ["twoHand"]);
+    assert.ok(body.includes("chest") && body.includes("feet"));
+    assert.ok(front.includes("neck") && front.includes("ring") && front.includes("chest"));
   });
 
   it("treats perfected as its own set and ignores the word the", () => {
@@ -294,5 +331,61 @@ describe("arrange", () => {
     const rings = [slot(result.placed, "ring1"), slot(result.placed, "ring2")];
     assert.equal(rings.filter((piece) => piece.source.kind === "owned").length, 1);
     assert.equal(rings.filter((piece) => piece.source.kind === "transmute").length, 1);
+  });
+
+  it("fills the body and the mythic when the snapshot only classified weapons", () => {
+    const result = arrange(
+      [
+        set({
+          role: "body",
+          name: "Perfected Slivers of the Null Arca",
+          kinds: kindsForRole("body", ["twoHand", "neck", "ring"]),
+          pieces: 5,
+        }),
+        set({
+          role: "mythic",
+          name: "Huntsman's Warmask",
+          kinds: kindsForRole("mythic", [], "Huntsman's Warmask"),
+          pieces: 1,
+          collected: 1,
+          total: 1,
+          collectedKinds: ["head"],
+        }),
+        set({
+          role: "front",
+          name: "Corpseburster",
+          kinds: kindsForRole("front", ["twoHand"]),
+          pieces: 5,
+        }),
+        set({
+          role: "back",
+          name: "Merciless Charge",
+          kinds: kindsForRole("back", ["twoHand"]),
+          pieces: 2,
+          collected: 2,
+          total: 2,
+          collectedKinds: ["twoHand"],
+        }),
+      ],
+      [own("Corpseburster", "twoHand", "Precise", "backpack", "Gurslag Soul-Corruptor")],
+      [],
+    );
+    for (const id of ["chest", "hands", "waist", "legs", "feet"]) {
+      assert.equal(slot(result.placed, id).setName, "Perfected Slivers of the Null Arca");
+      assert.equal(slot(result.placed, id).source.kind, "farm");
+    }
+    assert.equal(slot(result.placed, "head").setName, "Huntsman's Warmask");
+    assert.equal(slot(result.placed, "head").source.kind, "transmute");
+    assert.equal(slot(result.placed, "frontBar").setName, "Corpseburster");
+    assert.equal(slot(result.placed, "frontBar").source.kind, "owned");
+    for (const id of ["neck", "ring1", "ring2"]) {
+      assert.equal(slot(result.placed, id).setName, "Corpseburster");
+    }
+    assert.equal(slot(result.placed, "backBar").setName, "Merciless Charge");
+    assert.equal(slot(result.placed, "backBar").source.kind, "transmute");
+    assert.equal(
+      result.short.find((row) => row.role === "body" || row.role === "front" || row.role === "mythic"),
+      undefined,
+    );
   });
 });
