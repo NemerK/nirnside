@@ -375,6 +375,37 @@ func TestLauncherSelfUpdateSwapsOnDigestChange(t *testing.T) {
 	}
 }
 
+func TestLauncherSelfUpdateUsesPublicDownloadWhenRateLimited(t *testing.T) {
+	dir := t.TempDir()
+	exePath := filepath.Join(dir, "Nirnside.exe")
+	if err := os.WriteFile(exePath, []byte("old-launcher"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	newBytes := []byte("feed-launcher")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/releases/latest") {
+			http.Error(w, "rate limit", http.StatusForbidden)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "Nirnside.exe") {
+			_, _ = w.Write(newBytes)
+		}
+	}))
+	defer srv.Close()
+	previous := publicLauncherURL
+	publicLauncherURL = func(string) string { return srv.URL + "/download/Nirnside.exe" }
+	t.Cleanup(func() { publicLauncherURL = previous })
+
+	status, restart := checkLauncherUpdateAt(exePath, dir, srv.URL)
+	if !restart {
+		t.Fatalf("a rate-limited releases API must still swap a newer public launcher, status: %q", status)
+	}
+	got, err := os.ReadFile(exePath)
+	if err != nil || string(got) != "feed-launcher" {
+		t.Fatalf("expected the public launcher on disk, got %q", string(got))
+	}
+}
+
 func TestLauncherSelfUpdateKeepsCurrentOnChecksumFailure(t *testing.T) {
 	dir := t.TempDir()
 	exePath := filepath.Join(dir, "Nirnside.exe")
@@ -474,6 +505,9 @@ func TestCleanupSwapArtifacts(t *testing.T) {
 }
 
 func TestUpdatePendingZip(t *testing.T) {
+	previous := commitFeed
+	commitFeed = func(string, string) (string, error) { return "", os.ErrInvalid }
+	t.Cleanup(func() { commitFeed = previous })
 	dir := t.TempDir()
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -510,6 +544,34 @@ func TestUpdatePendingZip(t *testing.T) {
 	// Offline or bad responses must read as "no update" (never block startup).
 	if updatePendingZip(dir, "http://127.0.0.1:1") {
 		t.Fatal("an unreachable probe must read as not pending")
+	}
+}
+
+func TestReopenUsesCommitFeedWhenAPIIsDown(t *testing.T) {
+	dir := t.TempDir()
+	const head = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	previous := commitFeed
+	commitFeed = func(repo, ref string) (string, error) {
+		return `<id>tag:github.com,2008:Grit::Commit/` + head + `</id>`, nil
+	}
+	t.Cleanup(func() { commitFeed = previous })
+	if err := os.WriteFile(filepath.Join(dir, revisionName), []byte(`{"sha":"def456"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !updatePendingZip(dir, "http://127.0.0.1:1") {
+		t.Fatal("reopen must notice a newer main from the public feed when the API cannot be reached")
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".next"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".next", builtRevisionName), []byte(head), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, revisionName), []byte(`{"sha":"`+head+`"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if updatePendingZip(dir, "http://127.0.0.1:1") {
+		t.Fatal("a reopen on the feed's commit must stay put")
 	}
 }
 

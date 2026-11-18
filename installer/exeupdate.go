@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,6 +81,9 @@ func checkLauncherUpdateAt(exePath, root, apiBase string) (status string, restar
 		return "check skipped (offline?) — keeping this launcher.", false
 	}
 	defer res.Body.Close()
+	if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests {
+		return swapLauncherFromURL(exePath, client, publicLauncherURL(updateRepo(root)))
+	}
 	if res.StatusCode != 200 {
 		return fmt.Sprintf("check skipped (GitHub %d) — keeping this launcher.", res.StatusCode), false
 	}
@@ -121,6 +125,49 @@ func checkLauncherUpdateAt(exePath, root, apiBase string) (status string, restar
 	}
 	if err := os.Rename(tmpPath, exePath); err != nil {
 		_ = os.Rename(oldPath, exePath) // put the working launcher back
+		return fmt.Sprintf("could not swap the launcher in place. (%v)", err), false
+	}
+	_ = os.Remove(oldPath)
+	return "updated — restarting into the new launcher…", true
+}
+
+/** Direct release download, used when the releases API is rate-limited. */
+var publicLauncherURL = func(repo string) string {
+	if !feedNameOK(repo) {
+		return ""
+	}
+	return "https://github.com/" + repo + "/releases/download/latest/Nirnside.exe"
+}
+
+func swapLauncherFromURL(exePath string, client *http.Client, url string) (string, bool) {
+	if url == "" {
+		return "check skipped (GitHub rate limit) — keeping this launcher.", false
+	}
+	local, err := fileSHA256(exePath)
+	if err != nil {
+		return "check skipped (GitHub rate limit) — keeping this launcher.", false
+	}
+	tmpPath := exePath + ".new"
+	if err := downloadFile(client, url, tmpPath, nil); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Sprintf("check skipped (GitHub rate limit) — keeping this launcher. (%v)", err), false
+	}
+	got, err := fileSHA256(tmpPath)
+	if err != nil || got == "" || got == local {
+		_ = os.Remove(tmpPath)
+		if err != nil {
+			return "check skipped (GitHub rate limit) — keeping this launcher.", false
+		}
+		return "up to date.", false
+	}
+	oldPath := exePath + ".old"
+	_ = os.Remove(oldPath)
+	if err := os.Rename(exePath, oldPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Sprintf("could not swap the launcher in place. (%v)", err), false
+	}
+	if err := os.Rename(tmpPath, exePath); err != nil {
+		_ = os.Rename(oldPath, exePath)
 		return fmt.Sprintf("could not swap the launcher in place. (%v)", err), false
 	}
 	_ = os.Remove(oldPath)

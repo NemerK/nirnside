@@ -21,13 +21,17 @@ import (
  * launch flow can update, rebuild, and start it again.
  */
 
-// True when the app code on disk (what the updater last applied) is behind
-// main. Never blocks startup for long; any probe failure reads as "no update".
+// True when this install is behind main. The public commit feed is asked
+// first: the REST API allows 60 requests an hour, and a refusal used to make
+// a reopen look like "already up to date" while the old server kept running.
 func updatePending(root, apiBase string) bool {
+	if sha, ok := remoteZipSha(apiBase, updateRepo(root), updateRef(root)); ok {
+		return installBehind(root, sha)
+	}
 	if _, err := os.Stat(filepath.Join(root, ".git")); err == nil {
 		return updatePendingGit(root)
 	}
-	return updatePendingZip(root, apiBase)
+	return false
 }
 
 func updatePendingGit(root string) bool {
@@ -48,7 +52,51 @@ func updatePendingZip(root, apiBase string) bool {
 	if !ok {
 		return false
 	}
-	return sha != revisionSha(filepath.Join(root, revisionName))
+	return installBehind(root, sha)
+}
+
+/** A running install is behind when its recorded commit, or the build it compiled, is not main. */
+func installBehind(root, remote string) bool {
+	if _, err := os.Stat(filepath.Join(root, ".git")); err == nil {
+		if out, err := exec.Command("git", "-C", root, "rev-parse", "HEAD").Output(); err == nil {
+			head := strings.TrimSpace(string(out))
+			if head != "" {
+				if !sameCommit(head, remote) {
+					return true
+				}
+				built := builtRevision(root)
+				return built != "" && !sameCommit(built, remote)
+			}
+		}
+	}
+	if !sameCommit(revisionSha(filepath.Join(root, revisionName)), remote) {
+		return true
+	}
+	built := builtRevision(root)
+	return built != "" && !sameCommit(built, remote)
+}
+
+func builtRevision(root string) string {
+	data, err := os.ReadFile(filepath.Join(root, ".next", builtRevisionName))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+func sameCommit(local, remote string) bool {
+	local, remote = strings.TrimSpace(local), strings.TrimSpace(remote)
+	if local == "" || remote == "" {
+		return false
+	}
+	if local == remote {
+		return true
+	}
+	shorter, longer := local, remote
+	if len(shorter) > len(longer) {
+		shorter, longer = longer, shorter
+	}
+	return len(shorter) >= 7 && strings.HasPrefix(longer, shorter)
 }
 
 var commitFeed = func(repo, ref string) (string, error) {
@@ -56,7 +104,13 @@ var commitFeed = func(repo, ref string) (string, error) {
 		return "", fmt.Errorf("bad update channel")
 	}
 	client := &http.Client{Timeout: 10 * time.Second}
-	res, err := client.Get("https://github.com/" + repo + "/commits/" + ref + ".atom")
+	req, err := http.NewRequest(http.MethodGet, "https://github.com/"+repo+"/commits/"+ref+".atom", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "NirnsideInstaller")
+	req.Header.Set("Accept", "application/atom+xml")
+	res, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -72,6 +126,14 @@ var commitFeed = func(repo, ref string) (string, error) {
 }
 
 var commitInFeed = regexp.MustCompile(`Grit::Commit/([0-9a-fA-F]{40})`)
+
+func shaFromFeed(body string) string {
+	match := commitInFeed.FindStringSubmatch(body)
+	if match == nil {
+		return ""
+	}
+	return strings.ToLower(match[1])
+}
 
 func feedNameOK(value string) bool {
 	if value == "" || strings.Contains(value, "..") {
@@ -93,8 +155,13 @@ func feedNameOK(value string) bool {
 	return true
 }
 
-/** The commit the next launch would apply. A rate-limited API falls through to the public commit feed. */
+/** The commit the next launch would apply. The public feed does not share the REST API allowance. */
 func remoteZipSha(apiBase, repo, ref string) (string, bool) {
+	if body, err := commitFeed(repo, ref); err == nil {
+		if sha := shaFromFeed(body); sha != "" {
+			return sha, true
+		}
+	}
 	client := &http.Client{Timeout: 10 * time.Second}
 	res, err := client.Get(apiBase + "/repos/" + repo + "/commits/" + ref)
 	if err != nil {
@@ -106,11 +173,10 @@ func remoteZipSha(apiBase, repo, ref string) (string, bool) {
 		if feedErr != nil {
 			return "", false
 		}
-		match := commitInFeed.FindStringSubmatch(body)
-		if match == nil {
-			return "", false
+		if sha := shaFromFeed(body); sha != "" {
+			return sha, true
 		}
-		return match[1], true
+		return "", false
 	}
 	if res.StatusCode != http.StatusOK {
 		return "", false
