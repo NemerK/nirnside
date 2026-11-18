@@ -123,6 +123,12 @@ export const ATLAS_NAV: IaGroup[] = [
         href: "/planner",
         blurb: "Essential, optional, and completionist goals.",
       },
+      {
+        id: "builds",
+        label: "Builds",
+        href: "/builds",
+        blurb: "Gear builds slotted from what this account owns, can craft, or can reconstruct.",
+      },
     ],
   },
   {
