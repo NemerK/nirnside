@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { arrange, sourceSummary, type ArrangeSet, type Crafter, type OwnedGear, type PlacedPiece } from "./arrange";
-import { defaultTraitPlan, sameTrait, weightFromPieceName, weightsForSet, type ArmorWeight, type TraitPlan } from "./traits";
+import { defaultTraitPlan, mixFor, sameTrait, weightFromPieceName, weightsForSet, type ArmorWeight, type TraitPlan } from "./traits";
 import {
   gearSetKey,
   isMonsterSet,
@@ -649,8 +649,16 @@ describe("front-bar weapons", () => {
   });
 });
 
-function plan(partial: Partial<TraitPlan> = {}): TraitPlan {
-  return { ...defaultTraitPlan(), ...partial };
+function plan(partial: Partial<TraitPlan> & { weight?: ArmorWeight } = {}): TraitPlan {
+  const base = defaultTraitPlan();
+  const mix = partial.weight ? mixFor(partial.weight) : null;
+  return {
+    ...base,
+    ...partial,
+    heavy: mix?.heavy ?? partial.heavy ?? base.heavy,
+    medium: mix?.medium ?? partial.medium ?? base.medium,
+    light: mix?.light ?? partial.light ?? base.light,
+  };
 }
 
 function weighted(gear: OwnedGear, weight: ArmorWeight): OwnedGear {
@@ -954,6 +962,78 @@ describe("trait and armor weight", () => {
       plan({ weight: "light" }),
     );
     assert.equal(slot(result.placed, "chest").weight, "light");
+  });
+
+  it("keeps the body set on the body when both sets can be the asked weight", () => {
+    const result = arrange(
+      [set({ role: "body", name: "Null Arca" }), set({ role: "front", name: "Corpseburster" })],
+      [],
+      [],
+      null,
+      plan(),
+    );
+    assert.equal(slot(result.placed, "chest").setName, "Null Arca");
+    assert.equal(slot(result.placed, "hands").setName, "Null Arca");
+    assert.equal(slot(result.placed, "neck").setName, "Corpseburster");
+    assert.equal(slot(result.placed, "frontBar").setName, "Corpseburster");
+    assert.equal(slot(result.placed, "chest").weight, "medium");
+  });
+
+  it("puts a craftable front set on the armor when the body set cannot be that weight", () => {
+    const result = arrange(
+      [
+        set({ role: "body", name: "Perfected Mantle of Siroria", pieces: 5, armorWeights: ["light"] }),
+        set({ role: "monster", name: "Slimecraw", kinds: ["head"], pieces: 1, armorWeights: ["light", "medium", "heavy"] }),
+        set({ role: "mythic", name: "Velothi Ur-Mage's Amulet", kinds: ["neck"], pieces: 1 }),
+        set({
+          role: "front",
+          name: "Tide-Born Wildstalker",
+          pieces: 5,
+          crafted: true,
+          traitsNeeded: 6,
+          armorWeights: ["light", "medium", "heavy"],
+        }),
+      ],
+      [],
+      divines,
+      null,
+      plan(),
+    );
+    for (const id of ["shoulders", "chest", "hands", "waist", "legs", "feet"]) {
+      const piece = slot(result.placed, id);
+      assert.equal(piece.setName, "Tide-Born Wildstalker", id);
+      assert.equal(piece.weight, "medium", id);
+    }
+    assert.equal(slot(result.placed, "head").setName, "Slimecraw");
+    assert.equal(slot(result.placed, "head").weight, "medium");
+    assert.equal(slot(result.placed, "neck").setName, "Velothi Ur-Mage's Amulet");
+    assert.equal(slot(result.placed, "ring1").setName, "Perfected Mantle of Siroria");
+    assert.equal(slot(result.placed, "ring2").setName, "Perfected Mantle of Siroria");
+    assert.equal(slot(result.placed, "frontBar").setName, "Tide-Born Wildstalker");
+    const weights = result.placed.filter((piece) => piece.weight).map((piece) => piece.weight);
+    assert.equal(weights.filter((weight) => weight === "medium").length, 7);
+    assert.equal(weights.filter((weight) => weight === "light").length, 0);
+  });
+
+  it("gives the one light slot to the light set in a 1/5/1 mix", () => {
+    const result = arrange(
+      [
+        set({ role: "body", name: "Perfected Mantle of Siroria", pieces: 5, armorWeights: ["light"] }),
+        set({ role: "monster", name: "Slimecraw", kinds: ["head"], pieces: 1, armorWeights: ["light", "medium", "heavy"] }),
+        set({ role: "front", name: "Tide-Born Wildstalker", pieces: 5, crafted: true, traitsNeeded: 6, armorWeights: ["light", "medium", "heavy"] }),
+      ],
+      [],
+      divines,
+      null,
+      plan({ heavy: 1, medium: 5, light: 1 }),
+    );
+    const armor = ["head", "shoulders", "chest", "hands", "waist", "legs", "feet"].map((id) => slot(result.placed, id));
+    const count = (weight: string) => armor.filter((piece) => piece.weight === weight).length;
+    assert.equal(count("heavy"), 1);
+    assert.equal(count("medium"), 5);
+    assert.equal(count("light"), 1);
+    assert.equal(armor.filter((piece) => piece.weight === "light" && piece.setName === "Perfected Mantle of Siroria").length, 1);
+    assert.equal(slot(result.placed, "frontBar").setName, "Tide-Born Wildstalker");
   });
 
   it("wears a mythic as it is, whatever trait and weight the build asked for", () => {

@@ -1,5 +1,5 @@
 import type { FrontWeapon } from "./slots";
-import { defaultTraitPlan, type ArmorWeight, type TraitPlan } from "./traits";
+import { defaultTraitPlan, type TraitPlan } from "./traits";
 
 /** A gear build the player saved. Not part of the ESO snapshot. */
 export interface SavedBuild {
@@ -21,7 +21,10 @@ export interface SavedBuild {
   frontOff: FrontWeapon | null;
   backSetId: number | null;
   backName: string | null;
-  weight: ArmorWeight;
+  /** How many of the seven armor slots should be heavy, medium, and light. */
+  heavy: number;
+  medium: number;
+  light: number;
   armorTrait: string;
   jewelryTrait: string;
   frontTrait: string;
@@ -50,10 +53,17 @@ export function emptyBuild(): Omit<SavedBuild, "id" | "name" | "createdAt"> {
 export function traitPlanOf(build: TraitPlan): TraitPlan {
   const base = defaultTraitPlan();
   return {
-    weight: build.weight ?? base.weight,
+    heavy: mixCount(build.heavy, base.heavy),
+    medium: mixCount(build.medium, base.medium),
+    light: mixCount(build.light, base.light),
     armorTrait: build.armorTrait || base.armorTrait,
     jewelryTrait: build.jewelryTrait || base.jewelryTrait,
     frontTrait: build.frontTrait || base.frontTrait,
     backTrait: build.backTrait || base.backTrait,
   };
+}
+
+function mixCount(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.min(7, Math.round(value)));
 }

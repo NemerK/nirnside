@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getDb } from "./index";
 import { emptyBuild, type SavedBuild } from "../builds/saved";
 import { isTwoHandedWeapon, parseFrontWeapon } from "../builds/slots";
-import { ARMOR_TRAITS, defaultTraitPlan, isArmorWeight, JEWELRY_TRAITS, WEAPON_TRAITS, type ArmorWeight } from "../builds/traits";
+import { ARMOR_TRAITS, defaultTraitPlan, isArmorWeight, JEWELRY_TRAITS, mixFor, WEAPON_TRAITS } from "../builds/traits";
 
 function db() {
   return getDb();
@@ -30,7 +30,8 @@ function rowToBuild(row: { id: string; name: string; json: string; createdAt: nu
   const frontMain = parseFrontWeapon(typeof parsed.frontMain === "string" ? parsed.frontMain : "");
   const frontOff = parseFrontWeapon(typeof parsed.frontOff === "string" ? parsed.frontOff : "");
   const plan = defaultTraitPlan();
-  const weight: ArmorWeight = isArmorWeight(parsed.weight) ? parsed.weight : plan.weight;
+  const legacyWeight = (parsed as { weight?: unknown }).weight;
+  const legacy = isArmorWeight(legacyWeight) ? mixFor(legacyWeight) : null;
   return {
     id: row.id,
     name: row.name,
@@ -48,12 +49,19 @@ function rowToBuild(row: { id: string; name: string; json: string; createdAt: nu
     frontOff: frontMain && !isTwoHandedWeapon(frontMain) && frontOff && !isTwoHandedWeapon(frontOff) ? frontOff : null,
     backSetId: num(parsed.backSetId),
     backName: text(parsed.backName),
-    weight,
+    heavy: mixCount(parsed.heavy, legacy?.heavy ?? plan.heavy),
+    medium: mixCount(parsed.medium, legacy?.medium ?? plan.medium),
+    light: mixCount(parsed.light, legacy?.light ?? plan.light),
     armorTrait: listed(parsed.armorTrait, ARMOR_TRAITS, plan.armorTrait),
     jewelryTrait: listed(parsed.jewelryTrait, JEWELRY_TRAITS, plan.jewelryTrait),
     frontTrait: listed(parsed.frontTrait, WEAPON_TRAITS, plan.frontTrait),
     backTrait: listed(parsed.backTrait, WEAPON_TRAITS, plan.backTrait),
   };
+}
+
+function mixCount(value: unknown, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.min(7, Math.round(value)));
 }
 
 function listed(value: unknown, allowed: readonly string[], fallback: string): string {

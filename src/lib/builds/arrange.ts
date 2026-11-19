@@ -22,6 +22,7 @@ import {
   weightLabel,
   type ArmorWeight,
   type TraitPlan,
+  type WeightMix,
 } from "./traits";
 
 export type GearRole = "body" | "monster" | "mythic" | "front" | "back";
@@ -168,6 +169,74 @@ const CRAFT = 8;
 const FARM = 400;
 /** One missing piece is worse than farming every other slot. */
 const SHORT = 1_000_000;
+/** One step of distance from the asked heavy/medium/light mix. Larger than any piece-count miss. */
+const WEIGHT_POINT = SHORT * 8;
+/** An armor slot left empty is worse than wearing the wrong weight, so a chosen set still appears. */
+const EMPTY_ARMOR = SHORT * 20;
+/** The front set keeps the front weapons even when another set is short of its piece count. */
+const FRONT_WEAPON = SHORT * 4;
+
+const MIX_WEIGHTS: readonly ArmorWeight[] = ["heavy", "medium", "light"];
+
+function allowedWeights(set: ArrangeSet): ArmorWeight[] {
+  if (set.role === "mythic") {
+    const only = set.armorWeights?.[0];
+    return only ? [only] : [];
+  }
+  if (set.armorWeights == null) return [...MIX_WEIGHTS];
+  return MIX_WEIGHTS.filter((weight) => set.armorWeights!.includes(weight));
+}
+
+function helpsMix(set: ArrangeSet, plan: TraitPlan): boolean {
+  return allowedWeights(set).some((weight) => plan[weight] > 0);
+}
+
+function isWeaponKind(kind: SlotKind): boolean {
+  return kind === "oneHand" || kind === "twoHand" || kind === "shield";
+}
+
+/**
+ * A set may pass its piece count when that is the only way to hit the weight mix,
+ * and the front set may pass it to keep the weapons it was chosen for.
+ */
+function mayExceed(set: ArrangeSet, other: ArrangeSet | undefined, slot: Unit, plan: TraitPlan): boolean {
+  if (isBodyArmor(slot.kind)) {
+    if (!helpsMix(set, plan)) return false;
+    if (other && helpsMix(other, plan)) return false;
+    return true;
+  }
+  return set.role === "front" && slot.preferred === "front" && isWeaponKind(slot.kind);
+}
+
+function assignSlotWeights(slots: readonly { id: string; set: ArrangeSet }[], plan: TraitPlan): Map<string, ArmorWeight> {
+  const left: WeightMix = { heavy: plan.heavy, medium: plan.medium, light: plan.light };
+  const map = new Map<string, ArmorWeight>();
+  const ordered = [...slots].sort((a, b) => allowedWeights(a.set).length - allowedWeights(b.set).length);
+  for (const slot of ordered) {
+    const options = allowedWeights(slot.set);
+    const needed = options.filter((weight) => left[weight] > 0).sort((a, b) => left[a] - left[b]);
+    if (needed.length > 0) {
+      const pick = needed[0]!;
+      map.set(slot.id, pick);
+      left[pick] -= 1;
+      continue;
+    }
+    const wish = [...MIX_WEIGHTS].sort((a, b) => left[b] - left[a])[0]!;
+    map.set(slot.id, wish);
+  }
+  return map;
+}
+
+function wornWeight(set: ArrangeSet, asked: ArmorWeight): ArmorWeight | null {
+  if (set.role === "mythic") return set.armorWeights?.[0] ?? null;
+  if (setAllowsWeight(set.armorWeights, asked)) return asked;
+  if (set.armorWeights?.length === 1) return set.armorWeights[0] ?? null;
+  return null;
+}
+
+function mixDistance(actual: WeightMix, plan: TraitPlan): number {
+  return MIX_WEIGHTS.reduce((sum, weight) => sum + Math.abs(actual[weight] - plan[weight]), 0);
+}
 
 function sameSet(set: ArrangeSet, item: OwnedGear): boolean {
   if (set.setId != null && set.setId > 0 && item.setId != null && item.setId > 0 && set.setId === item.setId) {
@@ -200,6 +269,8 @@ interface Goal {
   plan: TraitPlan;
   set: ArrangeSet;
   slotId: string | null;
+  /** The weight this armor slot is being made in. */
+  slotWeight: ArmorWeight;
 }
 
 function divineCrafter(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], weapon?: FrontWeapon): Crafter | null {
@@ -219,8 +290,8 @@ function traitCrafter(goal: Goal, kind: SlotKind, crafters: Crafter[], weapon?: 
   if (!set.crafted || set.traitsNeeded == null) return null;
   const wanted = traitFor(goal.plan, goal.slotId, kind, set.role);
   if (!wanted) return null;
-  if (isBodyArmor(kind) && !setAllowsWeight(set.armorWeights, goal.plan.weight)) return null;
-  const names = researchLineNames(kind, isBodyArmor(kind) ? goal.plan.weight : null, weapon ? weaponResearchLine(weapon) : null);
+  if (isBodyArmor(kind) && !setAllowsWeight(set.armorWeights, goal.slotWeight)) return null;
+  const names = researchLineNames(kind, isBodyArmor(kind) ? goal.slotWeight : null, weapon ? weaponResearchLine(weapon) : null);
   let best: { crafter: Crafter; known: number } | null = null;
   for (const crafter of crafters) {
     const lines =
@@ -256,7 +327,7 @@ function weaponCollected(set: ArrangeSet, kind: SlotKind, weapon?: FrontWeapon):
 
 function weightBlocked(goal: Goal, kind: SlotKind): boolean {
   if (goal.set.role === "mythic" || !isBodyArmor(kind)) return false;
-  return !setAllowsWeight(goal.set.armorWeights, goal.plan.weight);
+  return !setAllowsWeight(goal.set.armorWeights, goal.slotWeight);
 }
 
 function weightNote(set: ArrangeSet): string {
@@ -275,7 +346,7 @@ function fallbackChoice(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], we
   const collected = weaponCollected(set, kind, weapon);
   const crystals = collected ? reconstructionCost(set.collected, set.total) : null;
   const divine = wantsDivines(kind) && divinesKnown(kind, crafters);
-  const pieceWeight = goal && isBodyArmor(kind) && set.role !== "mythic" ? goal.plan.weight : null;
+  const pieceWeight = goal && isBodyArmor(kind) && set.role !== "mythic" ? goal.slotWeight : null;
   const options: Choice[] = [];
   if (crafter) {
     options.push({
@@ -332,7 +403,7 @@ function ownedSource(
 function ownedWeightBlocks(item: OwnedGear, kind: SlotKind, goal: Goal): boolean {
   if (goal.set.role === "mythic" || !isBodyArmor(kind)) return false;
   if (!item.weight) return false;
-  return item.weight !== goal.plan.weight;
+  return item.weight !== goal.slotWeight;
 }
 
 function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Crafter[], goal?: Goal | null): Choice | null {
@@ -384,9 +455,21 @@ function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Cr
  * Give each slot the cheapest real source, and never use one physical item twice.
  * Owned pieces are taken only when they beat crafting, reconstructing, or farming.
  */
-function goalFor(plan: TraitPlan | null | undefined, set: ArrangeSet, slotId: string | null): Goal | null {
+function goalFor(
+  plan: TraitPlan | null | undefined,
+  set: ArrangeSet,
+  slotId: string | null,
+  weights?: ReadonlyMap<string, ArmorWeight> | null,
+): Goal | null {
   if (!plan) return null;
-  return { plan, set, slotId };
+  const asked = (slotId && weights?.get(slotId)) || dominantAsked(plan);
+  return { plan, set, slotId, slotWeight: asked };
+}
+
+function dominantAsked(plan: TraitPlan): ArmorWeight {
+  const ranked: ArmorWeight[] = ["medium", "heavy", "light"];
+  ranked.sort((a, b) => plan[b] - plan[a]);
+  return ranked[0] ?? "medium";
 }
 
 function allocate(
@@ -395,11 +478,12 @@ function allocate(
   owned: OwnedGear[],
   crafters: Crafter[],
   plan?: TraitPlan | null,
+  weights?: ReadonlyMap<string, ArmorWeight> | null,
 ): { cost: number; sources: PieceSource[]; used: OwnedGear[] } {
   const mine = owned
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => sameSet(set, item));
-  const fallbacks = units.map((unit) => fallbackChoice(set, unit.kind, crafters, unit.weapon, goalFor(plan, set, unit.id)));
+  const fallbacks = units.map((unit) => fallbackChoice(set, unit.kind, crafters, unit.weapon, goalFor(plan, set, unit.id, weights)));
   const used = new Set<number>();
   const chosen: (Choice | null)[] = units.map(() => null);
 
@@ -408,7 +492,7 @@ function allocate(
     mine.forEach(({ item, index }) => {
       if (item.kind !== unit.kind) return;
       if (unit.weapon && item.weapon !== unit.weapon) return;
-      const choice = itemChoice(item, index, unit.kind, crafters, goalFor(plan, set, unit.id));
+      const choice = itemChoice(item, index, unit.kind, crafters, goalFor(plan, set, unit.id, weights));
       if (!choice) return;
       const save = fallbacks[unitIndex]!.cost - choice.cost;
       if (save > 0) offers.push({ unit: unitIndex, choice, save });
@@ -442,19 +526,20 @@ function asideFor(
   used: readonly OwnedGear[],
   crafters: Crafter[],
   plan?: TraitPlan | null,
+  weights?: ReadonlyMap<string, ArmorWeight> | null,
 ): string | null {
   if (source.kind === "owned") return null;
   const leftover = owned.filter(
     (item) => sameSet(set, item) && item.kind === unit.kind && !used.includes(item) && (!unit.weapon || item.weapon === unit.weapon),
   );
   if (leftover.length === 0) return null;
-  const goal = goalFor(plan, set, unit.id);
-  if (goal && isBodyArmor(unit.kind) && set.role !== "mythic" && setAllowsWeight(set.armorWeights, goal.plan.weight)) {
-    const wrong = leftover.filter((item) => item.weight && item.weight !== goal.plan.weight);
-    const usable = leftover.filter((item) => !item.weight || item.weight === goal.plan.weight);
+  const goal = goalFor(plan, set, unit.id, weights);
+  if (goal && isBodyArmor(unit.kind) && set.role !== "mythic" && setAllowsWeight(set.armorWeights, goal.slotWeight)) {
+    const wrong = leftover.filter((item) => item.weight && item.weight !== goal.slotWeight);
+    const usable = leftover.filter((item) => !item.weight || item.weight === goal.slotWeight);
     if (usable.length === 0 && wrong[0]?.weight) {
       const where = `${wrong[0].owner ? `${wrong[0].owner} · ` : ""}${locationLabel(wrong[0].location)} · ${wrong[0].itemName}`;
-      return `${where} is ${weightLabel(wrong[0].weight)}. That weight cannot be changed, so this piece is made as ${weightLabel(goal.plan.weight)}.`;
+      return `${where} is ${weightLabel(wrong[0].weight)}. That weight cannot be changed, so this piece is made as ${weightLabel(goal.slotWeight)}.`;
     }
   }
   const item = leftover
@@ -472,13 +557,19 @@ function asideFor(
   return null;
 }
 
-function placedWeight(set: ArrangeSet, unit: Unit, source: PieceSource, plan: TraitPlan | null): ArmorWeight | null {
+function placedWeight(
+  set: ArrangeSet,
+  unit: Unit,
+  source: PieceSource,
+  plan: TraitPlan | null,
+  asked: ArmorWeight | null,
+): ArmorWeight | null {
   if (!isBodyArmor(unit.kind)) return null;
   if (set.role === "mythic") return set.armorWeights?.[0] ?? null;
   if (source.kind === "owned") return source.weight ?? null;
-  if (!plan) return null;
-  if (!setAllowsWeight(set.armorWeights, plan.weight)) return set.armorWeights?.length === 1 ? (set.armorWeights[0] ?? null) : null;
-  return plan.weight;
+  if (!plan || !asked) return null;
+  if (!setAllowsWeight(set.armorWeights, asked)) return set.armorWeights?.length === 1 ? (set.armorWeights[0] ?? null) : null;
+  return asked;
 }
 
 function placeWhere(source: Extract<PieceSource, { kind: "owned" }>): string {
@@ -586,6 +677,60 @@ function take(units: Unit[], kind: SlotKind): Unit | null {
 interface Fixed {
   unit: Unit;
   role: GearRole;
+}
+
+function weightScore(
+  flex: Unit[],
+  assigned: readonly number[],
+  fixed: readonly Fixed[],
+  sets: readonly ArrangeSet[],
+  plan: TraitPlan,
+): { penalty: number; frontWeapons: number } {
+  const armor: { id: string; set: ArrangeSet }[] = [];
+  let empty = 0;
+  let frontWeapons = 0;
+  const body = sets.find((set) => set.role === "body");
+  const front = sets.find((set) => set.role === "front");
+  flex.forEach((slot, index) => {
+    const who = assigned[index] ?? -1;
+    const set = who === 0 ? body : who === 1 ? front : undefined;
+    if (isBodyArmor(slot.kind)) {
+      if (set) armor.push({ id: slot.id, set });
+      else if ((body && canWear(body, slot.kind)) || (front && canWear(front, slot.kind))) empty += 1;
+    }
+    if (front && isWeaponKind(slot.kind) && slot.preferred === "front" && canWear(front, slot.kind) && set?.role !== "front") {
+      frontWeapons += FRONT_WEAPON * slot.pieces;
+    }
+  });
+  for (const entry of fixed) {
+    if (!isBodyArmor(entry.unit.kind)) continue;
+    const set = sets.find((item) => item.role === entry.role);
+    if (set) armor.push({ id: entry.unit.id, set });
+  }
+  const asked = onlyAsked(plan);
+  if (asked) {
+    let matched = 0;
+    let other = 0;
+    for (const slot of armor) {
+      const weight = wornWeight(slot.set, asked);
+      if (weight === asked) matched += 1;
+      else if (weight) other += 1;
+    }
+    const distance = Math.abs(matched - plan[asked]) + other;
+    return { penalty: distance * WEIGHT_POINT + empty * EMPTY_ARMOR, frontWeapons };
+  }
+  const assignedWeights = assignSlotWeights(armor, plan);
+  const actual: WeightMix = { heavy: 0, medium: 0, light: 0 };
+  for (const slot of armor) {
+    const weight = wornWeight(slot.set, assignedWeights.get(slot.id) ?? dominantAsked(plan));
+    if (weight) actual[weight] += 1;
+  }
+  return { penalty: mixDistance(actual, plan) * WEIGHT_POINT + empty * EMPTY_ARMOR, frontWeapons };
+}
+
+function onlyAsked(plan: TraitPlan): ArmorWeight | null {
+  const asked = MIX_WEIGHTS.filter((weight) => plan[weight] > 0);
+  return asked.length === 1 ? asked[0]! : null;
 }
 
 function lockFixed(
@@ -833,8 +978,16 @@ export function arrange(
             fixedShort +
             (body ? Math.max(0, body.pieces - bodyPieces) : 0) +
             (front ? Math.max(0, front.pieces - frontPieces) : 0);
+          const weights = plan ? weightScore(flex, assigned, fixed, sets, plan) : { penalty: 0, frontWeapons: 0 };
           const score =
-            short * SHORT + cost * 100 - preferred + stylePenalty(frontStyle) + stylePenalty(backStyle) + order / 1000;
+            weights.penalty +
+            weights.frontWeapons +
+            short * SHORT +
+            cost * 100 -
+            preferred +
+            stylePenalty(frontStyle) +
+            stylePenalty(backStyle) +
+            order / 1000;
           if (score < bestScore) {
             bestScore = score;
             bestAssigned = assigned.slice();
@@ -843,12 +996,12 @@ export function arrange(
         }
         const slot = flex[index]!;
         walk(index + 1, bodyPieces, frontPieces);
-        if (body && bodyPieces + slot.pieces <= body.pieces && canWear(body, slot.kind)) {
+        if (body && canWear(body, slot.kind) && (bodyPieces + slot.pieces <= body.pieces || (plan && mayExceed(body, front, slot, plan)))) {
           assigned[index] = 0;
           walk(index + 1, bodyPieces + slot.pieces, frontPieces);
           assigned[index] = -1;
         }
-        if (front && frontPieces + slot.pieces <= front.pieces && canWear(front, slot.kind)) {
+        if (front && canWear(front, slot.kind) && (frontPieces + slot.pieces <= front.pieces || (plan && mayExceed(front, body, slot, plan)))) {
           assigned[index] = 1;
           walk(index + 1, bodyPieces, frontPieces + slot.pieces);
           assigned[index] = -1;
@@ -885,6 +1038,12 @@ export function arrange(
     group.slots.push(slot);
     bySet.set(id, group);
   }
+  const askedWeights = plan
+    ? assignSlotWeights(
+        slots.filter((slot) => isBodyArmor(slot.unit.kind)).map((slot) => ({ id: slot.unit.id, set: slot.set })),
+        plan,
+      )
+    : null;
   for (const group of bySet.values()) {
     const priced = allocate(
       group.set,
@@ -892,6 +1051,7 @@ export function arrange(
       owned,
       crafters,
       plan,
+      askedWeights,
     );
     group.slots.forEach((slot, index) => {
       const source = priced.sources[index]!;
@@ -907,8 +1067,8 @@ export function arrange(
         source,
         preferred: slot.preferred,
         why: slot.preferred ? null : whyOff(slot.set, source),
-        aside: asideFor(slot.set, slot.unit, source, owned, priced.used, crafters, plan),
-        weight: placedWeight(slot.set, slot.unit, source, plan),
+        aside: asideFor(slot.set, slot.unit, source, owned, priced.used, crafters, plan, askedWeights),
+        weight: placedWeight(slot.set, slot.unit, source, plan, askedWeights?.get(slot.unit.id) ?? null),
       });
     });
   }

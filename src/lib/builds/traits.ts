@@ -52,22 +52,69 @@ export const JEWELRY_TRAITS = [
   "Swift",
 ] as const;
 
-export interface TraitPlan {
-  weight: ArmorWeight;
+/** The seven armor slots: head, shoulders, chest, hands, waist, legs, feet. */
+export const ARMOR_SLOT_COUNT = 7;
+
+export interface WeightMix {
+  heavy: number;
+  medium: number;
+  light: number;
+}
+
+export interface TraitPlan extends WeightMix {
   armorTrait: string;
   jewelryTrait: string;
   frontTrait: string;
   backTrait: string;
 }
 
+export function mixFor(weight: ArmorWeight): WeightMix {
+  return {
+    heavy: weight === "heavy" ? ARMOR_SLOT_COUNT : 0,
+    medium: weight === "medium" ? ARMOR_SLOT_COUNT : 0,
+    light: weight === "light" ? ARMOR_SLOT_COUNT : 0,
+  };
+}
+
 export function defaultTraitPlan(): TraitPlan {
   return {
-    weight: "medium",
+    ...mixFor("medium"),
     armorTrait: "Divines",
     jewelryTrait: "Bloodthirsty",
     frontTrait: "Infused",
     backTrait: "Infused",
   };
+}
+
+/** The weight the mix asks for most. A tie prefers medium, then heavy. */
+export function dominantWeight(mix: WeightMix): ArmorWeight {
+  const ranked: ArmorWeight[] = ["medium", "heavy", "light"];
+  ranked.sort((a, b) => mix[b] - mix[a]);
+  return ranked[0] ?? "medium";
+}
+
+/**
+ * Move one piece between weights and keep the seven-piece total.
+ * Adding a weight takes it from the largest of the other two.
+ * Removing a weight gives it to medium, or to the other weight when medium is the one changing.
+ */
+export function stepMix(mix: WeightMix, which: ArmorWeight, delta: 1 | -1): WeightMix {
+  const next = { ...mix };
+  if (delta > 0) {
+    if (next[which] >= ARMOR_SLOT_COUNT) return mix;
+    const donors = (["heavy", "medium", "light"] as const).filter((key) => key !== which && next[key] > 0);
+    if (donors.length === 0) return mix;
+    donors.sort((a, b) => next[b] - next[a] || (a === "medium" ? -1 : b === "medium" ? 1 : 0));
+    const donor = donors[0]!;
+    next[which] += 1;
+    next[donor] -= 1;
+    return next;
+  }
+  if (next[which] <= 0) return mix;
+  const receiver: ArmorWeight = which === "medium" ? (next.light >= next.heavy ? "light" : "heavy") : "medium";
+  next[which] -= 1;
+  next[receiver] += 1;
+  return next;
 }
 
 export function isArmorWeight(value: unknown): value is ArmorWeight {
