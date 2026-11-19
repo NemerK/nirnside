@@ -11,7 +11,7 @@ import { getAccount } from "@/lib/db/queries";
 export const dynamic = "force-dynamic";
 
 const SUBTITLE =
-  "Pick a body set, a monster set, one mythic, a front bar and a back bar, plus the armor weight and traits. Nirnside slots them from what you own, can craft, or can reconstruct.";
+  "Pick a body set, a monster set, one mythic, a front bar and a back bar, plus how many heavy, medium, and light pieces and which traits. Nirnside slots them from what you own, can craft, or can reconstruct.";
 
 export default function BuildsPage() {
   const account = safe(getAccount);

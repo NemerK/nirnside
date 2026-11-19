@@ -5,7 +5,7 @@ import { arrange, type ArrangeSet, type FrontBarWeapons, type GearRole, type Pla
 import { GameIcon } from "@/components/game-icon";
 import type { BuildPageData, BuildSetOption } from "@/lib/builds/options";
 import { emptyBuild, traitPlanOf, type SavedBuild } from "@/lib/builds/saved";
-import { ARMOR_TRAITS, ARMOR_WEIGHTS, JEWELRY_TRAITS, WEAPON_TRAITS, weightLabel, type ArmorWeight } from "@/lib/builds/traits";
+import { ARMOR_TRAITS, ARMOR_WEIGHTS, JEWELRY_TRAITS, stepMix, WEAPON_TRAITS, weightLabel, type ArmorWeight } from "@/lib/builds/traits";
 import {
   FRONT_MAIN_WEAPONS,
   FRONT_OFF_WEAPONS,
@@ -329,22 +329,60 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
   );
 }
 
-function TraitPlanBar({ draft, onChange }: { draft: SavedBuild; onChange: (next: SavedBuild) => void }) {
+const MIX_COLORS: Record<ArmorWeight, string> = {
+  heavy: "text-red-400",
+  medium: "text-green-400",
+  light: "text-blue-400",
+};
+
+function TraitPlanBar({
+  draft,
+  onChange,
+}: {
+  draft: SavedBuild;
+  onChange: (next: SavedBuild | ((current: SavedBuild) => SavedBuild)) => void;
+}) {
+  const step = (which: ArmorWeight, delta: 1 | -1) =>
+    onChange((current) => ({
+      ...current,
+      ...stepMix({ heavy: current.heavy, medium: current.medium, light: current.light }, which, delta),
+    }));
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1 text-sm">
-        <span className="text-fg-muted">Armor weight</span>
-        <div className="flex overflow-hidden rounded-lg border border-border">
-          {ARMOR_WEIGHTS.map((row) => (
-            <button
-              key={row.id}
-              type="button"
-              onClick={() => onChange({ ...draft, weight: row.id })}
-              className={`px-3 py-1.5 text-sm ${draft.weight === row.id ? "bg-accent-soft text-accent" : "text-fg-muted hover:text-fg"}`}
-            >
-              {row.label}
-            </button>
-          ))}
+        <span className="text-fg-muted">
+          Armor pieces <span className="text-red-400">{draft.heavy}</span>
+          <span className="text-fg-subtle"> / </span>
+          <span className="text-green-400">{draft.medium}</span>
+          <span className="text-fg-subtle"> / </span>
+          <span className="text-blue-400">{draft.light}</span>
+        </span>
+        <div className="flex gap-2">
+          {(["heavy", "medium", "light"] as const).map((id) => {
+            const row = ARMOR_WEIGHTS.find((entry) => entry.id === id)!;
+            return (
+            <div key={row.id} className="flex items-center overflow-hidden rounded-lg border border-border">
+              <span className={`pl-2 text-xs font-medium ${MIX_COLORS[row.id]}`}>{row.label}</span>
+              <button
+                type="button"
+                aria-label={`Fewer ${row.label.toLowerCase()}`}
+                onClick={() => step(row.id, -1)}
+                className="px-2 py-1.5 text-fg-muted hover:text-fg"
+              >
+                −
+              </button>
+              <span className={`min-w-4 text-center text-sm font-medium ${MIX_COLORS[row.id]}`}>{draft[row.id]}</span>
+              <button
+                type="button"
+                aria-label={`More ${row.label.toLowerCase()}`}
+                onClick={() => step(row.id, 1)}
+                className="px-2 py-1.5 text-fg-muted hover:text-fg"
+              >
+                +
+              </button>
+            </div>
+            );
+          })}
         </div>
       </div>
       <TraitSelect
