@@ -557,7 +557,14 @@ function SlotCard({
             {piece.kind === "shield" && piece.role !== "mythic" ? (
               <p className="text-xs leading-snug text-fg-muted">Shields use the armor trait.</p>
             ) : null}
-            {piece.aside ? <p className="mt-0.5 text-xs leading-snug text-fg-muted">{piece.aside}</p> : null}
+            {piece.aside ? (
+              <p
+                className={`mt-0.5 text-xs leading-snug text-fg-muted ${piece.kind === "neck" || piece.kind === "ring" ? "line-clamp-2" : ""}`}
+                title={piece.aside}
+              >
+                {piece.aside}
+              </p>
+            ) : null}
           </>
         ) : (
           <p className="text-sm text-fg-subtle">{blocked ? "Blocked" : "Empty"}</p>
