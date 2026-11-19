@@ -303,10 +303,22 @@ describe("arrange", () => {
     assert.equal(rings.filter((piece) => piece.source.kind === "owned").length, 1);
     assert.equal(rings.filter((piece) => piece.source.kind === "transmute").length, 1);
     const reconstructed = rings.find((piece) => piece.source.kind === "transmute");
-    assert.match(reconstructed?.aside ?? "", /Bloodthirsty/);
-    assert.match(reconstructed?.aside ?? "", /50/);
+    assert.equal(reconstructed?.aside, "Rosaria · Worn · Bloodthirsty");
+    assert.equal(rings.filter((piece) => piece.aside).length, 1);
     assert.equal(slot(result.placed, "frontBar").setName, "Corpseburster");
     assert.equal(slot(result.placed, "frontBar").source.kind, "transmute");
+  });
+
+  it("says where an unused ring is, once, without the crystal arithmetic", () => {
+    const result = arrange(
+      [set({ role: "body", name: "Siroria", pieces: 2, kinds: ["ring"], collected: 22, total: 22, collectedKinds: ["ring"] })],
+      [own("Siroria", "ring", "Arcane", "bank", "Faris Ibn-Jabber")],
+      [],
+      null,
+      plan({ jewelryTrait: "Bloodthirsty" }),
+    );
+    const notes = ["ring1", "ring2"].map((id) => slot(result.placed, id).aside).filter(Boolean);
+    assert.deepEqual(notes, ["Faris Ibn-Jabber · Bank · Arcane"]);
   });
 
   it("moves a necklace of the body set and a ring of the front set onto the slots that are already made", () => {

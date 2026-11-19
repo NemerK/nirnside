@@ -527,6 +527,7 @@ function asideFor(
   crafters: Crafter[],
   plan?: TraitPlan | null,
   weights?: ReadonlyMap<string, ArmorWeight> | null,
+  explained?: Set<string>,
 ): string | null {
   if (source.kind === "owned") return null;
   const leftover = owned.filter(
@@ -539,22 +540,48 @@ function asideFor(
     const usable = leftover.filter((item) => !item.weight || item.weight === goal.slotWeight);
     if (usable.length === 0 && wrong[0]?.weight) {
       const where = `${wrong[0].owner ? `${wrong[0].owner} · ` : ""}${locationLabel(wrong[0].location)} · ${wrong[0].itemName}`;
-      return `${where} is ${weightLabel(wrong[0].weight)}. That weight cannot be changed, so this piece is made as ${weightLabel(goal.slotWeight)}.`;
+      return rememberAside(
+        explained,
+        wrong[0],
+        `${where} is ${weightLabel(wrong[0].weight)}. That weight cannot be changed, so this piece is made as ${weightLabel(goal.slotWeight)}.`,
+      );
     }
   }
   const item = leftover
     .map((entry) => itemChoice(entry, 0, unit.kind, crafters, goal))
     .filter((choice): choice is Choice => choice != null)
     .sort((a, b) => a.cost - b.cost)[0];
-  if (!item || item.source.kind !== "owned") return null;
-  const where = placeWhere(item.source);
-  if (item.source.traitChangeCrystals) {
+  if (!item) return null;
+  if (item.source.kind !== "owned") return null;
+  const ownedSource = item.source;
+  const ownedPiece = leftover.find(
+    (entry) => entry.itemName === ownedSource.itemName && entry.location === ownedSource.location && entry.owner === ownedSource.owner,
+  );
+  if (ownedSource.traitChangeCrystals) {
+    if (unit.kind === "neck" || unit.kind === "ring") {
+      const who = ownedSource.owner ? `${ownedSource.owner} · ` : "";
+      const trait = ownedSource.trait ?? "another trait";
+      return rememberAside(explained, ownedPiece ?? leftover[0]!, `${who}${locationLabel(ownedSource.location)} · ${trait}`);
+    }
+    const where = placeWhere(ownedSource);
     const crystals = source.kind === "transmute" ? source.crystals : null;
     const via = crystals == null ? "reconstructing it" : `reconstructing it (${crystals} crystals)`;
-    const target = item.source.wantedTrait ? ` to ${item.source.wantedTrait}` : "";
-    return `${where} is ${item.source.trait ?? "another trait"}. Changing that trait${target} is ${item.source.traitChangeCrystals} crystals, so ${via} is cheaper.`;
+    const target = ownedSource.wantedTrait ? ` to ${ownedSource.wantedTrait}` : "";
+    return rememberAside(
+      explained,
+      ownedPiece ?? leftover[0]!,
+      `${where} is ${ownedSource.trait ?? "another trait"}. Changing that trait${target} is ${ownedSource.traitChangeCrystals} crystals, so ${via} is cheaper.`,
+    );
   }
   return null;
+}
+
+/** One owned piece explains one slot. A second ring does not repeat the same sentence. */
+function rememberAside(explained: Set<string> | undefined, item: OwnedGear, text: string): string | null {
+  const key = `${item.owner ?? ""}|${item.location}|${item.itemName}|${item.trait ?? ""}`;
+  if (explained?.has(key)) return null;
+  explained?.add(key);
+  return text;
 }
 
 function placedWeight(
@@ -1053,6 +1080,7 @@ export function arrange(
       plan,
       askedWeights,
     );
+    const explained = new Set<string>();
     group.slots.forEach((slot, index) => {
       const source = priced.sources[index]!;
       const ownedIcon = source.kind === "owned" ? source.icon : null;
@@ -1067,7 +1095,7 @@ export function arrange(
         source,
         preferred: slot.preferred,
         why: slot.preferred ? null : whyOff(slot.set, source),
-        aside: asideFor(slot.set, slot.unit, source, owned, priced.used, crafters, plan, askedWeights),
+        aside: asideFor(slot.set, slot.unit, source, owned, priced.used, crafters, plan, askedWeights, explained),
         weight: placedWeight(slot.set, slot.unit, source, plan, askedWeights?.get(slot.unit.id) ?? null),
       });
     });
