@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { arrange, sourceSummary, type ArrangeSet, type Crafter, type OwnedGear, type PlacedPiece } from "./arrange";
-import { defaultTraitPlan, mixFor, sameTrait, weightFromPieceName, weightsForSet, type ArmorWeight, type TraitPlan } from "./traits";
+import { defaultTraitPlan, mixFor, sameTrait, traitFor, weightFromPieceName, weightsForSet, type ArmorWeight, type TraitPlan } from "./traits";
 import {
   gearSetKey,
   isMonsterSet,
@@ -322,6 +322,38 @@ describe("arrange", () => {
     assert.equal(rings.every((piece) => piece.aside == null), true);
     assert.equal(slot(result.placed, "frontBar").setName, "Corpseburster");
     assert.equal(slot(result.placed, "frontBar").source.kind, "transmute");
+  });
+
+  it("aims one piece at its own trait and leaves the others on the group trait", () => {
+    const result = arrange(
+      [
+        set({
+          role: "body",
+          name: "Orders Wrath",
+          pieces: 2,
+          kinds: ["chest", "hands"],
+          collected: 22,
+          total: 22,
+          collectedKinds: ["chest", "hands"],
+        }),
+      ],
+      [
+        own("Orders Wrath", "chest", "Divines", "worn", "Sings-With-Shadows"),
+        own("Orders Wrath", "hands", "Divines", "worn", "Sings-With-Shadows"),
+      ],
+      [],
+      null,
+      plan({ armorTrait: "Divines", slotTraits: { chest: "Reinforced" } }),
+    );
+    const chest = slot(result.placed, "chest");
+    const hands = slot(result.placed, "hands");
+    assert.equal(chest.source.kind, "transmute");
+    assert.equal(chest.source.kind === "transmute" && chest.source.trait, "Reinforced");
+    assert.equal(hands.source.kind, "owned");
+    assert.equal(hands.source.kind === "owned" && hands.source.trait, "Divines");
+    assert.equal(traitFor(plan({ slotTraits: { ring1: "Arcane" } }), "ring1", "ring", "front"), "Arcane");
+    assert.equal(traitFor(plan({ jewelryTrait: "Bloodthirsty" }), "ring2", "ring", "front"), "Bloodthirsty");
+    assert.equal(traitFor(plan({ slotTraits: { neck: "Divines" } }), "neck", "neck", "front"), "Bloodthirsty");
   });
 
   it("does not name a character on a ring the build is reconstructing", () => {
