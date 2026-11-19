@@ -1,5 +1,5 @@
 import type { FrontWeapon } from "./slots";
-import { defaultTraitPlan, type TraitPlan } from "./traits";
+import { defaultTraitPlan, normalizeSlotTraits, type TraitPlan } from "./traits";
 
 /** A gear build the player saved. Not part of the ESO snapshot. */
 export interface SavedBuild {
@@ -29,6 +29,8 @@ export interface SavedBuild {
   jewelryTrait: string;
   frontTrait: string;
   backTrait: string;
+  /** Trait aimed at one slot. Empty means every slot uses the group trait. */
+  slotTraits: Record<string, string>;
 }
 
 export function emptyBuild(): Omit<SavedBuild, "id" | "name" | "createdAt"> {
@@ -47,6 +49,7 @@ export function emptyBuild(): Omit<SavedBuild, "id" | "name" | "createdAt"> {
     backSetId: null,
     backName: null,
     ...defaultTraitPlan(),
+    slotTraits: {},
   };
 }
 
@@ -60,6 +63,7 @@ export function traitPlanOf(build: TraitPlan): TraitPlan {
     jewelryTrait: build.jewelryTrait || base.jewelryTrait,
     frontTrait: build.frontTrait || base.frontTrait,
     backTrait: build.backTrait || base.backTrait,
+    slotTraits: normalizeSlotTraits(build.slotTraits),
   };
 }
 

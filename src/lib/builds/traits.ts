@@ -66,6 +66,8 @@ export interface TraitPlan extends WeightMix {
   jewelryTrait: string;
   frontTrait: string;
   backTrait: string;
+  /** A trait aimed at one slot. Slots left out use the group trait above. */
+  slotTraits?: Readonly<Record<string, string>>;
 }
 
 export function mixFor(weight: ArmorWeight): WeightMix {
@@ -83,7 +85,47 @@ export function defaultTraitPlan(): TraitPlan {
     jewelryTrait: "Bloodthirsty",
     frontTrait: "Infused",
     backTrait: "Infused",
+    slotTraits: {},
   };
+}
+
+const SLOT_TRAIT_IDS = new Set([
+  "head",
+  "shoulders",
+  "chest",
+  "hands",
+  "waist",
+  "legs",
+  "feet",
+  "neck",
+  "ring1",
+  "ring2",
+  "frontBar",
+  "frontMain",
+  "frontOff",
+  "backBar",
+  "backMain",
+  "backOff",
+]);
+
+/** Traits a slot is allowed to aim at. An off hand may be a weapon or a shield. */
+export function traitsForSlot(slotId: string): readonly string[] {
+  if (slotId === "neck" || slotId === "ring1" || slotId === "ring2") return JEWELRY_TRAITS;
+  if (slotId === "frontOff" || slotId === "backOff") return [...WEAPON_TRAITS, ...ARMOR_TRAITS];
+  if (slotId.startsWith("front") || slotId.startsWith("back")) return WEAPON_TRAITS;
+  return ARMOR_TRAITS;
+}
+
+/** Keep only real slot ids and traits that slot can wear. */
+export function normalizeSlotTraits(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object") return {};
+  const out: Record<string, string> = {};
+  for (const [id, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!SLOT_TRAIT_IDS.has(id) || typeof raw !== "string") continue;
+    const match = traitsForSlot(id).find((trait) => sameTrait(trait, raw));
+    if (match) out[id] = match;
+  }
+  return out;
 }
 
 /** The weight the mix asks for most. A tie prefers medium, then heavy. */
@@ -150,10 +192,15 @@ export function traitsFor(kind: SlotKind): readonly string[] {
   return [];
 }
 
-/** The trait this slot is aiming for. A mythic has none. */
+/** The trait this slot is aiming for. A mythic has none. A pinned slot trait wins over the group. */
 export function traitFor(plan: TraitPlan, slotId: string | null, kind: SlotKind, role: string): string | null {
   if (role === "mythic") return null;
   const group = traitGroup(kind);
+  const pinned = slotId ? plan.slotTraits?.[slotId] : undefined;
+  const allowed = traitsFor(kind);
+  if (pinned && allowed.some((trait) => sameTrait(trait, pinned))) {
+    return allowed.find((trait) => sameTrait(trait, pinned)) ?? pinned;
+  }
   if (group === "armor") return plan.armorTrait;
   if (group === "jewelry") return plan.jewelryTrait;
   if (group === "weapon") {

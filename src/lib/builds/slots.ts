@@ -238,7 +238,13 @@ export function resolveOwnedPiece(
 ): { kind: SlotKind; weapon: FrontWeapon | null } | null {
   if (item.equipSlot?.trim()) {
     const fromSlot = labeledPiece(item.equipSlot, "", "");
-    if (fromSlot) return fromSlot;
+    if (fromSlot) {
+      // "Main Hand" and "Two Hand" name the hand, not the weapon. The item
+      // name still says Dagger or Bow, and that is the piece the character holds.
+      const fromName = labeledPiece("", "", item.name);
+      if (fromName?.weapon && (fromName.kind === fromSlot.kind || fromName.kind === "shield")) return fromName;
+      return fromSlot;
+    }
   }
   const id = item.itemId ?? 0;
   if (id > 0) {
@@ -362,8 +368,20 @@ const LOCATION_LABEL: Record<string, string> = {
   craftBag: "Craft bag",
 };
 
+/** These bags belong to the account. A character name on them is not where the item is. */
+const ACCOUNT_BAGS = new Set(["bank", "subscriberBank", "craftBag"]);
+
 export function locationLabel(location: string): string {
   return LOCATION_LABEL[location] ?? location;
+}
+
+/**
+ * The character who is holding this stack.
+ * Worn and backpack name that character. The bank, ESO+ bank, and craft bag do not.
+ */
+export function characterHolding(owner: string | null | undefined, location: string): string | null {
+  if (!owner || ACCOUNT_BAGS.has(location)) return null;
+  return owner;
 }
 
 export function isDivinesTrait(trait: string | null | undefined): boolean {

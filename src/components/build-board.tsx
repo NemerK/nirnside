@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { arrange, type ArrangeSet, type FrontBarWeapons, type GearRole, type PlacedPiece, sourceSummary } from "@/lib/builds/arrange";
 import { GameIcon } from "@/components/game-icon";
+import { QuickSlot } from "@/components/quick-slot";
 import type { BuildPageData, BuildSetOption } from "@/lib/builds/options";
 import { emptyBuild, traitPlanOf, type SavedBuild } from "@/lib/builds/saved";
 import { ARMOR_TRAITS, ARMOR_WEIGHTS, JEWELRY_TRAITS, stepMix, WEAPON_TRAITS, weightLabel, type ArmorWeight } from "@/lib/builds/traits";
@@ -115,6 +116,7 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
   const [name, setName] = useState(data.builds[0]?.name ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [quick, setQuick] = useState(false);
 
   const chosen = useMemo(() => {
     const sets: ArrangeSet[] = [];
@@ -233,6 +235,13 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
+          onClick={() => setQuick(true)}
+          className="rounded-lg border border-accent/40 px-3 py-1.5 text-sm text-accent hover:bg-accent-soft"
+        >
+          Quick slot
+        </button>
+        <button
+          type="button"
           onClick={startNew}
           className={`rounded-lg border px-3 py-1.5 text-sm ${activeId ? "border-border text-fg-muted hover:text-fg" : "border-accent/40 bg-accent-soft text-accent"}`}
         >
@@ -325,6 +334,17 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
         </div>
       )}
       <PaperDoll placed={chosen.placed} />
+      {quick ? (
+        <QuickSlot
+          draft={draft}
+          placed={chosen.placed}
+          sets={data.sets}
+          owned={data.owned}
+          onChange={setDraft}
+          onPick={pick}
+          onClose={() => setQuick(false)}
+        />
+      ) : null}
     </div>
   );
 }

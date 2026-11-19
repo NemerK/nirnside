@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getDb } from "./index";
 import { emptyBuild, type SavedBuild } from "../builds/saved";
 import { isTwoHandedWeapon, parseFrontWeapon } from "../builds/slots";
-import { ARMOR_TRAITS, defaultTraitPlan, isArmorWeight, JEWELRY_TRAITS, mixFor, WEAPON_TRAITS } from "../builds/traits";
+import { ARMOR_TRAITS, defaultTraitPlan, isArmorWeight, JEWELRY_TRAITS, mixFor, normalizeSlotTraits, WEAPON_TRAITS } from "../builds/traits";
 
 function db() {
   return getDb();
@@ -56,6 +56,7 @@ function rowToBuild(row: { id: string; name: string; json: string; createdAt: nu
     jewelryTrait: listed(parsed.jewelryTrait, JEWELRY_TRAITS, plan.jewelryTrait),
     frontTrait: listed(parsed.frontTrait, WEAPON_TRAITS, plan.frontTrait),
     backTrait: listed(parsed.backTrait, WEAPON_TRAITS, plan.backTrait),
+    slotTraits: normalizeSlotTraits(parsed.slotTraits),
   };
 }
 
