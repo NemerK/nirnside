@@ -2,6 +2,7 @@ import {
   isDivinesTrait,
   isTwoHandedWeapon,
   lineMatchesKind,
+  characterHolding,
   locationLabel,
   reconstructionCost,
   setsShareKey,
@@ -539,7 +540,8 @@ function asideFor(
     const wrong = leftover.filter((item) => item.weight && item.weight !== goal.slotWeight);
     const usable = leftover.filter((item) => !item.weight || item.weight === goal.slotWeight);
     if (usable.length === 0 && wrong[0]?.weight) {
-      const where = `${wrong[0].owner ? `${wrong[0].owner} · ` : ""}${locationLabel(wrong[0].location)} · ${wrong[0].itemName}`;
+      const holder = characterHolding(wrong[0].owner, wrong[0].location);
+      const where = `${holder ? `${holder} · ` : ""}${locationLabel(wrong[0].location)} · ${wrong[0].itemName}`;
       return rememberAside(
         explained,
         wrong[0],
@@ -558,11 +560,9 @@ function asideFor(
     (entry) => entry.itemName === ownedSource.itemName && entry.location === ownedSource.location && entry.owner === ownedSource.owner,
   );
   if (ownedSource.traitChangeCrystals) {
-    if (unit.kind === "neck" || unit.kind === "ring") {
-      const who = ownedSource.owner ? `${ownedSource.owner} · ` : "";
-      const trait = ownedSource.trait ?? "another trait";
-      return rememberAside(explained, ownedPiece ?? leftover[0]!, `${who}${locationLabel(ownedSource.location)} · ${trait}`);
-    }
+    // A reconstructed ring is not sitting in someone's bag. Naming that bag
+    // under the slot reads as where the piece on the card is.
+    if (unit.kind === "neck" || unit.kind === "ring") return null;
     const where = placeWhere(ownedSource);
     const crystals = source.kind === "transmute" ? source.crystals : null;
     const via = crystals == null ? "reconstructing it" : `reconstructing it (${crystals} crystals)`;
@@ -600,20 +600,21 @@ function placedWeight(
 }
 
 function placeWhere(source: Extract<PieceSource, { kind: "owned" }>): string {
-  const who = source.owner ? `${source.owner} · ` : "";
-  return `${who}${locationLabel(source.location)} · ${source.itemName}`;
+  const who = characterHolding(source.owner, source.location);
+  return `${who ? `${who} · ` : ""}${locationLabel(source.location)} · ${source.itemName}`;
 }
 
 export function sourceSummary(source: PieceSource): string {
   if (source.kind === "owned") {
-    const who = source.owner ? `${source.owner} · ` : "";
+    const who = characterHolding(source.owner, source.location);
+    const holder = who ? `${who} · ` : "";
     const trait = source.traitChangeCrystals
       ? ` · ${source.trait ?? "another trait"} → ${source.wantedTrait ?? "chosen trait"} · ${source.traitChangeCrystals} crystals`
       : source.trait
         ? ` · ${source.trait}`
         : "";
     const weight = source.weight ? ` · ${weightLabel(source.weight)}` : "";
-    return `${who}${locationLabel(source.location)}${trait}${weight}`;
+    return `${holder}${locationLabel(source.location)}${trait}${weight}`;
   }
   if (source.kind === "craft") {
     const weight = source.weight ? ` · ${weightLabel(source.weight)}` : "";

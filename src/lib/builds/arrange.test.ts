@@ -122,6 +122,21 @@ describe("reconstruction cost", () => {
     assert.equal(kindFromPiece("Hands", "Medium Hands", "Coral Riptide Bracers"), "hands");
   });
 
+  it("keeps the weapon named on the item when the equip slot only says which hand", () => {
+    const dagger = resolveOwnedPiece({ name: "Coral Riptide Dagger", equipSlot: "Main Hand" }, []);
+    assert.equal(dagger?.kind, "oneHand");
+    assert.equal(dagger?.weapon, "dagger");
+    const bow = resolveOwnedPiece({ name: "Deadly Strike Bow", equipSlot: "Two Hand" }, []);
+    assert.equal(bow?.kind, "twoHand");
+    assert.equal(bow?.weapon, "bow");
+    const shield = resolveOwnedPiece({ name: "Coral Riptide Shield", equipSlot: "Off Hand" }, []);
+    assert.equal(shield?.kind, "shield");
+    assert.equal(shield?.weapon, "shield");
+    const sash = resolveOwnedPiece({ name: "Coral Riptide Sash", equipSlot: "Waist" }, []);
+    assert.equal(sash?.kind, "waist");
+    assert.equal(sash?.weapon, null);
+  });
+
   it("reads armor and jewelry from the item type when the slot label is only a number", () => {
     assert.equal(kindFromPiece("Slot 3", "Heavy Chest", "Perfected Slivers of the Null Arca"), "chest");
     assert.equal(kindFromPiece("Slot 1", "Medium Head", "Huntsman's Warmask"), "head");
@@ -303,13 +318,13 @@ describe("arrange", () => {
     assert.equal(rings.filter((piece) => piece.source.kind === "owned").length, 1);
     assert.equal(rings.filter((piece) => piece.source.kind === "transmute").length, 1);
     const reconstructed = rings.find((piece) => piece.source.kind === "transmute");
-    assert.equal(reconstructed?.aside, "Rosaria · Worn · Bloodthirsty");
-    assert.equal(rings.filter((piece) => piece.aside).length, 1);
+    assert.equal(reconstructed?.aside, null);
+    assert.equal(rings.every((piece) => piece.aside == null), true);
     assert.equal(slot(result.placed, "frontBar").setName, "Corpseburster");
     assert.equal(slot(result.placed, "frontBar").source.kind, "transmute");
   });
 
-  it("says where an unused ring is, once, without the crystal arithmetic", () => {
+  it("does not name a character on a ring the build is reconstructing", () => {
     const result = arrange(
       [set({ role: "body", name: "Siroria", pieces: 2, kinds: ["ring"], collected: 22, total: 22, collectedKinds: ["ring"] })],
       [own("Siroria", "ring", "Arcane", "bank", "Faris Ibn-Jabber")],
@@ -317,8 +332,43 @@ describe("arrange", () => {
       null,
       plan({ jewelryTrait: "Bloodthirsty" }),
     );
-    const notes = ["ring1", "ring2"].map((id) => slot(result.placed, id).aside).filter(Boolean);
-    assert.deepEqual(notes, ["Faris Ibn-Jabber · Bank · Arcane"]);
+    for (const id of ["ring1", "ring2"]) {
+      const piece = slot(result.placed, id);
+      assert.equal(piece.aside, null);
+      assert.equal(piece.source.kind, "transmute");
+      assert.doesNotMatch(sourceSummary(piece.source), /Faris/);
+    }
+  });
+
+  it("names the character holding a worn piece, and only the bag for a bank piece", () => {
+    const worn = arrange(
+      [set({ role: "body", name: "Coral Riptide", kinds: ["chest"], pieces: 1, collected: 1, total: 12, collectedKinds: ["chest"], armorWeights: ["medium"] })],
+      [weighted(own("Coral Riptide", "chest", "Divines", "worn", "Sings-With-Shadows"), "medium")],
+      [],
+      null,
+      plan(),
+    );
+    assert.equal(sourceSummary(slot(worn.placed, "chest").source), "Sings-With-Shadows · Worn · Divines · Medium");
+
+    const bank = arrange(
+      [set({ role: "front", name: "Coral Riptide", kinds: ["neck"], pieces: 1, collected: 1, total: 12, collectedKinds: ["neck"] })],
+      [own("Coral Riptide", "neck", "Bloodthirsty", "bank", "Sings-With-Shadows")],
+      [],
+      null,
+      plan({ jewelryTrait: "Bloodthirsty" }),
+    );
+    const line = sourceSummary(slot(bank.placed, "neck").source);
+    assert.equal(line, "Bank · Bloodthirsty");
+    assert.doesNotMatch(line, /Sings/);
+
+    const plus = arrange(
+      [set({ role: "mythic", name: "Ring of the Pale Order", kinds: ["ring"], pieces: 1, collected: 1, total: 1, collectedKinds: ["ring"] })],
+      [own("Pale Order", "ring", "Bloodthirsty", "subscriberBank", "Rosaria")],
+      [],
+    );
+    const ring = plus.placed.find((piece) => piece.role === "mythic");
+    assert.equal(sourceSummary(ring!.source), "ESO+ bank · Bloodthirsty");
+    assert.doesNotMatch(sourceSummary(ring!.source), /Rosaria/);
   });
 
   it("moves a necklace of the body set and a ring of the front set onto the slots that are already made", () => {
@@ -613,6 +663,9 @@ describe("front-bar weapons", () => {
     assert.equal(off.source.kind, "owned");
     assert.equal(main.source.kind === "owned" && main.source.trait, "Nirnhoned");
     assert.equal(off.source.kind === "owned" && off.source.trait, "Sharpened");
+    assert.equal(sourceSummary(main.source), "Faris · Worn · Nirnhoned");
+    assert.equal(sourceSummary(off.source), "Bank · Sharpened");
+    assert.doesNotMatch(sourceSummary(off.source), /Faris/);
     assert.equal(result.placed.some((piece) => piece.slot === "frontBar"), false);
   });
 
