@@ -16,6 +16,7 @@ import { romanRank } from "@/lib/skills/ability";
 import { SkillLinePlanner } from "./skill-line-planner";
 import { activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAllows, plannerLineKey, type PlannerAbilityRow } from "@/lib/planner/skill-groups";
 import { groupPlacedGoals } from "@/lib/planner/goal-groups";
+import { overlapNotices, type OverlapNotice } from "@/lib/goals/overlap";
 import { GroupedTargets } from "./goal-groups";
 import { isExcludedSkillLine } from "@/lib/catalog/excluded";
 
@@ -31,7 +32,7 @@ export interface PlannerChoices {
   abilityRows: PlannerAbilityRow[];
   roles: { id: string; name: string }[];
   classes: string[];
-  characters: { id: string; name: string; className: string; ranks?: { name: string; rank: number }[] }[];
+  characters: { id: string; name: string; className: string; roleIds?: string[]; ranks?: { name: string; rank: number }[] }[];
 }
 
 const TIER_TONE: Record<GoalTier, "accent" | "muted" | "ok"> = {
@@ -113,6 +114,33 @@ export function PlannerBoard({
       return next;
     });
   }
+
+  const selectionOverlaps = useMemo(() => {
+    const domain = kind === "abilities" ? "ability" : kind === "scribing" ? "script" : null;
+    if (!domain || selected.size === 0) return [];
+    const next = {
+      scope,
+      characterId: scope === "character" ? scopeKey : null,
+      scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
+    };
+    const people = choices.characters.map((character) => ({
+      id: character.id,
+      name: character.name,
+      className: character.className,
+      roleIds: character.roleIds ?? [],
+    }));
+    return [...selected].flatMap((name) =>
+      overlapNotices({
+        domain,
+        target: name,
+        next,
+        goals: cards.map((card) => card.goal),
+        people,
+        roles: choices.roles,
+        active: true,
+      }),
+    );
+  }, [kind, selected, scope, scopeKey, choices, cards]);
 
   const scriptGroups = useMemo(() => {
     const bySlot = new Map<string, typeof choices.scripts>();
@@ -344,7 +372,14 @@ export function PlannerBoard({
             }
             onToggle={toggleSelected}
           />
-          <AddBar busy={busy} count={selected.size} enabled={scopeOk(scope, scopeKey)} onAdd={addSelected} />
+          <OverlapNoticeList notices={selectionOverlaps} />
+          <AddBar
+            busy={busy}
+            count={selected.size}
+            enabled={scopeOk(scope, scopeKey)}
+            onAdd={addSelected}
+            caution={selectionOverlaps.length > 0}
+          />
           {error && <p className="mt-2 text-sm text-danger">{error}</p>}
         </Card>
       )}
@@ -377,12 +412,14 @@ export function PlannerBoard({
               })
             }
           />
+          <OverlapNoticeList notices={selectionOverlaps} />
           <AddBar
             busy={busy}
             count={selected.size}
             enabled={scopeOk(scope, scopeKey)}
             onAdd={addSelected}
             emptyLabel="Pick the scripts to learn"
+            caution={selectionOverlaps.length > 0}
           />
           {error && <p className="mt-2 text-sm text-danger">{error}</p>}
         </Card>
@@ -777,12 +814,14 @@ function AddBar({
   enabled,
   onAdd,
   emptyLabel = "Open a category, then pick from a skill line",
+  caution = false,
 }: {
   busy: boolean;
   count: number;
   enabled: boolean;
   onAdd: () => void;
   emptyLabel?: string;
+  caution?: boolean;
 }) {
   return (
     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -796,9 +835,20 @@ function AddBar({
         className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent hover:text-accent-fg disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-        Add {count > 0 ? `${count} target${count === 1 ? "" : "s"}` : ""}
+        {caution ? "Add anyway" : `Add ${count > 0 ? `${count} target${count === 1 ? "" : "s"}` : ""}`}
       </button>
     </div>
+  );
+}
+
+function OverlapNoticeList({ notices }: { notices: OverlapNotice[] }) {
+  if (notices.length === 0) return null;
+  return (
+    <ul className="mt-3 space-y-1 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+      {notices.map((notice) => (
+        <li key={`${notice.goalId}:${notice.what}`}>{notice.sentence}</li>
+      ))}
+    </ul>
   );
 }
 
