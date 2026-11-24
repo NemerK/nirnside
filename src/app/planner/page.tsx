@@ -83,6 +83,7 @@ export default function PlannerPage() {
       id: s.id,
       name: s.name,
       className: s.className,
+      roleIds: s.roleIds,
       ranks: s.skillLines.map((l) => ({ name: l.name, rank: l.rank })),
     })),
   };

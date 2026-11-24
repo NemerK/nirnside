@@ -8,6 +8,7 @@ import type { GoalCardView } from "@/lib/goals/views";
 import { isExcludedSkillLine } from "@/lib/catalog/excluded";
 import { isClassMasteryLineName } from "@/lib/skills/class-mastery";
 import { editSkillLineRanks } from "@/lib/skills/line-cap";
+import { overlapNotices } from "@/lib/goals/overlap";
 import { groupPlannerLines, plannerClassScopeAllows } from "@/lib/planner/skill-groups";
 import { Card } from "./ui";
 import { GameIcon } from "./game-icon";
@@ -33,6 +34,7 @@ export interface SkillLinePlannerCharacter {
   id: string;
   name: string;
   className: string;
+  roleIds?: string[];
   ranks: { name: string; rank: number }[];
 }
 
@@ -381,12 +383,35 @@ export function SkillLinePlanner({
 
   const saving = [...drafts.values()].some((d) => d.dirty);
 
+  function lineNotices(line: SkillLinePlannerLine, draft: Draft) {
+    return overlapNotices({
+      domain: "skillline",
+      target: line.name,
+      next: {
+        scope,
+        characterId: scope === "character" ? scopeKey : null,
+        scopeKey: scope === "role" || scope === "class" ? scopeKey : null,
+      },
+      goals: cards.map((card) => card.goal),
+      people: characters.map((character) => ({
+        id: character.id,
+        name: character.name,
+        className: character.className,
+        roleIds: character.roleIds ?? [],
+      })),
+      roles,
+      active: draft.mandatory > 0 || draft.extra > 0,
+    });
+  }
+
   function renderBar(line: SkillLinePlannerLine) {
     const cap = line.maxRank ?? 0;
     const draft = shown(line);
     const key = lineKey(scope, scopeKey, line.name);
     const current = watched?.ranks.find((r) => r.name.toLowerCase() === line.name.toLowerCase())?.rank;
+    const notices = lineNotices(line, draft);
     return (
+      <>
       <LineBar
         line={line}
         cap={cap}
@@ -436,6 +461,14 @@ export function SkillLinePlanner({
           }
         }}
       />
+      {notices.length > 0 && (
+        <ul className="border-t border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+          {notices.map((notice) => (
+            <li key={notice.goalId}>{notice.sentence}</li>
+          ))}
+        </ul>
+      )}
+      </>
     );
   }
 
@@ -555,6 +588,7 @@ export function SkillLinePlanner({
                             const draft = shown(line);
                             return draft.mandatory > 0 || draft.extra > 0;
                           }}
+                          overlaps={(line) => lineNotices(line, shown(line)).length > 0}
                         />
                       ))
                     : (
@@ -567,6 +601,7 @@ export function SkillLinePlanner({
                           const draft = shown(line);
                           return draft.mandatory > 0 || draft.extra > 0;
                         }}
+                        overlaps={(line) => lineNotices(line, shown(line)).length > 0}
                       />
                     )}
                 </div>
@@ -595,6 +630,7 @@ function ClassLines({
   onToggle,
   renderBar,
   isSet,
+  overlaps,
 }: {
   className?: string;
   lines: SkillLinePlannerLine[];
@@ -602,6 +638,7 @@ function ClassLines({
   onToggle: (name: string) => void;
   renderBar: (line: SkillLinePlannerLine) => ReactNode;
   isSet: (line: SkillLinePlannerLine) => boolean;
+  overlaps: (line: SkillLinePlannerLine) => boolean;
 }) {
   const open = lines.filter((line) => openLines.has(line.name.toLowerCase()));
   return (
@@ -629,6 +666,7 @@ function ClassLines({
             >
               <EsoMark name={line.name} icon={line.icon} size={16} />
               {isSet(line) ? <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--rank-mandatory)" }} /> : null}
+              {overlaps(line) ? <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" title="Overlaps another plan" /> : null}
               {line.name}
             </button>
           );
