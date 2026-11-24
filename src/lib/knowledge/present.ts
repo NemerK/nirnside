@@ -146,6 +146,60 @@ export function presentMotifs(styles: MotifStyle[] | undefined): PresentedMotifs
   return { styles: list, known, total };
 }
 
+export interface AccountMotifs {
+  known: number;
+  total: number;
+}
+
+/**
+ * Motif chapters known anywhere on the account. A chapter learned on one
+ * character counts once; a second character does not raise the total.
+ */
+export function accountMotifProgress(characters: Character[]): AccountMotifs {
+  interface StyleAcc {
+    chapters: Map<string, boolean>;
+    known: number;
+    total: number;
+    sawChapters: boolean;
+  }
+  const styles = new Map<string, StyleAcc>();
+  for (const character of characters) {
+    for (const style of character.motifs ?? []) {
+      const key = motifKey(style.name) || style.name.trim().toLowerCase();
+      if (!key) continue;
+      let acc = styles.get(key);
+      if (!acc) {
+        acc = { chapters: new Map(), known: 0, total: 0, sawChapters: false };
+        styles.set(key, acc);
+      }
+      const chapters = style.chapters ?? [];
+      if (chapters.length > 0) {
+        acc.sawChapters = true;
+        for (const chapter of chapters) {
+          const id =
+            chapter.bookId != null ? `id:${chapter.bookId}` : `name:${chapter.name.trim().toLowerCase()}`;
+          acc.chapters.set(id, (acc.chapters.get(id) ?? false) || chapter.known);
+        }
+      } else {
+        acc.known = Math.max(acc.known, style.known);
+        acc.total = Math.max(acc.total, style.total);
+      }
+    }
+  }
+  let known = 0;
+  let total = 0;
+  for (const acc of styles.values()) {
+    if (acc.sawChapters && acc.chapters.size > 0) {
+      total += acc.chapters.size;
+      for (const chapterKnown of acc.chapters.values()) if (chapterKnown) known += 1;
+    } else {
+      known += acc.known;
+      total += acc.total;
+    }
+  }
+  return { known, total };
+}
+
 export interface PresentedRecipeLists {
   lists: RecipeList[];
   known: number;
@@ -208,9 +262,6 @@ export function summarizeAccountKnowledge(characters: Character[]): KnowledgeAcc
     const research = presentResearch(c.research);
     summary.researchKnown += research.known;
     summary.researchTotal += research.total;
-    const motifs = presentMotifs(c.motifs);
-    summary.motifKnown += motifs.known;
-    summary.motifTotal += motifs.total;
     const recipes = presentRecipeLists(c.recipeLists, "provisioning");
     summary.recipeKnown += recipes.known;
     summary.recipeTotal += recipes.total;
@@ -218,6 +269,9 @@ export function summarizeAccountKnowledge(characters: Character[]): KnowledgeAcc
     summary.planKnown += plans.known;
     summary.planTotal += plans.total;
   }
+  const motifs = accountMotifProgress(characters);
+  summary.motifKnown = motifs.known;
+  summary.motifTotal = motifs.total;
   return summary;
 }
 

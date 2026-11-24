@@ -49,6 +49,11 @@ export interface CharacterWorkspaceCard {
    * Optional, completionist, and extra-above-mandatory ranks do not move this bar.
    */
   mandatoryTargets: ProgressTally;
+  /**
+   * Optional and completionist goals, plus skill-line ranks above the mandatory
+   * rank. Visible beside the percentage; never part of it.
+   */
+  beyond: ProgressTally;
   research: ProgressTally;
   motifs: ProgressTally;
   scribingKnown: number;
@@ -99,6 +104,37 @@ export function mandatoryTargetTally(goals: Goal[], subject: GoalSubject, indexe
   return { ...tally(done, total), unknownCount };
 }
 
+/**
+ * Work that sits beside the mandatory percentage: optional and completionist
+ * goals, and a skill-line extra rank above the mandatory rank.
+ */
+export function beyondTargetTally(goals: Goal[], subject: GoalSubject, indexes: GoalIndexes): ProgressTally {
+  let done = 0;
+  let total = 0;
+  let unknownCount = 0;
+  for (const goal of goals) {
+    if (!goalAppliesTo(goal, subject)) continue;
+    if (goal.tier !== "essential") {
+      const progress = goalProgress(goal, subject, indexes);
+      if (progress.state === "unknown") unknownCount += 1;
+      else if (progress.state !== "notapplicable") {
+        total += 1;
+        if (progress.state === "done") done += 1;
+      }
+    }
+    const extraAbove =
+      goal.domain === "skillline" && goal.targetRank > 0 && goal.extraRank > goal.targetRank;
+    if (!extraAbove) continue;
+    const extra = skillLineProgress(subject, goal.target, goal.extraRank, indexes);
+    if (extra.state === "unknown") unknownCount += 1;
+    else if (extra.state !== "notapplicable") {
+      total += 1;
+      if (extra.state === "done") done += 1;
+    }
+  }
+  return { ...tally(done, total), unknownCount };
+}
+
 function researchTally(research: PresentedResearch | null): ProgressTally {
   if (!research) return tally(0, 0);
   return tally(research.known, research.total);
@@ -137,6 +173,7 @@ export function presentCharacterWorkspaceCard(
     roles: rolesForCharacter(character.id, roleCatalog, { [character.id]: roleIds }),
     targets: unknown ? tally(0, 0) : targetTally(goals, toGoalSubject(character), indexes),
     mandatoryTargets: unknown ? { ...tally(0, 0), unknownCount: 0 } : mandatoryTargetTally(goals, subject, indexes),
+    beyond: unknown ? { ...tally(0, 0), unknownCount: 0 } : beyondTargetTally(goals, subject, indexes),
     research: researchTally(research),
     motifs: motifTally(motifs),
     scribingKnown: unknown ? 0 : character.scribingScripts?.length ?? 0,
@@ -156,11 +193,22 @@ export function presentCharacterWorkspaceCards(
   );
 }
 
-export function overallWorkspacePct(card: CharacterWorkspaceCard): number {
-  if (card.unknown) return 0;
-  const parts = [card.targets, card.research, card.motifs].filter((p) => p.total > 0);
-  if (parts.length === 0) return 0;
-  const done = parts.reduce((s, p) => s + p.done, 0);
-  const total = parts.reduce((s, p) => s + p.total, 0);
-  return total > 0 ? Math.round((done / total) * 100) : 0;
+/** The completion percentage: essential goals at the mandatory rank. */
+export function mandatoryWorkspacePct(card: CharacterWorkspaceCard): number {
+  if (card.unknown || card.mandatoryTargets.total <= 0) return 0;
+  return card.mandatoryTargets.pct;
+}
+
+/** Account completion. Characters are weighted by how many mandatory goals they have. */
+export function accountMandatory(cards: CharacterWorkspaceCard[]): ProgressTally {
+  let done = 0;
+  let total = 0;
+  let unknownCount = 0;
+  for (const card of cards) {
+    if (card.unknown) continue;
+    done += card.mandatoryTargets.done;
+    total += card.mandatoryTargets.total;
+    unknownCount += card.mandatoryTargets.unknownCount ?? 0;
+  }
+  return { ...tally(done, total), unknownCount };
 }

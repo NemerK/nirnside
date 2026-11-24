@@ -7,7 +7,7 @@ import { listRoles, listAssignments } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
 import { catalogAbilityLoreFor, getScripts, getSkillLineByName } from "@/lib/db/catalog-queries";
 import { buildGoalIndexes, characterGoalRows, loadPlannerData, skillLineChoices } from "@/lib/planner/data";
-import { goalAppliesTo, goalProgress, toGoalSubject } from "@/lib/goals/progress";
+import { goalAppliesTo, goalProgress, skillLineProgress, toGoalSubject } from "@/lib/goals/progress";
 import type { Goal, GoalSubject } from "@/lib/goals/types";
 import { presentMotifs, presentResearch } from "@/lib/knowledge/present";
 import { presentSkillBook } from "@/lib/skills/present";
@@ -41,9 +41,14 @@ function domainTallies(goals: Goal[], subject: GoalSubject, indexes: Parameters<
   let overallDone = 0;
   let overallTotal = 0;
   for (const goal of goals) {
+    if (goal.tier !== "essential") continue;
     if (!goalAppliesTo(goal, subject)) continue;
-    const progress = goalProgress(goal, subject, indexes);
-    if (progress.state === "notapplicable") continue;
+    if (goal.domain === "skillline" && goal.targetRank <= 0 && goal.extraRank > 0) continue;
+    const progress =
+      goal.domain === "skillline"
+        ? skillLineProgress(subject, goal.target, goal.targetRank, indexes)
+        : goalProgress(goal, subject, indexes);
+    if (progress.state === "notapplicable" || progress.state === "unknown") continue;
     const t = byDomain.get(goal.domain) ?? { done: 0, total: 0 };
     t.total += 1;
     overallTotal += 1;

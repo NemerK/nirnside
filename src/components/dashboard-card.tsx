@@ -32,7 +32,7 @@ export interface DashboardCardData {
   levelCaption: string;
   scanned: boolean;
   roles: string[];
-  /** Overall completion against applicable targets; null when none apply. */
+  /** Mandatory essential goals; null when none apply. */
   overall: { pct: number; done: number; total: number } | null;
   rows: DashboardRow[];
 }
@@ -74,7 +74,7 @@ export function DashboardCard({
               <span className="text-fg-subtle">Not scanned yet</span>
             ) : char.overall ? (
               <>
-                <span className="font-medium text-fg">{char.overall.done}</span>/{char.overall.total} targets done
+                <span className="font-medium text-fg">{char.overall.done}</span>/{char.overall.total} mandatory
               </>
             ) : (
               <span className="text-fg-subtle">No targets apply yet</span>

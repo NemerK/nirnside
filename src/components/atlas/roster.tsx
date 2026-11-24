@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Droplet, Moon } from "lucide-react";
 import {
-  overallWorkspacePct,
+  mandatoryWorkspacePct,
   type CharacterWorkspaceCard,
 } from "@/lib/characters/workspace";
 import { classColor, classIcon } from "@/lib/classes";
@@ -22,7 +22,7 @@ function sortCards(cards: CharacterWorkspaceCard[], sort: RosterSort): Character
     next.sort((a, b) => a.name.localeCompare(b.name));
   } else {
     next.sort((a, b) => {
-      const diff = overallWorkspacePct(b) - overallWorkspacePct(a);
+      const diff = mandatoryWorkspacePct(b) - mandatoryWorkspacePct(a);
       if (diff !== 0) return diff;
       return a.name.localeCompare(b.name);
     });
@@ -63,6 +63,9 @@ export function AtlasRoster({
             </span>
           ) : null}
           {action}
+          <Link href="/progress" className="rounded px-2.5 py-1.5 text-xs text-fg-muted hover:text-fg">
+            Full progress
+          </Link>
           <div className="inline-flex gap-0.5 rounded-md border border-border bg-surface p-0.5">
             {(
               [
@@ -126,7 +129,7 @@ export function AtlasRoster({
 
 function WorkspaceCard({ card, photoCount }: { card: CharacterWorkspaceCard; photoCount: number }) {
   const accent = ALLIANCE_ACCENT[card.alliance] ?? "var(--accent)";
-  const overall = overallWorkspacePct(card);
+  const mandatory = mandatoryWorkspacePct(card);
 
   return (
     <article
@@ -162,7 +165,9 @@ function WorkspaceCard({ card, photoCount }: { card: CharacterWorkspaceCard; pho
               Unknown — not logged since install
             </span>
           ) : (
-            <span className="rounded border border-border px-1.5 py-0.5 text-fg-subtle">{overall}% overall</span>
+            <span className="rounded border border-border px-1.5 py-0.5 text-fg-subtle">
+              {card.mandatoryTargets.total > 0 ? `${mandatory}% mandatory` : "No mandatory goals"}
+            </span>
           )}
           {card.vampire ? (
             <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-fg-muted">
@@ -184,9 +189,9 @@ function WorkspaceCard({ card, photoCount }: { card: CharacterWorkspaceCard; pho
 
         <div className="mt-4 space-y-2.5">
           <AtlasMeter
-            label="Targets"
-            done={card.targets.done}
-            total={card.targets.total}
+            label="Mandatory"
+            done={card.mandatoryTargets.done}
+            total={card.mandatoryTargets.total}
             unknown={card.unknown}
           />
           <AtlasMeter
@@ -195,7 +200,6 @@ function WorkspaceCard({ card, photoCount }: { card: CharacterWorkspaceCard; pho
             total={card.research.total}
             unknown={card.unknown}
           />
-          <AtlasMeter label="Motifs" done={card.motifs.done} total={card.motifs.total} unknown={card.unknown} />
         </div>
 
         <p className="mt-4 text-xs text-fg-subtle">
