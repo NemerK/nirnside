@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { pruneRemovedFiles, pruneStale } from "./prune-stale.mjs";
 
 /** GitHub repo ZIP/git updates pull from. Override with NIRNSIDE_UPDATE_REPO. */
 export const DEFAULT_REPO = "NemerK/nirnside";
@@ -52,6 +53,9 @@ export function overlayCopy(fromDir, toDir) {
     }
   }
   walk(fromDir);
+  // Copying alone never deletes: drop app files this version no longer has,
+  // or a moved page stays behind as a duplicate route and the build fails.
+  pruneRemovedFiles(fromDir, toDir, shouldSkip);
   writeFileSync(join(toDir, ".nirnside-need-build"), "1\n");
   return files;
 }
@@ -332,6 +336,17 @@ export async function runSelfUpdate(root = process.cwd()) {
   if (process.env.NIRNSIDE_SKIP_UPDATE === "1" || process.env.CI) {
     log("Skipped (NIRNSIDE_SKIP_UPDATE or CI).");
     return 0;
+  }
+  // Every start, update or not: clear leftovers an older updater copied
+  // over without deleting (see scripts/prune-stale.mjs).
+  try {
+    const removed = pruneStale(root);
+    if (removed.length > 0) {
+      log(`Removed ${removed.length} leftover file(s) from an older version.`);
+      writeFileSync(join(root, ".nirnside-need-build"), "1\n");
+    }
+  } catch {
+    /* cleanup is best-effort */
   }
   const channel = readChannel(root);
   const repo = process.env.NIRNSIDE_UPDATE_REPO || channel.repo;
