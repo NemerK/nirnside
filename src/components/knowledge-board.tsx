@@ -124,7 +124,8 @@ export function KnowledgeBoard({
   );
 }
 
-function KnowledgeDetail({
+/** One character's research, motifs, recipes and plans, without the roster around it. */
+export function KnowledgeDetail({
   character,
   initialTab,
   initialQuery,

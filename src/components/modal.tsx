@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+
+function noopSubscribe(): () => void {
+  return () => {};
+}
 
 export function Modal({
   title,
@@ -28,7 +32,12 @@ export function Modal({
     };
   }, [onClose]);
 
-  if (typeof document === "undefined") return null;
+  // The portal needs document.body, so the dialog mounts only in the browser.
+  // Reading this through useSyncExternalStore keeps server and first client
+  // render identical (both null), which avoids a hydration mismatch when a
+  // page opens with the dialog already open.
+  const inBrowser = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  if (!inBrowser) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto p-4 sm:items-center">

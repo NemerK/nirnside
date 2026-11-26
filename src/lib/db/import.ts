@@ -98,9 +98,11 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
     const insChar = db.prepare(`
       INSERT INTO characters
         (id, name, class, race, alliance, level, championPoints,
-         isVampire, vampireStage, isWerewolf, lastSeen, sortOrder, json)
+         isVampire, vampireStage, isWerewolf, lastSeen, sortOrder, json,
+         archivedAt, gold, telVar, alliancePoints, classMastery, gender, mundus, lines)
       VALUES (@id, @name, @class, @race, @alliance, @level, @championPoints,
-              @isVampire, @vampireStage, @isWerewolf, @lastSeen, @sortOrder, @json)
+              @isVampire, @vampireStage, @isWerewolf, @lastSeen, @sortOrder, @json,
+              @archivedAt, @gold, @telVar, @alliancePoints, @classMastery, @gender, @mundus, @lines)
     `);
     const allChars = [
       ...snap.characters.map((c) => stripVengeanceFromCharacter({ ...c, archivedAt: c.archivedAt ?? null })),
@@ -126,6 +128,17 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         lastSeen: c.lastSeen,
         sortOrder: i,
         json: JSON.stringify(c),
+        archivedAt: c.archivedAt ?? null,
+        gold: c.gold ?? 0,
+        telVar: c.telVar ?? 0,
+        alliancePoints: c.alliancePoints ?? 0,
+        classMastery: c.classMastery ? 1 : 0,
+        gender: c.gender ?? null,
+        mundus: c.mundus ?? null,
+        // Roster rows need line names and ranks only, never the abilities.
+        lines: JSON.stringify(
+          c.skillLines.map((l) => ({ name: l.name, category: l.category ?? "", rank: l.rank ?? 0, subclassed: l.subclassed ? 1 : 0 })),
+        ),
       });
     });
 

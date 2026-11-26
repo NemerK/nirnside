@@ -26,8 +26,6 @@ import { clearLoadingRetry } from "../loading-recovery";
 import { NirnsideMark } from "../nirnside-mark";
 import { NirnsideSettings } from "../nirnside-settings";
 import { ThemeToggle } from "../theme-toggle";
-import { LookToggle } from "../look-toggle";
-import type { ShellAccount } from "../app-shell";
 
 const ICONS: Record<string, LucideIcon> = {
   home: Home,
@@ -97,6 +95,13 @@ function AtlasNav({ hiddenModules, onNavigate }: { hiddenModules?: string[]; onN
   );
 }
 
+export interface ShellAccount {
+  displayName: string;
+  region: string;
+  esoPlus: boolean;
+  lastSnapshot: number;
+}
+
 export function AtlasShell({
   account,
   hiddenModules,
@@ -122,7 +127,12 @@ export function AtlasShell({
         </div>
         <AtlasNav hiddenModules={hiddenModules} />
         <div className="mt-auto space-y-3 px-1 pt-6">
-          <LookToggle compact />
+          <a
+            href="/party"
+            className="block rounded-md border border-accent/40 bg-accent-soft px-3 py-2 text-xs font-medium text-accent hover:bg-accent hover:text-accent-fg"
+          >
+            Try the new Party look
+          </a>
           <div className="flex items-center justify-between gap-2">
             <ThemeToggle />
             <NirnsideSettings modules={modules ?? []} hiddenModules={hiddenModules ?? []} compact />
@@ -147,7 +157,6 @@ export function AtlasShell({
         <div className="shrink-0 overflow-y-auto border-b border-border bg-bg-elev p-4 md:hidden">
           <AtlasNav hiddenModules={hiddenModules} onNavigate={() => setOpen(false)} />
           <div className="mt-4 space-y-3">
-            <LookToggle />
             <div className="flex flex-wrap items-center gap-3">
               <ThemeToggle />
               <NirnsideSettings modules={modules ?? []} hiddenModules={hiddenModules ?? []} />

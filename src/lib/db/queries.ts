@@ -115,9 +115,9 @@ function intOr(value: unknown, fallback = 0): number {
 }
 
 /**
- * Roster rows for list pages. Skill lines keep name and rank only — abilities,
- * gear, and wardrobe stay out of the payload so changing pages does not wait
- * on every character's full snapshot.
+ * Roster rows for list pages, from the summary columns the importer writes
+ * (see ensureCharacterSummaryColumns). Skill lines keep name and rank only;
+ * the full character JSON is never read here.
  */
 const loadRoster = cache(function loadRoster(): Character[] {
   const db = getDb();
@@ -126,22 +126,8 @@ const loadRoster = cache(function loadRoster(): Character[] {
       .prepare(
         `SELECT id, name, class, race, alliance, level, championPoints,
                 isVampire, vampireStage, isWerewolf, lastSeen,
-                json_extract(json, '$.gold') AS gold,
-                json_extract(json, '$.telVar') AS telVar,
-                json_extract(json, '$.alliancePoints') AS alliancePoints,
-                json_extract(json, '$.classMastery') AS classMastery,
-                json_extract(json, '$.archivedAt') AS archivedAt,
-                json_extract(json, '$.gender') AS gender,
-                json_extract(json, '$.mundus') AS mundus,
-                (
-                  SELECT json_group_array(json_object(
-                    'name', json_extract(line.value, '$.name'),
-                    'category', IFNULL(json_extract(line.value, '$.category'), ''),
-                    'rank', IFNULL(json_extract(line.value, '$.rank'), 0),
-                    'subclassed', IFNULL(json_extract(line.value, '$.subclassed'), 0)
-                  ))
-                  FROM json_each(COALESCE(json_extract(characters.json, '$.skillLines'), '[]')) AS line
-                ) AS skillLines
+                gold, telVar, alliancePoints, classMastery, archivedAt, gender, mundus,
+                lines AS skillLines
          FROM characters
          ORDER BY sortOrder ASC`,
       )
@@ -272,7 +258,7 @@ export function getChampionAllocations(): { id: string; name: string; champion: 
     .prepare(
       `SELECT id, name, json_extract(json, '$.champion') AS champion
        FROM characters
-       WHERE COALESCE(json_extract(json, '$.archivedAt'), 0) = 0
+       WHERE COALESCE(archivedAt, 0) = 0
        ORDER BY sortOrder ASC`,
     )
     .all() as { id: string; name: string; champion: string | null }[];

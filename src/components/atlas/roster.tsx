@@ -31,8 +31,8 @@ function sortCards(cards: CharacterWorkspaceCard[], sort: RosterSort): Character
 }
 
 /**
- * Atlas character roster — progress that Classic kept on Dashboard, plus the
- * live roster cards. Opening a toon still goes to /characters/[id].
+ * The roster: every live character with their progress, then any deleted
+ * characters whose last-known sheet is still kept.
  */
 export function AtlasRoster({
   cards,
@@ -41,6 +41,7 @@ export function AtlasRoster({
   accountCP = 0,
   photoCounts = {},
   action,
+  archived = [],
 }: {
   cards: CharacterWorkspaceCard[];
   sort?: RosterSort;
@@ -48,6 +49,8 @@ export function AtlasRoster({
   accountCP?: number;
   photoCounts?: Record<string, number>;
   action?: ReactNode;
+  /** Deleted characters: their last-known sheet and bags stay readable. */
+  archived?: { id: string; name: string; className: string; archivedAt: number | null }[];
 }) {
   const sorted = sortCards(cards, sort);
   const listHref = "/characters?view=list";
@@ -120,6 +123,32 @@ export function AtlasRoster({
         </div>
         )
       )}
+      {archived.length > 0 ? (
+        <section className="mt-10">
+          <h2 className="mb-1 font-display text-lg font-semibold text-fg-muted">Deleted characters</h2>
+          <p className="mb-3 text-[13px] text-fg-subtle">
+            Their last-known sheet and bags, kept for reference. They don&apos;t count towards the live inventory.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {archived.map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={`/characters/${c.id}`}
+                  className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm text-fg-muted hover:border-border-strong hover:text-fg"
+                >
+                  <span
+                    className="h-2 w-2 rounded-full opacity-60"
+                    style={{ background: classColor(c.className) ?? "var(--fg-subtle)" }}
+                    aria-hidden
+                  />
+                  {c.name}
+                  {c.archivedAt ? <span className="text-[12px] text-fg-subtle">deleted {timeAgo(c.archivedAt)}</span> : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </AtlasPage>
   );
 }

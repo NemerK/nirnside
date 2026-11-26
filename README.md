@@ -50,6 +50,19 @@ field**, so a scan upgrades entries without dropping detail.
 | Catalog addon | `addon/NirnsideCatalog` | OPT-IN `/nirncatalog` scan of the live game catalog (AFK) |
 | Sample data | `data/sample/Nirnside.lua` | A realistic snapshot so you can try it without the game |
 
+## Two looks: Atlas and Party
+
+Nirnside opens in **Atlas**, the account-grouped layout. **Party** (at `/party`,
+or "Try the new Party look" in Atlas's sidebar) is the character-first look:
+your characters sit in a band across the top, and each one opens as a sheet of
+modules — gear on both bars, today's dailies, skill lines, targets, Champion
+stars, Wizard's Wardrobe setups, crafting, companions and bags. Everything the
+account owns lives in **the Vault**, and **Compare** shows every skill line for
+every character side by side, where targets are set.
+
+Party pages load only what they show, so a 20-character account stays as quick
+as a small one.
+
 ## Download & install
 
 The project is public: **https://github.com/NemerK/nirnside**

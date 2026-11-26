@@ -193,12 +193,61 @@ function migrate(db: Database.Database) {
       updatedAt INTEGER NOT NULL
     );
   `);
+  ensureCharacterSummaryColumns(db);
   migrateCharacterRolesToMany(db);
   migrateGoalsTable(db);
   ensureGoalExtraRank(db);
   clampGoalRanks(db);
   deleteExcludedCatalogAndGoals(db);
   stripStoredVengeance(db);
+}
+
+/**
+ * Small per-character fields the roster and every page header need, kept in
+ * their own columns. Reading them out of the full character JSON made SQLite
+ * re-parse every character's whole snapshot (about 1 MB each on an endgame
+ * account) on every page. Older databases are filled in once, here.
+ */
+const SUMMARY_COLUMNS: [string, string][] = [
+  ["archivedAt", "INTEGER"],
+  ["gold", "INTEGER"],
+  ["telVar", "INTEGER"],
+  ["alliancePoints", "INTEGER"],
+  ["classMastery", "INTEGER"],
+  ["gender", "TEXT"],
+  ["mundus", "TEXT"],
+  ["lines", "TEXT"],
+];
+
+function ensureCharacterSummaryColumns(db: Database.Database) {
+  const have = new Set((db.prepare("PRAGMA table_info(characters)").all() as { name: string }[]).map((c) => c.name));
+  for (const [name, type] of SUMMARY_COLUMNS) {
+    if (!have.has(name)) db.exec(`ALTER TABLE characters ADD COLUMN ${name} ${type}`);
+  }
+  try {
+    db.exec(`
+      UPDATE characters SET
+        archivedAt = json_extract(json, '$.archivedAt'),
+        gold = json_extract(json, '$.gold'),
+        telVar = json_extract(json, '$.telVar'),
+        alliancePoints = json_extract(json, '$.alliancePoints'),
+        classMastery = json_extract(json, '$.classMastery'),
+        gender = json_extract(json, '$.gender'),
+        mundus = json_extract(json, '$.mundus'),
+        lines = (
+          SELECT json_group_array(json_object(
+            'name', json_extract(line.value, '$.name'),
+            'category', IFNULL(json_extract(line.value, '$.category'), ''),
+            'rank', IFNULL(json_extract(line.value, '$.rank'), 0),
+            'subclassed', IFNULL(json_extract(line.value, '$.subclassed'), 0)
+          ))
+          FROM json_each(COALESCE(json_extract(characters.json, '$.skillLines'), '[]')) AS line
+        )
+      WHERE lines IS NULL
+    `);
+  } catch {
+    // SQLite without JSON1: the roster falls back to parsing the JSON itself.
+  }
 }
 
 /** Older snapshots recorded Vengeance lines. Take them off the stored characters. */

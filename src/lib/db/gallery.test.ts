@@ -1,11 +1,13 @@
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
 import { GALLERY_MAX_PHOTOS, GalleryError } from "../gallery/rules";
 
-process.env.NIRNSIDE_DB = join(tmpdir(), `nirnside-gallery-${process.pid}.db`);
+// Photos live beside the db, so each run gets its own folder (not the shared temp dir).
+process.env.NIRNSIDE_DB = join(mkdtempSync(join(tmpdir(), "nirnside-gallery-")), "test.db");
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -46,7 +48,7 @@ describe("gallery photos", () => {
   it("does not store a file that is not a photo, or write outside the gallery folder", () => {
     assert.throws(() => gallery.addGalleryPhoto("character", "char-001", Buffer.from("not a photo")), /JPEG/);
     assert.throws(() => gallery.addGalleryPhoto("character", "../secret", PNG), GalleryError);
-    const dir = join(tmpdir(), "gallery", "character", "char-001");
+    const dir = join(dirname(process.env.NIRNSIDE_DB as string), "gallery", "character", "char-001");
     const names = readdirSync(dir);
     assert.equal(names.length, GALLERY_MAX_PHOTOS - 1);
     assert.equal(names.every((name) => /^[a-f0-9]{16}\.png$/.test(name)), true);

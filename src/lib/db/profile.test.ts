@@ -1,10 +1,10 @@
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
 
-process.env.NIRNSIDE_DB = join(tmpdir(), `nirnside-profile-${process.pid}.db`);
+process.env.NIRNSIDE_DB = join(mkdtempSync(join(tmpdir(), "nirnside-profile-")), "test.db");
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -31,8 +31,8 @@ describe("profile pictures", () => {
     const read = profile.readProfileImage("avatar");
     assert.equal(read?.mime, "image/png");
     assert.equal(read?.bytes.length, PNG.length);
-    assert.equal(existsSync(join(tmpdir(), "profile", "avatar.png")), true);
-    assert.equal(existsSync(join(tmpdir(), "profile", "banner.png")), true);
+    assert.equal(existsSync(join(dirname(process.env.NIRNSIDE_DB as string), "profile", "avatar.png")), true);
+    assert.equal(existsSync(join(dirname(process.env.NIRNSIDE_DB as string), "profile", "banner.png")), true);
 
     const again = profile.setProfileImage("avatar", PNG);
     assert.ok(again.updatedAt >= avatar.updatedAt);
@@ -41,7 +41,7 @@ describe("profile pictures", () => {
     profile.clearProfileImage("avatar");
     assert.equal(profile.profileMedia().avatar, null);
     assert.equal(profile.readProfileImage("avatar"), null);
-    assert.equal(existsSync(join(tmpdir(), "profile", "avatar.png")), false);
+    assert.equal(existsSync(join(dirname(process.env.NIRNSIDE_DB as string), "profile", "avatar.png")), false);
     assert.equal(profile.profileMedia().banner, banner.updatedAt);
     assert.throws(() => profile.clearProfileImage("avatar"), profile.ProfileError);
   });
