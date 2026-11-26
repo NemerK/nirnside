@@ -23,4 +23,7 @@ jobs:
           git config --global user.name "Nirnside CI"
           git config --global user.email "ci@nirnside.invalid"
           git config --global init.defaultBranch main
+      # The updater skips itself when CI is set; its tests need it to run.
       - run: npm test
+        env:
+          CI: ""
