@@ -89,7 +89,17 @@ macOS / Linux, or a zip if you already use Node: download
 
 ### Updates (you and everyone who downloaded it)
 
-Every start via **Nirnside.exe**, `start-nirnside.cmd`, or `.sh`:
+**Nirnside.exe** downloads a ready-built copy of the app. GitHub builds it
+once per release on Windows and checks that it launches before publishing it
+(`nirnside-win-x64.zip`, with a checksum in `nirnside-win-x64.json`). Nothing is
+compiled or installed with npm on the player's PC. The install folder holds:
+
+- `app/`: the ready-built app, swapped out whole on each update.
+- `data/`: your database, pictures and dropped files. Updates never touch it.
+- `runtime/`: a private Node.js copy.
+
+`start-nirnside.cmd` and `.sh` (for people who already have Node, and for
+macOS/Linux) still build from source on each start:
 
 - **Git clone** — `git pull` on the branch you checked out (app + `addon/`).
 - **ZIP download** — fetches the latest `main` from GitHub and overlays it

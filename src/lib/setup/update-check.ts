@@ -84,6 +84,31 @@ async function remoteHead(repo: string, ref: string): Promise<string | null> {
 }
 
 /**
+ * The Windows app runs a ready-built copy, so "an update is waiting" means a
+ * newer ready-built release is published, not just a newer commit (the
+ * release is built a few minutes after each commit lands).
+ */
+async function releasedBundleSha(repo: string): Promise<string | null> {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
+  const key = `${repo}#bundle`;
+  const memory = remoteMemory.get(key) ?? { etag: null, sha: null };
+  try {
+    const res = await fetch(`https://github.com/${repo}/releases/download/latest/nirnside-win-x64.json`, {
+      headers: { "User-Agent": "nirnside-self-update" },
+      signal: AbortSignal.timeout(8000),
+      cache: "no-store",
+    });
+    if (!res.ok) return memory.sha;
+    const sha = ((await res.json()) as { sha?: unknown }).sha;
+    if (typeof sha !== "string" || !/^[0-9a-f]{7,40}$/i.test(sha)) return memory.sha;
+    remoteMemory.set(key, { etag: null, sha });
+    return sha;
+  } catch {
+    return memory.sha;
+  }
+}
+
+/**
  * Compare this install with the commit the next launch would apply.
  * Git clones ask origin/main. Zip installs, and a git install whose git
  * command failed, read the public commit feed. A feed that cannot be reached
@@ -110,7 +135,9 @@ export async function getUpdateStatus(
   } else if (!info.skipped) {
     ref = info.ref && info.ref !== "this git branch" ? info.ref : "main";
   }
-  if (!remote && !info.skipped) {
+  if (!remote && !info.skipped && process.env.NIRNSIDE_INSTALL_ROOT) {
+    remote = await releasedBundleSha(info.repo);
+  } else if (!remote && !info.skipped) {
     remote = await remoteHead(info.repo, ref);
   }
 

@@ -11,7 +11,73 @@ permissions:
   contents: write
 
 jobs:
+  # The ready-built app the Windows launcher downloads and runs as is: built
+  # and launch-tested on Windows here, so players never build anything.
+  bundle:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # The runtime new installs download (the manifest pins it).
+          node-version: "24"
+      - run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npx next build
+        env:
+          NIRNSIDE_BUNDLE: "1"
+          NEXT_TELEMETRY_DISABLED: "1"
+      - run: node scripts/make-bundle.mjs ${{ github.sha }}
+      - name: Zip
+        shell: pwsh
+        run: |
+          Push-Location dist/bundle
+          7z a -tzip -mx=7 ..\nirnside-win-x64.zip * | Out-Null
+          Pop-Location
+      - name: Launch test (unzipped elsewhere, data in its own folder)
+        shell: pwsh
+        run: |
+          $root = "$env:RUNNER_TEMP\nirnside-test"
+          7z x dist\nirnside-win-x64.zip "-o$root\app" | Out-Null
+          New-Item -ItemType Directory -Force "$root\data" | Out-Null
+          $env:PORT = "43219"; $env:HOSTNAME = "127.0.0.1"; $env:NODE_ENV = "production"
+          $env:NIRNSIDE_DB = "$root\data\nirnside.db"; $env:NIRNSIDE_INSTALL_ROOT = $root
+          $p = Start-Process -FilePath node -ArgumentList "server.js" -WorkingDirectory "$root\app" -RedirectStandardOutput "$root\out.log" -RedirectStandardError "$root\err.log" -PassThru -NoNewWindow
+          $ok = $false
+          for ($i = 0; $i -lt 60 -and -not $ok; $i++) {
+            Start-Sleep -Seconds 1
+            try { $ok = (Invoke-WebRequest http://127.0.0.1:43219/api/health -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200 } catch {}
+          }
+          $fail = -not $ok
+          foreach ($u in @("/", "/characters", "/party", "/setup")) {
+            try { $r = Invoke-WebRequest ("http://127.0.0.1:43219" + $u) -UseBasicParsing -TimeoutSec 60 -MaximumRedirection 5; "$u -> $($r.StatusCode)" } catch { "$u -> FAILED: $($_.Exception.Message)"; $fail = $true }
+          }
+          if (-not (Test-Path "$root\data\nirnside.db")) { "database not created in the data folder"; $fail = $true }
+          Stop-Process -Id $p.Id -Force
+          Get-Content "$root\out.log", "$root\err.log"
+          if ($fail) { exit 1 }
+      - name: Manifest
+        shell: pwsh
+        run: |
+          $zip = Get-Item dist\nirnside-win-x64.zip
+          @{
+            sha = "${{ github.sha }}"
+            node = (node -v).Trim()
+            sha256 = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower()
+            size = $zip.Length
+          } | ConvertTo-Json | Set-Content -Encoding utf8NoBOM dist\nirnside-win-x64.json
+          Get-Content dist\nirnside-win-x64.json
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: |
+            dist/nirnside-win-x64.zip
+            dist/nirnside-win-x64.json
+          overwrite_files: true
+
   pack:
+    needs: bundle
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

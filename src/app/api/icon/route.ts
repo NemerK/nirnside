@@ -1,3 +1,4 @@
+import { iconCacheDir } from "@/lib/data-dir";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -32,7 +33,7 @@ const UPSTREAMS = (process.env.NIRNSIDE_ICON_UPSTREAM || "https://esoicons.uesp.
   .map((s) => s.trim().replace(/\/$/, ""))
   .filter(Boolean);
 
-const CACHE_DIR = join(process.cwd(), ".cache", "icons");
+const CACHE_DIR = iconCacheDir();
 
 /**
  * Hot icons are held in a small memory cache so a page full of the same art
