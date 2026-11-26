@@ -18,7 +18,7 @@ export type GalleryPhoto = {
 };
 
 function galleryRoot(): string {
-  const dbPath = resolve(process.env.NIRNSIDE_DB ?? "./data/nirnside.db");
+  const dbPath = resolve(/* turbopackIgnore: true */ process.env.NIRNSIDE_DB ?? "./data/nirnside.db");
   return join(dirname(dbPath), "gallery");
 }
 
@@ -103,7 +103,7 @@ export function readGalleryPhoto(
     return null;
   }
   try {
-    const bytes = readFileSync(path);
+    const bytes = readFileSync(/* turbopackIgnore: true */ path);
     const image = checkGalleryBytes(bytes);
     if (image.ext !== row.ext) return null;
     return { bytes, mime: image.mime };

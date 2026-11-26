@@ -16,7 +16,7 @@ export class ProfileError extends Error {
 }
 
 function profileRoot(): string {
-  const dbPath = resolve(process.env.NIRNSIDE_DB ?? "./data/nirnside.db");
+  const dbPath = resolve(/* turbopackIgnore: true */ process.env.NIRNSIDE_DB ?? "./data/nirnside.db");
   return join(dirname(dbPath), "profile");
 }
 
@@ -89,7 +89,7 @@ export function readProfileImage(kind: ProfileKind): { bytes: Buffer; mime: Gall
     return null;
   }
   try {
-    const bytes = readFileSync(path);
+    const bytes = readFileSync(/* turbopackIgnore: true */ path);
     const image = checkGalleryBytes(bytes);
     if (image.ext !== saved.ext) return null;
     return { bytes, mime: image.mime };
