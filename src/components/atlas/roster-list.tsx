@@ -115,7 +115,7 @@ export function RosterList({
         <SortHeader label="Class" sortKey="class" sort={sort} onSort={toggleSort} />
         <SortHeader label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
         <SortHeader label="Role" sortKey="role" sort={sort} onSort={toggleSort} />
-        <SortHeader label="Targets" sortKey="targets" sort={sort} onSort={toggleSort} />
+        <SortHeader label="Mandatory" sortKey="targets" sort={sort} onSort={toggleSort} />
         <SortHeader label="Research" sortKey="research" sort={sort} onSort={toggleSort} />
       </div>
       <ul>
@@ -184,7 +184,7 @@ export function RosterList({
               )}
             </div>
             <div className="col-span-3 min-w-0 pl-11 sm:col-span-1 sm:pl-0">
-              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle sm:hidden">Targets</p>
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle sm:hidden">Mandatory</p>
               <Bar tally={card.mandatoryTargets} unscanned={card.unknown} />
             </div>
             <div className="col-span-3 min-w-0 pl-11 sm:col-span-1 sm:pl-0">

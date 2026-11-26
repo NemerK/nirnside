@@ -10,6 +10,7 @@ import {
   presentOutfitStyles,
   presentRecipeLists,
   presentResearch,
+  accountMotifProgress,
   summarizeAccountKnowledge,
 } from "./present";
 
@@ -174,6 +175,32 @@ describe("knowledge present", () => {
     assert.equal(summary.researchKnown, 2);
     assert.equal(summary.recipeKnown, 2);
     assert.equal(summary.planKnown, 1);
+  });
+
+  it("counts a motif chapter once even when several characters know it", () => {
+    const style = (axes: boolean, belts: boolean): MotifStyle => ({
+      name: "Crafting Motif 15: Dwemer",
+      known: Number(axes) + Number(belts),
+      total: 2,
+      chapters: [
+        { name: "Axes", known: axes, bookId: 1 },
+        { name: "Belts", known: belts, bookId: 2 },
+      ],
+    });
+    const countsOnly = (known: number): MotifStyle => ({
+      name: "Crafting Motif 12: Barbaric",
+      known,
+      total: 14,
+      chapters: [],
+    });
+    const a = char({ id: "a", name: "Main", motifs: [style(true, false), countsOnly(10)] });
+    const b = char({ id: "b", name: "Alt", motifs: [style(true, true), countsOnly(4)] });
+    const motifs = accountMotifProgress([a, b]);
+    assert.equal(motifs.known, 12);
+    assert.equal(motifs.total, 16);
+    const summary = summarizeAccountKnowledge([a, b]);
+    assert.equal(summary.motifKnown, 12);
+    assert.equal(summary.motifTotal, 16);
   });
 
   it("presents outfit styles as the game tree and counts unlocks", () => {

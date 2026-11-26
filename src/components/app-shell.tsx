@@ -14,6 +14,7 @@ import {
   BookOpen,
   CalendarDays,
   FolderCog,
+  Gauge,
   Home,
   Landmark,
   LayoutDashboard,
@@ -40,6 +41,7 @@ export interface ShellAccount {
 const NAV = [
   { href: "/", label: "Home", icon: Home, exact: true },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/progress", label: "Progress", icon: Gauge },
   { href: "/planner", label: "Planner", icon: ListChecks },
   { href: "/builds", label: "Builds", icon: Swords },
   { href: "/characters", label: "Characters", icon: Users },

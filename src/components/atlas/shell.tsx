@@ -8,6 +8,7 @@ import {
   BookOpen,
   CalendarDays,
   FolderCog,
+  Gauge,
   Home,
   Layers,
   Library,
@@ -39,6 +40,7 @@ const ICONS: Record<string, LucideIcon> = {
   knowledge: BookOpen,
   encyclopedia: Library,
   planner: ListChecks,
+  progress: Gauge,
   setup: FolderCog,
 };
 

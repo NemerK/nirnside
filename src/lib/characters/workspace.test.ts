@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import type { Character, SkillLine } from "../snapshot/schema";
 import type { Goal } from "../goals/types";
 import {
-  overallWorkspacePct,
+  accountMandatory,
+  mandatoryWorkspacePct,
   presentCharacterWorkspaceCard,
   presentCharacterWorkspaceCards,
 } from "./workspace";
@@ -48,7 +49,7 @@ describe("presentCharacterWorkspaceCard", () => {
     assert.equal(card.targets.total, 0);
     assert.equal(card.research.total, 0);
     assert.equal(card.motifs.total, 0);
-    assert.equal(overallWorkspacePct(card), 0);
+    assert.equal(mandatoryWorkspacePct(card), 0);
   });
 
   it("maps a scanned character without inventing progress", () => {
@@ -94,6 +95,55 @@ describe("presentCharacterWorkspaceCard", () => {
     assert.equal(card.mandatoryTargets.done, 1);
     assert.equal(card.mandatoryTargets.total, 1);
     assert.equal(card.mandatoryTargets.pct, 100);
+    assert.equal(card.beyond.done, 0);
+    assert.equal(card.beyond.total, 2);
+    assert.equal(card.targets.total, 2);
+    card.motifs = { done: 1, total: 40, pct: 3 };
+    card.research = { done: 10, total: 324, pct: 3 };
+    assert.equal(mandatoryWorkspacePct(card), 100);
+  });
+
+  it("weights the account percentage by mandatory goals, not by character", () => {
+    const line = (name: string, rank: number): SkillLine => ({
+      name,
+      category: "Guild",
+      rank,
+      subclassed: false,
+      classMastery: false,
+      abilities: [],
+    });
+    const goal = (id: string, target: string): Goal => ({
+      id,
+      domain: "skillline",
+      tier: "essential",
+      scope: "account",
+      characterId: null,
+      scopeKey: null,
+      target,
+      targetRank: 10,
+      extraRank: 0,
+      note: "",
+      createdAt: 1,
+    });
+    const done = presentCharacterWorkspaceCard(
+      char({ id: "a", name: "Done", lastSeen: 5, skillLines: [line("Mages Guild", 10)] }),
+      [goal("m", "Mages Guild")],
+      {},
+    );
+    const short = presentCharacterWorkspaceCard(
+      char({
+        id: "b",
+        name: "Short",
+        lastSeen: 5,
+        skillLines: [line("Mages Guild", 1), line("Fighters Guild", 1), line("Undaunted", 1)],
+      }),
+      [goal("m", "Mages Guild"), goal("f", "Fighters Guild"), goal("u", "Undaunted")],
+      {},
+    );
+    const account = accountMandatory([done, short]);
+    assert.equal(account.done, 1);
+    assert.equal(account.total, 4);
+    assert.equal(account.pct, 25);
   });
 
   it("keeps assigned roles on the card", () => {

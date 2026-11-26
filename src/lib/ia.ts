@@ -4,8 +4,8 @@
  * the Atlas shell and the Collections hub.
  *
  * Module ids still match `TOGGLEABLE_MODULES` so Setup toggles keep working.
- * Dashboard is intentionally omitted from Atlas nav: its progress workspace
- * lives on Characters. Focus remains a redirect to Dashboard for old links.
+ * Dashboard is intentionally omitted from Atlas nav. Progress is the
+ * mandatory-goal board; the roster still shows each character's percentage.
  */
 
 export type IaGrain = "account" | "characters" | "catalog" | "planning" | "system";
@@ -117,6 +117,13 @@ export const ATLAS_NAV: IaGroup[] = [
     label: "Planning",
     blurb: "Player-authored targets on top of the snapshot.",
     items: [
+      {
+        id: "progress",
+        label: "Progress",
+        href: "/progress",
+        blurb: "Mandatory completion, with extra goals and account motifs beside it.",
+        permanent: true,
+      },
       {
         id: "planner",
         label: "Planner",

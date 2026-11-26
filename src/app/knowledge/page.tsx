@@ -95,7 +95,7 @@ export default async function KnowledgePage({
         ]}
       />
       <p className="mt-1.5 text-xs text-fg-subtle">
-        Account totals. Open a character for the trait grid, chapters, recipes, and plans.
+        Motif chapters count once, on whichever character learned them. Research, recipes, and plans stay per character.
       </p>
     </div>
   );
