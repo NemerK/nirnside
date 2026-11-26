@@ -1,6 +1,7 @@
+import { dataDir } from "../data-dir";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { getDb } from "./index";
 import {
   GALLERY_MAX_PHOTOS,
@@ -18,8 +19,7 @@ export type GalleryPhoto = {
 };
 
 function galleryRoot(): string {
-  const dbPath = resolve(/* turbopackIgnore: true */ process.env.NIRNSIDE_DB ?? "./data/nirnside.db");
-  return join(dirname(dbPath), "gallery");
+  return join(/* turbopackIgnore: true */ dataDir(), "gallery");
 }
 
 function ownerOrThrow(kind: string, id: string): { kind: GalleryKind; id: string } {
@@ -33,7 +33,7 @@ function photoPath(owner: { kind: GalleryKind; id: string }, photoId: string, ex
   if (ext !== "jpg" && ext !== "png" && ext !== "webp" && ext !== "gif") {
     throw new GalleryError("That photo is not in this gallery.");
   }
-  return join(galleryRoot(), owner.kind, owner.id, `${photoId}.${ext}`);
+  return join(/* turbopackIgnore: true */ galleryRoot(), owner.kind, owner.id, `${photoId}.${ext}`);
 }
 
 export function listGalleryPhotos(kind: string, ownerId: string): GalleryPhoto[] {

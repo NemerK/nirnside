@@ -25,6 +25,9 @@ import (
 // first: the REST API allows 60 requests an hour, and a refusal used to make
 // a reopen look like "already up to date" while the old server kept running.
 func updatePending(root, apiBase string) bool {
+	if hasBundle(root) {
+		return bundleUpdatePending(root)
+	}
 	if sha, ok := remoteZipSha(apiBase, updateRepo(root), updateRef(root)); ok {
 		return installBehind(root, sha)
 	}

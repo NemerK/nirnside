@@ -32,6 +32,11 @@ if (playerInstall) {
 
 const nextConfig: NextConfig = {
   // better-sqlite3 is a native module; keep it out of the bundler.
+  // Release builds (scripts/make-bundle.mjs) produce a self-contained server
+  // that the Windows app downloads and runs as is: no build on players' PCs.
+  output: process.env.NIRNSIDE_BUNDLE === "1" ? "standalone" : undefined,
+  // No next/image in the app, so the image library never needs to ship.
+  outputFileTracingExcludes: { "*": ["node_modules/@img/**", "node_modules/sharp/**"] },
   serverExternalPackages: ["better-sqlite3"],
   // Skip the developer type check on players' machines (see playerInstall).
   typescript: { ignoreBuildErrors: playerInstall },

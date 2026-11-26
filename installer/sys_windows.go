@@ -134,8 +134,11 @@ func createShortcuts(dest string) error {
 	// targeting start-nirnside.cmd — pin the .ico so the tile never shows the
 	// generic cmd icon.
 	ico := ""
-	if _, err := os.Stat(filepath.Join(dest, "nirnside.ico")); err == nil {
-		ico = filepath.Join(dest, "nirnside.ico")
+	for _, p := range []string{filepath.Join(dest, "nirnside.ico"), filepath.Join(dest, "app", "nirnside.ico")} {
+		if _, err := os.Stat(p); err == nil {
+			ico = p
+			break
+		}
 	}
 	iconLine := ""
 	if ico != "" {

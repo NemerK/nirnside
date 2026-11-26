@@ -88,6 +88,9 @@ func looksInstalled(dir string) bool {
 	if dir == "" {
 		return false
 	}
+	if hasBundle(dir) {
+		return true
+	}
 	if _, err := os.Stat(filepath.Join(dir, "package.json")); err != nil {
 		return false
 	}

@@ -103,6 +103,11 @@ export async function POST() {
     if (answer) return answer;
   }
 
+  // The Windows app's ready-built copy is only ever updated by its launcher.
+  if (process.env.NIRNSIDE_INSTALL_ROOT) {
+    return NextResponse.json({ error: HANDOFF_FAILED }, { status: 503 });
+  }
+
   const plan = planUpdate({
     platform: process.platform,
     parentIsLauncher: parentIsLauncher(),
