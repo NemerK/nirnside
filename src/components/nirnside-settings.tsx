@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { Modal } from "./modal";
 import { NirnsideMark } from "./nirnside-mark";
-import { LookToggle } from "./look-toggle";
 import { ProfileSettings } from "./profile-settings";
 import type { ModuleDef } from "@/lib/modules";
 
@@ -103,17 +102,10 @@ export function NirnsideSettings({
           <div className="mb-4 flex items-center gap-3">
             <NirnsideMark className="h-9 w-9 shrink-0 rounded-lg" />
             <p className="text-sm text-fg-muted">
-              Your profile, the look of the app, and which pages stay in the sidebar. Pictures stay on this machine.
+              Your profile and which pages stay in the sidebar. Pictures stay on this machine.
             </p>
           </div>
           <ProfileSettings />
-          <div className="mb-4 rounded-lg border border-border bg-surface-2/40 p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Look</p>
-            <LookToggle />
-            <p className="mt-2 text-xs text-fg-subtle">
-              Atlas regroups the app by account / characters / catalog / planning. Classic keeps the original layout.
-            </p>
-          </div>
           <ul className="divide-y divide-border/70">
             {modules.map((m) => {
               const Icon = MODULE_ICONS[m.id] ?? Settings2;

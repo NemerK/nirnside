@@ -10,10 +10,8 @@ import { getMeta, setMeta } from "./db";
  * user's choices. It never touches game data: a hidden module keeps working if
  * you go to its URL directly.
  *
- * Atlas look regroups some of these (stickerbook + styles + houses → Collections
- * hub at /collections) but the underlying module ids stay so Setup toggles and
- * Classic URLs keep working. Dashboard progress is shown on the Atlas roster;
- * the dashboard module itself remains for Classic and old bookmarks.
+ * Collections (/collections) groups stickerbook + styles + houses, but each
+ * keeps its own module id so it can still be hidden on its own.
  */
 
 export interface ModuleDef {
@@ -25,13 +23,6 @@ export interface ModuleDef {
 }
 
 export const TOGGLEABLE_MODULES: ModuleDef[] = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    href: "/dashboard",
-    description:
-      "Classic: every character at a glance. Atlas folds the same progress into the Characters roster.",
-  },
   {
     id: "planner",
     label: "Planner",

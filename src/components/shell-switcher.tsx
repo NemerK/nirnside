@@ -2,10 +2,8 @@
 
 import type { ReactNode } from "react";
 import type { ModuleDef } from "@/lib/modules";
-import { AppShell, type ShellAccount } from "./app-shell";
 import { AppUpdate } from "./app-update";
-import { AtlasShell } from "./atlas/shell";
-import { useLook } from "./look-provider";
+import { AtlasShell, type ShellAccount } from "./atlas/shell";
 
 export function ShellSwitcher({
   account,
@@ -18,21 +16,14 @@ export function ShellSwitcher({
   modules?: ModuleDef[];
   children: ReactNode;
 }) {
-  const { look } = useLook();
-  const shell =
-    look === "atlas" ? (
-      <AtlasShell account={account} hiddenModules={hiddenModules} modules={modules}>
-        {children}
-      </AtlasShell>
-    ) : (
-      <AppShell account={account} hiddenModules={hiddenModules} modules={modules}>
-        {children}
-      </AppShell>
-    );
   return (
-    <div data-rendered-look={look} className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <AppUpdate />
-      <div className="min-h-0 flex-1">{shell}</div>
+      <div className="min-h-0 flex-1">
+        <AtlasShell account={account} hiddenModules={hiddenModules} modules={modules}>
+          {children}
+        </AtlasShell>
+      </div>
     </div>
   );
 }

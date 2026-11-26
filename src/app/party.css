@@ -1,0 +1,329 @@
+@import "tailwindcss";
+
+/*
+ * Party — the character-first look.
+ *
+ * Warm night plum with candle-gold. Gold marks what is yours to act on:
+ * the selected character, progress, the next thing to do. ESO's item quality
+ * colors stay reserved for items. Token names match the rest of the app, so
+ * every shared board renders in this look without changes.
+ */
+
+html.party {
+  color-scheme: dark;
+  --bg: #141019;
+  --bg-elev: #19141f;
+  --surface: #1c1624;
+  --surface-2: #251d2f;
+  --border: #30263b;
+  --border-strong: #45384f;
+  --fg: #eee7f2;
+  --fg-muted: #c4b8cf;
+  --fg-subtle: #94889f;
+  --accent: #e9c46a;
+  --accent-fg: #1c1405;
+  --accent-soft: rgb(233 196 106 / 0.13);
+  --danger: #ef7b6e;
+  --ok: #7fd3a0;
+  --info: #8db8ec;
+  --meter: #e9c46a;
+  --meter-track: #2e2439;
+  --rank-mandatory: #e9c46a;
+  --rank-extra: #8db8ec;
+  --shadow-pop: 0 18px 48px rgb(4 2 8 / 0.6);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-info: var(--info);
+  --color-meter: var(--meter);
+  --color-meter-track: var(--meter-track);
+  --font-sans: var(--font-party-body);
+  --font-display: var(--font-party-display);
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
+
+  --color-q-trash: #9d9d9d;
+  --color-q-normal: #c8c6bf;
+  --color-q-fine: #4cd12a;
+  --color-q-superior: #3a92ff;
+  --color-q-epic: #a94ff5;
+  --color-q-legendary: #d8b13a;
+  --color-q-mythic: #e6832b;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-party-body), system-ui, sans-serif;
+}
+
+/* One soft pool of light behind the character band; the rest stays still. */
+.party-sky {
+  background:
+    radial-gradient(1100px 420px at 22% -120px, color-mix(in srgb, var(--hero, #b46ad4) 26%, transparent), transparent 70%),
+    var(--bg);
+}
+
+.party-module {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 16px;
+}
+a.party-module:hover {
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--surface) 85%, var(--surface-2));
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Shared board styles (also in globals.css for the Atlas look). */
+/* Craft station pins are white silhouettes. Black on a light page, white on a dark one. */
+.craft-station-icon {
+  filter: brightness(0);
+}
+html.party .craft-station-icon {
+  filter: none;
+}
+
+/* The planner's rank slider: draggable, keyboard-friendly, gold. */
+.range-gold {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+.range-gold::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 3px solid var(--bg-elev);
+  box-shadow: 0 0 0 1px var(--border-strong);
+  cursor: grab;
+}
+.range-gold:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+.range-gold::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 3px solid var(--bg-elev);
+  box-shadow: 0 0 0 1px var(--border-strong);
+  cursor: grab;
+}
+
+/* Class filter crests: light the pixels, never a halo around the art. */
+.class-filter-crest {
+  transition: filter 180ms ease;
+}
+
+.class-filter-crest-on {
+  filter: brightness(1.22) saturate(1.2) contrast(1.06);
+}
+
+.class-filter-crest-dim {
+  filter: brightness(0.52) saturate(0.35);
+}
+
+.game-icon-lit {
+  position: relative;
+  display: inline-flex;
+  isolation: isolate;
+  transform: scale(1.06);
+  transform-origin: center;
+}
+
+.game-icon-lit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    118deg,
+    transparent 0%,
+    transparent 42%,
+    rgba(255, 248, 220, 0.1) 47%,
+    rgba(255, 232, 170, 0.55) 50%,
+    rgba(200, 163, 90, 0.18) 53%,
+    transparent 58%,
+    transparent 100%
+  );
+  background-size: 260% 100%;
+  background-position: 140% 0;
+  animation: class-crest-sheen 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  -webkit-mask-image: var(--icon-mask);
+  mask-image: var(--icon-mask);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  mix-blend-mode: screen;
+}
+
+@keyframes class-crest-sheen {
+  0%,
+  28% {
+    background-position: 140% 0;
+  }
+  58%,
+  100% {
+    background-position: -40% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-icon-lit {
+    transform: none;
+  }
+
+  .game-icon-lit::after {
+    animation: none;
+    background: rgba(255, 236, 186, 0.2);
+  }
+}
+
+/* Floating skill and set cards. One edge only — a second ring sat on the
+   hovered item's outline and read as two borders. */
+.nirn-tip {
+  background: color-mix(in srgb, var(--surface-2) 88%, white 12%);
+  border: 1px solid color-mix(in srgb, var(--accent) 65%, var(--border-strong));
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.62);
+}
+.nirn-tip-target {
+  border-radius: 0.5rem;
+}
+.nirn-tip-target:hover,
+.nirn-tip-target:focus-within {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* Gallery dialog. The veil settles first, then the sheet rises into place. */
+.nirn-gallery-veil {
+  animation: nirn-gallery-veil 220ms ease-out both;
+}
+.nirn-gallery-sheet {
+  transform-origin: center bottom;
+  animation: nirn-gallery-rise 460ms cubic-bezier(0.16, 1, 0.3, 1) 70ms both;
+}
+@keyframes nirn-gallery-veil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes nirn-gallery-rise {
+  from {
+    transform: translateY(84px) scale(0.96);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nirn-gallery-veil,
+  .nirn-gallery-sheet {
+    animation: none;
+  }
+}
+
+/* Personal home: a profile card. Banner, cut-out avatar, showcases. */
+.nirn-profile {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 28px 70px rgb(0 0 0 / 0.32);
+}
+.nirn-profile-banner {
+  position: relative;
+  height: 9.25rem;
+  background:
+    radial-gradient(80% 130% at 92% -20%, color-mix(in srgb, var(--profile) 82%, white) 0%, transparent 52%),
+    radial-gradient(70% 100% at -10% 130%, color-mix(in srgb, var(--alliance) 75%, black) 0%, transparent 48%),
+    linear-gradient(112deg, color-mix(in srgb, var(--profile) 74%, #07060c) 0%, #10131a 70%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22);
+}
+.nirn-profile-banner::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 3px;
+  background: var(--alliance);
+}
+@media (min-width: 640px) {
+  .nirn-profile-banner {
+    height: 13rem;
+  }
+}
+.nirn-living-face {
+  animation: nirn-living-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes nirn-living-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nirn-living-face {
+    animation: none;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Side sheet: the panel slides in; the page behind dims. */
+.nirn-sheet-veil {
+  animation: nirn-gallery-veil 180ms ease-out both;
+}
+.nirn-sheet {
+  animation: nirn-sheet-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes nirn-sheet-in {
+  from { transform: translateX(32px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nirn-sheet, .nirn-sheet-veil { animation: none; }
+}

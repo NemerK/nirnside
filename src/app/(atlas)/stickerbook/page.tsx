@@ -1,0 +1,65 @@
+import { BookMarked } from "lucide-react";
+import { getAccount, getStickerbook, getStickerbookStats } from "@/lib/db/queries";
+import { MythicLeads } from "@/components/mythic-leads";
+import { setHref } from "@/lib/db/catalog-queries";
+import { StickerbookGrid } from "@/components/stickerbook-grid";
+import { EmptyState, Stat } from "@/components/ui";
+import { AtlasSection } from "@/components/atlas/section";
+import { AtlasCollectionsLink } from "@/components/atlas/collections-link";
+
+export const dynamic = "force-dynamic";
+
+export default function StickerbookPage() {
+  let sets: ReturnType<typeof getStickerbook> = [];
+  let stats: ReturnType<typeof getStickerbookStats> = { total: 0, collected: 0, sets: 0 };
+  let mythics: NonNullable<ReturnType<typeof getAccount>>["mythics"] = [];
+  try {
+    sets = getStickerbook();
+    stats = getStickerbookStats();
+    mythics = getAccount()?.mythics ?? [];
+  } catch {
+    // leave defaults
+  }
+
+  const pct = stats.total ? Math.round((stats.collected / stats.total) * 100) : 0;
+  const completeSets = sets.filter((s) => s.total > 0 && s.collected === s.total).length;
+  const newPieces = sets.reduce((n, s) => n + s.newCount, 0);
+
+  const mythicBlock = <MythicLeads mythics={mythics ?? []} />;
+
+  const body =
+    sets.length === 0 ? (
+      <EmptyState title="Stickerbook is empty" icon={<BookMarked className="h-8 w-8" />}>
+        Log out with the addon installed to capture your collection, or run{" "}
+        <code className="rounded bg-surface-2 px-1">npm run seed</code> for sample data.
+      </EmptyState>
+    ) : (
+      <>
+        <div className="mb-4 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Overall" value={`${pct}%`} hint={`${stats.collected}/${stats.total} pieces`} />
+          <Stat label="Sets tracked" value={stats.sets} />
+          <Stat label="Complete sets" value={completeSets} />
+          <Stat
+            label="Pieces missing"
+            value={stats.total - stats.collected}
+            hint={newPieces > 0 ? `${newPieces} new` : undefined}
+          />
+        </div>
+        <StickerbookGrid
+          mythics={mythics ?? []}
+          sets={sets.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }))}
+        />
+      </>
+    );
+
+  return (
+    <AtlasSection
+          title="Stickerbook"
+          subtitle="Set piece reconstruction — collected vs missing, as the game tracks it."
+        >
+          <AtlasCollectionsLink current="sets" />
+          {mythicBlock}
+          {body}
+        </AtlasSection>
+  );
+}
