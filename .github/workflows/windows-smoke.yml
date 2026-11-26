@@ -1,0 +1,94 @@
+name: Windows smoke
+on:
+  push:
+    branches: [ci/windows-smoke]
+jobs:
+  e2e:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "24" }
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.22" }
+      - run: npm ci --no-audit --no-fund
+      - run: npx next build
+        env: { NIRNSIDE_BUNDLE: "1", NEXT_TELEMETRY_DISABLED: "1" }
+      - run: node scripts/make-bundle.mjs ${{ github.sha }}
+      - name: Zip + manifest
+        shell: pwsh
+        run: |
+          Push-Location dist/bundle; 7z a -tzip -mx=7 ..\nirnside-win-x64.zip * | Out-Null; Pop-Location
+          $zip = Get-Item dist\nirnside-win-x64.zip
+          @{ sha = "${{ github.sha }}"; node = (node -v).Trim(); sha256 = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower(); size = $zip.Length } | ConvertTo-Json | Set-Content -Encoding utf8NoBOM dist\nirnside-win-x64.json
+          "zip MB: " + [math]::Round($zip.Length / 1MB, 1)
+      - name: Build launcher
+        working-directory: installer
+        run: go build -o ../Nirnside.exe .
+      - name: Fresh install, then upgrade over an old-style install
+        shell: pwsh
+        run: |
+          $srv = Start-Process -FilePath python -ArgumentList "-m","http.server","8765","--directory","dist" -PassThru -NoNewWindow
+          $env:NIRNSIDE_BUNDLE_URL = "http://127.0.0.1:8765"
+          $env:NIRNSIDE_SKIP_UPDATE = "1"
+          $sv = [Environment]::GetFolderPath("MyDocuments") + "\Elder Scrolls Online\live\SavedVariables"
+          New-Item -ItemType Directory -Force $sv | Out-Null
+          $in = [IO.File]::OpenRead("$PWD\.ci\big.lua.gz"); $gz = New-Object IO.Compression.GZipStream($in, [IO.Compression.CompressionMode]::Decompress); $o = [IO.File]::Create("$sv\NirnsideSnapshot.lua"); $gz.CopyTo($o); $o.Close(); $gz.Close()
+          function Wait-Ready($label) {
+            $last = ""; $sw = [Diagnostics.Stopwatch]::StartNew()
+            for ($i = 0; $i -lt 200; $i++) {
+              Start-Sleep -Seconds 2
+              try { $s = Invoke-RestMethod http://127.0.0.1:43218/api/state -TimeoutSec 5 } catch { continue }
+              $line = "$($s.phase) $($s.percent)% $($s.step) | $($s.detail)"; if ($line -ne $last) { "  $line"; $last = $line }
+              if ($s.ready) { "$label ready in $([int]$sw.Elapsed.TotalSeconds)s, app $($s.appRevision)"; return $true }
+              if ($s.phase -eq "error") { "$label ERROR: $($s.error)"; return $false }
+            }
+            "$label timed out"; return $false
+          }
+          function Probe() {
+            $bad = $false
+            foreach ($u in @("/api/health","/","/characters","/party","/inventory")) {
+              $sw = [Diagnostics.Stopwatch]::StartNew()
+              try { $r = Invoke-WebRequest ("http://127.0.0.1:43219" + $u) -TimeoutSec 60 -UseBasicParsing; "  $u -> $($r.StatusCode) in $($sw.ElapsedMilliseconds) ms" } catch { "  $u -> FAILED: $($_.Exception.Message)"; $bad = $true }
+            }
+            return -not $bad
+          }
+          $dest = "$env:USERPROFILE\nirnside-app"
+          $fail = $false
+
+          "== 1. fresh install"
+          New-Item -ItemType Directory -Force C:\dl | Out-Null; Copy-Item Nirnside.exe C:\dl\Nirnside.exe
+          $l = Start-Process -FilePath C:\dl\Nirnside.exe -PassThru
+          Start-Sleep -Seconds 4
+          Invoke-RestMethod -Method Post -Uri http://127.0.0.1:43218/api/install -Body (@{ dest = $dest; shortcut = $false } | ConvertTo-Json) -ContentType application/json | Out-Null
+          if (-not (Wait-Ready "fresh")) { $fail = $true }
+          if (-not (Probe)) { $fail = $true }
+          "  install folder: " + ((Get-ChildItem -Force $dest | ForEach-Object Name) -join ", ")
+          "  data: " + ((Get-ChildItem -Force "$dest\data" | ForEach-Object Name) -join ", ")
+          if (-not (Test-Path "$dest\data\nirnside.db")) { "  no database in data/"; $fail = $true }
+
+          "== 2. reopen an old-style install (source files at the top) with the new launcher"
+          Get-Process Nirnside, node -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 3
+          Remove-Item -Recurse -Force "$dest\app"
+          foreach ($d in @("src\app\inventory", "node_modules\next", ".next\server", "scripts")) { New-Item -ItemType Directory -Force "$dest\$d" | Out-Null }
+          Set-Content "$dest\package.json" '{"name":"nirnside"}'
+          Set-Content "$dest\src\app\inventory\page.tsx" 'old'
+          $l = Start-Process -FilePath "$dest\Nirnside.exe" -PassThru
+          if (-not (Wait-Ready "upgrade")) { $fail = $true }
+          if (-not (Probe)) { $fail = $true }
+          Start-Sleep -Seconds 5
+          "  install folder: " + ((Get-ChildItem -Force $dest | ForEach-Object Name) -join ", ")
+          foreach ($gone in @("src", "node_modules", ".next", "package.json", "scripts")) { if (Test-Path "$dest\$gone") { "  leftover not removed: $gone"; $fail = $true } }
+          if (-not (Test-Path "$dest\data\nirnside.db")) { "  database lost!"; $fail = $true }
+
+          "== 3. second start is quick (no download)"
+          Get-Process Nirnside, node -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 3
+          $l = Start-Process -FilePath "$dest\Nirnside.exe" -PassThru
+          if (-not (Wait-Ready "restart")) { $fail = $true }
+          if (-not (Probe)) { $fail = $true }
+
+          "---- log tail"; Get-Content "$dest\nirnside-installer.log" -Tail 40
+          if ($fail) { exit 1 }
