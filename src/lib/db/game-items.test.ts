@@ -73,3 +73,13 @@ describe("item index", () => {
     assert.ok(db.getLearnedItem(1));
   });
 });
+
+describe("filing bag items", () => {
+  it("keeps the game's tab and files untagged gear by its piece", () => {
+    assert.equal(idx.fileItem({ name: "x", bagCategory: "consumables", bagSubtype: "food", equipSlot: null }).bagCategory, "consumables");
+    const helm = idx.fileItem({ name: "Helm of the Pariah", equipSlot: null, bagCategory: null, bagSubtype: null });
+    assert.deepEqual([helm.bagCategory, helm.bagSubtype], ["apparel", "heavy"]);
+    const oil = idx.fileItem({ name: "Dwarven Oil", equipSlot: null, bagCategory: null, bagSubtype: null });
+    assert.equal(oil.bagCategory, null);
+  });
+});

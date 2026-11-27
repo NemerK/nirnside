@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  Archive,
   ArrowLeft,
-  Backpack,
   Droplet,
   Moon,
   ShieldQuestion,
   Sparkles,
 } from "lucide-react";
-import { getAccount, getCharacter, getItemsForCharacter } from "@/lib/db/queries";
+import { getAccount, getCharacter } from "@/lib/db/queries";
 import { loadSetHover } from "@/lib/catalog/hover-sets";
 import { withResolvedSet } from "@/lib/catalog/set-brief";
 import { listAssignments, listRoles } from "@/lib/db/roles";
@@ -18,7 +16,8 @@ import { skillLineChoices } from "@/lib/planner/data";
 import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-links";
 import type { Character, Wardrobe as WardrobeData } from "@/lib/snapshot/schema";
-import { isArchived } from "@/lib/snapshot/roster";
+import { readCharacter } from "@/lib/game/understand";
+import { abilityLines, classLines, mundusTexts } from "@/lib/db/game-knowledge";
 import { rolesForCharacter } from "@/lib/roles/filter";
 import { presentSkillBook } from "@/lib/skills/present";
 import { briefsFromLore } from "@/lib/skills/skill-brief";
@@ -33,11 +32,10 @@ import { CharacterChampion } from "@/components/character-champion";
 import { CharacterScripts, type CharacterScript } from "@/components/character-scripts";
 import { CharacterLoadout } from "@/components/character-loadout";
 import { SetCatalogProvider } from "@/components/set-hover";
-import { SetHover } from "@/components/set-hover";
 import { SkillCatalogProvider } from "@/components/skill-hover";
 import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
-import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
+import { ALLIANCE_ACCENT, formatGold, formatNumber, timeAgo } from "@/lib/format";
 import { formatResearchRemaining, presentMotifs, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
 import { skillLineCap } from "@/lib/game/skill-caps";
 import type { AbilityPlan, LineSkillView } from "@/lib/planner/line-plan";
@@ -65,15 +63,14 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
   }
   if (!c) notFound();
 
-  const archived = isArchived(c);
-  let bags: ReturnType<typeof getItemsForCharacter> = [];
-  if (archived) {
-    try {
-      bags = getItemsForCharacter(c);
-    } catch {
-      bags = [];
-    }
-  }
+  // One reading of the character through the game model.
+  const account = safe(() => getAccount());
+  const reading = readCharacter(
+    c,
+    safe(classLines) ?? new Map(),
+    safe(abilityLines) ?? new Map(),
+    { mundus: safe(mundusTexts) ?? [], companions: account?.companions ?? [] },
+  );
   let roles: ReturnType<typeof listRoles> = [];
   let assigned: ReturnType<typeof rolesForCharacter> = [];
   try {
@@ -158,12 +155,9 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
   // Cross-link every set worn in a Wizard's Wardrobe setup. Mythics open their
   // missing leads instead of the encyclopedia. Names come from the stickerbook
   // when an older snapshot stored the piece without a set.
-  const mythics = safe(() => getAccount()?.mythics ?? []) ?? [];
+  const mythics = account?.mythics ?? [];
   const hover = loadSetHover();
   const wardrobe = presentWardrobe(c.wardrobe, hover.known);
-  if (archived) {
-    bags = bags.map((item) => withResolvedSet(item, hover.known));
-  }
   const hrefForSet: Record<string, string> = {};
   for (const zone of wardrobe?.zones ?? []) {
     for (const page of zone.pages) {
@@ -255,10 +249,10 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden">
       <Link
-        href={archived ? "/characters#archive" : "/characters"}
+        href="/characters"
         className="mb-3 inline-flex shrink-0 items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
       >
-        <ArrowLeft className="h-4 w-4" /> {archived ? "Archive" : "All characters"}
+        <ArrowLeft className="h-4 w-4" /> All characters
       </Link>
 
       <Card className="mb-3 shrink-0 overflow-hidden">
@@ -283,13 +277,12 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
                   <Moon className="h-3 w-3" /> Werewolf
                 </Badge>
               )}
-              {archived && (
-                <Badge tone="muted">
-                  <Archive className="h-3 w-3" /> Archived
-                </Badge>
-              )}
               {c.classMastery && <Badge tone="muted">Class Mastery</Badge>}
-              {c.mundus && <Badge tone="muted">{c.mundus}</Badge>}
+              {reading.mundus.blessings.map((m) => (
+                <Badge key={m.name} tone="muted">
+                  <span title={m.text ?? undefined}>{m.name}</span>
+                </Badge>
+              ))}
               {c.classMasteries.length > 0 && (
                 <span className="inline-flex flex-wrap items-center gap-1 text-[11px] text-fg-subtle">
                   <Sparkles className="h-3 w-3 text-accent" />
@@ -321,16 +314,7 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
         </div>
       </Card>
 
-      {archived && (
-        <Card className="mb-6 flex items-start gap-3 border-border bg-surface-2 p-4">
-          <Archive className="mt-0.5 h-5 w-5 shrink-0 text-fg-muted" />
-          <div className="text-sm text-fg">
-            <span className="font-medium">This character is no longer on the live ESO roster.</span> The snapshot
-            below is last-known only — gold and bags here are not counted in the account total or Inventory.
-          </div>
-        </Card>
-      )}
-      {!c.lastSeen && !archived && (
+      {!c.lastSeen && (
         <Card className="mb-6 flex items-start gap-3 border-accent/40 bg-accent-soft p-4">
           <ShieldQuestion className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
           <div className="text-sm text-fg">
@@ -353,54 +337,23 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
               rememberKey={c.id}
             />
 
-      {archived && (
-        <section className="mb-6">
-          <SectionTitle>Last-known bags</SectionTitle>
-          {bags.length === 0 ? (
-            <Card className="px-4 py-6 text-sm text-fg-muted">No backpack or worn items were captured before deletion.</Card>
-          ) : (
-            <Card className="overflow-hidden">
-              <ul className="divide-y divide-border">
-                {bags.map((it, i) => (
-                  <li key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <div className="min-w-0">
-                      <SetHover name={it.setName} setId={it.setId} itemName={it.name}>
-                        <div className={`truncate text-sm font-medium ${qualityText(it.quality)}`}>{it.name}</div>
-                      </SetHover>
-                      <div className="text-xs text-fg-subtle">{locationLabel(it.location)}</div>
-                    </div>
-                    <span className="shrink-0 tabular-nums text-sm text-fg-muted">
-                      {it.count.toLocaleString("en-US")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="border-t border-border px-4 py-2.5 text-xs text-fg-subtle">
-                <Backpack className="mr-1 inline h-3 w-3" />
-                Not included in{" "}
-                <Link href="/inventory" className="text-accent hover:underline">
-                  Inventory
-                </Link>
-                . These stacks left the account when the character was deleted.
-              </div>
-            </Card>
-          )}
-        </section>
-      )}
 
-      {(c.companions.length > 0 || hasKnowledge) && (
+      {(reading.companions.length > 0 || hasKnowledge) && (
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Companions */}
-          {c.companions.length > 0 && (
+          {reading.companions.length > 0 && (
             <section>
               <SectionTitle>Companions</SectionTitle>
+              <p className="-mt-2 mb-2 text-xs text-fg-subtle">Shared by every character on the account.</p>
               <div className="space-y-2">
-                {c.companions.map((comp, i) => (
-                  <Card key={i} className="flex items-center justify-between px-4 py-2.5">
+                {reading.companions.map((comp) => (
+                  <Card key={comp.name} className="flex items-center justify-between px-4 py-2.5">
                     <span className="text-sm text-fg">{comp.name}</span>
                     <div className="flex items-center gap-2">
                       {comp.rapport && <Badge tone="muted">{comp.rapport}</Badge>}
-                      <span className="text-xs text-fg-subtle">Lv {comp.level}</span>
+                      <span className="text-xs text-fg-subtle">
+                        {comp.level == null ? "not seen out yet" : `Lv ${comp.level}`}
+                      </span>
                     </div>
                   </Card>
                 ))}

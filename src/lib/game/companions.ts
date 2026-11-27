@@ -35,22 +35,45 @@ export const COMPANION_THEME: Record<string, string> = {
 
 export interface CompanionReading {
   name: string;
-  level: number;
+  /** Null until a save has seen this companion out (addon 0.9.43+ reads it only then). */
+  level: number | null;
   maxed: boolean;
   ultimateOpen: boolean;
   rapport: string | null;
   theme: string | null;
+  icon: string | null;
+  /** When a save last saw it out, in unix seconds. */
+  seenAt: number | null;
 }
 
-export function readCompanion(c: { name: string; level?: number | null; rapport?: string | null }): CompanionReading {
-  const level = c.level ?? 0;
+export interface CompanionInput {
+  name: string;
+  level?: number | null;
+  rapport?: string | null;
+  icon?: string | null;
+  seenAt?: number | null;
+}
+
+export function readCompanion(c: CompanionInput): CompanionReading {
+  const level = c.level ?? null;
   const theme = Object.entries(COMPANION_THEME).find(([n]) => c.name.toLowerCase().startsWith(n.toLowerCase()))?.[1] ?? null;
   return {
     name: c.name,
     level,
-    maxed: level >= COMPANION_MAX_LEVEL,
-    ultimateOpen: level >= COMPANION_ULTIMATE_LEVEL,
+    maxed: level != null && level >= COMPANION_MAX_LEVEL,
+    ultimateOpen: level != null && level >= COMPANION_ULTIMATE_LEVEL,
     rapport: c.rapport ?? null,
     theme,
+    icon: c.icon ?? null,
+    seenAt: c.seenAt ?? null,
   };
+}
+
+/**
+ * The account's companions (addon 0.9.43+): every owned one, read through
+ * the model. Progress is shared by every character, so these belong to the
+ * account, not to a character.
+ */
+export function readAccountCompanions(rows: readonly (CompanionInput & { owned?: boolean | null })[]): CompanionReading[] {
+  return rows.filter((r) => r.owned !== false).map(readCompanion);
 }

@@ -7,7 +7,7 @@ import { loadoutOf, type Loadout } from "./loadout";
 import { idleResearchSlots } from "./research";
 import { ARMOR_LINES, readBar, type BarReading } from "./weapon-lines";
 import type { FactSource } from "./addons";
-import { readCompanion, type CompanionReading } from "./companions";
+import { readAccountCompanions, readCompanion, type CompanionInput, type CompanionReading } from "./companions";
 import { recipeFamily, type RecipeFamily } from "./food";
 import { styleKnowledge, type StyleKnowledge } from "./motifs";
 import { readMundus, type MundusReading, type MundusText } from "./mundus";
@@ -75,13 +75,15 @@ export interface CharacterReading {
   styles: StyleKnowledge[];
   /** Provisioning recipe families this character knows recipes in, with what they boost. */
   recipeFamilies: { family: RecipeFamily; known: number; total: number }[];
-  /** The active companion at the last save, if any. */
+  /** The account's companions (shared by every character), or an older save's per-character list. */
   companions: CompanionReading[];
 }
 
-/** What the catalog knows that a reading can use: the game's own Mundus text. */
+/** What else a reading can use: the game's own Mundus text, and the account's companions. */
 export interface GameKnowledge {
   mundus?: readonly MundusText[];
+  /** The account's companions (account-wide since addon 0.9.43). */
+  companions?: readonly (CompanionInput & { owned?: boolean | null })[];
 }
 
 export function readCharacter(
@@ -135,7 +137,8 @@ export function readCharacter(
         const family = recipeFamily(l.name);
         return family ? [{ family, known: l.known, total: l.total }] : [];
       }),
-    companions: c.companions.map(readCompanion),
+    // Companions are account-wide; older saves kept a per-character list instead.
+    companions: knowledge.companions?.length ? readAccountCompanions(knowledge.companions) : c.companions.map(readCompanion),
     setups: (c.wardrobe?.zones ?? []).flatMap((z) =>
       z.pages.flatMap((p) =>
         p.setups.map((setup) => ({

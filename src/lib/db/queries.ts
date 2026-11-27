@@ -24,6 +24,8 @@ export type AccountMeta = Pick<
   | "houses"
   | "outfitStyles"
   | "mythics"
+  | "companions"
+  | "bankSpace"
 >;
 
 export function getAccount(): AccountMeta | null {
