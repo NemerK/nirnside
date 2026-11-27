@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { lookupSetBrief, type SetBrief, type SetQuery } from "@/lib/catalog/set-brief";
+import { stripBonusCount } from "@/lib/text/eso-markup";
 import { EsoText } from "./eso-text";
 import { SourceBadge, UnverifiedNote } from "./source-badge";
 
@@ -136,7 +137,7 @@ function SetTipLayer({
                       {bonus.pieces}
                     </span>
                     <span>
-                      <EsoText text={bonus.text} />
+                      <EsoText text={stripBonusCount(bonus.text)} />
                     </span>
                   </li>
                 ))}

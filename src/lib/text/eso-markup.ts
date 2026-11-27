@@ -104,3 +104,8 @@ export function esoPlainText(input: string): string {
     .map((run) => run.text)
     .join("");
 }
+
+/** The game prefixes each set bonus with "(2 items)"; the count is shown beside it already. */
+export function stripBonusCount(text: string): string {
+  return text.replace(/^\s*\(\s*\d+\s+items?\s*\)\s*/i, "");
+}

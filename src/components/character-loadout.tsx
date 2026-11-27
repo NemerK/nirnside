@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { esoPlainText } from "@/lib/text/eso-markup";
 import type { Character, Wardrobe, WardrobeSetup } from "@/lib/snapshot/schema";
 import { setHref } from "@/lib/db/catalog-queries";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
@@ -149,7 +150,7 @@ function GearCell({
   centered?: boolean;
 }) {
   const { item, label } = slot;
-  const meta = item ? [item.trait, item.enchant, ...item.scribing].filter(Boolean) : [];
+  const meta = item ? [item.trait, item.enchant ? esoPlainText(item.enchant) : null, ...item.scribing].filter(Boolean) : [];
   const wornCount = item?.setName ? worn.get(item.setName) : undefined;
   const detail = [...meta, wornCount ? `${wornCount} worn` : null].filter(Boolean).join(" · ");
   const name = item ? (

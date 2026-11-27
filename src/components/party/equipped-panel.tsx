@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { EsoText } from "@/components/eso-text";
+import { esoPlainText, stripBonusCount } from "@/lib/text/eso-markup";
 import { GameIcon } from "../game-icon";
 import { HoverTip } from "./hover-tip";
 
@@ -53,7 +55,11 @@ function Tile({ p }: { p: EquippedPiece }) {
       <span className="mt-0.5 block text-fg-subtle">
         {[p.slot, p.trait, p.quality ? p.quality[0].toUpperCase() + p.quality.slice(1) : null].filter(Boolean).join(" · ")}
       </span>
-      {p.enchant ? <span className="mt-1.5 block text-fg-muted">{p.enchant}</span> : null}
+      {p.enchant ? (
+        <span className="mt-1.5 block text-fg-muted">
+          <EsoText text={p.enchant} />
+        </span>
+      ) : null}
       {p.setName ? (
         <span className="mt-2 block border-t border-border pt-2">
           <span className="flex justify-between gap-2">
@@ -63,8 +69,13 @@ function Tile({ p }: { p: EquippedPiece }) {
             </span>
           </span>
           {p.bonuses.map((b) => (
-            <span key={b.pieces} className={`mt-1 block ${p.setCount >= b.pieces ? "text-fg" : "text-fg-subtle"}`}>
-              <span className="tabular-nums">({b.pieces})</span> {b.text}
+            <span key={b.pieces} className={`mt-1 block ${p.setCount >= b.pieces ? "text-fg-muted" : "text-fg-subtle/70"}`}>
+              <span className={`tabular-nums ${p.setCount >= b.pieces ? "text-ok" : ""}`}>({b.pieces})</span>{" "}
+              {p.setCount >= b.pieces ? (
+                <EsoText text={stripBonusCount(b.text)} />
+              ) : (
+                esoPlainText(stripBonusCount(b.text))
+              )}
             </span>
           ))}
         </span>

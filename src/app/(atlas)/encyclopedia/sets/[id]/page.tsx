@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stripBonusCount } from "@/lib/text/eso-markup";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Backpack, BookMarked, MapPin } from "lucide-react";
 import { overlayScannedBonuses } from "@/lib/catalog/set-brief";
@@ -64,7 +65,7 @@ export default async function SetDetailPage({ params }: PageProps<"/encyclopedia
                       {b.pieces}
                     </span>
                     <span className="text-sm text-fg">
-                      <EsoText text={b.text} />
+                      <EsoText text={stripBonusCount(b.text)} />
                     </span>
                   </li>
                 ))}
