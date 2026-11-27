@@ -1,4 +1,5 @@
 import "server-only";
+import { skillCategory } from "@/lib/game/skills";
 import { getDb } from "../db";
 import { getCharacters } from "../db/queries";
 import { getScripts, getSkillLines, getSkills } from "../db/catalog-queries";
@@ -98,14 +99,7 @@ export interface ChoiceSource {
   line?: string;
 }
 
-/** "alliance war" → "Alliance War"; class lines file under Class. */
-function choiceCategory(category: string | null | undefined, className: string | null): string {
-  if (className) return "Class";
-  const raw = (category ?? "").trim();
-  if (!raw) return "Other";
-  if (/^class/i.test(raw)) return "Class";
-  return raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-}
+const choiceCategory = skillCategory;
 
 const SLOT_WORD: Record<string, string> = { focus: "Focus script", signature: "Signature script", affix: "Affix script" };
 

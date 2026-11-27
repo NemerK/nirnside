@@ -9,6 +9,8 @@ import {
   unionCompletedAchievementIds,
 } from "../achievements/pithka";
 import { stripVengeanceFromCharacter } from "../catalog/excluded";
+import { itemsFromSnapshot } from "../game/item-index";
+import { learnItems } from "./game-items";
 
 /**
  * Replace the entire local DB with a fresh snapshot. Because Nirnside only ever
@@ -213,6 +215,12 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
   });
 
   tx();
+  // Learn the scan's items into the lasting item index (never cleared).
+  try {
+    learnItems(itemsFromSnapshot(snap), snap.lastSnapshot || undefined);
+  } catch (err) {
+    console.warn("[nirnside] could not update the item index:", err);
+  }
   return {
     items: snap.items.length,
     characters: snap.characters.length,

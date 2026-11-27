@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { qualityColor as gameQualityColor } from "@/lib/game/quality";
 import { EsoText } from "@/components/eso-text";
 import { esoPlainText, stripBonusCount } from "@/lib/text/eso-markup";
 import { GameIcon } from "../game-icon";
@@ -31,18 +32,8 @@ export interface EquippedSet {
   max: number;
 }
 
-const QUALITY_VAR: Record<string, string> = {
-  trash: "var(--color-q-trash)",
-  normal: "var(--color-q-normal)",
-  fine: "var(--color-q-fine)",
-  superior: "var(--color-q-superior)",
-  epic: "var(--color-q-epic)",
-  legendary: "var(--color-q-legendary)",
-  mythic: "var(--color-q-mythic)",
-};
-
 function qualityColor(q: string | null): string {
-  return (q && QUALITY_VAR[q.toLowerCase()]) || "var(--border-strong)";
+  return gameQualityColor(q);
 }
 
 function Tile({ p }: { p: EquippedPiece }) {

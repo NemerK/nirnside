@@ -5,117 +5,61 @@
  * by weight (a light "Hat", a medium "Helmet", a heavy "Helm").
  */
 
-export type OutfitWeight = "light" | "medium" | "heavy" | "special";
-export type ArmorSlot = "head" | "shoulders" | "chest" | "hands" | "waist" | "legs" | "feet";
-export type WeaponKind =
-  | "axe"
-  | "mace"
-  | "sword"
-  | "dagger"
-  | "battleaxe"
-  | "maul"
-  | "greatsword"
-  | "bow"
-  | "destruction"
-  | "restoration"
-  | "shield";
+import {
+  ARMOR_SLOTS as GAME_SLOTS,
+  SLOT_LABEL,
+  WEAPON_LABEL,
+  WEIGHTS as GAME_WEIGHTS,
+  WEIGHT_LABEL,
+  parseWornSlot,
+  pieceKindFromName,
+  weaponFromText,
+  type ArmorSlot,
+  type Weapon,
+  type Weight,
+} from "../game/equipment";
+
+export type { ArmorSlot };
+export type OutfitWeight = Weight | "special";
+/** Weapon types as the outfit station groups them: one destruction staff. */
+export type WeaponKind = Exclude<Weapon, "inferno" | "ice" | "lightning"> | "destruction";
 
 export type OutfitFacets =
   | { kind: "armor"; weight: OutfitWeight; slot: ArmorSlot | null }
   | { kind: "weapon"; weapon: WeaponKind | null };
 
 export const WEIGHTS: { id: OutfitWeight; label: string }[] = [
-  { id: "light", label: "Light" },
-  { id: "medium", label: "Medium" },
-  { id: "heavy", label: "Heavy" },
+  ...GAME_WEIGHTS.map((id) => ({ id, label: WEIGHT_LABEL[id] })),
   { id: "special", label: "Special" },
 ];
 
-export const ARMOR_SLOTS: { id: ArmorSlot; label: string }[] = [
-  { id: "head", label: "Head" },
-  { id: "shoulders", label: "Shoulders" },
-  { id: "chest", label: "Chest" },
-  { id: "hands", label: "Hands" },
-  { id: "waist", label: "Waist" },
-  { id: "legs", label: "Legs" },
-  { id: "feet", label: "Feet" },
-];
+export const ARMOR_SLOTS: { id: ArmorSlot; label: string }[] = GAME_SLOTS.map((id) => ({ id, label: SLOT_LABEL[id] }));
 
+/** The outfit station groups the three destruction staves as one weapon type. */
 export const WEAPON_KINDS: { id: WeaponKind; label: string }[] = [
-  { id: "axe", label: "Axe" },
-  { id: "mace", label: "Mace" },
-  { id: "sword", label: "Sword" },
-  { id: "dagger", label: "Dagger" },
-  { id: "battleaxe", label: "Battle axe" },
-  { id: "maul", label: "Maul" },
-  { id: "greatsword", label: "Greatsword" },
-  { id: "bow", label: "Bow" },
+  ...(["axe", "mace", "sword", "dagger", "battleaxe", "maul", "greatsword", "bow"] as const).map((id) => ({
+    id,
+    label: WEAPON_LABEL[id],
+  })),
   { id: "destruction", label: "Destruction staff" },
   { id: "restoration", label: "Restoration staff" },
   { id: "shield", label: "Shield" },
 ];
 
-// Piece words per weight and slot. Longer words first where one contains another.
-const ARMOR_WORDS: [RegExp, OutfitWeight, ArmorSlot][] = [
-  [/\bhelmet\b/, "medium", "head"],
-  [/\bhelm\b/, "heavy", "head"],
-  [/\bhat\b/, "light", "head"],
-  [/\bepaulets?\b/, "light", "shoulders"],
-  [/\barm cops\b/, "medium", "shoulders"],
-  [/\bpauldrons?\b/, "heavy", "shoulders"],
-  [/\b(robe|jerkin)\b/, "light", "chest"],
-  [/\bjack\b/, "medium", "chest"],
-  [/\bcuirass\b/, "heavy", "chest"],
-  [/\bgloves\b/, "light", "hands"],
-  [/\bbracers\b/, "medium", "hands"],
-  [/\bgauntlets\b/, "heavy", "hands"],
-  [/\bsash\b/, "light", "waist"],
-  [/\bbelt\b/, "medium", "waist"],
-  [/\bgirdle\b/, "heavy", "waist"],
-  [/\bbreeches\b/, "light", "legs"],
-  [/\bguards\b/, "medium", "legs"],
-  [/\bgreaves\b/, "heavy", "legs"],
-  [/\bshoes\b/, "light", "feet"],
-  [/\bboots\b/, "medium", "feet"],
-  [/\bsabatons\b/, "heavy", "feet"],
-];
-
-// Slot words that say nothing about weight (costume-like pieces).
+// Costume-like pieces have a slot but no weight; these words name the slot only.
 const SLOT_ONLY: [RegExp, ArmorSlot][] = [
   [/\b(hood|mask|cowl|crown|circlet|headdress|cap|visor)\b/, "head"],
-  [/\b(shoulders?|mantle|spaulders?)\b/, "shoulders"],
-  [/\b(chest|cuirasse|tunic|coat|vest|armor)\b/, "chest"],
-  [/\b(hands?|wraps|gauntlet)\b/, "hands"],
-  [/\b(waist|cinch|tassets)\b/, "waist"],
-  [/\b(legs?|pants|trousers|leggings)\b/, "legs"],
-  [/\b(feet|footwear|shoe|boot|sandals)\b/, "feet"],
+  [/\b(mantle|spaulders?)\b/, "shoulders"],
+  [/\b(tunic|coat|vest)\b/, "chest"],
+  [/\b(wraps|handwraps)\b/, "hands"],
+  [/\b(cinch|tassets)\b/, "waist"],
+  [/\b(pants|trousers|leggings)\b/, "legs"],
+  [/\b(sandals|treaders)\b/, "feet"],
 ];
 
-const WEAPON_WORDS: [RegExp, WeaponKind][] = [
-  [/\bbattle ?axe\b/, "battleaxe"],
-  [/\bgreatsword\b/, "greatsword"],
-  [/\bmaul\b/, "maul"],
-  [/\b(inferno|ice|frost|lightning|flame|fire|shock|destruction) staff\b/, "destruction"],
-  [/\b(restoration|healing) staff\b/, "restoration"],
-  [/\bstaff\b/, "destruction"],
-  [/\baxe\b/, "axe"],
-  [/\bmace\b/, "mace"],
-  [/\bsword\b/, "sword"],
-  [/\bdagger\b/, "dagger"],
-  [/\bbow\b/, "bow"],
-  [/\bshield\b/, "shield"],
-];
-
-const WEIGHT_WORDS: Record<string, OutfitWeight> = { light: "light", medium: "medium", heavy: "heavy" };
-const ADDON_SLOT: Record<string, ArmorSlot> = {
-  head: "head",
-  shoulders: "shoulders",
-  chest: "chest",
-  hands: "hands",
-  waist: "waist",
-  legs: "legs",
-  feet: "feet",
-};
+function toOutfitWeapon(w: Weapon): WeaponKind {
+  return w === "inferno" || w === "ice" || w === "lightning" ? "destruction" : w;
+}
 
 export function outfitFacets(
   style: { name: string; weight?: string | null; slot?: string | null },
@@ -123,26 +67,26 @@ export function outfitFacets(
 ): OutfitFacets {
   const name = style.name.toLowerCase();
   const cat = categoryName.toLowerCase();
-  const addonSlot = style.slot?.toLowerCase() ?? "";
+  const addonSlot = (style.slot ?? "").toLowerCase();
 
-  const weaponCategory = /weapon/.test(cat);
-  const addonWeapon = addonSlot.startsWith("weapon") || WEAPON_WORDS.some(([re]) => re.test(addonSlot));
-  const named = WEAPON_WORDS.find(([re]) => re.test(name))?.[1] ?? null;
-  const armorWord = ARMOR_WORDS.find(([re]) => re.test(name));
-  if (weaponCategory || addonWeapon || (named && !armorWord)) {
-    const fromAddon = WEAPON_WORDS.find(([re]) => re.test(addonSlot))?.[1] ?? null;
-    return { kind: "weapon", weapon: fromAddon ?? named };
+  // Weapons: the addon's "weapon…" slot, a weapon category, or a weapon named in the style.
+  const named = weaponFromText(name) ?? (/\bstaff\b/.test(name) ? "inferno" : null);
+  const fromName = pieceKindFromName(style.name);
+  const armorByName = fromName?.kind === "armor" ? fromName : null;
+  if (addonSlot.startsWith("weapon") || /weapon/.test(cat) || (named && !armorByName)) {
+    const fromAddon = weaponFromText(addonSlot.replace(/^weapon-?/, ""));
+    const w = fromAddon ?? named;
+    return { kind: "weapon", weapon: w ? toOutfitWeapon(w) : null };
   }
 
-  const weight =
-    (style.weight && (WEIGHT_WORDS[style.weight.toLowerCase()] ?? (style.weight.toLowerCase() === "special" ? "special" : null))) ||
-    armorWord?.[1] ||
-    Object.entries(WEIGHT_WORDS).find(([w]) => cat.includes(w))?.[1] ||
-    "special";
+  const reported = (style.weight ?? "").toLowerCase();
+  const weight: OutfitWeight =
+    (GAME_WEIGHTS as readonly string[]).includes(reported) || reported === "special"
+      ? (reported as OutfitWeight)
+      : (armorByName?.weight ?? GAME_WEIGHTS.find((w) => cat.includes(w)) ?? "special");
   const slot =
-    ADDON_SLOT[addonSlot] ??
-    armorWord?.[2] ??
-    SLOT_ONLY.find(([re]) => re.test(name))?.[1] ??
-    (/\b(hat|head)/.test(cat) ? "head" : null);
+    parseWornSlot(addonSlot) && (GAME_SLOTS as readonly string[]).includes(parseWornSlot(addonSlot)!)
+      ? (parseWornSlot(addonSlot) as ArmorSlot)
+      : (armorByName?.slot ?? SLOT_ONLY.find(([re]) => re.test(name))?.[1] ?? (/\b(hat|head)/.test(cat) ? "head" : null));
   return { kind: "armor", weight, slot };
 }

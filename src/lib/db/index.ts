@@ -118,6 +118,23 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_catalog_name ON catalog(domain, name);
     CREATE INDEX IF NOT EXISTS idx_catalog_cat ON catalog(domain, category);
 
+    -- What Nirnside has learned about the game's items, by the game's item
+    -- id (src/lib/game/item-index.ts). Never cleared on import: it only
+    -- grows, so every item this account has ever shown the addon is known.
+    CREATE TABLE IF NOT EXISTS game_items (
+      itemId    INTEGER PRIMARY KEY,
+      name      TEXT NOT NULL,
+      icon      TEXT,
+      kind      TEXT,
+      setId     INTEGER,
+      setName   TEXT,
+      seenIn    TEXT NOT NULL DEFAULT '[]',
+      firstSeen INTEGER NOT NULL,
+      lastSeen  INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_game_items_set ON game_items(setId);
+    CREATE INDEX IF NOT EXISTS idx_game_items_kind ON game_items(kind);
+
     -- Earned Pithka ids. Never deleted: Maelstrom Arena clears are still
     -- per-character, so a later toon's snapshot must not uncheck them.
     CREATE TABLE IF NOT EXISTS completed_achievements (

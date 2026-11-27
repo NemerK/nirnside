@@ -206,6 +206,8 @@ export const EquippedItem = z.object({
   trait: z.string().nullable().default(null),
   enchant: z.string().nullable().default(null),
   scribing: z.array(z.string()).default([]),
+  /** What the piece is, from the game's types ("Heavy Head", "Inferno Staff"). Newer addons only. */
+  type: z.string().nullable().optional(),
 });
 
 export const Companion = z.object({

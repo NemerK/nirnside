@@ -1,3 +1,4 @@
+import { qualityBorderClass, qualityTextClass } from "./game/quality";
 import type { ItemQuality } from "./snapshot/schema";
 
 export function formatNumber(n: number): string {
@@ -34,32 +35,12 @@ export function formatDateTime(unixSeconds: number | null | undefined): string {
   });
 }
 
-const QUALITY_TEXT: Record<ItemQuality, string> = {
-  trash: "text-q-trash",
-  normal: "text-q-normal",
-  fine: "text-q-fine",
-  superior: "text-q-superior",
-  epic: "text-q-epic",
-  legendary: "text-q-legendary",
-  mythic: "text-q-mythic",
-};
-
-const QUALITY_BORDER: Record<ItemQuality, string> = {
-  trash: "border-q-trash/40",
-  normal: "border-q-normal/40",
-  fine: "border-q-fine/50",
-  superior: "border-q-superior/50",
-  epic: "border-q-epic/50",
-  legendary: "border-q-legendary/60",
-  mythic: "border-q-mythic/60",
-};
-
 export function qualityText(q: ItemQuality | null | undefined): string {
-  return q ? QUALITY_TEXT[q] : "text-fg";
+  return qualityTextClass(q);
 }
 
 export function qualityBorder(q: ItemQuality | null | undefined): string {
-  return q ? QUALITY_BORDER[q] : "border-border";
+  return qualityBorderClass(q, true);
 }
 
 export const LOCATION_LABELS: Record<string, string> = {

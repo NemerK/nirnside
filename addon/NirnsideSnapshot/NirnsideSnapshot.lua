@@ -1081,6 +1081,8 @@ local function gatherEquipped()
         setId = hasSet and setId or nil,
         trait = traitString(link),
         enchant = enchantName and enchantName ~= "" and zo_strformat("<<1>>", enchantName) or nil,
+        -- What the piece is, from the game's own types ("Heavy Head", "Inferno Staff").
+        type = safe(function() return (pieceTypeInfo(link)) end, nil),
         scribing = {},
       }
     end

@@ -1,3 +1,4 @@
+import { ARMOR_TRAITS, JEWELRY_TRAITS, WEAPON_TRAITS } from "../game/traits";
 import type { SlotKind } from "./slots";
 
 /**
@@ -16,41 +17,8 @@ export const ARMOR_WEIGHTS: readonly { id: ArmorWeight; label: string }[] = [
   { id: "heavy", label: "Heavy" },
 ];
 
-export const ARMOR_TRAITS = [
-  "Divines",
-  "Invigorating",
-  "Infused",
-  "Reinforced",
-  "Sturdy",
-  "Well-fitted",
-  "Training",
-  "Impenetrable",
-  "Nirnhoned",
-] as const;
-
-export const WEAPON_TRAITS = [
-  "Infused",
-  "Precise",
-  "Nirnhoned",
-  "Sharpened",
-  "Charged",
-  "Powered",
-  "Defending",
-  "Decisive",
-  "Training",
-] as const;
-
-export const JEWELRY_TRAITS = [
-  "Bloodthirsty",
-  "Infused",
-  "Arcane",
-  "Healthy",
-  "Robust",
-  "Triune",
-  "Harmony",
-  "Protective",
-  "Swift",
-] as const;
+// The trait lists live in the game model, in the research grid's order.
+export { ARMOR_TRAITS, JEWELRY_TRAITS, WEAPON_TRAITS };
 
 /** The seven armor slots: head, shoulders, chest, hands, waist, legs, feet. */
 export const ARMOR_SLOT_COUNT = 7;

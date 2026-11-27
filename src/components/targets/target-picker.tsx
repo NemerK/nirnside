@@ -3,11 +3,10 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import { classColor } from "@/lib/classes";
+import { compareSkillCategory } from "@/lib/game/skills";
 import { TIER_LABEL, type Goal, type GoalDomain } from "@/lib/goals/types";
 import type { TargetSubject } from "./target-sheet";
 
-/** The in-game skills window order; anything else follows alphabetically. */
-const CATEGORY_ORDER = ["Class", "Weapon", "Armor", "World", "Guild", "Alliance War", "Racial", "Craft"];
 const SCRIPT_ORDER = ["Focus script", "Signature script", "Affix script"];
 
 type Tab = GoalDomain | "targeted";
@@ -100,7 +99,7 @@ export function TargetPicker({
         .map(([line, l]) => ({ id: `${prefix}/${line}`, label: line, ...tally(l) }));
     };
     return [...cats.entries()]
-      .sort((a, b) => orderBy(tab === "script" ? SCRIPT_ORDER : CATEGORY_ORDER)(a[0], b[0]))
+      .sort((a, b) => (tab === "script" ? orderBy(SCRIPT_ORDER)(a[0], b[0]) : compareSkillCategory(a[0], b[0])))
       .map(([category, list]) => {
         if (category === "Class") {
           const classes = new Map<string, TargetSubject[]>();
