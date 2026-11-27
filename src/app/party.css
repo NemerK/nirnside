@@ -337,8 +337,16 @@ html.party .craft-station-icon {
   from { transform: translateX(32px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
+/* Centered dialog: rises a little into place. */
+.nirn-dialog {
+  animation: nirn-dialog-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes nirn-dialog-in {
+  from { transform: translateY(10px) scale(0.985); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .nirn-sheet, .nirn-sheet-veil { animation: none; }
+  .nirn-sheet, .nirn-sheet-veil, .nirn-dialog { animation: none; }
 }
 
 /* Page change: the new page eases in (Party template). */

@@ -92,6 +92,19 @@ export interface ChoiceSource {
   cap: number | null;
   className: string | null;
   context: string;
+  /** The skills window category it sits under: Class, Weapon, Armor, World… */
+  category?: string;
+  /** For abilities: the skill line it belongs to. */
+  line?: string;
+}
+
+/** "alliance war" → "Alliance War"; class lines file under Class. */
+function choiceCategory(category: string | null | undefined, className: string | null): string {
+  if (className) return "Class";
+  const raw = (category ?? "").trim();
+  if (!raw) return "Other";
+  if (/^class/i.test(raw)) return "Class";
+  return raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const SLOT_WORD: Record<string, string> = { focus: "Focus script", signature: "Signature script", affix: "Affix script" };
@@ -113,19 +126,29 @@ export function targetChoices(lines: GridLineSource[]): ChoiceSource[] {
   }
   for (const l of lines) {
     if (sameName(l.name, "class mastery")) continue;
-    add({ domain: "skillline", name: l.name, cap: l.maxRank, className: l.className, context: l.className ?? l.category });
+    add({
+      domain: "skillline",
+      name: l.name,
+      cap: l.maxRank,
+      className: l.className,
+      context: l.className ?? l.category,
+      category: choiceCategory(l.category, l.className),
+    });
   }
   for (const { entry } of safe(() => getSkills(), [])) {
     const line = lineById.get(entry.lineId);
     const className = line?.className ?? null;
-    add({ domain: "ability", name: entry.name, cap: null, className, context: line?.name ?? "Ability" });
+    const category = line ? choiceCategory(line.category, className) : "Other";
+    const lineName = line?.name ?? "Other";
+    add({ domain: "ability", name: entry.name, cap: null, className, context: lineName, category, line: lineName });
     for (const m of entry.morphs) {
       if (!m.isMorph || !m.name) continue;
-      add({ domain: "ability", name: m.name, cap: null, className, context: `${entry.name} morph` });
+      add({ domain: "ability", name: m.name, cap: null, className, context: `${entry.name} morph`, category, line: lineName });
     }
   }
   for (const { entry } of safe(() => getScripts(), [])) {
-    add({ domain: "script", name: entry.name, cap: null, className: null, context: SLOT_WORD[entry.slot] ?? "Script" });
+    const slot = SLOT_WORD[entry.slot] ?? "Script";
+    add({ domain: "script", name: entry.name, cap: null, className: null, context: slot, category: slot });
   }
   return out;
 }

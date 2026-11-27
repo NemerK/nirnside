@@ -14,7 +14,10 @@ export function Sheet({
   onClose,
   children,
   footer,
+  variant = "side",
 }: {
+  /** "side" slides in from the right; "center" is a larger dialog for browsing. */
+  variant?: "side" | "center";
   title: string;
   subtitle?: ReactNode;
   onClose: () => void;
@@ -27,13 +30,14 @@ export function Sheet({
       if (e.key === "Escape") onClose();
     }
     document.addEventListener("keydown", onKey);
-    panel.current?.focus();
+    // Leave focus where a field inside already took it (a search box with autoFocus).
+    if (!panel.current?.contains(document.activeElement)) panel.current?.focus();
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   if (typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex justify-end">
+    <div className={`fixed inset-0 z-[80] flex ${variant === "center" ? "items-center justify-center p-4 sm:p-8" : "justify-end"}`}>
       <button
         type="button"
         aria-label="Close"
@@ -46,7 +50,11 @@ export function Sheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="sheet-title"
-        className="nirn-sheet relative z-[81] flex h-full w-full max-w-md flex-col border-l border-border-strong bg-bg-elev shadow-[var(--shadow-pop)] focus:outline-none"
+        className={
+          variant === "center"
+            ? "nirn-dialog relative z-[81] flex h-[min(85vh,46rem)] w-full max-w-4xl flex-col rounded-2xl border border-border-strong bg-bg-elev shadow-[var(--shadow-pop)] focus:outline-none"
+            : "nirn-sheet relative z-[81] flex h-full w-full max-w-md flex-col border-l border-border-strong bg-bg-elev shadow-[var(--shadow-pop)] focus:outline-none"
+        }
       >
         <header className="flex items-start justify-between gap-3 border-b border-border px-6 py-5">
           <div className="min-w-0">
@@ -64,7 +72,9 @@ export function Sheet({
             <X className="h-4 w-4" />
           </button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className={`min-h-0 flex-1 px-6 py-5 ${variant === "center" ? "flex flex-col overflow-y-auto" : "overflow-y-auto"}`}>
+          {children}
+        </div>
         {footer ? <footer className="border-t border-border px-6 py-4">{footer}</footer> : null}
       </div>
     </div>,
