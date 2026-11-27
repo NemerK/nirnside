@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { qualityBorderClass } from "@/lib/game/quality";
 import { esoPlainText } from "@/lib/text/eso-markup";
 import type { Character, Wardrobe, WardrobeSetup } from "@/lib/snapshot/schema";
 import { setHref } from "@/lib/db/catalog-queries";
@@ -274,24 +275,7 @@ function WeaponBar({
 }
 
 function qualityFrame(quality: Worn["quality"]): string {
-  switch (quality) {
-    case "mythic":
-      return "border-q-mythic";
-    case "legendary":
-      return "border-q-legendary";
-    case "epic":
-      return "border-q-epic";
-    case "superior":
-      return "border-q-superior";
-    case "fine":
-      return "border-q-fine";
-    case "normal":
-      return "border-q-normal";
-    case "trash":
-      return "border-q-trash";
-    default:
-      return "border-border-strong";
-  }
+  return qualityBorderClass(quality, false, "border-border-strong");
 }
 
 function foodPiece(food: WardrobeSetup["food"], known: ReturnType<typeof indexKnownSets>): Worn | undefined {

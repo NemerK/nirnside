@@ -1,3 +1,4 @@
+import { qualityTextClass } from "../game/quality";
 import type {
   Character,
   CharacterResearch,
@@ -291,16 +292,6 @@ export function knownMotifKeys(styles: MotifStyle[] | undefined): Set<string> {
 }
 
 export function recipeQualityClass(quality: number | undefined): string {
-  switch (quality) {
-    case 2:
-      return "text-q-fine";
-    case 3:
-      return "text-q-superior";
-    case 4:
-      return "text-q-epic";
-    case 5:
-      return "text-q-legendary";
-    default:
-      return "text-fg";
-  }
+  // Recipes report the game's numeric quality; normal (1) stays plain text.
+  return quality && quality >= 2 ? qualityTextClass(quality) : "text-fg";
 }

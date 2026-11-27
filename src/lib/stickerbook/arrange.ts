@@ -1,88 +1,66 @@
+import {
+  ARMOR_SLOTS as GAME_SLOTS,
+  SLOT_LABEL,
+  WEAPONS,
+  WEIGHTS as GAME_WEIGHTS,
+  WEIGHT_LABEL,
+  parsePieceType,
+  type PieceKind,
+} from "../game/equipment";
+
 /**
  * Lay a set's pieces out the way the game's sticker book does: armor as a
- * weight-by-slot table, then jewelry, then weapons and shields. Anything the
- * snapshot names in a way that doesn't fit lands in "other", never dropped.
+ * weight-by-slot table, then jewelry, then weapons and shields. What a piece
+ * is comes from the game model; anything it can't place lands in "other",
+ * never dropped.
  */
 
-export const ARMOR_WEIGHTS = ["Light", "Medium", "Heavy"] as const;
-export const ARMOR_SLOTS = ["Head", "Shoulders", "Chest", "Hands", "Waist", "Legs", "Feet"] as const;
+export const ARMOR_WEIGHTS = GAME_WEIGHTS.map((w) => WEIGHT_LABEL[w]);
+export const ARMOR_SLOTS = GAME_SLOTS.map((s) => SLOT_LABEL[s]);
 
 export type ArmorWeight = (typeof ARMOR_WEIGHTS)[number];
 export type ArmorSlotName = (typeof ARMOR_SLOTS)[number];
 
 export interface ArrangedPieces<P> {
-  /** weight → slot → piece. Empty when the set has no armor. */
-  armor: Map<ArmorWeight, Map<ArmorSlotName, P>>;
+  /** Weight label → slot label → piece. Empty when the set has no armor. */
+  armor: Map<string, Map<string, P>>;
   jewelry: P[];
   weapons: P[];
   other: P[];
 }
 
-const SLOT_ALIASES: Record<string, ArmorSlotName> = {
-  head: "Head",
-  helm: "Head",
-  shoulder: "Shoulders",
-  shoulders: "Shoulders",
-  chest: "Chest",
-  hand: "Hands",
-  hands: "Hands",
-  waist: "Waist",
-  leg: "Legs",
-  legs: "Legs",
-  foot: "Feet",
-  feet: "Feet",
-};
-
-const WEAPON_ORDER = [
-  "axe",
-  "mace",
-  "sword",
-  "dagger",
-  "battle axe",
-  "maul",
-  "greatsword",
-  "bow",
-  "inferno staff",
-  "flame staff",
-  "ice staff",
-  "frost staff",
-  "lightning staff",
-  "restoration staff",
-  "shield",
-];
-
 export function arrangePieces<P extends { type?: string | null; slot?: string | null; weight?: string | null }>(
   pieces: P[],
 ): ArrangedPieces<P> {
   const out: ArrangedPieces<P> = { armor: new Map(), jewelry: [], weapons: [], other: [] };
+  const kinds = new Map<P, PieceKind>();
   for (const p of pieces) {
-    const type = (p.type ?? "").trim().toLowerCase();
-    const m = /^(light|medium|heavy)\s+(\w+)$/.exec(type);
-    const weightWord = m?.[1] ?? (p.weight ?? "").trim().toLowerCase();
-    const slot = SLOT_ALIASES[m?.[2] ?? ""] ?? (weightWord ? SLOT_ALIASES[(p.slot ?? "").trim().toLowerCase()] : undefined);
-    const weight = ARMOR_WEIGHTS.find((w) => w.toLowerCase() === weightWord);
-    if (weight && slot) {
-      let row = out.armor.get(weight);
-      if (!row) out.armor.set(weight, (row = new Map()));
-      if (!row.has(slot)) {
-        row.set(slot, p);
-        continue;
-      }
-    } else if (/\b(necklace|ring|amulet)\b/.test(type)) {
-      out.jewelry.push(p);
-      continue;
-    } else if (WEAPON_ORDER.some((w) => type === w || type.endsWith(` ${w}`))) {
-      out.weapons.push(p);
+    const kind = parsePieceType(p.type, p.weight) ?? parsePieceType(p.slot, p.weight);
+    if (!kind) {
+      out.other.push(p);
       continue;
     }
-    out.other.push(p);
+    kinds.set(p, kind);
+    if (kind.kind === "armor") {
+      const w = WEIGHT_LABEL[kind.weight];
+      const s = SLOT_LABEL[kind.slot];
+      let row = out.armor.get(w);
+      if (!row) out.armor.set(w, (row = new Map()));
+      if (row.has(s)) out.other.push(p);
+      else row.set(s, p);
+    } else if (kind.kind === "jewelry") out.jewelry.push(p);
+    else out.weapons.push(p);
   }
   const rank = (p: P) => {
-    const t = (p.type ?? "").trim().toLowerCase();
-    const i = WEAPON_ORDER.findIndex((w) => t === w || t.endsWith(` ${w}`));
-    return i < 0 ? 99 : i;
+    const k = kinds.get(p);
+    return k?.kind === "weapon" ? WEAPONS.indexOf(k.weapon) : 99;
   };
   out.weapons.sort((a, b) => rank(a) - rank(b));
-  out.jewelry.sort((a, b) => Number(/ring/i.test(a.type ?? "")) - Number(/ring/i.test(b.type ?? "")));
+  // Necklace before rings, as the game lists them.
+  const isRing = (p: P) => {
+    const k = kinds.get(p);
+    return k?.kind === "jewelry" && k.jewelry === "ring" ? 1 : 0;
+  };
+  out.jewelry.sort((a, b) => isRing(a) - isRing(b));
   return out;
 }

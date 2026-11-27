@@ -1,3 +1,11 @@
+import {
+  TWO_HANDED,
+  WEAPON_LABEL as GAME_WEAPON_LABEL,
+  pieceForResearchLine,
+  weaponFromText,
+  type PieceKind,
+  type Weapon,
+} from "../game/equipment";
 import { mythicNameKey } from "../collections/mythic-match";
 
 /**
@@ -316,24 +324,18 @@ export function isMonsterSet(set: { mythic: boolean; category: string; kinds: re
 }
 
 /** Names the research grid uses for one slot, across the three armor weights and weapons. */
-const RESEARCH_LINES: Record<SlotKind, readonly string[]> = {
-  head: ["helm", "hat", "helmet"],
-  shoulders: ["pauldron", "epaulets", "arm cops"],
-  chest: ["cuirass", "robe", "jack"],
-  hands: ["gauntlets", "gloves", "bracers"],
-  waist: ["girdle", "sash", "belt"],
-  legs: ["greaves", "breeches", "guards"],
-  feet: ["sabatons", "shoes", "boots"],
-  neck: ["necklace"],
-  ring: ["ring"],
-  oneHand: ["axe", "mace", "sword", "dagger"],
-  twoHand: ["battle axe", "maul", "greatsword", "bow", "inferno staff", "ice staff", "lightning staff", "restoration staff"],
-  shield: ["shield"],
-};
+/** The build slot a game piece fills. */
+function slotKindOfPiece(p: PieceKind): SlotKind {
+  if (p.kind === "armor") return p.slot;
+  if (p.kind === "jewelry") return p.jewelry === "necklace" ? "neck" : "ring";
+  if (p.weapon === "shield") return "shield";
+  return TWO_HANDED.has(p.weapon) ? "twoHand" : "oneHand";
+}
 
+/** Whether a research line (by the game's line name) covers this build slot. From the game model. */
 export function lineMatchesKind(lineName: string, kind: SlotKind): boolean {
-  const name = lineName.trim().toLowerCase();
-  return RESEARCH_LINES[kind].some((line) => line === name);
+  const piece = pieceForResearchLine(lineName);
+  return !!piece && slotKindOfPiece(piece) === kind;
 }
 
 /** "Slivers of the Null Arca" and "Slivers of Null Arca" share a key. Perfected stays distinct. */
@@ -430,28 +432,19 @@ export type FrontWeapon =
   | "dagger"
   | "shield";
 
-export const FRONT_MAIN_WEAPONS: readonly { id: FrontWeapon; label: string; hands: "two" | "one" }[] = [
-  { id: "greatsword", label: "Greatsword", hands: "two" },
-  { id: "battleAxe", label: "Battle Axe", hands: "two" },
-  { id: "maul", label: "Maul", hands: "two" },
-  { id: "bow", label: "Bow", hands: "two" },
-  { id: "inferno", label: "Inferno Staff", hands: "two" },
-  { id: "ice", label: "Ice Staff", hands: "two" },
-  { id: "lightning", label: "Lightning Staff", hands: "two" },
-  { id: "restoration", label: "Restoration Staff", hands: "two" },
-  { id: "sword", label: "Sword", hands: "one" },
-  { id: "axe", label: "Axe", hands: "one" },
-  { id: "mace", label: "Mace", hands: "one" },
-  { id: "dagger", label: "Dagger", hands: "one" },
-];
+const FRONT_ORDER: FrontWeapon[] = ["greatsword", "battleAxe", "maul", "bow", "inferno", "ice", "lightning", "restoration", "sword", "axe", "mace", "dagger"];
+const toGame = (w: FrontWeapon): Weapon => (w === "battleAxe" ? "battleaxe" : w);
+const fromGame = (w: Weapon): FrontWeapon => (w === "battleaxe" ? "battleAxe" : w);
 
-export const FRONT_OFF_WEAPONS: readonly { id: FrontWeapon; label: string }[] = [
-  { id: "sword", label: "Sword" },
-  { id: "axe", label: "Axe" },
-  { id: "mace", label: "Mace" },
-  { id: "dagger", label: "Dagger" },
-  { id: "shield", label: "Shield" },
-];
+export const FRONT_MAIN_WEAPONS: readonly { id: FrontWeapon; label: string; hands: "two" | "one" }[] = FRONT_ORDER.map((id) => ({
+  id,
+  label: GAME_WEAPON_LABEL[toGame(id)],
+  hands: TWO_HANDED.has(toGame(id)) ? "two" : "one",
+}));
+
+export const FRONT_OFF_WEAPONS: readonly { id: FrontWeapon; label: string }[] = (
+  ["sword", "axe", "mace", "dagger", "shield"] as FrontWeapon[]
+).map((id) => ({ id, label: GAME_WEAPON_LABEL[toGame(id)] }));
 
 const WEAPON_LABEL = new Map<FrontWeapon, string>(
   [...FRONT_MAIN_WEAPONS, { id: "shield" as const, label: "Shield", hands: "one" as const }].map((weapon) => [
@@ -482,19 +475,6 @@ export function weaponResearchLine(weapon: FrontWeapon): string {
  * item name. Checked before the coarser one-hand / two-hand slot kind.
  */
 export function weaponTypeFromPiece(slot: string, type: string, name: string): FrontWeapon | null {
-  const blob = `${slot} ${type} ${name}`.toLowerCase();
-  if (/restoration staff|healing staff/.test(blob)) return "restoration";
-  if (/inferno staff|fire staff/.test(blob)) return "inferno";
-  if (/ice staff|frost staff/.test(blob)) return "ice";
-  if (/lightning staff/.test(blob)) return "lightning";
-  if (/\bbows?\b/.test(blob)) return "bow";
-  if (/greatswords?|two[\s-]?handed sword/.test(blob)) return "greatsword";
-  if (/battle ?axes?|two[\s-]?handed axe/.test(blob)) return "battleAxe";
-  if (/\bmauls?\b|two[\s-]?handed hammer/.test(blob)) return "maul";
-  if (/\bshields?\b/.test(blob)) return "shield";
-  if (/\bdaggers?\b/.test(blob)) return "dagger";
-  if (/\bmaces?\b|\bhammers?\b/.test(blob)) return "mace";
-  if (/\baxes?\b/.test(blob)) return "axe";
-  if (/\bswords?\b/.test(blob)) return "sword";
-  return null;
+  const w = weaponFromText(type) ?? weaponFromText(`${slot} ${type} ${name}`);
+  return w ? fromGame(w) : null;
 }
