@@ -1,9 +1,22 @@
+import type { PieceKind, Weapon } from "./equipment";
+
 /**
- * Inventory tabs in the same order as the backpack window
+ * Where every item belongs: the game's own inventory tabs.
+ *
+ * The tabs and their order are the backpack window's
  * (`BACKPACK_FILTER_KEYS` / `BACKPACK_SEARCH_FILTER_KEYS` in esoui
- * `inventory.lua`). Ids are stable. Labels are the English client's
- * filter strings, used only until a snapshot stores the client's own
- * `GetString` label.
+ * `inventory.lua`). Ids are stable. Labels are the English client's filter
+ * strings, used only until a snapshot stores the client's own `GetString`
+ * label.
+ *
+ * Each item is filed by `itemPlace`, in this order:
+ * 1. the tab the game itself put it in (the addon asks the game's own
+ *    filter, ZO_ItemFilterUtils, for each stack);
+ * 2. for gear the game didn't file (older saves, worn gear, the set
+ *    collection), the tab its piece kind belongs in;
+ * 3. otherwise no place. A name counts only through the model's parser of
+ *    the game's piece words (pieceKindFromName), never by guessing.
+ * The game's item type ("Food", "Style Material") is kept beside it.
  */
 export interface BagFilter {
   id: string;
@@ -151,4 +164,73 @@ export function bagSubtypeLabel(
   if (fromClient && fromClient.trim()) return fromClient.trim();
   const cat = BAG_CATEGORIES.find((row) => row.id === categoryId);
   return cat?.subs.find((row) => row.id === subtypeId)?.label ?? "";
+}
+
+export type PlaceSource = "game" | "piece";
+
+export interface ItemPlace {
+  /** A BAG_CATEGORIES id: "weapons", "consumables", … */
+  category: string;
+  /** A sub id inside it: "two-handed", "food", …; null when the game gave none. */
+  subtype: string | null;
+  /** The game's item type label ("Food"), when the addon read it. */
+  typeLabel: string | null;
+  /** The game's finer kind (SPECIALIZED_ITEMTYPE_*), when read. */
+  specializedLabel: string | null;
+  from: PlaceSource;
+}
+
+export interface PlaceInput {
+  bagCategory?: string | null;
+  bagSubtype?: string | null;
+  itemTypeLabel?: string | null;
+  specializedTypeLabel?: string | null;
+  /** Companion gear has its own tab. */
+  companion?: boolean;
+}
+
+const WEAPON_SUB: Record<Exclude<Weapon, "shield">, string> = {
+  axe: "one-handed",
+  mace: "one-handed",
+  sword: "one-handed",
+  dagger: "one-handed",
+  battleaxe: "two-handed",
+  maul: "two-handed",
+  greatsword: "two-handed",
+  bow: "bow",
+  inferno: "destruction-staff",
+  ice: "destruction-staff",
+  lightning: "destruction-staff",
+  restoration: "restoration-staff",
+};
+
+/** The tab a piece kind belongs in, as the game files gear. */
+export function placeOfPiece(kind: PieceKind, companion = false): { category: string; subtype: string | null } {
+  let category: string;
+  let subtype: string | null;
+  if (kind.kind === "armor") {
+    category = "apparel";
+    subtype = kind.weight;
+  } else if (kind.kind === "jewelry") {
+    category = "jewelry";
+    subtype = kind.jewelry === "necklace" ? "neck" : "ring";
+  } else if (kind.weapon === "shield") {
+    category = "apparel";
+    subtype = "shield";
+  } else {
+    category = "weapons";
+    subtype = WEAPON_SUB[kind.weapon];
+  }
+  if (!companion) return { category, subtype };
+  return { category: "companion", subtype: category };
+}
+
+export function itemPlace(item: PlaceInput, kind: PieceKind | null = null): ItemPlace | null {
+  const typeLabel = item.itemTypeLabel?.trim() || null;
+  const specializedLabel = item.specializedTypeLabel?.trim() || null;
+  if (item.bagCategory && BAG_CATEGORIES.some((c) => c.id === item.bagCategory)) {
+    return { category: item.bagCategory, subtype: item.bagSubtype ?? null, typeLabel, specializedLabel, from: "game" };
+  }
+  if (kind) return { ...placeOfPiece(kind, item.companion), typeLabel, specializedLabel, from: "piece" };
+  return null;
 }

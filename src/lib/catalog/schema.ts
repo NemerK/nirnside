@@ -12,7 +12,7 @@ import { z } from "zod";
 export const CatalogSource = z.enum(["ingame", "community", "reference"]);
 export type CatalogSource = z.infer<typeof CatalogSource>;
 
-export const CatalogDomain = z.enum(["set", "skillline", "skill", "cp", "grimoire", "script", "achievement"]);
+export const CatalogDomain = z.enum(["set", "skillline", "skill", "cp", "grimoire", "script", "achievement", "mundus", "food"]);
 export type CatalogDomain = z.infer<typeof CatalogDomain>;
 
 const base = {
@@ -25,6 +25,8 @@ const base = {
 export const SetBonus = z.object({
   pieces: z.number().int().min(1).max(12),
   text: z.string(),
+  /** The perfected line (GetItemLinkSetBonusInfo's third return): only perfected pieces count toward it. */
+  perfected: z.boolean().nullable().optional(),
 });
 
 export const CatalogSet = z.object({
@@ -111,6 +113,30 @@ export const CatalogAchievement = z.object({
 });
 export type CatalogAchievement = z.infer<typeof CatalogAchievement>;
 
+/** A Mundus blessing as the game describes it this patch. Catalog 0.2.5+, or learned from a character's buff. */
+export const CatalogMundus = z.object({
+  ...base,
+  abilityId: z.number().int().nonnegative().nullable().default(null),
+  description: z.string().default(""),
+  icon: z.string().nullable().default(null),
+});
+export type CatalogMundus = z.infer<typeof CatalogMundus>;
+
+/** A provisioning dish and the buff it gives, from the game's tooltip. Catalog 0.2.5+. */
+export const CatalogFood = z.object({
+  ...base,
+  itemId: z.number().int().nonnegative(),
+  recipeList: z.string().default(""),
+  quality: z.number().int().nonnegative().nullable().default(null),
+  /** "Food" or "Drink", as the game types the dish. */
+  kind: z.string().nullable().default(null),
+  subtype: z.string().nullable().default(null),
+  buffName: z.string().nullable().default(null),
+  buff: z.string().default(""),
+  icon: z.string().nullable().default(null),
+});
+export type CatalogFood = z.infer<typeof CatalogFood>;
+
 /** A domain -> entries bundle, as stored in the reference JSON seeds. */
 export const CatalogBundle = z.object({
   patch: z.string().default("U50"),
@@ -122,6 +148,8 @@ export const CatalogBundle = z.object({
   grimoires: z.array(CatalogGrimoire).default([]),
   scripts: z.array(CatalogScript).default([]),
   achievements: z.array(CatalogAchievement).default([]),
+  mundus: z.array(CatalogMundus).default([]),
+  food: z.array(CatalogFood).default([]),
 });
 export type CatalogBundle = z.infer<typeof CatalogBundle>;
 

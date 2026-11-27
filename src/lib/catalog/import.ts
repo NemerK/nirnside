@@ -39,7 +39,10 @@ type Row = {
  * reference) is at least as high. This is the accuracy rule as code — an in-game
  * scan can never be clobbered by reference seed data.
  */
-export function importCatalogBundle(raw: unknown): Record<string, number> {
+export function importCatalogBundle(
+  raw: unknown,
+  opts: { /** False for facts learned outside a catalog scan, so the scan's patch label stays. */ touchMeta?: boolean } = {},
+): Record<string, number> {
   const bundle = CatalogBundle.parse(raw);
   const db = getDb();
 
@@ -69,6 +72,8 @@ export function importCatalogBundle(raw: unknown): Record<string, number> {
   for (const g of bundle.grimoires) push("grimoire", g, g.skillLine, null);
   for (const s of bundle.scripts) push("script", s, s.slot, null);
   for (const a of bundle.achievements) push("achievement", a, a.category, a.subtype);
+  for (const m of bundle.mundus) push("mundus", m, null, null);
+  for (const f of bundle.food) push("food", f, f.kind, f.recipeList || null);
 
   const selectStmt = db.prepare("SELECT source, json FROM catalog WHERE domain = ? AND id = ?");
   const upsertStmt = db.prepare(`
@@ -100,6 +105,7 @@ export function importCatalogBundle(raw: unknown): Record<string, number> {
   });
   tx(rows);
 
+  if (opts.touchMeta === false) return counts;
   // Record the highest-precedence source present, for UI honesty.
   const prev = (getCatalogMeta()?.source ?? "reference") as keyof typeof SOURCE_RANK;
   const incoming = bundle.source;

@@ -1,6 +1,6 @@
 import { getDb, getMeta } from "./index";
 import type { AccountSnapshot } from "../snapshot/schema";
-import { accountAlliancePoints, accountGold, accountTelVar } from "../snapshot/roster";
+import { accountAlliancePoints, accountGold, accountTelVar, withoutDeletedCharacters } from "../snapshot/roster";
 import { canonicalizeCurrencies } from "../currencies";
 import { collectedPieceKeys } from "../stickerbook/seen";
 import { seedStickerbookSeenIfNeeded } from "../stickerbook/seen-store";
@@ -10,7 +10,9 @@ import {
 } from "../achievements/pithka";
 import { stripVengeanceFromCharacter } from "../catalog/excluded";
 import { itemsFromSnapshot } from "../game/item-index";
-import { learnItems } from "./game-items";
+import { syncItems } from "./game-items";
+import { importCatalogBundle } from "../catalog/import";
+import { blessingsFromCharacters } from "../game/learn";
 
 /**
  * Replace the entire local DB with a fresh snapshot. Because Nirnside only ever
@@ -21,7 +23,11 @@ import { learnItems } from "./game-items";
  * still character-bound in live ESO — if any toon has earned one, it stays
  * checked for the whole account.
  */
-export function importSnapshot(snap: AccountSnapshot): { items: number; characters: number; sets: number } {
+export function importSnapshot(
+  scanned: AccountSnapshot,
+): { items: number; characters: number; sets: number; deleted: number } {
+  // A character deleted in game leaves Nirnside with its bags and its settings.
+  const { snap, deleted } = withoutDeletedCharacters(scanned);
   const db = getDb();
   const persisted = (db.prepare("SELECT id FROM completed_achievements").all() as { id: number }[]).map(
     (r) => r.id,
@@ -59,7 +65,8 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
     db.exec("DELETE FROM characters; DELETE FROM items; DELETE FROM stickerbook; DELETE FROM achievements;");
     db.prepare("DELETE FROM meta WHERE key = 'account'").run();
 
-    const rosterForGold = [...snap.characters, ...snap.archivedCharacters];
+    const rosterForGold = snap.characters;
+    forgetCharacters(deleted.map((c) => c.id));
     const setMeta = db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)");
     setMeta.run(
       "account",
@@ -91,6 +98,8 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
         houses: snap.houses ?? [],
         outfitStyles: snap.outfitStyles ?? [],
         mythics: snap.mythics ?? [],
+        companions: snap.companions ?? [],
+        bankSpace: snap.bankSpace ?? null,
       }),
     );
 
@@ -106,15 +115,7 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
               @isVampire, @vampireStage, @isWerewolf, @lastSeen, @sortOrder, @json,
               @archivedAt, @gold, @telVar, @alliancePoints, @classMastery, @gender, @mundus, @lines)
     `);
-    const allChars = [
-      ...snap.characters.map((c) => stripVengeanceFromCharacter({ ...c, archivedAt: c.archivedAt ?? null })),
-      ...snap.archivedCharacters.map((c) =>
-        stripVengeanceFromCharacter({
-          ...c,
-          archivedAt: c.archivedAt ?? snap.lastSnapshot ?? 1,
-        }),
-      ),
-    ];
+    const allChars = snap.characters.map((c) => stripVengeanceFromCharacter({ ...c, archivedAt: null }));
     allChars.forEach((c, i) => {
       insChar.run({
         id: c.id,
@@ -215,15 +216,38 @@ export function importSnapshot(snap: AccountSnapshot): { items: number; characte
   });
 
   tx();
-  // Learn the scan's items into the lasting item index (never cleared).
+  // Bring the item index in line with what the account holds now.
   try {
-    learnItems(itemsFromSnapshot(snap), snap.lastSnapshot || undefined);
+    syncItems(itemsFromSnapshot(snap), snap.lastSnapshot || undefined);
   } catch (err) {
     console.warn("[nirnside] could not update the item index:", err);
+  }
+  // Each character's blessing text, as the game wrote it, upgrades the catalog's Mundus rows.
+  try {
+    const mundus = blessingsFromCharacters(snap.characters, snap.apiVersion ? `API${snap.apiVersion}` : "live");
+    if (mundus.length) importCatalogBundle({ source: "ingame", patch: `API${snap.apiVersion}`, mundus }, { touchMeta: false });
+  } catch (err) {
+    console.warn("[nirnside] could not learn Mundus text:", err);
   }
   return {
     items: snap.items.length,
     characters: snap.characters.length,
     sets: snap.stickerbook.length,
+    deleted: deleted.length,
   };
+}
+
+/**
+ * Settings that only meant something for one character: its roles and its
+ * own targets. Photos stay; they are the player's files, not settings.
+ */
+function forgetCharacters(ids: string[]) {
+  if (ids.length === 0) return;
+  const db = getDb();
+  const roles = db.prepare("DELETE FROM character_roles WHERE characterId = ?");
+  const goals = db.prepare("DELETE FROM goals WHERE scope = 'character' AND characterId = ?");
+  for (const id of ids) {
+    roles.run(id);
+    goals.run(id);
+  }
 }

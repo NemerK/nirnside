@@ -99,6 +99,12 @@ export const Item = z.object({
   /** The client's own tab label, when the game string was available. */
   bagCategoryLabel: z.string().nullable().optional(),
   bagSubtypeLabel: z.string().nullable().optional(),
+  /** The game's item type (ITEMTYPE_*) and its label ("Food"). Addon 0.9.43+. */
+  itemType: z.number().int().nonnegative().nullable().optional(),
+  itemTypeLabel: z.string().nullable().optional(),
+  /** The finer kind (SPECIALIZED_ITEMTYPE_*) and its label. Addon 0.9.43+. */
+  specializedType: z.number().int().nonnegative().nullable().optional(),
+  specializedTypeLabel: z.string().nullable().optional(),
 });
 export type Item = z.infer<typeof Item>;
 
@@ -224,6 +230,53 @@ export const Companion = z.object({
   rapport: z.string().nullable().default(null),
   level: z.number().int().nonnegative().default(0),
 });
+
+/**
+ * A companion on the account (addon 0.9.43+). Progress is account-wide.
+ * Level and rapport are read only while that companion is out, so each row
+ * keeps when it was last seen; rows never seen out have no level.
+ */
+export const AccountCompanion = z.object({
+  collectibleId: z.number().int().nonnegative(),
+  name: z.string(),
+  icon: z.string().nullable().optional(),
+  owned: z.boolean().default(false),
+  level: z.number().int().nonnegative().nullable().optional(),
+  rapport: z.string().nullable().optional(),
+  rapportValue: z.number().int().nullable().optional(),
+  seenAt: z.number().int().nonnegative().nullable().optional(),
+});
+export type AccountCompanion = z.infer<typeof AccountCompanion>;
+
+/** A lasting effect on the character at the save (addon 0.9.43+). Under a minute is left out. */
+export const ActiveBuff = z.object({
+  name: z.string(),
+  abilityId: z.number().int().nonnegative().nullable().optional(),
+  icon: z.string().nullable().optional(),
+  stacks: z.number().int().nonnegative().nullable().optional(),
+  /** Unix seconds when it runs out; missing = lasts until removed. */
+  endsAt: z.number().int().nonnegative().nullable().optional(),
+  /** A Mundus blessing ("Boon: The Warrior"). */
+  mundus: z.boolean().nullable().optional(),
+  /** The game's text, with this patch's numbers. Blessings only. */
+  description: z.string().nullable().optional(),
+});
+export type ActiveBuff = z.infer<typeof ActiveBuff>;
+
+/** Riding lessons (addon 0.9.43+). */
+export const Riding = z.object({
+  speed: z.number().int().nonnegative(),
+  maxSpeed: z.number().int().nonnegative().nullable().optional(),
+  stamina: z.number().int().nonnegative().nullable().optional(),
+  maxStamina: z.number().int().nonnegative().nullable().optional(),
+  capacity: z.number().int().nonnegative().nullable().optional(),
+  maxCapacity: z.number().int().nonnegative().nullable().optional(),
+  /** Unix seconds when the next lesson opens. */
+  trainableAt: z.number().int().nonnegative().nullable().optional(),
+});
+export type Riding = z.infer<typeof Riding>;
+
+export const BagSpace = z.object({ used: z.number().int().nonnegative(), size: z.number().int().nonnegative() });
 
 /**
  * Daily board cell. `available` / `accepted` / `done` come from the game
@@ -502,6 +555,15 @@ export const Character = z.object({
   level: z.number().int().default(1),
   championPoints: z.number().int().default(0),
   mundus: z.string().nullable().default(null),
+  /** Every active blessing, two with Twice-Born Star. Addon 0.9.43+. */
+  mundusBoons: z.array(z.string()).optional().catch(undefined),
+  buffs: lenientArray(ActiveBuff).optional(),
+  riding: Riding.nullable().optional().catch(null),
+  /** Unspent skill points. */
+  skillPoints: z.number().int().nonnegative().nullable().optional().catch(null),
+  /** Skyshard pieces toward the next point. */
+  skyshards: z.number().int().nonnegative().nullable().optional().catch(null),
+  backpack: BagSpace.nullable().optional().catch(null),
   /** Attribute point spend. */
   attributes: z
     .object({ magicka: z.number().int(), health: z.number().int(), stamina: z.number().int() })
@@ -637,7 +699,14 @@ export const StickerbookSet = z.object({
    * before the addon recorded them — never invented here.
    */
   bonuses: z
-    .array(z.object({ pieces: z.number().int().nonnegative(), text: z.string() }))
+    .array(
+      z.object({
+        pieces: z.number().int().nonnegative(),
+        text: z.string(),
+        /** The perfected line: only perfected pieces count toward it. Addon 0.9.43+. */
+        perfected: z.boolean().nullable().optional(),
+      }),
+    )
     .optional(),
   /** Max pieces equipped, from GetItemLinkSetInfo. Missing until a snapshot records it. */
   maxEquip: z.number().int().positive().optional(),
@@ -700,6 +769,10 @@ export const AccountSnapshot = z.object({
     .catch({}),
   guilds: lenientArray(Guild).default([]),
   items: lenientArray(Item).default([]),
+  /** Companions on the account. Addon 0.9.43+. */
+  companions: lenientArray(AccountCompanion).default([]),
+  /** Bank and ESO Plus bank together. Addon 0.9.43+. */
+  bankSpace: BagSpace.nullable().optional().catch(null),
   characters: lenientArray(Character).default([]),
   /**
    * Characters that were on the account and have since been deleted.

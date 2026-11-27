@@ -30,7 +30,7 @@ import { getSets, setHref } from "@/lib/db/catalog-queries";
 import { loadSetHover } from "@/lib/catalog/hover-sets";
 import { withResolvedSet } from "@/lib/catalog/set-brief";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
-import { tallyBagFilters } from "@/lib/inventory/bag-filters";
+import { tallyBagFilters } from "@/lib/game/item-category";
 import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { classColor } from "@/lib/classes";
 import { formatNumber } from "@/lib/format";

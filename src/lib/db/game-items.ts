@@ -1,5 +1,5 @@
 import { getDb } from "./index";
-import { mergeLearned, type LearnedItem } from "../game/item-index";
+import { goneItems, mergeLearned, type LearnedItem } from "../game/item-index";
 import { setProfileFrom, type SetProfile } from "../game/set-profile";
 
 interface Row {
@@ -12,6 +12,11 @@ interface Row {
   seenIn: string;
   firstSeen: number;
   lastSeen: number;
+  category: string | null;
+  subtype: string | null;
+  typeLabel: string | null;
+  specializedLabel: string | null;
+  placeFrom: string | null;
 }
 
 const toItem = (r: Row): LearnedItem & { firstSeen: number; lastSeen: number } => ({
@@ -22,6 +27,11 @@ const toItem = (r: Row): LearnedItem & { firstSeen: number; lastSeen: number } =
   setId: r.setId,
   setName: r.setName,
   seenIn: safeArray(r.seenIn),
+  category: r.category ?? null,
+  subtype: r.subtype ?? null,
+  typeLabel: r.typeLabel ?? null,
+  specializedLabel: r.specializedLabel ?? null,
+  placeFrom: r.placeFrom === "game" || r.placeFrom === "piece" ? r.placeFrom : null,
   firstSeen: r.firstSeen,
   lastSeen: r.lastSeen,
 });
@@ -35,18 +45,32 @@ function safeArray(json: string): string[] {
   }
 }
 
-/** Add a scan's items to what is known. Existing facts stay; gaps fill in; nothing is removed. */
-export function learnItems(items: LearnedItem[], at: number = Math.floor(Date.now() / 1000)): number {
-  if (items.length === 0) return 0;
+/**
+ * Bring the index in line with a scan: every item in it is added or
+ * updated, and every item no longer in it is dropped. A scan with no items
+ * at all is ignored, so an empty or broken file can't wipe the index.
+ */
+export function syncItems(items: LearnedItem[], at: number = Math.floor(Date.now() / 1000)): { kept: number; dropped: number } {
+  if (items.length === 0) return { kept: 0, dropped: 0 };
   const db = getDb();
   const get = db.prepare("SELECT * FROM game_items WHERE itemId = ?");
   const put = db.prepare(
-    `INSERT INTO game_items (itemId, name, icon, kind, setId, setName, seenIn, firstSeen, lastSeen)
-     VALUES (@itemId, @name, @icon, @kind, @setId, @setName, @seenIn, @firstSeen, @lastSeen)
+    `INSERT INTO game_items (itemId, name, icon, kind, setId, setName, seenIn, firstSeen, lastSeen,
+       category, subtype, typeLabel, specializedLabel, placeFrom)
+     VALUES (@itemId, @name, @icon, @kind, @setId, @setName, @seenIn, @firstSeen, @lastSeen,
+       @category, @subtype, @typeLabel, @specializedLabel, @placeFrom)
      ON CONFLICT(itemId) DO UPDATE SET name = @name, icon = @icon, kind = @kind, setId = @setId,
-       setName = @setName, seenIn = @seenIn, lastSeen = @lastSeen`,
+       setName = @setName, seenIn = @seenIn, lastSeen = @lastSeen, category = @category, subtype = @subtype,
+       typeLabel = @typeLabel, specializedLabel = @specializedLabel, placeFrom = @placeFrom`,
   );
+  const drop = db.prepare("DELETE FROM game_items WHERE itemId = ?");
+  let dropped = 0;
   const tx = db.transaction(() => {
+    const knownIds = (db.prepare("SELECT itemId FROM game_items").all() as { itemId: number }[]).map((r) => r.itemId);
+    for (const id of goneItems(knownIds, items)) {
+      drop.run(id);
+      dropped += 1;
+    }
     for (const seen of items) {
       const row = get.get(seen.itemId) as Row | undefined;
       const known = row ? toItem(row) : undefined;
@@ -55,7 +79,7 @@ export function learnItems(items: LearnedItem[], at: number = Math.floor(Date.no
     }
   });
   tx();
-  return items.length;
+  return { kept: items.length, dropped };
 }
 
 export function getLearnedItem(itemId: number) {

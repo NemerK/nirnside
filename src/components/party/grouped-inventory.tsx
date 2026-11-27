@@ -6,7 +6,7 @@ import { Hand } from "lucide-react";
 import { SetHover } from "@/components/set-hover";
 import { SortHeader, useSort } from "@/components/sort-header";
 import { locationLabel, qualityText } from "@/lib/format";
-import { bagSubtypeLabel } from "@/lib/inventory/bag-filters";
+import { bagSubtypeLabel } from "@/lib/game/item-category";
 import { sortRows } from "@/lib/ui/column-sort";
 import type { ItemGroup } from "@/lib/party/inventory";
 

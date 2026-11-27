@@ -49,14 +49,35 @@ describe("motifs and styles", () => {
 });
 
 describe("mundus", () => {
-  it("finds stones and reads Divines and Twice-Born Star", () => {
+  it("knows the Update 51 stones", () => {
     assert.equal(findMundus("Boon: The Shadow")?.boosts, "Critical Damage and Critical Healing");
-    const r = readMundus("The Thief", [
+    assert.equal(findMundus("The Warrior")?.boosts, "Weapon and Spell Damage");
+    assert.equal(findMundus("Apprentice")?.combat, false);
+  });
+  it("reads Divines and Twice-Born Star", () => {
+    const r = readMundus({ mundus: "The Thief" }, [
       ...["Head", "Chest", "Legs", "Feet", "Hands"].map((s) => ({ slot: s, type: `Light ${s}`, setName: "Twice-Born Star", trait: "Divines" })),
       { slot: "Ring 1", type: "Ring", trait: "Arcane" },
     ]);
     assert.equal(r.allowed, 2);
     assert.equal(r.divinesPieces, 5);
+    assert.equal(r.secondBlessingFree, true);
+  });
+  it("prefers the game's own text: the saved buff, then the catalog", () => {
+    const catalog = [{ name: "The Warrior", description: "Increases Weapon and Spell Damage by 238." }];
+    const fromBuff = readMundus(
+      {
+        mundusBoons: ["The Warrior"],
+        buffs: [{ name: "Boon: The Warrior", mundus: true, description: "Increases Weapon and Spell Damage by 350." }],
+      },
+      [],
+      catalog,
+    );
+    assert.equal(fromBuff.blessings[0].text, "Increases Weapon and Spell Damage by 350.");
+    assert.equal(fromBuff.blessings[0].textFrom, "buff");
+    const fromCatalog = readMundus({ mundus: "The Warrior" }, [], catalog);
+    assert.equal(fromCatalog.blessings[0].textFrom, "catalog");
+    assert.equal(readMundus({ mundus: null }, []).blessings.length, 0);
   });
 });
 

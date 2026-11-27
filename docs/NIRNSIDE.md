@@ -21,8 +21,7 @@ game works, so every page reads the same answers.
 - **Two looks, one app.** *Party* (the current design, under `/party`) and
   *Atlas* (the original). They share one database and one game model.
 - **Later: a web version** with profiles, friends and sharing chosen
-  modules. See §9. It needs the owner's approval to change the privacy
-  rules first.
+  modules. The owner approved the direction; details come first. See §9.
 
 ---
 
@@ -69,7 +68,8 @@ it). Tables fall into three groups:
 | Group | Tables | On import |
 | --- | --- | --- |
 | **The account** (replaced by each scan) | `characters`, `items`, `stickerbook`, `achievements`, `meta['account']` | Deleted and rewritten in one transaction, so no stale rows survive |
-| **What Nirnside has learned** (never cleared) | `catalog` (game catalog), `game_items` (item index), `completed_achievements`, `character_completed_achievements` | Merged: better sources win, gaps fill in, nothing is forgotten |
+| **What Nirnside has learned** | `catalog` (game catalog), `completed_achievements`, `character_completed_achievements` | Merged: better sources win, gaps fill in, nothing is forgotten |
+| **The item index** | `game_items` | Brought in line with the scan: what the account holds plus the set collection's pieces, each filed in its place |
 | **What the player set** | `goals`, `roles`, `character_roles`, `gear_builds`, `gallery_photos`, `profile_media`, `meta` keys (`party-profile`, `daily-tracking`, …) | Never touched by an import |
 
 Schema changes go in `src/lib/db/index.ts` (`migrate`). Write them as
@@ -141,10 +141,12 @@ The full map, with sources, is in `docs/game-model.md`. In short:
 | Classes | `classes.ts` | Class lines, own, borrowed and swapped-out lines, subclassing rules, Class Mastery |
 | Champion Points | `champion.ts` | Constellations, cap, slots, unslotted slottables |
 | Weapons and armor lines | `weapon-lines.ts` | What each bar's weapons make, which abilities work there |
-| Mundus, food, companions | `mundus.ts`, `food.ts`, `companions.ts` | Blessings, buffs, companion rules |
+| Mundus, food, companions | `mundus.ts`, `food.ts`, `companions.ts` | Blessings with the game's own text, buffs, companion rules |
+| Buffs, riding | `buffs.ts`, `riding.ts` | Lasting buffs and riding lessons, counted down from the save |
+| Where items belong | `item-category.ts` | The game's inventory tabs; `itemPlace` files every item |
 | Addons | `addons.ts`, `setups.ts` | What addons are, sources and freshness, Wizard's Wardrobe setups |
 | Everything at once | `understand.ts` | `readCharacter(c, classLines(), abilityLines())` |
-| Learned items | `item-index.ts`, `db/game-items.ts` | Every item seen, by item id; set profiles |
+| The item index | `item-index.ts`, `db/game-items.ts` | Every item the account holds, by item id, in its place; set profiles |
 | Catalog lookups | `db/game-knowledge.ts` | Class → lines; ability → line |
 
 Modules in `src/lib/game/` are pure. They take data and return answers,
@@ -224,20 +226,19 @@ including a server. Database access lives in `src/lib/db/`.
 
 ## 9. Toward a web version
 
-Nothing here is built yet. Two things have to be decided first.
+Nothing here is built yet. The owner approved the direction in November
+2026, and the rules file (§3) now records it: private accounts, sharing
+chosen modules, and each player's catalog built from their own scans.
+Still to agree before building: how shared data is protected, sign-in and
+hosting (docs/notes.md).
 
-**1. The owner must change the privacy rule.** The rules file (§3) says
-account data never leaves the device and there are no servers. A web
-version, friends and sharing all need the owner to rewrite that rule
-first, including how shared data is protected. The rule today requires
-any sharing to be end-to-end encrypted.
-
-**2. What would go where.** The layout already separates these:
+**What would go where.** The layout already separates these:
 
 | Kind | Today | On the web |
 | --- | --- | --- |
 | **Game rules** (`src/lib/game/`) | Code | The same code, run on the server and in the browser. Rules stay code, not database rows |
-| **Game knowledge** (`catalog`, `game_items`) | Per-install SQLite | One shared table for all users, if the owner approves contributing it. It describes the game, not anyone's account. It needs merge rules: source rank, recency, agreement between several reports, so one bad or old scan can't overwrite good data |
+| **Game knowledge** (`catalog`) | Per-install SQLite | Per player, from their own scans and saves. Not pooled between players (owner, November 2026) |
+| **Item index** (`game_items`) | Per-install SQLite | Per player: what their account holds, in its place |
 | **Account data** (`characters`, `items`, `stickerbook`, …) | Per-install SQLite | Private per user, visible only to them and whoever they share chosen modules with (profile visibility is already stored per module) |
 | **Player settings** (`goals`, roles, profile) | Per-install SQLite | Private per user |
 
@@ -254,6 +255,7 @@ mechanical. Keep it that way: no logic in SQL that the model should own.
 | Product rules (hard) | `.cursor/rules/nirnside.mdc` |
 | Finding SavedVariables | `.cursor/rules/eso-paths.mdc`, `src/lib/snapshot/locate.ts` |
 | Game model | `src/lib/game/`, `docs/game-model.md` |
+| Notes for later, open questions | `docs/notes.md` |
 | Snapshot shape | `src/lib/snapshot/schema.ts` |
 | Database | `src/lib/db/index.ts` (schema), `import.ts`, `queries.ts`, `game-items.ts`, `game-knowledge.ts` |
 | Party pages | `src/app/(party)/party/`, `src/components/party/` |

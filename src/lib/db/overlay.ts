@@ -1,7 +1,6 @@
 import "server-only";
 import { getDb } from "./index";
-import { getArchivedCharacters, getCharactersFull } from "./queries";
-import { archivedOwnerNames } from "../snapshot/roster";
+import { getCharactersFull } from "./queries";
 import { abilityIsKnown, displayAbility, knownAbilityNames, romanRank } from "../skills/ability";
 
 /** How much of a set the account owns: inventory stacks + stickerbook progress. */
@@ -9,13 +8,10 @@ export function setOwnership(setName: string): {
   inventoryCount: number;
   sticker: { collected: number; total: number } | null;
 } {
-  const archived = archivedOwnerNames(getArchivedCharacters());
-  const invRows = getDb()
-    .prepare("SELECT ownerCharacter FROM items WHERE setName = ? COLLATE NOCASE")
-    .all(setName) as { ownerCharacter: string | null }[];
-  const inventoryCount = invRows.filter(
-    (r) => !r.ownerCharacter || !archived.has(r.ownerCharacter),
-  ).length;
+  // Deleted characters' bags never reach the database (snapshot/roster.ts withoutDeletedCharacters).
+  const inventoryCount = (
+    getDb().prepare("SELECT COUNT(*) AS n FROM items WHERE setName = ? COLLATE NOCASE").get(setName) as { n: number }
+  ).n;
   const sb = getDb()
     .prepare("SELECT collected, total FROM stickerbook WHERE name = ? COLLATE NOCASE")
     .get(setName) as { collected: number; total: number } | undefined;

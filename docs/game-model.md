@@ -13,7 +13,7 @@ The model lives in `src/lib/game/`:
 | `quality.ts` | Item qualities in the game's order, their theme colors |
 | `skills.ts` | Skill line categories in the Skills window's order |
 | `set-profile.ts` | What a set comes in: which weights for which slots, jewelry, weapons; its shape (full, monster head-and-shoulders, weapons-only, single-piece) |
-| `loadout.ts` | How worn gear works together: set counts per bar, two-handers as two, active bonuses, body armor per weight |
+| `loadout.ts` | How worn gear works together: set counts per bar, perfected and normal pieces as one set, two-handers as two, active bonuses (the perfected line needs perfected pieces), body armor per weight |
 | `research.ts` | Trait research per piece kind, whether a piece can be crafted for a set and trait, idle research slots |
 | `character.ts` | Races, their home alliances, what a race–alliance pairing means (home, Imperial's choice, Any Race Any Alliance), racial lines |
 | `classes.ts` | Classes and their three lines (from the catalog), a character's own / borrowed / swapped-out lines, subclassing rules, Class Mastery |
@@ -22,11 +22,15 @@ The model lives in `src/lib/game/`:
 | `addons.ts` | What an ESO addon is, how its saved data reaches Nirnside, the addons Nirnside works with, where each fact comes from and how fresh it is |
 | `setups.ts` | A Wizard's Wardrobe setup read against the model: each bar's weapon line, skills a bar can't use, planned vs worn gear |
 | `motifs.ts` | The 14 motif chapters and the pieces each covers, per-character style knowledge, the shared style key linking motifs and outfit styles |
-| `mundus.ts` | The 13 Mundus stones and what each boosts, one blessing (two with Twice-Born Star), Divines strengthening it |
+| `mundus.ts` | The 13 Mundus stones as of Update 51 and what each boosts, one blessing (two with Twice-Born Star), Divines strengthening it, and the game's own text for each blessing |
+| `buffs.ts` | Lasting buffs at the save (Mundus, food, drink), counted down from the save |
+| `riding.ts` | Riding lessons: speed, stamina, capacity against their caps, and when the next lesson opens |
+| `item-category.ts` | Where every item belongs: the game's inventory tabs and sub-tabs, in the game's order |
+| `learn.ts` | Facts about the game a save carries (a blessing's text), turned into catalog rows |
 | `food.ts` | One food or drink buff at a time; food raises maximums, drink recovery; recipe families and grades |
 | `companions.ts` | Companion levels (20), bar, ultimate at 20, account-wide progress, class themes, armor lines needing five pieces, rapport |
 | `understand.ts` | `readCharacter`: one character read through every system at once |
-| `item-index.ts` | What every scan teaches about items (below) |
+| `item-index.ts` | Every item the account holds, plus the set collection's pieces, filed in its place (below) |
 
 ## Where the facts come from
 
@@ -105,14 +109,22 @@ plus items learned in play.
   bar is out.
 - A two-handed weapon counts as two pieces.
 - Every bonus up to the worn count is active.
+- Perfected and normal pieces are one set when worn. Every piece counts
+  toward the normal bonuses; the perfected line counts only perfected
+  pieces. Four perfected and one normal give the full set except the
+  perfected bonus. They are collected separately: the normal piece drops
+  in veteran, the perfected one in veteran hard mode. The two versions have
+  their own set ids, so the loadout groups them by name without "Perfected".
 - Body pieces are counted per weight, which armor passives scale with. A
   shield isn't body armor.
 
-Where a rule is uncertain or changes between patches (how perfected and
-normal pieces combine), the model doesn't encode it. Newer addon scans
-record the game's own count (`GetItemLinkSetInfo(link, true)`: pieces worn,
-and how many are perfected) as `setCount` / `setPerfectedCount`, and the
-loadout keeps them as `gameCount`.
+Sources: the owner, and the game's own tooltip, which checks a bonus line
+flagged perfected (`GetItemLinkSetBonusInfo`'s third return, recorded as
+`perfected` since addon 0.9.43) against the perfected count, and every
+other line against the full count. Newer scans also record the game's own
+counts (`GetItemLinkSetInfo(link, true)`) as `setCount` / `setPerfectedCount`;
+the loadout keeps them as `gameCount` / `gamePerfectedCount`. They are for
+the bar that was out at the save.
 
 ## Research
 
@@ -201,37 +213,66 @@ the game.
   style account-wide, and `styleKey` links the two.
 - **Mundus.** Thirteen stones, one blessing at a time, two with five
   pieces of Twice-Born Star. Divines armor strengthens it, more on
-  higher quality. Values change with patches, so only what each stone
-  boosts is kept.
+  higher quality. Update 51 (live 28 September 2026) changed two: the
+  Warrior now gives Weapon and Spell Damage, and the Apprentice 8% more
+  experience and inspiration instead of Spell Damage. The numbers come
+  from the game, never from here: a character's own blessing text from its
+  saved buffs, and every stone's from the catalog scan (`mundus` domain).
+  A save's blessing text also fills the catalog row (`learn.ts`).
 - **Food and drink.** One buff at a time. Food raises maximum Health,
   Magicka or Stamina, drinks raise their recovery, and specialities mix
   both. Standard recipes touch one stat, difficult two, complex three.
+  The catalog scan records every dish and its buff as the game's tooltip
+  states it (`food` domain). A character's active food shows as a lasting
+  buff with its timer; which dish it came from isn't knowable (docs/notes.md).
+- **Riding.** Three lessons (speed, stamina, capacity) up to the caps the
+  game reports, and when the next lesson opens, counted from the save.
 - **Companions.** Level 1–20, shared across the account. One bar with five
   abilities, and the ultimate at 20. Abilities cost no skill points and
   don't morph. Armor lines need five pieces of a weight. Rapport changes
-  dialogue, not combat.
+  dialogue, not combat. Since addon 0.9.43 the account's companions come
+  from the collection, and the one out at a save adds its level and
+  rapport; the others keep what an earlier save saw.
 
 Sources: UESP (Online:Crafting_Motifs, Online:Mundus_Stones,
 Online:Divines, Online:Provisioning, Online:Recipes, Online:Rapport) and the
 ZOS Companions System Guide.
 
-## Learning: the item index
+## The item index: where everything belongs
 
-Every import adds the scan's items to the `game_items` table, keyed by the
-game's item id:
+Every import brings the `game_items` table in line with the scan, keyed by
+the game's item id:
 
 - name, icon and piece kind;
 - set id and set name;
-- where the item has been seen (bag, worn, collection);
-- first and last seen.
+- its place: an inventory tab and sub-tab (`category`, `subtype`), the
+  game's item type ("Food") and finer kind, and who filed it;
+- where the latest scan has it (bag, worn, collection), and first and last
+  seen.
 
-The table is never cleared, so it keeps growing. Over time Nirnside knows
-every item the account has shown the addon, even after the item is sold
-or deconstructed. Known facts are kept, gaps fill in, and nothing is
-guessed.
+**Where it belongs.** `itemPlace` (item-category.ts) files each item: the
+tab the game itself put it in (the addon asks the game's own inventory
+filter), then, for gear the game didn't file, the tab its piece kind
+belongs in. A name counts only through the model's parser of the game's
+piece words; nothing else is guessed.
+
+**What stays.** The index holds what the account holds now, plus every
+piece of the set collection (which lists every piece of every set, owned
+or not, so it describes the game). An item sold, deconstructed or
+destroyed, or on a deleted character, leaves at the next import. A scan
+with no items at all is ignored, so a broken file can't wipe it.
 
 Queries: `getLearnedItem(itemId)` and `learnedItemsForSet(setId)` in
 `src/lib/db/game-items.ts`.
+
+## Deleted characters
+
+The addon compares its characters with the game's own list at each save.
+A character no longer on it is filed under `archivedCharacters`, and its
+bags are dropped from the save. On import Nirnside leaves it out entirely:
+no character row, no bags, no gold in the totals, and its roles and
+character-only targets are removed. Photos of it stay; they are the
+player's own files.
 
 ## Adding to the model
 

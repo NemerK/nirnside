@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTransition } from "react";
-import { BAG_CATEGORIES, bagCategoryLabel, bagSubtypeLabel } from "@/lib/inventory/bag-filters";
+import { BAG_CATEGORIES, bagCategoryLabel, bagSubtypeLabel } from "@/lib/game/item-category";
 
 export function InventoryCategories({
   counts,

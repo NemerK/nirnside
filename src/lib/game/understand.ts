@@ -10,7 +10,9 @@ import type { FactSource } from "./addons";
 import { readCompanion, type CompanionReading } from "./companions";
 import { recipeFamily, type RecipeFamily } from "./food";
 import { styleKnowledge, type StyleKnowledge } from "./motifs";
-import { readMundus, type MundusReading } from "./mundus";
+import { readMundus, type MundusReading, type MundusText } from "./mundus";
+import { readBuffs, type BuffReading } from "./buffs";
+import { readRiding, type RidingReading } from "./riding";
 import { readSetup, type SetupReading } from "./setups";
 
 /**
@@ -25,7 +27,8 @@ import { readSetup, type SetupReading } from "./setups";
  * research → idle slots per craft;
  * Wizard's Wardrobe setups → each plan's weapon lines, skills its bars
  *   can't use, and how far the worn gear is from it;
- * mundus → the blessing, Twice-Born Star, Divines pieces;
+ * mundus → the blessings with the game's own text, Twice-Born Star, Divines pieces;
+ * buffs, riding, skill points, backpack space → as of the save, counted down;
  * motifs → which styles and chapters it can craft in;
  * recipes → which food and drink families it can cook;
  * companions → level, ultimate, theme;
@@ -58,8 +61,16 @@ export interface CharacterReading {
    * plans), each read against the game model. Empty without the addon.
    */
   setups: { zone: string; page: string; setup: string; reading: SetupReading }[];
-  /** Mundus blessing, how many the gear allows, and the Divines pieces strengthening it. */
+  /** Mundus blessings with the game's own text, how many the gear allows, and the Divines pieces. */
   mundus: MundusReading;
+  /** Lasting buffs at the save, counted down to now. Empty before addon 0.9.43. */
+  buffs: BuffReading[];
+  /** Riding lessons and when the next one opens. Null before addon 0.9.43. */
+  riding: RidingReading | null;
+  /** Unspent skill points at the save. */
+  skillPoints: number | null;
+  /** Backpack slots used and total at the save. */
+  backpack: { used: number; size: number } | null;
   /** Motif knowledge per style: complete books and known chapters. */
   styles: StyleKnowledge[];
   /** Provisioning recipe families this character knows recipes in, with what they boost. */
@@ -68,10 +79,17 @@ export interface CharacterReading {
   companions: CompanionReading[];
 }
 
+/** What the catalog knows that a reading can use: the game's own Mundus text. */
+export interface GameKnowledge {
+  mundus?: readonly MundusText[];
+}
+
 export function readCharacter(
   c: Character,
   classLines: Map<string, string[]>,
   abilityLines: Map<string, string> = new Map(),
+  knowledge: GameKnowledge = {},
+  now: number = Math.floor(Date.now() / 1000),
 ): CharacterReading {
   const loadout = loadoutOf(c.equipped);
   const weaponOn = (bar: "front" | "back", slot: "mainhand" | "offhand"): Weapon | null => {
@@ -105,7 +123,11 @@ export function readCharacter(
       companions: "game",
       setups: "addon",
     },
-    mundus: readMundus(c.mundus, c.equipped),
+    mundus: readMundus(c, c.equipped, knowledge.mundus ?? []),
+    buffs: readBuffs(c.buffs, now),
+    riding: readRiding(c.riding, now),
+    skillPoints: c.skillPoints ?? null,
+    backpack: c.backpack ?? null,
     styles: c.motifs.map(styleKnowledge),
     recipeFamilies: c.recipeLists
       .filter((l) => l.kind === "provisioning")

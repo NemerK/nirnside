@@ -1,4 +1,4 @@
-import { getArchivedCharacters, getCharacters, getCharactersFull } from "@/lib/db/queries";
+import { getCharacters, getCharactersFull } from "@/lib/db/queries";
 import { galleryCounts } from "@/lib/db/gallery";
 import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
@@ -55,12 +55,6 @@ export default async function CharactersPage({
           accountCP={accountCP}
           photoCounts={photoCounts}
           action={<RoleManagerButton roles={roles} />}
-          archived={(safe(() => getArchivedCharacters()) ?? []).map((c) => ({
-            id: c.id,
-            name: c.name,
-            className: c.class,
-            archivedAt: c.archivedAt,
-          }))}
         />
   );
 }
