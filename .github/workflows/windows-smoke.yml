@@ -40,17 +40,17 @@ jobs:
             for ($i = 0; $i -lt 200; $i++) {
               Start-Sleep -Seconds 2
               try { $s = Invoke-RestMethod http://127.0.0.1:43218/api/state -TimeoutSec 5 } catch { continue }
-              $line = "$($s.phase) $($s.percent)% $($s.step) | $($s.detail)"; if ($line -ne $last) { "  $line"; $last = $line }
-              if ($s.ready) { "$label ready in $([int]$sw.Elapsed.TotalSeconds)s, app $($s.appRevision)"; return $true }
-              if ($s.phase -eq "error") { "$label ERROR: $($s.error)"; return $false }
+              $line = "$($s.phase) $($s.percent)% $($s.step) | $($s.detail)"; if ($line -ne $last) { Write-Host "  $line"; $last = $line }
+              if ($s.ready) { Write-Host "$label ready in $([int]$sw.Elapsed.TotalSeconds)s, app $($s.appRevision)"; return $true }
+              if ($s.phase -eq "error") { Write-Host "$label ERROR: $($s.error)"; return $false }
             }
-            "$label timed out"; return $false
+            Write-Host "$label timed out"; return $false
           }
           function Probe() {
             $bad = $false
             foreach ($u in @("/api/health","/","/characters","/party","/inventory")) {
               $sw = [Diagnostics.Stopwatch]::StartNew()
-              try { $r = Invoke-WebRequest ("http://127.0.0.1:43219" + $u) -TimeoutSec 60 -UseBasicParsing; "  $u -> $($r.StatusCode) in $($sw.ElapsedMilliseconds) ms" } catch { "  $u -> FAILED: $($_.Exception.Message)"; $bad = $true }
+              try { $r = Invoke-WebRequest ("http://127.0.0.1:43219" + $u) -TimeoutSec 60 -UseBasicParsing; Write-Host "  $u -> $($r.StatusCode) in $($sw.ElapsedMilliseconds) ms" } catch { Write-Host "  $u -> FAILED: $($_.Exception.Message)"; $bad = $true }
             }
             return -not $bad
           }
