@@ -20,16 +20,22 @@ html.party {
   --fg: #eee7f2;
   --fg-muted: #c4b8cf;
   --fg-subtle: #94889f;
-  --accent: #e9c46a;
-  --accent-fg: #1c1405;
-  --accent-soft: rgb(233 196 106 / 0.13);
-  --danger: #ef7b6e;
-  --ok: #7fd3a0;
-  --info: #8db8ec;
-  --meter: #e9c46a;
-  --meter-track: #2e2439;
-  --rank-mandatory: #e9c46a;
-  --rank-extra: #8db8ec;
+  --accent: #a99cff;
+  --accent-fg: #150f2a;
+  --accent-soft: rgb(169 156 255 / 0.14);
+  --danger: #ff7a7f;
+  --ok: #5cd6a2;
+  --info: #6cb6ff;
+  --meter: #8f86a3;
+  --meter-track: #2a2234;
+  --rank-mandatory: #a99cff;
+  --rank-extra: #6cb6ff;
+  --rank-completionist: #9a92ab;
+  /* Meaning, not decoration: gold is only for gold. */
+  --gold: #e8c46e;
+  --cp-craft: #69d391;
+  --cp-warfare: #66b3ff;
+  --cp-fitness: #ff7b7b;
   --shadow-pop: 0 18px 48px rgb(4 2 8 / 0.6);
 }
 
@@ -51,6 +57,13 @@ html.party {
   --color-info: var(--info);
   --color-meter: var(--meter);
   --color-meter-track: var(--meter-track);
+  --color-gold: var(--gold);
+  --color-tier-mandatory: var(--rank-mandatory);
+  --color-tier-extra: var(--rank-extra);
+  --color-tier-completionist: var(--rank-completionist);
+  --color-cp-craft: var(--cp-craft);
+  --color-cp-warfare: var(--cp-warfare);
+  --color-cp-fitness: var(--cp-fitness);
   --font-sans: var(--font-party-body);
   --font-display: var(--font-party-display);
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;

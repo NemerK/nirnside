@@ -229,7 +229,7 @@ export default function ProfilePage() {
     <dl className="grid grid-cols-2 gap-x-5 gap-y-3">
       <div className="col-span-2">
         <dt className="text-[12px] text-fg-subtle">Gold, bank and every wallet</dt>
-        <dd className="font-display text-[24px] leading-tight tabular-nums text-accent">{formatNumber(t.gold)}</dd>
+        <dd className="font-display text-[24px] leading-tight tabular-nums text-gold">{formatNumber(t.gold)}</dd>
       </div>
       {t.currencies.slice(0, 6).map((c) => (
         <div key={c.key}>
