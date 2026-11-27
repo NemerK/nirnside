@@ -1,3 +1,4 @@
+import { canonicalTrait } from "../game/traits";
 import type { CharacterResearch } from "../snapshot/schema";
 
 /**
@@ -76,7 +77,9 @@ export function whoCanCraft(characters: CraftSource[], traitsNeeded: number, tra
           rows.set(key, row);
         }
         const known = line.traits.filter((t) => t.known).length;
-        const traitRow = trait ? line.traits.find((t) => same(t.name, trait)) : undefined;
+        // Trait names compared through the game model ("Well-Fitted", "Armor Well-fitted").
+        const wanted = trait ? (canonicalTrait(trait) ?? trait) : null;
+        const traitRow = wanted ? line.traits.find((t) => same(canonicalTrait(t.name) ?? t.name, wanted)) : undefined;
         const hasTrait = trait ? (traitRow ? traitRow.known : false) : null;
         const candidate: CraftCandidate = { id: c.id, name: c.name, className: c.className, known, hasTrait };
         const ok = known >= traitsNeeded && hasTrait !== false;

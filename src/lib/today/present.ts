@@ -1,3 +1,4 @@
+import { idleSlots } from "../game/research";
 import type { Character } from "../snapshot/schema";
 import { presentResearch } from "../knowledge/present";
 import { WRIT_CRAFTS, type PresentedCharacterDailies, type DailyCell } from "../dailies/present";
@@ -89,7 +90,7 @@ export function todayResearch(characters: ResearchSource[], nowUnix: number): To
       }))
       .sort((a, b) => (a.remaining ?? Infinity) - (b.remaining ?? Infinity));
     const idle = research.crafts.reduce(
-      (sum, craft) => sum + (craft.maxSlots > 0 ? Math.max(0, craft.maxSlots - craft.researching) : 0),
+      (sum, craft) => sum + (craft.maxSlots > 0 ? idleSlots(craft) : 0),
       0,
     );
     out.push({ id: c.id, name: c.name, className: c.class, running, idle });

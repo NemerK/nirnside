@@ -1,5 +1,6 @@
 import { getDb } from "./index";
 import { mergeLearned, type LearnedItem } from "../game/item-index";
+import { setProfileFrom, type SetProfile } from "../game/set-profile";
 
 interface Row {
   itemId: number;
@@ -69,4 +70,40 @@ export function learnedItemsForSet(setId: number) {
 
 export function learnedItemCount(): number {
   return (getDb().prepare("SELECT COUNT(*) AS n FROM game_items").get() as { n: number }).n;
+}
+
+/**
+ * What every set comes in, by set id: the sticker book's full piece list
+ * (every piece the game has for the set), plus pieces learned in play.
+ */
+export function setProfiles(): Map<number, SetProfile> {
+  const db = getDb();
+  const out = new Map<number, SetProfile>();
+  const sticker = db
+    .prepare("SELECT setId, json_extract(json, '$.pieces') AS pieces FROM stickerbook")
+    .all() as { setId: number; pieces: string | null }[];
+  const learned = new Map<number, string[]>();
+  for (const r of db.prepare("SELECT setId, kind FROM game_items WHERE setId IS NOT NULL AND kind IS NOT NULL").all() as {
+    setId: number;
+    kind: string;
+  }[]) {
+    learned.set(r.setId, [...(learned.get(r.setId) ?? []), r.kind]);
+  }
+  const ids = new Set([...sticker.map((r) => r.setId), ...learned.keys()]);
+  const piecesBySet = new Map(sticker.map((r) => [r.setId, parsePieces(r.pieces)]));
+  for (const id of ids) {
+    const profile = setProfileFrom(piecesBySet.get(id) ?? [], learned.get(id) ?? []);
+    if (profile.shape !== "unknown") out.set(id, profile);
+  }
+  return out;
+}
+
+function parsePieces(json: string | null): { type?: string | null; weight?: string | null }[] {
+  if (!json) return [];
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
 }

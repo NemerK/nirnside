@@ -1,4 +1,5 @@
 import "server-only";
+import { idleSlots } from "../game/research";
 import { getDb } from "../db";
 import {
   getAccount,
@@ -102,7 +103,7 @@ export function rosterRows(a: Account | null): RosterRow[] {
       // Research keeps running after logout: count what has finished since.
       const elapsed = c.lastSeen != null ? Math.max(0, now - c.lastSeen) : 0;
       const finished = r.inProgress.filter((x) => x.remainingSeconds != null && x.remainingSeconds - elapsed <= 0).length;
-      const idle = r.crafts.reduce((n, cr) => n + Math.max(0, cr.maxSlots - cr.researching), 0);
+      const idle = r.crafts.reduce((n, cr) => n + idleSlots(cr), 0);
       return [c.id, { idle, finished }];
     }),
   );
