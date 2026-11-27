@@ -1,4 +1,4 @@
-import type { AccountSnapshot } from "../snapshot/schema";
+import type { AccountSnapshot, Item } from "../snapshot/schema";
 import { parsePieceType, parseWornSlot, pieceKey, pieceKindFromName, type PieceKind } from "./equipment";
 import { itemPlace, type PlaceSource } from "./item-category";
 
@@ -148,4 +148,15 @@ export function mergeLearned(known: LearnedItem | undefined, seen: LearnedItem):
 export function goneItems(knownIds: Iterable<number>, scan: readonly LearnedItem[]): number[] {
   const now = new Set(scan.map((i) => i.itemId));
   return [...knownIds].filter((id) => !now.has(id));
+}
+
+/**
+ * A bag item with its place filled in: the tab the game gave it, or, for
+ * gear the game didn't tag (older saves), the tab its piece kind belongs in.
+ * Applied at import, so every page reads one answer.
+ */
+export function fileItem<T extends Pick<Item, "bagCategory" | "bagSubtype" | "equipSlot" | "name">>(it: T): T {
+  if (it.bagCategory) return it;
+  const place = itemPlace({}, parsePieceType(it.equipSlot) ?? pieceKindFromName(it.name));
+  return place ? { ...it, bagCategory: place.category, bagSubtype: place.subtype } : it;
 }

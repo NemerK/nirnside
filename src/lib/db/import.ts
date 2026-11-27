@@ -9,7 +9,7 @@ import {
   unionCompletedAchievementIds,
 } from "../game/pithka";
 import { stripVengeanceFromCharacter } from "../game/vengeance";
-import { itemsFromSnapshot } from "../game/item-index";
+import { fileItem, itemsFromSnapshot } from "../game/item-index";
 import { syncItems } from "./game-items";
 import { importCatalogBundle } from "../catalog/import";
 import { blessingsFromCharacters } from "../game/learn";
@@ -152,7 +152,8 @@ export function importSnapshot(
       VALUES (@itemId, @name, @icon, @quality, @count, @ownerCharacter, @location,
               @setName, @setId, @trait, @level, @equipSlot, @obtainable, @bound, @stolen, @json)
     `);
-    for (const it of snap.items) {
+    // Every item filed in its place (game/item-index.ts fileItem).
+    for (const it of snap.items.map(fileItem)) {
       insItem.run({
         itemId: it.itemId,
         name: it.name,

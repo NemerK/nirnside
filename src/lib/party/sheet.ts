@@ -62,7 +62,6 @@ export interface SheetSummary {
   motifs: { known: number; total: number };
   recipes: { known: number; total: number };
   plans: { known: number; total: number };
-  companions: { name: string; level: number; rapport: string | null }[];
   scripts: number;
 }
 
@@ -157,7 +156,6 @@ export function presentSheet(c: Character, nowUnix: number): SheetSummary {
     motifs: (({ known, total }) => ({ known, total }))(presentMotifs(c.motifs)),
     recipes: (({ known, total }) => ({ known, total }))(presentRecipeLists(c.recipeLists, "provisioning")),
     plans: (({ known, total }) => ({ known, total }))(presentRecipeLists(c.recipeLists, "furnishing")),
-    companions: c.companions.map((x) => ({ name: x.name, level: x.level, rapport: x.rapport })),
     scripts: c.scribingScripts.length,
   };
 }

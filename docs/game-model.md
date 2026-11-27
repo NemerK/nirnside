@@ -240,7 +240,8 @@ the game.
   don't morph. Armor lines need five pieces of a weight. Rapport changes
   dialogue, not combat. Since addon 0.9.43 the account's companions come
   from the collection, and the one out at a save adds its level and
-  rapport; the others keep what an earlier save saw.
+  rapport; the others keep what an earlier save saw (`readAccountCompanions`;
+  a companion never seen out has no level yet).
 
 Sources: UESP (Online:Crafting_Motifs, Online:Mundus_Stones,
 Online:Divines, Online:Provisioning, Online:Recipes, Online:Rapport) and the
@@ -304,8 +305,10 @@ applies the Vengeance rule to stored rows.
 Builds (`lib/builds/slots.ts`, `traits.ts`), set briefs, the character
 paper doll (`lib/characters/loadout.ts`), the sheet summary
 (`lib/party/sheet.ts`) and the character page read slots, weights,
-research lines and set counts through the model. The character page reads
-the character through `readCharacter`.
+research lines and set counts through the model. Both character pages
+(Party and Atlas) read the character through `readCharacter`, with the
+catalog's Mundus text and the account's companions. Bag items are filed at
+import (`fileItem`), so every inventory screen reads one place per item.
 
 ## Adding to the model
 

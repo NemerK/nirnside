@@ -6,6 +6,7 @@ import {
   chapterOfName,
   findMundus,
   parsePieceType,
+  readAccountCompanions,
   readCompanion,
   readMundus,
   recipeFamily,
@@ -97,5 +98,13 @@ describe("companions", () => {
     assert.equal(c.ultimateOpen, true);
     assert.equal(c.theme, "Templar");
     assert.equal(readCompanion({ name: "Mirri Elendis", level: 12 }).maxed, false);
+    assert.equal(readCompanion({ name: "Ember" }).level, null);
+    assert.deepEqual(
+      readAccountCompanions([
+        { name: "Bastian Hallix", owned: true, level: 20 },
+        { name: "Tanlorin", owned: false },
+      ]).map((x) => x.name),
+      ["Bastian Hallix"],
+    );
   });
 });
