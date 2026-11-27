@@ -7,6 +7,10 @@ import { loadoutOf, type Loadout } from "./loadout";
 import { idleResearchSlots } from "./research";
 import { ARMOR_LINES, readBar, type BarReading } from "./weapon-lines";
 import type { FactSource } from "./addons";
+import { readCompanion, type CompanionReading } from "./companions";
+import { recipeFamily, type RecipeFamily } from "./food";
+import { styleKnowledge, type StyleKnowledge } from "./motifs";
+import { readMundus, type MundusReading } from "./mundus";
 import { readSetup, type SetupReading } from "./setups";
 
 /**
@@ -21,6 +25,10 @@ import { readSetup, type SetupReading } from "./setups";
  * research → idle slots per craft;
  * Wizard's Wardrobe setups → each plan's weapon lines, skills its bars
  *   can't use, and how far the worn gear is from it;
+ * mundus → the blessing, Twice-Born Star, Divines pieces;
+ * motifs → which styles and chapters it can craft in;
+ * recipes → which food and drink families it can cook;
+ * companions → level, ultimate, theme;
  * and for each part, where it comes from and when it was saved.
  */
 export interface CharacterReading {
@@ -41,12 +49,23 @@ export interface CharacterReading {
    * Where each part comes from. Everything is "as of savedAt": addons only
    * write their data at a reload, zone change, logout or quit.
    */
-  provenance: Record<"identity" | "skills" | "gear" | "champion" | "research" | "setups", FactSource>;
+  provenance: Record<
+    "identity" | "skills" | "gear" | "champion" | "research" | "motifs" | "recipes" | "companions" | "setups",
+    FactSource
+  >;
   /**
    * Wizard's Wardrobe setups (a third-party addon's record of the player's
    * plans), each read against the game model. Empty without the addon.
    */
   setups: { zone: string; page: string; setup: string; reading: SetupReading }[];
+  /** Mundus blessing, how many the gear allows, and the Divines pieces strengthening it. */
+  mundus: MundusReading;
+  /** Motif knowledge per style: complete books and known chapters. */
+  styles: StyleKnowledge[];
+  /** Provisioning recipe families this character knows recipes in, with what they boost. */
+  recipeFamilies: { family: RecipeFamily; known: number; total: number }[];
+  /** The active companion at the last save, if any. */
+  companions: CompanionReading[];
 }
 
 export function readCharacter(
@@ -81,8 +100,20 @@ export function readCharacter(
       gear: "game",
       champion: "game",
       research: "game",
+      motifs: "game",
+      recipes: "game",
+      companions: "game",
       setups: "addon",
     },
+    mundus: readMundus(c.mundus, c.equipped),
+    styles: c.motifs.map(styleKnowledge),
+    recipeFamilies: c.recipeLists
+      .filter((l) => l.kind === "provisioning")
+      .flatMap((l) => {
+        const family = recipeFamily(l.name);
+        return family ? [{ family, known: l.known, total: l.total }] : [];
+      }),
+    companions: c.companions.map(readCompanion),
     setups: (c.wardrobe?.zones ?? []).flatMap((z) =>
       z.pages.flatMap((p) =>
         p.setups.map((setup) => ({

@@ -17,3 +17,7 @@ export * from "./weapon-lines";
 export * from "./understand";
 export * from "./addons";
 export * from "./setups";
+export * from "./motifs";
+export * from "./mundus";
+export * from "./food";
+export * from "./companions";

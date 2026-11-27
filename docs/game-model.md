@@ -21,6 +21,10 @@ The model lives in `src/lib/game/`:
 | `weapon-lines.ts` | The six weapon lines and what each needs on the bar (two one-handers make Dual Wield, one plus a shield One Hand and Shield, a lone one-hander nothing), staff elements, per-weapon passives, armor lines |
 | `addons.ts` | What an ESO addon is, how its saved data reaches Nirnside, the addons Nirnside works with, where each fact comes from and how fresh it is |
 | `setups.ts` | A Wizard's Wardrobe setup read against the model: each bar's weapon line, skills a bar can't use, planned vs worn gear |
+| `motifs.ts` | The 14 motif chapters and the pieces each covers, per-character style knowledge, the shared style key linking motifs and outfit styles |
+| `mundus.ts` | The 13 Mundus stones and what each boosts, one blessing (two with Twice-Born Star), Divines strengthening it |
+| `food.ts` | One food or drink buff at a time; food raises maximums, drink recovery; recipe families and grades |
+| `companions.ts` | Companion levels (20), bar, ultimate at 20, account-wide progress, class themes, armor lines needing five pieces, rapport |
 | `understand.ts` | `readCharacter`: one character read through every system at once |
 | `item-index.ts` | What every scan teaches about items (below) |
 
@@ -187,6 +191,29 @@ element, armor per weight with its line, Champion Point slots, idle research.
 The addon (0.9.42) records for each class line whether it is the
 character's own and whether it is equipped, so swapped-out lines come from
 the game.
+
+## Styles, Mundus, food, companions
+
+- **Motifs.** Per character. Every character knows its own race's motif.
+  A motif is a whole book or fourteen chapters (Axes … Swords). Each
+  chapter covers its piece in every weight, or its weapon in one and two
+  hands. Jewelry has no style. Reading a motif also unlocks the outfit
+  style account-wide, and `styleKey` links the two.
+- **Mundus.** Thirteen stones, one blessing at a time, two with five
+  pieces of Twice-Born Star. Divines armor strengthens it, more on
+  higher quality. Values change with patches, so only what each stone
+  boosts is kept.
+- **Food and drink.** One buff at a time. Food raises maximum Health,
+  Magicka or Stamina, drinks raise their recovery, and specialities mix
+  both. Standard recipes touch one stat, difficult two, complex three.
+- **Companions.** Level 1–20, shared across the account. One bar with five
+  abilities, and the ultimate at 20. Abilities cost no skill points and
+  don't morph. Armor lines need five pieces of a weight. Rapport changes
+  dialogue, not combat.
+
+Sources: UESP (Online:Crafting_Motifs, Online:Mundus_Stones,
+Online:Divines, Online:Provisioning, Online:Recipes, Online:Rapport) and the
+ZOS Companions System Guide.
 
 ## Learning: the item index
 
