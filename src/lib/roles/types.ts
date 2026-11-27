@@ -13,6 +13,7 @@ export interface CharacterFilters {
   q?: string;
   className?: string;
   race?: string;
+  alliance?: string;
   /** Role id, or "none" for unassigned. */
   role?: string;
 }
