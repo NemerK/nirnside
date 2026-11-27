@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CornerDownLeft, Search } from "lucide-react";
+import { toPartyHref } from "@/lib/party/links";
 import type { PartyLink, PartyMember } from "./types";
 
 interface Hit {
@@ -24,23 +25,7 @@ interface Section {
 
 const EMPTY: Results = { catalog: [], account: [] };
 
-/** Search answers with Atlas addresses; inside Party, open the Party page for the same thing. */
-const PARTY_ROUTES: [RegExp, string][] = [
-  [/^\/characters\/([^/?#]+)/, "/party/c/$1"],
-  [/^\/inventory/, "/party/vault/inventory"],
-  [/^\/stickerbook/, "/party/vault/sets"],
-  [/^\/achievements/, "/party/vault/achievements"],
-  [/^\/knowledge/, "/party/vault/crafting"],
-  [/^\/styles/, "/party/vault/styles"],
-  [/^\/houses/, "/party/vault/houses"],
-];
-
-export function toPartyHref(href: string): string {
-  for (const [from, to] of PARTY_ROUTES) {
-    if (from.test(href)) return href.replace(from, to);
-  }
-  return href;
-}
+export { toPartyHref };
 
 function matches(text: string, q: string): boolean {
   return text.toLowerCase().includes(q.toLowerCase());

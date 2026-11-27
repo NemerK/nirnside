@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
 
-/** A Party page title with a one-line purpose and an optional action. */
+/**
+ * A Party page title. Kept to one short line so the data starts high on the
+ * screen; the lead sits beside the title on wide screens.
+ */
 export function PageHead({ title, lead, action }: { title: string; lead?: ReactNode; action?: ReactNode }) {
   return (
-    <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="font-display text-[46px] leading-[1.02] text-fg">{title}</h1>
-        {lead ? <p className="mt-2 max-w-[70ch] text-[15px] text-fg-muted">{lead}</p> : null}
+    <header className="mb-4 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h1 className="font-display text-[28px] leading-tight text-fg">{title}</h1>
+        {lead ? <p className="max-w-[80ch] text-[13px] text-fg-muted">{lead}</p> : null}
       </div>
       {action}
     </header>

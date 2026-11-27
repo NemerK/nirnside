@@ -6,27 +6,53 @@ export function Module({
   title,
   href,
   hrefLabel = "Open",
+  meta,
   className = "",
   children,
 }: {
   title: string;
+  /** The module's full page. The title links there too. */
   href?: string;
   hrefLabel?: string;
+  /** A short fact beside the title ("12 of 45 maxed"). */
+  meta?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <section className={`party-module flex min-w-0 flex-col px-5 pb-5 pt-4 ${className}`}>
-      <header className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-[22px] leading-tight text-fg">{title}</h2>
+    <section className={`party-module flex min-w-0 flex-col px-4 pb-4 pt-3 ${className}`}>
+      <header className="mb-2.5 flex items-baseline justify-between gap-3">
+        <h2 className="flex min-w-0 items-baseline gap-2 font-display text-[18px] leading-tight text-fg">
+          {href ? (
+            <Link href={href} className="hover:text-accent">
+              {title}
+            </Link>
+          ) : (
+            title
+          )}
+          {meta ? <span className="truncate font-sans text-[12px] text-fg-subtle">{meta}</span> : null}
+        </h2>
         {href ? (
-          <Link href={href} className="shrink-0 text-[13px] text-accent hover:underline">
+          <Link href={href} className="shrink-0 text-[12px] text-accent hover:underline">
             {hrefLabel}
           </Link>
         ) : null}
       </header>
       <div className="min-w-0 flex-1">{children}</div>
     </section>
+  );
+}
+
+/** "and 12 more", linking to where they all are. */
+export function More({ count, href, noun = "more" }: { count: number; href?: string; noun?: string }) {
+  if (count <= 0) return null;
+  const text = `+ ${count} ${noun}`;
+  return href ? (
+    <Link href={href} className="mt-2 inline-block text-[12px] text-fg-subtle hover:text-accent">
+      {text}
+    </Link>
+  ) : (
+    <p className="mt-2 text-[12px] text-fg-subtle">{text}</p>
   );
 }
 
