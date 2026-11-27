@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { Sheet } from "@/components/sheet";
 import { overlapNotices, type OverlapPerson } from "@/lib/goals/overlap";
 import { TIER_LABEL, type Goal, type GoalDomain, type GoalScope, type GoalTier } from "@/lib/goals/types";
@@ -79,6 +79,8 @@ export function TargetSheet({
   const [audience, setAudienceState] = useState<Audience>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // In the picker window, saving keeps the window open and says so briefly.
+  const [saved, setSaved] = useState(0);
 
   const cap = subject?.domain === "skillline" ? (subject.cap ?? 50) : MAX_ABILITY_RANK;
   const onTarget = subject
@@ -169,7 +171,9 @@ export function TargetSheet({
             extraRank,
           }),
         });
-    if (ok) onClose();
+    if (!ok) return;
+    if (givenSubject) onClose();
+    else setSaved(Date.now());
   }
 
   const scopeButton = (label: string, next: Audience, on: boolean, dot?: string) => (
@@ -187,65 +191,37 @@ export function TargetSheet({
     </button>
   );
 
-  if (!subject) {
-    return (
-      <Sheet
-        variant="center"
-        title="Edit targets"
-        subtitle="Pick something to target, or one you already have to change or remove."
-        onClose={onClose}
-      >
-        <TargetPicker
-          choices={choices}
-          goals={goals}
-          onPick={(s) => {
-            setSubject(s);
-            load(audience, s);
-          }}
-        />
-      </Sheet>
-    );
-  }
+  const actions = (
+    <div className="flex items-center justify-between gap-3">
+      {error ? (
+        <p className="text-[13px] text-danger">{error}</p>
+      ) : saved && !busy ? (
+        <p className="text-[13px] text-ok" role="status">
+          Saved
+        </p>
+      ) : (
+        <span />
+      )}
+      <div className="flex gap-2">
+        {givenSubject ? (
+          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-fg-muted hover:text-fg">
+            Cancel
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={save}
+          disabled={busy}
+          className="shrink-0 whitespace-nowrap rounded-md bg-accent px-3.5 py-1.5 text-sm font-medium text-accent-fg disabled:opacity-60"
+        >
+          {same ? "Update target" : "Set target"}
+        </button>
+      </div>
+    </div>
+  );
 
-  return (
-    <Sheet
-      variant={givenSubject ? "side" : "center"}
-      title={subject.name}
-      subtitle={
-        <span className="flex items-center gap-2">
-          {!givenSubject ? (
-            <button
-              type="button"
-              onClick={() => setSubject(null)}
-              className="inline-flex items-center gap-1 text-fg-muted hover:text-fg"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Pick something else
-            </button>
-          ) : (
-            subject.context
-          )}
-        </span>
-      }
-      onClose={onClose}
-      footer={
-        <div className="flex items-center justify-between gap-3">
-          {error ? <p className="text-[13px] text-danger">{error}</p> : <span />}
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-fg-muted hover:text-fg">
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={save}
-              disabled={busy}
-              className="rounded-md bg-accent px-3.5 py-1.5 text-sm font-medium text-accent-fg disabled:opacity-60"
-            >
-              {same ? "Update target" : "Set target"}
-            </button>
-          </div>
-        </div>
-      }
-    >
+  const editor = subject ? (
+    <>
       <section className="mb-6">
         <h3 className="mb-2 text-sm font-medium text-fg">Who</h3>
         <div className="flex flex-wrap gap-1.5">
@@ -265,18 +241,32 @@ export function TargetSheet({
             ),
           )}
         </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {people
-            .filter((c) => !subject.className || c.className === subject.className)
-            .map((c) =>
-              scopeButton(
-                c.name,
-                { scope: "character", characterId: c.id, scopeKey: null },
-                audience.scope === "character" && audience.characterId === c.id,
-                classColor(c.className),
-              ),
-            )}
-        </div>
+        {/* One character: a list, so a big roster never pushes the rank off screen. */}
+        <label className="mt-2 flex items-center gap-2 text-[13px] text-fg-muted">
+          <span className="shrink-0">Or one character</span>
+          <select
+            value={audience.scope === "character" ? (audience.characterId ?? "") : ""}
+            onChange={(e) =>
+              setAudience(
+                e.target.value
+                  ? { scope: "character", characterId: e.target.value, scopeKey: null }
+                  : { scope: "account", characterId: null, scopeKey: null },
+              )
+            }
+            className={`min-w-0 flex-1 rounded-md border bg-surface px-2 py-1 text-fg ${
+              audience.scope === "character" ? "border-accent" : "border-border"
+            }`}
+          >
+            <option value="">Choose a character</option>
+            {people
+              .filter((c) => !subject.className || c.className === subject.className)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.className})
+                </option>
+              ))}
+          </select>
+        </label>
       </section>
 
       {subject.domain === "skillline" ? (
@@ -401,6 +391,63 @@ export function TargetSheet({
           </ul>
         </section>
       ) : null}
+    </>
+  ) : null;
+
+  if (givenSubject && subject) {
+    return (
+      <Sheet title={subject.name} subtitle={subject.context} onClose={onClose} footer={actions}>
+        {editor}
+      </Sheet>
+    );
+  }
+
+  // Picked from the list: the editor opens beside it in the same window, so
+  // the list, the categories and the search stay exactly where they were.
+  return (
+    <Sheet
+      variant="center"
+      title="Edit targets"
+      subtitle="Pick something to target, or one you already have to change or remove."
+      onClose={onClose}
+    >
+      <TargetPicker
+        choices={choices}
+        goals={goals}
+        selected={subject}
+        onPick={(s) => {
+          setSubject(s);
+          setError(null);
+          setSaved(0);
+          load(audience, s);
+        }}
+        aside={
+          subject ? (
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate font-display text-xl text-fg">{subject.name}</h3>
+                  <p className="truncate text-[12px] text-fg-subtle">{subject.className ?? subject.context}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSubject(null)}
+                  aria-label="Close the editor"
+                  className="-mr-1 rounded-md p-1.5 text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto pr-1">{editor}</div>
+              <div className="mt-3 border-t border-border pt-3">{actions}</div>
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center px-4 text-center text-[13px] text-fg-subtle">
+              Pick a skill line, ability or script to set or change its target.
+            </div>
+          )
+        }
+      />
     </Sheet>
   );
 }
