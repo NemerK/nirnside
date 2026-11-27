@@ -1,3 +1,4 @@
+import { SKILL_CATEGORIES, skillCategory, type SkillCategory } from "../game/skills";
 import { loadoutOf } from "../game/loadout";
 import type { Character } from "../snapshot/schema";
 import { presentMotifs, presentRecipeLists, presentResearch } from "../knowledge/present";
@@ -102,7 +103,6 @@ export function presentGear(equipped: Character["equipped"]): GearSummary {
   return { body, front, back, frontSets, backSets };
 }
 
-const CATEGORY_ORDER = ["class", "weapon", "armor", "world", "guild", "alliance war", "racial", "craft"];
 
 export function presentLines(lines: Character["skillLines"]): LineSummary[] {
   return lines
@@ -115,8 +115,9 @@ export function presentLines(lines: Character["skillLines"]): LineSummary[] {
       subclassed: l.subclassed,
     }))
     .sort((a, b) => {
-      const ai = CATEGORY_ORDER.indexOf(a.category.toLowerCase());
-      const bi = CATEGORY_ORDER.indexOf(b.category.toLowerCase());
+      // The game's Skills window order (game/skills.ts).
+      const ai = SKILL_CATEGORIES.indexOf(skillCategory(a.category) as SkillCategory);
+      const bi = SKILL_CATEGORIES.indexOf(skillCategory(b.category) as SkillCategory);
       return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || Number(a.subclassed) - Number(b.subclassed);
     });
 }

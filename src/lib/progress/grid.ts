@@ -1,3 +1,4 @@
+import { SKILL_CATEGORIES, skillCategory, type SkillCategory } from "../game/skills";
 import { CLASSES } from "../game/classes";
 import { lineNamesMatch, normalizeLineName, skillLineProgress } from "../goals/progress";
 import { effectiveGoal } from "../goals/effective";
@@ -83,7 +84,6 @@ export interface GridLineSource {
   icon: string | null;
 }
 
-const CATEGORY_ORDER = ["class", "weapon", "armor", "world", "guild", "alliance war", "craft", "racial"];
 
 function titleCase(raw: string): string {
   const key = raw.trim().toLowerCase();
@@ -196,7 +196,8 @@ export function buildLineGrid(input: {
       const i = CLASSES.findIndex((c) => c.toLowerCase() === g.className!.toLowerCase());
       return i < 0 ? 9 : i / 10;
     }
-    const i = CATEGORY_ORDER.indexOf(g.title.toLowerCase());
+    // The game's Skills window order (game/skills.ts).
+    const i = SKILL_CATEGORIES.indexOf(skillCategory(g.title) as SkillCategory);
     return i < 0 ? 90 : i;
   };
   const ordered = [...groups.values()].sort((a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title));

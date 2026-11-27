@@ -8,7 +8,9 @@ import { compareLines, lightSubjects, roster } from "@/lib/party/data";
 import { SubTabs } from "@/components/party/sub-tabs";
 import { ProgressGrid } from "@/components/progress/progress-grid";
 import { listGoals } from "@/lib/db/goals";
-import { listRoles } from "@/lib/db/roles";
+import { listAssignments, listRoles } from "@/lib/db/roles";
+import { filterCharacters, filterChoices, filtersFromParams } from "@/lib/roles/filter";
+import { RosterFilters } from "@/components/party/roster-filters";
 import { buildLineGrid } from "@/lib/progress/grid";
 import { account, rosterRows } from "@/lib/party/overview";
 
@@ -22,8 +24,8 @@ function safe<T>(fn: () => T, fallback: T): T {
   }
 }
 
-function RosterTable() {
-  const rows = rosterRows(account());
+function RosterTable({ ids }: { ids: Set<string> }) {
+  const rows = rosterRows(account()).filter((r) => ids.has(r.id));
   return (
     <div className="party-module overflow-hidden p-0">
       <div className="max-h-[calc(100dvh-13rem)] overflow-auto">
@@ -88,7 +90,7 @@ function RosterTable() {
   );
 }
 
-function SkillGrid() {
+function SkillGrid({ ids }: { ids: string[] }) {
   const characters = roster();
   const subjects = lightSubjects();
   const { lines, lineIndex } = compareLines(characters);
@@ -98,7 +100,7 @@ function SkillGrid() {
   // The grid scrolls inside the screen, so line and character names stay in view.
   return (
     <div className="flex flex-col" style={{ height: "calc(100dvh - 12.5rem)" }}>
-      <ProgressGrid grid={grid} goals={goals} roles={roles} />
+      <ProgressGrid grid={grid} goals={goals} roles={roles} showIds={ids} />
     </div>
   );
 }
@@ -109,16 +111,44 @@ export const dynamic = "force-dynamic";
 export default async function CharactersPage({ searchParams }: PageProps<"/party/characters">) {
   const sp = await searchParams;
   const view: View = sp.view === "table" || sp.view === "skills" ? sp.view : "cards";
-  const characters = roster();
+  const everyone = roster();
+  const filters = filtersFromParams(sp);
+  const roleList = safe(() => listRoles(), []);
+  const assignments = safe(() => listAssignments(), {} as Record<string, string[]>);
+  const characters = filterCharacters(everyone, roleList, assignments, filters);
+  const ids = characters.map((c) => c.id);
+  // Switching views keeps the filters.
+  const keep = new URLSearchParams();
+  for (const k of ["q", "class", "race", "alliance", "role"]) {
+    const v = sp[k];
+    if (typeof v === "string" && v) keep.set(k, v);
+  }
+  const hrefFor = (v: View) => {
+    const p = new URLSearchParams(keep);
+    if (v !== "cards") p.set("view", v);
+    const qs = p.toString();
+    return qs ? `/party/characters?${qs}` : "/party/characters";
+  };
   const tabs = (
-    <SubTabs
-      label="Roster view"
-      tabs={[
-        { href: "/party/characters", label: "Cards", on: view === "cards" },
-        { href: "/party/characters?view=table", label: "At a glance", on: view === "table" },
-        { href: "/party/characters?view=skills", label: "Skill lines", on: view === "skills" },
-      ]}
-    />
+    <div className="flex flex-wrap items-start gap-x-4">
+      <SubTabs
+        label="Roster view"
+        tabs={[
+          { href: hrefFor("cards"), label: "Cards", on: view === "cards" },
+          { href: hrefFor("table"), label: "At a glance", on: view === "table" },
+          { href: hrefFor("skills"), label: "Skill lines", on: view === "skills" },
+        ]}
+      />
+      <RosterFilters
+        choices={filterChoices(everyone, roleList, assignments)}
+        current={filters}
+        shown={characters.length}
+        total={everyone.length}
+      />
+    </div>
+  );
+  const noMatch = (
+    <p className="party-module px-6 py-10 text-center text-fg-muted">No characters match these filters.</p>
   );
   const lead =
     view === "skills"
@@ -126,23 +156,25 @@ export default async function CharactersPage({ searchParams }: PageProps<"/party
       : view === "table"
         ? "Every character's gold, today's dailies and research in one table."
         : "Pick a character to open their skills, gear, Champion Points and crafting.";
-  if (characters.length > 0 && view !== "cards") {
+  if (everyone.length > 0 && view !== "cards") {
     return (
       <div className={`mx-auto w-full ${view === "skills" ? "max-w-[1600px]" : "max-w-[1400px]"}`}>
         <PageHead title="Roster" lead={lead} />
         {tabs}
-        {view === "table" ? <RosterTable /> : <SkillGrid />}
+        {characters.length === 0 ? noMatch : view === "table" ? <RosterTable ids={new Set(ids)} /> : <SkillGrid ids={ids} />}
       </div>
     );
   }
   return (
     <div className="mx-auto w-full max-w-[1400px]">
       <PageHead title="Roster" lead={lead} />
-      {characters.length > 0 ? tabs : null}
-      {characters.length === 0 ? (
+      {everyone.length > 0 ? tabs : null}
+      {everyone.length === 0 ? (
         <p className="party-module px-6 py-10 text-center text-fg-muted">
           No characters yet. Log one out in game with the Nirnside Snapshot addon on.
         </p>
+      ) : characters.length === 0 ? (
+        noMatch
       ) : (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {characters.map((c) => {

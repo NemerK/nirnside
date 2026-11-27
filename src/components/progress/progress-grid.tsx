@@ -108,16 +108,18 @@ export function ProgressGrid({
   grid,
   goals,
   roles,
+  showIds,
 }: {
   grid: LineGrid;
   goals: Goal[];
   roles: { id: string; name: string }[];
+  /** The characters the roster filters keep; every character when unset. */
+  showIds?: string[];
 }) {
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<string>("all");
   const [unfinished, setUnfinished] = useState(false);
   const [targeted, setTargeted] = useState(false);
-  const [role, setRole] = useState<string>("");
   const [open, setOpen] = useState<Open>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
 
@@ -141,9 +143,18 @@ export function ProgressGrid({
     }
   }
 
+  // Groups with a line some shown character can have: another class's lines drop out when filtered.
+  const applicable = useMemo(() => {
+    if (!showIds) return grid.groups;
+    const shown = grid.columns.flatMap((c, i) => (showIds.includes(c.id) ? [i] : []));
+    return grid.groups
+      .map((g) => ({ ...g, rows: g.rows.filter((r) => shown.some((i) => r.cells[i]?.state !== "na")) }))
+      .filter((g) => g.rows.length > 0);
+  }, [grid.groups, grid.columns, showIds]);
+
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return grid.groups
+    return applicable
       .filter((g) => group === "all" || g.key === group)
       .map((g) => ({
         ...g,
@@ -155,17 +166,17 @@ export function ProgressGrid({
         }),
       }))
       .filter((g) => g.rows.length > 0);
-  }, [grid.groups, group, query, targeted, unfinished]);
+  }, [applicable, group, query, targeted, unfinished]);
 
-  // Characters to show: the chosen role, and when the rows on screen belong to
-  // one class, only the characters those lines apply to (no empty columns).
+  // Characters to show: those the roster filters keep, and when the rows on
+  // screen belong to one class, only the characters those lines apply to.
   const visibleCols = useMemo(() => {
     const rows = groups.flatMap((g) => g.rows);
     return grid.columns
       .map((c, i) => ({ c, i }))
-      .filter(({ c }) => !role || c.roleIds.includes(role))
+      .filter(({ c }) => !showIds || showIds.includes(c.id))
       .filter(({ i }) => group === "all" || rows.some((r) => r.cells[i]?.state !== "na"));
-  }, [grid.columns, role, groups, group]);
+  }, [grid.columns, showIds, groups, group]);
 
   const filtering = query.trim() !== "" || unfinished || targeted;
   const isCollapsed = (key: string) => !filtering && group === "all" && collapsed.has(key);
@@ -205,21 +216,6 @@ export function ProgressGrid({
             className="w-full rounded-md border border-border bg-surface py-1.5 pl-8 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-border-strong focus:outline-none"
           />
         </label>
-        {roles.length > 0 ? (
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            aria-label="Show characters with role"
-            className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-fg"
-          >
-            <option value="">All characters</option>
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} only
-              </option>
-            ))}
-          </select>
-        ) : null}
         {toggle(unfinished, setUnfinished, "Unfinished only")}
         {toggle(targeted, setTargeted, "With a target")}
         <button
@@ -236,7 +232,7 @@ export function ProgressGrid({
       </div>
       <div className="-mx-1 mb-3 flex shrink-0 gap-1 overflow-x-auto px-1 pb-1">
         {chip("all", "All lines")}
-        {grid.groups.map((g) => chip(g.key, g.title))}
+        {applicable.map((g) => chip(g.key, g.title))}
       </div>
 
       {groups.length === 0 ? (
