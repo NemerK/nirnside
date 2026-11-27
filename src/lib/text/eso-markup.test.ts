@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { esoPlainText, parseEsoMarkup } from "./eso-markup";
+import { esoPlainText, parseEsoMarkup, stripBonusCount } from "./eso-markup";
 
 describe("ESO tooltip markup", () => {
   it("colors |cRRGGBB runs and resets on |r", () => {
@@ -40,5 +40,13 @@ describe("ESO tooltip markup", () => {
     assert.equal(runs[1]?.color, "#ffffff");
     assert.equal(runs[1]?.text, "868");
     assert.equal(esoPlainText(raw), "Adds 868 Maximum Stamina.");
+  });
+});
+
+describe("stripBonusCount", () => {
+  it("drops the game's item-count prefix", () => {
+    assert.equal(stripBonusCount("(2 items) Adds 1401 Armor"), "Adds 1401 Armor");
+    assert.equal(stripBonusCount("(1 item) Adds |cffffff434|r Magicka"), "Adds |cffffff434|r Magicka");
+    assert.equal(stripBonusCount("Adds 1401 Armor"), "Adds 1401 Armor");
   });
 });
