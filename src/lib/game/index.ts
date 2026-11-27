@@ -5,7 +5,6 @@
 export * from "./equipment";
 export * from "./traits";
 export * from "./skills";
-export { ESO_CLASSES, classColor, classIcon, type EsoClass } from "../classes";
 export * from "./quality";
 export * from "./set-profile";
 export * from "./loadout";
@@ -21,3 +20,7 @@ export * from "./motifs";
 export * from "./mundus";
 export * from "./food";
 export * from "./companions";
+export * from "./buffs";
+export * from "./riding";
+export * from "./item-category";
+export * from "./learn";

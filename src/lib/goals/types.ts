@@ -167,5 +167,12 @@ export const TIER_LABEL: Record<GoalTier, string> = {
   completionist: "Completionist",
 };
 
+/** Each tier's theme color: violet mandatory, blue extra, slate completionist. */
+export const TIER_COLOR: Record<GoalTier, string> = {
+  essential: "var(--rank-mandatory)",
+  optional: "var(--rank-extra)",
+  completionist: "var(--rank-completionist)",
+};
+
 /** The class-specific line categories — guarded, never "missing" cross-class. */
 export const CLASS_LINE_CATEGORIES = new Set(["class", "class mastery"]);

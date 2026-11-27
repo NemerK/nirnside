@@ -1,4 +1,4 @@
-import { ESO_CLASSES } from "../classes";
+import { CLASSES } from "../game/classes";
 import { lineNamesMatch, normalizeLineName, skillLineProgress } from "../goals/progress";
 import { effectiveGoal } from "../goals/effective";
 import type { Goal, GoalIndexes, GoalScope, GoalSubject, LineMeta } from "../goals/types";
@@ -193,7 +193,7 @@ export function buildLineGrid(input: {
 
   const rank = (g: LineGroup) => {
     if (g.className) {
-      const i = ESO_CLASSES.findIndex((c) => c.toLowerCase() === g.className!.toLowerCase());
+      const i = CLASSES.findIndex((c) => c.toLowerCase() === g.className!.toLowerCase());
       return i < 0 ? 9 : i / 10;
     }
     const i = CATEGORY_ORDER.indexOf(g.title.toLowerCase());

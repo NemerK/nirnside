@@ -1,3 +1,4 @@
+import { loadoutOf } from "../game/loadout";
 import type { Character } from "../snapshot/schema";
 import { presentMotifs, presentRecipeLists, presentResearch } from "../knowledge/present";
 import { skillLineCap } from "../skills/line-cap";
@@ -64,8 +65,6 @@ export interface SheetSummary {
   scripts: number;
 }
 
-const WEAPON_SLOTS = /main hand|off hand|weapon|backup/i;
-
 function piece(e: Character["equipped"][number]): GearPiece {
   return {
     slot: e.slot,
@@ -77,32 +76,28 @@ function piece(e: Character["equipped"][number]): GearPiece {
   };
 }
 
-function countSets(pieces: GearPiece[]): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const p of pieces) {
-    if (!p.setName) continue;
-    out.set(p.setName, (out.get(p.setName) ?? 0) + 1);
-  }
-  return out;
-}
-
+/**
+ * Body, front bar and back bar, and the sets each bar has active, by the
+ * game model's rules (loadoutOf: body pieces count on both bars, a
+ * two-hander counts twice, perfected and normal pieces are one set).
+ */
 export function presentGear(equipped: Character["equipped"]): GearSummary {
+  const loadout = loadoutOf(equipped);
   const body: GearPiece[] = [];
   const front: GearPiece[] = [];
   const back: GearPiece[] = [];
-  for (const e of equipped) {
-    if (e.bar === "back") back.push(piece(e));
-    else if (e.bar === "front" || WEAPON_SLOTS.test(e.slot)) front.push(piece(e));
-    else body.push(piece(e));
-  }
-  const withFront = countSets([...body, ...front]);
-  const withBack = countSets([...body, ...back]);
-  const frontSets = [...withFront.entries()]
-    .map(([name, count]) => ({ name, count }))
+  equipped.forEach((e, i) => {
+    const bar = loadout.pieces[i].bar;
+    (bar === "back" ? back : bar === "front" ? front : body).push(piece(e));
+  });
+  const named = loadout.sets.filter((s) => s.name);
+  const frontSets = named
+    .filter((s) => s.front > 0)
+    .map((s) => ({ name: s.name, count: s.front }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-  const backSets = [...withBack.entries()]
-    .filter(([name, count]) => withFront.get(name) !== count)
-    .map(([name, count]) => ({ name, count }))
+  const backSets = named
+    .filter((s) => s.back !== s.front && s.back > 0)
+    .map((s) => ({ name: s.name, count: s.back }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   return { body, front, back, frontSets, backSets };
 }

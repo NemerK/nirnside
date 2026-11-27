@@ -8,14 +8,8 @@ import {
   type ChampionStarView,
 } from "@/lib/characters/champion";
 import { GameIcon } from "@/components/game-icon";
+import { constellationColor, constellationRank } from "@/lib/ui/game-colors";
 
-/** Craft, then Warfare, then Fitness — the same left-to-right read as the constellation bar. */
-const ORDER = ["craft", "warfare", "fitness"];
-const COLOR: Record<string, string> = {
-  craft: "#3dce7a",
-  warfare: "#4c9dff",
-  fitness: "#e15b4a",
-};
 
 /**
  * Each discipline shows the four equipped slottables, then the unlocked
@@ -30,7 +24,8 @@ export function CharacterChampion({
 }) {
   const catalog = cpCatalog();
   const rows = [...alignChampionDisciplines(champion, catalog.categories)]
-    .sort((a, b) => rank(a.name) - rank(b.name))
+    // The game's order, the same left-to-right read as the constellation bar.
+    .sort((a, b) => constellationRank(a.name) - constellationRank(b.name))
     .map((disc) => ({
       disc,
       groups: groupChampionStars(disc.stars, catalog.kinds),
@@ -58,8 +53,7 @@ export function CharacterChampion({
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
         {rows.map(({ disc, groups, spent }) => {
-          const key = disc.name.trim().toLowerCase();
-          const color = COLOR[key] ?? "var(--border-strong)";
+          const color = constellationColor(disc.name) ?? "var(--border-strong)";
           return (
             <section key={disc.name} className="overflow-hidden rounded-lg border border-border bg-surface">
               <div
@@ -170,10 +164,6 @@ function iconFor(star: ChampionStarView, icons: Map<string, string>): string | n
   return star.icon || icons.get(star.name.trim().toLowerCase()) || null;
 }
 
-function rank(name: string): number {
-  const index = ORDER.indexOf(name.trim().toLowerCase());
-  return index < 0 ? ORDER.length : index;
-}
 
 function cpCatalog(): {
   kinds: Map<string, ChampionKind>;

@@ -1,3 +1,4 @@
+import { findAlliance, type Alliance } from "./game/character";
 import { qualityBorderClass, qualityTextClass } from "./game/quality";
 import type { ItemQuality } from "./snapshot/schema";
 
@@ -55,8 +56,15 @@ export function locationLabel(loc: string): string {
   return LOCATION_LABELS[loc] ?? loc;
 }
 
-export const ALLIANCE_ACCENT: Record<string, string> = {
+/** Each alliance's color, keyed by the model's alliances (game/character.ts). */
+export const ALLIANCE_ACCENT: Record<Alliance, string> = {
   "Aldmeri Dominion": "#e3c34a",
   "Daggerfall Covenant": "#3f7fd6",
   "Ebonheart Pact": "#c0453b",
 };
+
+/** An alliance's color from any spelling of its name; undefined when it isn't one. */
+export function allianceAccent(name: string | null | undefined): string | undefined {
+  const a = findAlliance(name);
+  return a ? ALLIANCE_ACCENT[a] : undefined;
+}

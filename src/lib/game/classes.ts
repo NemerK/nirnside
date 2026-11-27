@@ -1,5 +1,3 @@
-import { ESO_CLASSES } from "../classes";
-
 /**
  * Classes and their skill lines, and what a character's class lines say.
  *
@@ -19,7 +17,16 @@ import { ESO_CLASSES } from "../classes";
  * is judged by: the model explains, it doesn't overrule the game.
  */
 
-export const CLASSES = ESO_CLASSES;
+/** Live ESO classes, in character-create order. */
+export const CLASSES = [
+  "Dragonknight",
+  "Sorcerer",
+  "Nightblade",
+  "Templar",
+  "Warden",
+  "Necromancer",
+  "Arcanist",
+] as const;
 export type ClassName = (typeof CLASSES)[number];
 
 export const SUBCLASSING = {

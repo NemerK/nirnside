@@ -1,6 +1,7 @@
 import "server-only";
 import { classLineMap } from "../game/classes";
-import { getSkillLines, getSkills } from "./catalog-queries";
+import { getMundus, getSkillLines, getSkills } from "./catalog-queries";
+import type { MundusText } from "../game/mundus";
 
 /** Class → its skill lines, from the game catalog (the in-game scan wins over shipped reference data). */
 export function classLines(): Map<string, string[]> {
@@ -29,4 +30,13 @@ export function abilityLines(): Map<string, string> {
     // no catalog yet
   }
   return out;
+}
+
+/** Each Mundus blessing's text as the game wrote it, for readCharacter. */
+export function mundusTexts(): MundusText[] {
+  try {
+    return getMundus().map(({ entry }) => ({ name: entry.name, description: entry.description }));
+  } catch {
+    return [];
+  }
 }

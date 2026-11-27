@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { GameIcon } from "@/components/game-icon";
-import { ALLIANCE_ACCENT, formatNumber } from "@/lib/format";
+import { allianceAccent, formatNumber } from "@/lib/format";
 import type { LivingFace, LivingGuild, LivingHome } from "@/lib/home/living";
 
 const LINE_KEY = "nirnside-home-line";
@@ -45,7 +45,7 @@ export function LivingHomeView({
   const field = useRef<HTMLTextAreaElement>(null);
   const face = model.faces.find((item) => item.id === faceId) ?? model.faces[0] ?? null;
   const color = face ? (colorByClass[face.className] ?? "var(--accent)") : "var(--accent)";
-  const alliance = face ? (ALLIANCE_ACCENT[face.alliance] ?? color) : color;
+  const alliance = face ? (allianceAccent(face.alliance) ?? color) : color;
 
   useEffect(() => {
     setLine(window.localStorage.getItem(LINE_KEY) ?? "");

@@ -8,7 +8,7 @@ The model lives in `src/lib/game/`:
 
 | File | What it knows |
 | --- | --- |
-| `equipment.ts` | Piece kinds (armor weight × slot, jewelry, weapons, shields), the game's piece words, worn slots, which craft makes a piece, which research line covers it, which trait family it takes |
+| `equipment.ts` | Piece kinds (armor weight × slot, jewelry, weapons, shields), the game's piece words (weighted ones, and the words unique pieces use, which give a slot but no weight), worn slots, reading a slot from any wording (`pieceSlotFromText`), which craft makes a piece, which research line covers it, which trait family it takes |
 | `traits.ts` | The 27 researchable traits in research-grid order, plus Ornate and Intricate |
 | `quality.ts` | Item qualities in the game's order, their theme colors |
 | `skills.ts` | Skill line categories in the Skills window's order |
@@ -16,7 +16,7 @@ The model lives in `src/lib/game/`:
 | `loadout.ts` | How worn gear works together: set counts per bar, perfected and normal pieces as one set, two-handers as two, active bonuses (the perfected line needs perfected pieces), body armor per weight |
 | `research.ts` | Trait research per piece kind, whether a piece can be crafted for a set and trait, idle research slots |
 | `character.ts` | Races, their home alliances, what a race–alliance pairing means (home, Imperial's choice, Any Race Any Alliance), racial lines |
-| `classes.ts` | Classes and their three lines (from the catalog), a character's own / borrowed / swapped-out lines, subclassing rules, Class Mastery |
+| `classes.ts` | The live classes, their three lines (from the catalog), a character's own / borrowed / swapped-out lines, subclassing rules, Class Mastery |
 | `champion.ts` | The three constellations, the 3600 cap (1200 each), earning order, slottable vs passive stars, four slots per constellation |
 | `weapon-lines.ts` | The six weapon lines and what each needs on the bar (two one-handers make Dual Wield, one plus a shield One Hand and Shield, a lone one-hander nothing), staff elements, per-weapon passives, armor lines |
 | `addons.ts` | What an ESO addon is, how its saved data reaches Nirnside, the addons Nirnside works with, where each fact comes from and how fresh it is |
@@ -273,6 +273,25 @@ bags are dropped from the save. On import Nirnside leaves it out entirely:
 no character row, no bags, no gold in the totals, and its roles and
 character-only targets are removed. Photos of it stay; they are the
 player's own files.
+
+## Who uses the model
+
+Every page and module reads game facts from here. Presentation stays
+outside, keyed by the model's own values:
+
+- `lib/classes.ts`: each class's crest and color, keyed by `CLASSES`;
+- `lib/format.ts`: each alliance's color, keyed by `ALLIANCES`
+  (`allianceAccent` reads any spelling);
+- `lib/ui/game-colors.ts`: each constellation's color and the game's
+  order (`constellationColor`, `constellationRank`);
+- `lib/goals/types.ts`: target tiers' labels and colors (player plans,
+  not game facts).
+
+Builds (`lib/builds/slots.ts`, `traits.ts`), set briefs, the character
+paper doll (`lib/characters/loadout.ts`), the sheet summary
+(`lib/party/sheet.ts`) and the character page read slots, weights,
+research lines and set counts through the model. The character page reads
+the character through `readCharacter`.
 
 ## Adding to the model
 

@@ -1,3 +1,6 @@
+import { parseWornSlot } from "../game/equipment";
+import { loadoutOf, type WornInput } from "../game/loadout";
+
 /** A worn piece, keyed the way the snapshot labels equipment slots. */
 export type WornSlot = {
   slot: string;
@@ -29,49 +32,42 @@ export type PlacedGear<T> = {
 /**
  * Paper-doll slots in the game's equipment order. Armor and jewelry have no
  * bar. Weapons split into the front and back bars, main hand then off hand.
- * Anything the slot name does not match stays in `other` so it still renders.
+ * Slots are read by the game model (parseWornSlot: "Hands" is armor, only
+ * "Main Hand" / "Off Hand" are weapons). Anything else stays in `other` so
+ * it still renders.
  */
 export function placeEquipped<T extends WornSlot>(items: T[]): PlacedGear<T> {
-  const worn = items.filter((item) => item.bar == null);
-  const used = new Set<T>();
-  const take = (match: string[]) => {
-    const found = worn.find(
-      (item) => !used.has(item) && match.some((part) => item.slot.toLowerCase().includes(part)),
-    );
-    if (found) used.add(found);
-    return found;
-  };
-
-  const shoulders = take(["shoulder"]);
-  const head = take(["head"]);
-  const chest = take(["chest"]);
-  const hands = take(["hand", "glove", "bracer"]);
-  const waist = take(["waist", "belt"]);
-  const legs = take(["leg", "pant", "greave"]);
-  const feet = take(["feet", "foot", "boot", "shoe"]);
-  const neck = take(["neck"]);
-  const rings = worn.filter((item) => !used.has(item) && item.slot.toLowerCase().includes("ring"));
-  for (const ring of rings) used.add(ring);
-
+  const bySlot = new Map<string, T>();
+  const rings: T[] = [];
+  const other: T[] = [];
+  const front: T[] = [];
+  for (const item of items) {
+    if (item.bar === "front" || item.bar === "back") continue;
+    const slot = parseWornSlot(item.slot);
+    if (slot === "ring1" || slot === "ring2") rings.push(item);
+    else if (slot === "mainhand" || slot === "offhand") front.push(item);
+    else if (slot && slot !== "poison" && !bySlot.has(slot)) bySlot.set(slot, item);
+    else other.push(item);
+  }
   return {
-    head,
-    shoulders,
-    chest,
-    hands,
-    waist,
-    legs,
-    feet,
-    neck,
+    head: bySlot.get("head"),
+    shoulders: bySlot.get("shoulders"),
+    chest: bySlot.get("chest"),
+    hands: bySlot.get("hands"),
+    waist: bySlot.get("waist"),
+    legs: bySlot.get("legs"),
+    feet: bySlot.get("feet"),
+    neck: bySlot.get("necklace"),
     rings,
-    front: weaponPair(items.filter((item) => item.bar === "front")),
+    front: weaponPair([...items.filter((item) => item.bar === "front"), ...front]),
     back: weaponPair(items.filter((item) => item.bar === "back")),
-    other: worn.filter((item) => !used.has(item)),
+    other,
   };
 }
 
 function weaponPair<T extends WornSlot>(items: T[]): WeaponPair<T> {
-  const main = items.find((item) => item.slot.toLowerCase().includes("main"));
-  const off = items.find((item) => item.slot.toLowerCase().includes("off"));
+  const main = items.find((item) => parseWornSlot(item.slot) === "mainhand");
+  const off = items.find((item) => parseWornSlot(item.slot) === "offhand");
   const rest = items.filter((item) => item !== main && item !== off);
   return {
     main: main ?? rest.shift(),
@@ -80,15 +76,15 @@ function weaponPair<T extends WornSlot>(items: T[]): WeaponPair<T> {
   };
 }
 
-/** Piece counts for the sets actually worn, fullest set first. */
-export function tallySets(items: { setName?: string | null }[]): { name: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const item of items) {
-    const name = item.setName?.trim();
-    if (!name) continue;
-    counts.set(name, (counts.get(name) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([name, count]) => ({ name, count }))
+/**
+ * Each worn set and how many of its pieces count, on the fuller bar, by the
+ * game's rules (game/loadout.ts): body pieces count on both bars, a
+ * two-hander counts twice, perfected and normal pieces are one set. Fullest
+ * first. Names are without "Perfected".
+ */
+export function tallySets(items: WornInput[]): { name: string; count: number }[] {
+  return loadoutOf(items)
+    .sets.filter((set) => set.name)
+    .map((set) => ({ name: set.name, count: Math.max(set.front, set.back) }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }

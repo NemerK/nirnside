@@ -12,7 +12,8 @@ import type { AbilitySlotView, AbilityView, SkillCategoryView, SkillLineView } f
 import { romanRank } from "@/lib/skills/ability";
 import { CLASS_MASTERY_POINTS } from "@/lib/skills/class-mastery";
 import type { CatalogSource } from "@/lib/catalog/schema";
-import { classIcon, ESO_CLASSES } from "@/lib/classes";
+import { classIcon } from "@/lib/classes";
+import { CLASSES } from "@/lib/game/classes";
 
 function RankPips({ rank, max = 4 }: { rank: number | null; max?: number }) {
   const filled = rank ?? 0;
@@ -195,7 +196,7 @@ function TabButton({
 }
 
 function classRank(name: string): number {
-  const index = ESO_CLASSES.findIndex((cls) => cls.toLowerCase() === name.toLowerCase());
+  const index = CLASSES.findIndex((cls) => cls.toLowerCase() === name.toLowerCase());
   return index < 0 ? 90 : index;
 }
 

@@ -333,3 +333,115 @@ export function weaponFromText(text: string | null | undefined): Weapon | null {
   const n = norm(text);
   return WEAPON_WORDS.find(([re]) => re.test(n))?.[1] ?? null;
 }
+
+/**
+ * Words unique pieces use (mythics, monster masks, named and crafted
+ * uniques): they name a slot but not a weight, so a name with only these
+ * gives the slot and leaves the weight to the game's own type. Gathered
+ * from real item names; extend when a new item shows another word.
+ */
+export const SLOT_ONLY_WORDS: Record<ArmorSlot, string[]> = {
+  head: ["Mask", "Warmask", "Visage", "Circlet", "Cowl", "Hood", "Casque", "Coif", "Guise", "Visor", "Faceguard", "Greathelm", "Great Helm"],
+  shoulders: ["Spaulder", "Shoulder"],
+  chest: ["Breastplate", "Hauberk", "Shirt", "Coat"],
+  hands: ["Handwraps"],
+  waist: [],
+  legs: ["Chausses"],
+  feet: ["Sollerets", "Treaders"],
+};
+
+/** Jewelry words in item names. */
+export const JEWELRY_WORDS: Record<Jewelry, string[]> = {
+  necklace: ["Necklace", "Amulet", "Pendant", "Choker", "Torc"],
+  ring: ["Ring"],
+};
+
+/** The game's slot labels ("Head", "Legs"); "Hand" alone is a weapon hand, not gloves. */
+const SLOT_LABEL_WORDS: Record<ArmorSlot, string[]> = {
+  head: ["Head"],
+  shoulders: ["Shoulders"],
+  chest: ["Chest"],
+  hands: ["Hands"],
+  waist: ["Waist"],
+  legs: ["Legs"],
+  feet: ["Feet", "Foot"],
+};
+
+/** A piece's slot, when a name or label gives the slot but maybe not the weight. */
+export type PieceSlot =
+  | { kind: "armor"; slot: ArmorSlot; weight: Weight | null }
+  | { kind: "jewelry"; jewelry: Jewelry }
+  | { kind: "weapon"; weapon: Weapon };
+
+const wordRe = (word: string) => new RegExp(`\\b${word.toLowerCase().replace(/\s+/g, "\\s+")}s?\\b`);
+
+/** Weighted words also seen in the singular on items ("Gauntlet" is still heavy hands). */
+const SINGULAR_TOO = new Set(["Epaulets", "Gloves", "Bracers", "Boots", "Shoes", "Gauntlets", "Sabatons"]);
+const weightedRe = (word: string) =>
+  SINGULAR_TOO.has(word) ? new RegExp(`\\b${word.toLowerCase().slice(0, -1)}s?\\b`) : wordRe(word);
+
+/**
+ * Every piece word the game uses, in the order a text is read: armor slots
+ * (weighted words first, so the weight comes along), then jewelry, then
+ * weapons as WEAPON_WORDS orders them.
+ */
+const SLOT_READERS: [RegExp, PieceSlot][] = [
+  ...(["shoulders", "head", "chest", "hands", "waist", "legs", "feet"] as const).flatMap((slot) => [
+    ...WEIGHTS.flatMap((weight) =>
+      PIECE_WORDS[weight][slot].map((word): [RegExp, PieceSlot] => [weightedRe(word), { kind: "armor", slot, weight }]),
+    ),
+    ...[...SLOT_ONLY_WORDS[slot], ...SLOT_LABEL_WORDS[slot]].map((word): [RegExp, PieceSlot] => [
+      wordRe(word),
+      { kind: "armor", slot, weight: null },
+    ]),
+  ]),
+  ...(Object.keys(JEWELRY_WORDS) as Jewelry[]).flatMap((jewelry) =>
+    [...JEWELRY_WORDS[jewelry], jewelry === "necklace" ? "Neck" : "Ring"].map((word): [RegExp, PieceSlot] => [
+      wordRe(word),
+      { kind: "jewelry", jewelry },
+    ]),
+  ),
+  ...WEAPON_WORDS.map(([re, weapon]): [RegExp, PieceSlot] => [re, { kind: "weapon", weapon }]),
+];
+
+/**
+ * The slot a name or label names, by the game's piece words: "Spaulder of
+ * Ruin" is shoulders of no stated weight, "Null Arca Guards" medium legs,
+ * "Ring 1" a ring. Null when no piece word appears; a set name alone never
+ * picks a slot.
+ */
+export function pieceSlotFromText(text: string | null | undefined): PieceSlot | null {
+  const n = norm(text);
+  if (!n) return null;
+  return SLOT_READERS.find(([re]) => re.test(n))?.[1] ?? null;
+}
+
+/** A label that names only a weapon hand: "two-handed" or "one-handed" (Main Hand, Off Hand). */
+export function weaponHandFromText(text: string | null | undefined): "one" | "two" | null {
+  const n = norm(text);
+  if (/\b(two[- ]?hand(ed)?|staff|staves)\b/.test(n)) return "two";
+  if (/\b(main hand|off hand|one[- ]?hand(ed)?)\b/.test(n)) return "one";
+  return null;
+}
+
+/** Every piece word, lowercase, longest first: for telling a set name from the piece word after it. */
+export const ALL_PIECE_WORDS: readonly string[] = [
+  ...new Set(
+    [
+      ...WEIGHTS.flatMap((w) => ARMOR_SLOTS.flatMap((s) => PIECE_WORDS[w][s])),
+      ...ARMOR_SLOTS.flatMap((s) => SLOT_ONLY_WORDS[s]),
+      ...[...SINGULAR_TOO].map((w) => w.slice(0, -1)),
+      "Shoulders",
+      ...Object.values(JEWELRY_WORDS).flat(),
+      ...Object.values(WEAPON_LABEL),
+      "Battleaxe",
+      "Frost Staff",
+      "Healing Staff",
+      "Fire Staff",
+      "Staff",
+    ]
+      .map((w) => w.toLowerCase())
+      // Plurals too ("Spaulders"); words already ending in s stay as they are.
+      .flatMap((w) => (w.endsWith("s") ? [w] : [w, `${w}s`])),
+  ),
+].sort((a, b) => b.length - a.length || a.localeCompare(b));

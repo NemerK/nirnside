@@ -1,7 +1,9 @@
 import { countDown } from "@/lib/game/addons";
 import { idleSlots as idleSlots_ } from "@/lib/game/research";
-import { isWeaponSlot, parseWornSlot } from "@/lib/game/equipment";
-import { loadoutOf, readWornPiece } from "@/lib/game/loadout";
+import { ARMOR_SLOTS, SLOT_LABEL, type WornSlot } from "@/lib/game/equipment";
+import { baseSetName } from "@/lib/game/loadout";
+import { readCharacter, type CharacterReading } from "@/lib/game/understand";
+import { abilityLines, classLines, mundusTexts } from "@/lib/db/game-knowledge";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Droplet, Moon } from "lucide-react";
@@ -32,7 +34,8 @@ import { loadSetHover } from "@/lib/catalog/hover-sets";
 import { toPartyHref } from "@/lib/party/links";
 import { presentResearch } from "@/lib/knowledge/present";
 import { skillLineCap } from "@/lib/skills/line-cap";
-import { TIER_LABEL, type GoalTier } from "@/lib/goals/types";
+import { TIER_COLOR, TIER_LABEL, type GoalTier } from "@/lib/goals/types";
+import { constellationColor } from "@/lib/ui/game-colors";
 import { formatTimeLeft } from "@/lib/today/present";
 import type { Character } from "@/lib/snapshot/schema";
 
@@ -46,27 +49,6 @@ function safe<T>(fn: () => T, fallback: T): T {
   }
 }
 
-const ARMOR_SLOTS = ["Head", "Shoulders", "Chest", "Hands", "Waist", "Legs", "Feet"];
-const JEWELRY_SLOTS = ["Neck", "Ring 1", "Ring 2"];
-const SLOT_ALIAS: Record<string, string> = { necklace: "Neck", hand: "Hands", gloves: "Hands", belt: "Waist", shoulder: "Shoulders" };
-
-function slotKey(slot: string): string {
-  const s = slot.trim();
-  return SLOT_ALIAS[s.toLowerCase()] ?? s.replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
-const DISCIPLINE_COLOR: Record<string, string> = {
-  craft: "var(--cp-craft)",
-  warfare: "var(--cp-warfare)",
-  fitness: "var(--cp-fitness)",
-};
-
-const TIER_COLOR: Record<GoalTier, string> = {
-  essential: "var(--rank-mandatory)",
-  optional: "var(--rank-extra)",
-  completionist: "var(--rank-completionist)",
-};
-
 function todayState(status: DailyCell["status"]): TodayRow["state"] {
   if (status === "done" || status === "cooldown") return "done";
   if (status === "ready") return "ready";
@@ -75,21 +57,29 @@ function todayState(status: DailyCell["status"]): TodayRow["state"] {
   return "unknown";
 }
 
-/** Armor, jewelry and both bars as tiles, with set counts and bonuses for the hover card. */
-function presentEquipped(c: Character) {
+/** Labels for the jewelry tiles. */
+const JEWELRY_TILES: [WornSlot, string][] = [
+  ["necklace", "Neck"],
+  ["ring1", "Ring 1"],
+  ["ring2", "Ring 2"],
+];
+
+/**
+ * Armor, jewelry and both bars as tiles, with set counts and bonuses for the
+ * hover card. Slots, bars and set counts come from the game model's reading
+ * (worn slots by parseWornSlot; body pieces count on both bars, two-handers
+ * count twice, perfected and normal pieces are one set).
+ */
+function presentEquipped(c: Character, reading: CharacterReading) {
   const hover = safe(() => loadSetHover().briefs, []);
   const brief = (name: string | null) => (name ? hover.find((b) => b.name.toLowerCase() === name.toLowerCase()) : undefined);
-  // From the game model: "Hands" is armor; only a bar or a weapon slot makes a weapon.
-  const isWeapon = (e: Character["equipped"][number]) => e.bar != null || isWeaponSlot(parseWornSlot(e.slot));
-  const body = c.equipped.filter((e) => !isWeapon(e));
-  const front = c.equipped.filter((e) => isWeapon(e) && e.bar !== "back");
-  const back = c.equipped.filter((e) => e.bar === "back");
-  // Set counts per bar, by the game model's rules (body on both bars, two-handers count twice).
-  const loadout = loadoutOf(c.equipped);
-  const twoHanded = (e: Character["equipped"][number]) => readWornPiece(e).weight === 2;
-  const countsFor = (bar: "front" | "back") => new Map(loadout.sets.map((s) => [s.name, s[bar]]));
+  const { loadout } = reading;
+  const worn = c.equipped.map((e, i) => ({ e, piece: loadout.pieces[i] }));
+  const countsFor = (bar: "front" | "back") => new Map(loadout.sets.map((s) => [s.name.toLowerCase(), s[bar]]));
   const withFront = countsFor("front");
   const withBack = countsFor("back");
+  const countOf = (counts: Map<string, number>, setName: string | null | undefined) =>
+    setName ? (counts.get(baseSetName(setName).toLowerCase()) ?? 0) : 0;
   const hrefFor = (name: string | null, setId?: number | null) =>
     name || setId != null ? toPartyHref(safe(() => setHref({ name, setId: setId ?? null }), "")) || null : null;
 
@@ -105,42 +95,42 @@ function presentEquipped(c: Character) {
       enchant: e.enchant ?? null,
       setName: e.setName ?? null,
       setHref: hrefFor(e.setName ?? null, e.setId),
-      setCount: e.setName ? (counts.get(e.setName) ?? 0) : 0,
+      setCount: countOf(counts, e.setName),
       setMax: b?.maxEquip ?? 0,
       bonuses: b?.bonuses ?? [],
     };
   };
 
-  const bySlot = new Map(body.map((e) => [slotKey(e.slot), e]));
-  const fill = (slots: string[], label = (s: string) => s) =>
-    slots.map((s) => {
-      const e = bySlot.get(s);
-      return e ? tile(e, label(s), withFront) : { empty: label(s) };
+  const onBody = new Map(worn.filter((w) => w.piece.bar == null && w.piece.slot).map((w) => [w.piece.slot!, w.e]));
+  const fill = (slots: [WornSlot, string][]) =>
+    slots.map(([slot, label]) => {
+      const e = onBody.get(slot);
+      return e ? tile(e, label, withFront) : { empty: label };
     });
-  const bar = (list: typeof c.equipped, counts: Map<string, number>) => {
-    const main = list.find((e) => parseWornSlot(e.slot) === "mainhand" || twoHanded(e)) ?? list[0];
-    const off = list.find((e) => e !== main);
-    const two = !!main && twoHanded(main);
+  const bar = (which: "front" | "back", counts: Map<string, number>) => {
+    const list = worn.filter((w) => w.piece.bar === which);
+    const main = list.find((w) => w.piece.slot === "mainhand" || w.piece.weight === 2) ?? list[0];
+    const off = list.find((w) => w !== main);
+    const two = !!main && main.piece.weight === 2;
     return [
-      main ? tile(main, two ? "Two-handed" : "Main hand", counts) : { empty: "Main hand" },
-      ...(two ? [] : [off ? tile(off, "Off hand", counts) : { empty: "Off hand" }]),
+      main ? tile(main.e, two ? "Two-handed" : "Main hand", counts) : { empty: "Main hand" },
+      ...(two ? [] : [off ? tile(off.e, "Off hand", counts) : { empty: "Off hand" }]),
     ];
   };
-  const names = [...new Set([...withFront.keys(), ...withBack.keys()])];
-  const sets: EquippedSet[] = names
-    .map((name) => ({
-      name,
-      href: hrefFor(name),
-      front: withFront.get(name) ?? 0,
-      back: withBack.get(name) !== withFront.get(name) ? (withBack.get(name) ?? 0) : null,
-      max: brief(name)?.maxEquip ?? 0,
+  const sets: EquippedSet[] = loadout.sets
+    .map((set) => ({
+      name: set.name,
+      href: hrefFor(set.name, set.setId),
+      front: set.front,
+      back: set.back !== set.front ? set.back : null,
+      max: brief(set.name)?.maxEquip ?? 0,
     }))
     .sort((a, b) => b.front - a.front || a.name.localeCompare(b.name));
   return {
-    armor: fill(ARMOR_SLOTS),
-    jewelry: fill(JEWELRY_SLOTS),
-    front: bar(front, withFront),
-    back: bar(back, withBack),
+    armor: fill(ARMOR_SLOTS.map((slot) => [slot, SLOT_LABEL[slot]])),
+    jewelry: fill(JEWELRY_TILES),
+    front: bar("front", withFront),
+    back: bar("back", withBack),
     sets,
     any: c.equipped.length > 0,
   };
@@ -235,7 +225,9 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
   const elapsed = c.lastSeen != null ? Math.max(0, now - c.lastSeen) : 0;
   const running = research.inProgress.map((r) => ({ ...r, left: countDown(r.remainingSeconds, elapsed) }));
   const idleSlots = research.crafts.reduce((n, cr) => n + idleSlots_(cr), 0);
-  const equipped = presentEquipped(c);
+  // One reading of the character through the game model.
+  const reading = readCharacter(c, safe(classLines, new Map()), safe(abilityLines, new Map()), { mundus: safe(mundusTexts, []) }, now);
+  const equipped = presentEquipped(c, reading);
 
   const stat = (label: string, value: string, tone = "text-fg") => (
     <div className="text-right">
@@ -253,7 +245,18 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
             <span>
               {c.race} <span style={{ color }}>{c.class}</span> ·{" "}
               <span style={{ color: ALLIANCE_ACCENT[c.alliance] }}>{c.alliance}</span>
-              {c.mundus ? <> · {c.mundus}</> : null}
+              {reading.mundus.blessings.map((m) => (
+                <span key={m.name}>
+                  {" · "}
+                  {m.text ? (
+                    <HoverTip tip={<span className="text-[13px] text-fg">{m.text}</span>}>
+                      <span className="cursor-help underline decoration-dotted underline-offset-2">{m.name}</span>
+                    </HoverTip>
+                  ) : (
+                    m.name
+                  )}
+                </span>
+              ))}
               {known ? <span className="text-fg-subtle"> · last logout {timeAgo(c.lastSeen)}</span> : null}
             </span>
             {c.vampire.isVampire ? (
@@ -402,7 +405,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {sheet.champion.map((d) => {
-                  const tone = DISCIPLINE_COLOR[d.discipline.toLowerCase()] ?? "var(--fg-muted)";
+                  const tone = constellationColor(d.discipline) ?? "var(--fg-muted)";
                   return (
                     <section key={d.discipline}>
                       <h3 className="mb-2 flex items-baseline justify-between gap-2 border-b pb-1.5" style={{ borderColor: `color-mix(in srgb, ${tone} 35%, transparent)` }}>
