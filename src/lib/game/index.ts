@@ -15,3 +15,5 @@ export * from "./classes";
 export * from "./champion";
 export * from "./weapon-lines";
 export * from "./understand";
+export * from "./addons";
+export * from "./setups";

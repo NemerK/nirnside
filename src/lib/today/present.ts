@@ -1,3 +1,4 @@
+import { countDown } from "../game/addons";
 import { idleSlots } from "../game/research";
 import type { Character } from "../snapshot/schema";
 import { presentResearch } from "../knowledge/present";
@@ -86,7 +87,7 @@ export function todayResearch(characters: ResearchSource[], nowUnix: number): To
         craftName: slot.craftName,
         line: slot.line,
         trait: slot.trait,
-        remaining: slot.remainingSeconds == null ? null : Math.max(0, slot.remainingSeconds - elapsed),
+        remaining: countDown(slot.remainingSeconds, elapsed),
       }))
       .sort((a, b) => (a.remaining ?? Infinity) - (b.remaining ?? Infinity));
     const idle = research.crafts.reduce(

@@ -1,3 +1,4 @@
+import { countDown } from "@/lib/game/addons";
 import { idleSlots as idleSlots_ } from "@/lib/game/research";
 import { isWeaponSlot, parseWornSlot } from "@/lib/game/equipment";
 import { loadoutOf, readWornPiece } from "@/lib/game/loadout";
@@ -233,7 +234,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
   // Research: every slot, running or idle. Research keeps going after logout.
   const research = presentResearch(c.research);
   const elapsed = c.lastSeen != null ? Math.max(0, now - c.lastSeen) : 0;
-  const running = research.inProgress.map((r) => ({ ...r, left: r.remainingSeconds == null ? null : Math.max(0, r.remainingSeconds - elapsed) }));
+  const running = research.inProgress.map((r) => ({ ...r, left: countDown(r.remainingSeconds, elapsed) }));
   const idleSlots = research.crafts.reduce((n, cr) => n + idleSlots_(cr), 0);
   const equipped = presentEquipped(c);
 
