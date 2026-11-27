@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHead } from "@/components/party/page-head";
-import { VaultNav, VAULT_SECTIONS, type VaultSection } from "@/components/party/vault-nav";
+import { VAULT_SECTIONS, type VaultSection } from "@/components/party/vault-nav";
 import { Empty } from "@/components/party/module";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryCategories } from "@/components/inventory-categories";
-import { InventoryTable } from "@/components/inventory-table";
+import { GroupedInventory } from "@/components/party/grouped-inventory";
+import { groupItems } from "@/lib/party/inventory";
 import { CurrencyTable } from "@/components/currency-table";
 import { SetCatalogProvider } from "@/components/set-hover";
 import { StickerbookGrid } from "@/components/stickerbook-grid";
@@ -117,9 +118,12 @@ function InventorySection({ sp }: { sp: Params }) {
   if (bag) items = items.filter((it) => it.bagCategory === bag);
   if (sub) items = items.filter((it) => it.bagSubtype === sub);
   const facets = safe(() => getItemFacets(), { locations: [], qualities: [], sets: [], traits: [], owners: [] });
-  const pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const groups = groupItems(items);
+  const pages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
   const current = Math.min(page, pages);
-  const shown = items.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const shownGroups = groups.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const shown = shownGroups.map((g) => g.item);
+  const characterIds = Object.fromEntries(roster().map((ch) => [ch.name, ch.id]));
   const mythics = safe(() => getAccount()?.mythics ?? [], []);
   const setHrefs: Record<string, string> = {};
   for (const it of shown) {
@@ -140,8 +144,8 @@ function InventorySection({ sp }: { sp: Params }) {
       </div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-[13px] text-fg-muted">
         <span>
-          {formatNumber(items.length)} stacks · {formatNumber(totalCount)} items
-          {pages > 1 ? ` · showing ${(current - 1) * PAGE_SIZE + 1}–${Math.min(current * PAGE_SIZE, items.length)}` : ""}
+          {formatNumber(groups.length)} kinds of item · {formatNumber(totalCount)} items in {formatNumber(items.length)} stacks
+          {pages > 1 ? ` · showing ${(current - 1) * PAGE_SIZE + 1}–${Math.min(current * PAGE_SIZE, groups.length)}` : ""}
         </span>
         <Link href="/party/vault/inventory?view=currency" className="text-accent hover:underline">
           Currencies per character
@@ -150,7 +154,7 @@ function InventorySection({ sp }: { sp: Params }) {
       {shown.length === 0 ? (
         <Empty>No items match. Clear a filter to see more.</Empty>
       ) : (
-        <InventoryTable items={shown} setHrefs={setHrefs} />
+        <GroupedInventory groups={shownGroups} setHrefs={setHrefs} characterIds={characterIds} />
       )}
       {pages > 1 ? (
         <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center gap-2 text-[14px]">
@@ -193,8 +197,8 @@ function SetsSection({ sp }: { sp: Params }) {
   const sub = split ? (subs.find((x) => x === str(sp.sub)) ?? subs[0]) : null;
   const pool = sub ? inCategory.filter((s) => s.subcategory === sub) : inCategory;
   // Whatever is still large after the zone split is shown a page at a time.
-  const SETS_PER_PAGE = 24;
-  const setPages = pool.length > 30 ? Math.ceil(pool.length / SETS_PER_PAGE) : 1;
+  const SETS_PER_PAGE = 60;
+  const setPages = pool.length > SETS_PER_PAGE ? Math.ceil(pool.length / SETS_PER_PAGE) : 1;
   const setPage = Math.min(setPages, Math.max(1, Number(str(sp.page) ?? 1) || 1));
   const sets = setPages > 1 ? pool.slice((setPage - 1) * SETS_PER_PAGE, setPage * SETS_PER_PAGE) : pool;
   return (
@@ -232,6 +236,7 @@ function SetsSection({ sp }: { sp: Params }) {
       ) : null}
       <StickerbookGrid
         contained
+        compact
         mythics={safe(() => getAccount()?.mythics ?? [], [])}
         sets={sets.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }))}
       />
@@ -476,7 +481,6 @@ export default async function VaultSectionPage({ params, searchParams }: PagePro
   return (
     <div className="mx-auto w-full max-w-[1320px]">
       <PageHead title={TITLES[id].title} lead={TITLES[id].lead} />
-      <VaultNav current={id} />
       {id === "inventory" ? (
         <InventorySection sp={sp} />
       ) : id === "sets" ? (

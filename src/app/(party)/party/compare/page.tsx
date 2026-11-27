@@ -25,10 +25,11 @@ export default function ComparePage() {
   const grid = buildLineGrid({ subjects, lines, lineIndex, goals });
 
   return (
-    <div className="mx-auto flex w-full max-w-[1320px] flex-col" style={{ minHeight: "calc(100vh - 220px)" }}>
+    // The grid scrolls inside the screen, so the line and character names stay in view.
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col" style={{ height: "calc(100dvh - 7.5rem)" }}>
       <PageHead
         title="Compare"
-        lead="Every skill line for every character. Click a line to set a target for a group, or a cell for one character."
+        lead="Every skill line for every character."
       />
       {subjects.length === 0 ? (
         <p className="party-module px-6 py-10 text-center text-fg-muted">No characters yet.</p>

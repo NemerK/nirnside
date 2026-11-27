@@ -39,10 +39,16 @@ export function StickerbookGrid({
   sets,
   contained = false,
   mythics = [],
+  compact = false,
 }: {
   sets: SetWithTotals[];
   contained?: boolean;
   mythics?: MythicSet[];
+  /**
+   * Party's set list: the page already chose the category, so no side list,
+   * and each set shows only its missing pieces until opened.
+   */
+  compact?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<Status>("all");
@@ -164,7 +170,9 @@ export function StickerbookGrid({
       {/* Category tree has its own scroll; it never overlays the set cards. */}
       <aside
         className={
-          contained
+          compact
+            ? "hidden"
+            : contained
             ? "shrink-0 bg-bg pr-1 lg:sticky lg:top-0 lg:max-h-[calc(100vh-6rem)] lg:w-64 lg:self-start lg:overflow-y-auto"
             : "max-h-[36vh] shrink-0 overflow-y-auto bg-bg pr-1 lg:max-h-none lg:min-h-0 lg:w-64 lg:self-stretch"
         }
@@ -297,9 +305,10 @@ export function StickerbookGrid({
               No sets match these filters.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className={compact ? "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3" : "grid grid-cols-1 gap-3 lg:grid-cols-2"}>
               {filtered.map((s) => (
                 <SetCard
+                  compact={compact}
                   key={s.setId}
                   set={s}
                   mythic={mythicForSet(s, mythics)}
@@ -424,7 +433,9 @@ function SetCard({
   newCount,
   pieceIsNew,
   onSeePiece,
+  compact = false,
 }: {
+  compact?: boolean;
   set: SetWithTotals;
   /** Present when this card is a mythic. Null means the leads were not in the snapshot. */
   mythic: MythicSet | null;
@@ -442,11 +453,14 @@ function SetCard({
   }, [openLeads, s.setId]);
   const complete = s.total > 0 && s.collected === s.total;
   const pct = s.total > 0 ? Math.round((s.collected / s.total) * 100) : 0;
+  const [allPieces, setAllPieces] = useState(false);
+  const missing = s.pieces.filter((p) => !p.collected).length;
+  const pieces = compact && !allPieces ? s.pieces.filter((p) => !p.collected || pieceIsNew(p)) : s.pieces;
 
   return (
     <div
       id={leads ? mythicAnchor(s.setId) : undefined}
-      className={`rounded-xl border bg-surface/70 p-4 transition-colors ${
+      className={`rounded-xl border bg-surface/70 ${compact ? "px-3.5 py-3" : "p-4"} transition-colors ${
         complete ? "border-accent/50" : "border-border"
       }`}
     >
@@ -468,7 +482,7 @@ function SetCard({
           ) : (
             <div className="truncate font-medium text-fg">{s.name}</div>
           )}
-          <div className="mt-0.5 text-xs text-fg-subtle">{s.subcategory ?? s.category}</div>
+          {compact ? null : <div className="mt-0.5 text-xs text-fg-subtle">{s.subcategory ?? s.category}</div>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {newCount > 0 && <NewBang />}
@@ -486,8 +500,41 @@ function SetCard({
 
       {leads && open ? <MythicComponents mythic={mythic} /> : null}
 
-      <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-        {s.pieces.map((p, i) => {
+      {compact ? (
+        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface-2">
+          <div className={`h-full rounded-full ${complete ? "bg-ok" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+        </div>
+      ) : null}
+
+      {compact && !allPieces ? (
+        <p className="mt-1.5 flex items-baseline justify-between gap-2 text-[12px]">
+          <span className="min-w-0 truncate text-fg-muted" title={s.pieces.filter((p) => !p.collected).map((p) => pieceLabel(p, s.name)).join(", ")}>
+            {missing > 0 ? (
+              <>
+                <span className="text-fg-subtle">Missing </span>
+                {s.pieces
+                  .filter((p) => !p.collected)
+                  .map((p) => pieceLabel(p, s.name))
+                  .join(", ")}
+              </>
+            ) : (
+              <span className="text-ok">Every piece collected</span>
+            )}
+          </span>
+          {s.pieces.length > 0 ? (
+            <button type="button" onClick={() => setAllPieces(true)} className="shrink-0 text-fg-subtle hover:text-accent">
+              Pieces
+            </button>
+          ) : null}
+        </p>
+      ) : null}
+
+      <div
+        className={`${compact ? "mt-2" : "mt-3"} grid grid-cols-1 gap-1.5 sm:grid-cols-2 ${
+          pieces.length === 0 || (compact && !allPieces) ? "hidden" : ""
+        }`}
+      >
+        {pieces.map((p, i) => {
           const label = pieceLabel(p, s.name);
           const fresh = pieceIsNew(p);
           return (
@@ -528,9 +575,17 @@ function SetCard({
         })}
       </div>
 
-      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
-        <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-      </div>
+      {compact ? (
+        allPieces ? (
+          <button type="button" onClick={() => setAllPieces(false)} className="mt-2 text-[12px] text-fg-subtle hover:text-accent">
+            Hide pieces
+          </button>
+        ) : null
+      ) : (
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+          <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+        </div>
+      )}
     </div>
   );
 }

@@ -8,7 +8,16 @@ function parts(seconds: number): { h: number; m: number } {
 }
 
 /** Time until the daily reset, ticking once a minute. */
-export function ResetCountdown({ resetAt, resetHourUtc }: { resetAt: number; resetHourUtc: number }) {
+export function ResetCountdown({
+  resetAt,
+  resetHourUtc,
+  compact = false,
+}: {
+  resetAt: number;
+  resetHourUtc: number;
+  /** One short line, for a card header. */
+  compact?: boolean;
+}) {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   useEffect(() => {
     const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 30_000);
@@ -16,6 +25,13 @@ export function ResetCountdown({ resetAt, resetHourUtc }: { resetAt: number; res
   }, []);
   const left = resetAt - now;
   const { h, m } = parts(left);
+  if (compact) {
+    return (
+      <span className="text-[12px] tabular-nums text-fg-muted" aria-live="polite" title={`Daily reset at ${String(resetHourUtc).padStart(2, "0")}:00 UTC`}>
+        {left <= 0 ? "Reset now" : `Reset in ${h}h ${String(m).padStart(2, "0")}m`}
+      </span>
+    );
+  }
   return (
     <div className="sm:text-right" aria-live="polite">
       <p className="font-display text-[44px] font-semibold leading-none tabular-nums text-fg">

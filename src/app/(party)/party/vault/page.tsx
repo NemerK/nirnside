@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Bar, Empty, Module } from "@/components/party/module";
 import { PageHead } from "@/components/party/page-head";
-import { VaultNav } from "@/components/party/vault-nav";
 import { getDb } from "@/lib/db";
 import { getAccount, getCompletedAchievementIds, getDataSource, getOutfitStyles, getStickerbookStats } from "@/lib/db/queries";
 import { ACCOUNT_CURRENCIES, canonicalizeCurrencies } from "@/lib/currencies";
@@ -90,7 +89,6 @@ export default function VaultPage() {
   return (
     <div className="mx-auto w-full max-w-[1320px]">
       <PageHead title="The Vault" lead={`What ${account.displayName} owns, shared by every character.`} />
-      <VaultNav current="" />
 
       <section className="party-module mb-5 px-6 py-5">
         <h2 className="mb-4 font-display text-[24px] text-accent">Treasury</h2>

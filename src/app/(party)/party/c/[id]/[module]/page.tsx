@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { getAccount, getCharacter } from "@/lib/db/queries";
 import { getScripts, getSkillLineByName, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
 import { loadSetHover } from "@/lib/catalog/hover-sets";
 import { withResolvedSet } from "@/lib/catalog/set-brief";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
 import { presentSkillBook, SKILL_CATEGORY_ORDER } from "@/lib/skills/present";
+import { skillLineCap } from "@/lib/skills/line-cap";
+import { isClassMasteryLineName } from "@/lib/skills/class-mastery";
 import { briefsFromLore } from "@/lib/skills/skill-brief";
 import { presentRecipeLists, presentResearch, characterHasKnowledgeScan } from "@/lib/knowledge/present";
 import type { Character, Wardrobe as WardrobeData } from "@/lib/snapshot/schema";
-import { classColor } from "@/lib/classes";
 import { SkillBook } from "@/components/skill-book";
 import { SkillCatalogProvider } from "@/components/skill-hover";
 import { SetCatalogProvider } from "@/components/set-hover";
@@ -43,7 +43,144 @@ function skillLineHref(name: string, className?: string | null): string | null {
   return row ? `/encyclopedia/skills/${encodeURIComponent(row.entry.id)}` : null;
 }
 
-function SkillsModule({ c, cat, base }: { c: Character; cat: string | undefined; base: string }) {
+type RailLine = { name: string; category: string; rank: number; cap: number | null; subclassed: boolean };
+
+/** Every skill line of the character, grouped as in game: one click opens any line. */
+function SkillRail({
+  groups,
+  selected,
+  base,
+  view,
+  scripts,
+}: {
+  groups: { category: string; lines: RailLine[] }[];
+  selected: string | null;
+  base: string;
+  view: "lines" | "scribing";
+  scripts: { known: number; total: number };
+}) {
+  return (
+    <nav
+      aria-label="Skill lines"
+      className="party-module max-h-[calc(100dvh-8.5rem)] overflow-y-auto p-2 lg:sticky lg:top-[6.75rem]"
+    >
+      <div className="mb-2 grid grid-cols-2 gap-1 rounded-lg bg-surface-2/60 p-0.5 text-[12px]" role="group" aria-label="Show">
+        <Link
+          href={selected ? `${base}/skills?line=${encodeURIComponent(selected)}` : `${base}/skills`}
+          aria-current={view === "lines" ? "page" : undefined}
+          scroll={false}
+          className={`rounded-md px-2 py-1 text-center ${view === "lines" ? "bg-surface text-fg" : "text-fg-muted hover:text-fg"}`}
+        >
+          Skill lines
+        </Link>
+        <Link
+          href={`${base}/skills?view=scribing`}
+          aria-current={view === "scribing" ? "page" : undefined}
+          scroll={false}
+          className={`rounded-md px-2 py-1 text-center ${view === "scribing" ? "bg-surface text-fg" : "text-fg-muted hover:text-fg"}`}
+        >
+          Scribing <span className="tabular-nums text-fg-subtle">{scripts.known}/{scripts.total}</span>
+        </Link>
+      </div>
+      {groups.map((g) => (
+        <section key={g.category} className="mb-2">
+          <h2 className="px-2 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-fg-subtle">{g.category}</h2>
+          <ul>
+            {g.lines.map((l) => {
+              const on = view === "lines" && l.name === selected;
+              const done = l.cap != null && l.rank >= l.cap;
+              return (
+                <li key={`${g.category}-${l.name}`}>
+                  <Link
+                    href={`${base}/skills?line=${encodeURIComponent(l.name)}`}
+                    aria-current={on ? "page" : undefined}
+                    scroll={false}
+                    className={`block rounded-lg px-2 py-1 ${on ? "bg-accent-soft" : "hover:bg-surface-2"}`}
+                  >
+                    <span className="flex items-baseline justify-between gap-2 text-[13px]">
+                      <span className={`truncate ${on ? "text-fg" : done ? "text-fg-muted" : "text-fg"}`}>
+                        {l.name}
+                        {l.subclassed ? <span className="ml-1 text-[11px] text-info">subclass</span> : null}
+                      </span>
+                      <span className={`shrink-0 text-[12px] tabular-nums ${done ? "text-ok" : "text-fg-subtle"}`}>
+                        {l.rank}
+                        {l.cap && !done ? <span className="text-fg-subtle/70">/{l.cap}</span> : null}
+                      </span>
+                    </span>
+                    {l.cap && !done ? (
+                      <span className="mt-0.5 block h-[3px] overflow-hidden rounded-full bg-meter-track" aria-hidden>
+                        <span className="block h-full rounded-full bg-meter" style={{ width: `${(l.rank / l.cap) * 100}%` }} />
+                      </span>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </nav>
+  );
+}
+
+function SkillsModule({
+  c,
+  cat,
+  lineName,
+  view,
+  base,
+}: {
+  c: Character;
+  cat: string | undefined;
+  lineName: string | undefined;
+  view: "lines" | "scribing";
+  base: string;
+}) {
+  // The rail: every line, cheap (names and ranks only).
+  const order = (x: string) => {
+    const i = SKILL_CATEGORY_ORDER.indexOf(x as (typeof SKILL_CATEGORY_ORDER)[number]);
+    return i < 0 ? 99 : i;
+  };
+  const railLines: RailLine[] = c.skillLines
+    .filter((l) => !isClassMasteryLineName(l.name))
+    .map((l) => ({ name: l.name, category: l.category, rank: l.rank, cap: skillLineCap(l.name), subclassed: !!l.subclassed }));
+  const groups = [...new Set(railLines.map((l) => l.category))]
+    .sort((a, b) => order(a) - order(b))
+    .map((category) => ({
+      category,
+      lines: railLines.filter((l) => l.category === category).sort((a, b) => Number(a.subclassed) - Number(b.subclassed)),
+    }));
+  const flat = groups.flatMap((g) => g.lines);
+  const selected =
+    flat.find((l) => l.name === lineName) ??
+    (cat ? flat.find((l) => l.category === cat) : undefined) ??
+    flat[0] ??
+    null;
+
+  const known = new Set(c.scribingScripts.map((s) => s.trim().toLowerCase()));
+  const allScripts = safe(() => getScripts(), []);
+  const scriptCount = { known: allScripts.filter((r) => known.has(r.entry.name.trim().toLowerCase())).length, total: allScripts.length };
+
+  if (view === "scribing") {
+    const scripts: CharacterScript[] = allScripts.map((row) => ({
+      name: row.entry.name,
+      slot: row.entry.slot,
+      effect: row.entry.effect ?? "",
+      known: known.has(row.entry.name.trim().toLowerCase()),
+      icon: row.entry.icon,
+    }));
+    return (
+      <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <SkillRail groups={groups} selected={null} base={base} view="scribing" scripts={scriptCount} />
+        <div className="min-w-0">
+          <CharacterScripts scripts={scripts} />
+        </div>
+      </div>
+    );
+  }
+
+  // The detail: one category's abilities and descriptions, the one the chosen line is in.
+  const chosen = selected?.category ?? null;
   const names: string[] = [];
   const snapshotSkills: { name: string; description: string }[] = [];
   const note = (name?: string | null, description?: string | null) => {
@@ -53,14 +190,7 @@ function SkillsModule({ c, cat, base }: { c: Character; cat: string | undefined;
     const d = description?.trim();
     if (d) snapshotSkills.push({ name: n, description: d });
   };
-  // One skill category per page load: an endgame character's every ability,
-  // morph and description at once is well over a megabyte.
-  const categoryNames = [...new Set(c.skillLines.map((l) => l.category))];
-  const chosen =
-    cat && categoryNames.includes(cat)
-      ? cat
-      : (SKILL_CATEGORY_ORDER.find((x) => categoryNames.includes(x)) ?? categoryNames[0] ?? null);
-  for (const line of c.skillLines.filter((l) => l.category === chosen)) {
+  for (const line of c.skillLines.filter((l) => l.name === selected?.name)) {
     for (const a of line.abilities) {
       note(a.name, a.description);
       for (const m of a.morphs ?? []) note(m.name, m.description);
@@ -68,45 +198,35 @@ function SkillsModule({ c, cat, base }: { c: Character; cat: string | undefined;
   }
   const lore = safe(() => catalogAbilityLoreFor(names), new Map() as ReturnType<typeof catalogAbilityLoreFor>);
   const fullBook = presentSkillBook(
-    c.skillLines,
+    c.skillLines.filter((l) => l.category === chosen),
     lore,
     (name) => skillLineHref(name, c.class),
     c.class,
     (name) => safe(() => getSkillLineByName(name)?.entry.className ?? null, null),
   );
-  const current = fullBook.find((cg) => cg.name === chosen) ?? fullBook[0];
-  const book = current ? [current] : [];
-  const known = new Set(c.scribingScripts.map((s) => s.trim().toLowerCase()));
-  const scripts: CharacterScript[] = safe(() => getScripts(), []).map((row) => ({
-    name: row.entry.name,
-    slot: row.entry.slot,
-    effect: row.entry.effect ?? "",
-    known: known.has(row.entry.name.trim().toLowerCase()),
-    icon: row.entry.icon,
-  }));
+  const current = fullBook.find((cg) => cg.lines.some((l) => l.name === selected?.name)) ?? fullBook[0];
+  const lineView = current?.lines.find((l) => l.name === selected?.name) ?? current?.lines[0];
+  const book = current && lineView ? [{ ...current, lines: [lineView] }] : [];
+
   return (
-    <SkillCatalogProvider skills={briefsFromLore(names, lore, snapshotSkills)}>
-      <nav aria-label="Skill categories" className="mb-4 flex flex-wrap gap-2">
-        {fullBook.map((cg) => (
-          <Link
-            key={cg.name}
-            href={`${base}/skills?cat=${encodeURIComponent(cg.name)}`}
-            aria-current={cg.name === current?.name ? "page" : undefined}
-            className={`rounded-xl border px-3 py-1.5 text-[13px] ${
-              cg.name === current?.name ? "border-accent bg-accent-soft text-fg" : "border-border text-fg-muted hover:text-fg"
-            }`}
-          >
-            {cg.name}
-            <span className="ml-2 text-fg-subtle">{cg.lines.length}</span>
-          </Link>
-        ))}
-      </nav>
-      <SkillBook categories={book} lastSeen={c.lastSeen} characterClass={c.class} rememberKey={c.id} />
-      <section className="mt-10">
-        <h2 className="mb-3 font-display text-[26px] text-fg">Scribing scripts</h2>
-        <CharacterScripts scripts={scripts} />
-      </section>
-    </SkillCatalogProvider>
+    <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <SkillRail groups={groups} selected={selected?.name ?? null} base={base} view="lines" scripts={scriptCount} />
+      <div className="min-w-0">
+        {book.length === 0 ? (
+          <p className="party-module px-5 py-8 text-center text-fg-muted">No skills captured yet.</p>
+        ) : (
+          <SkillCatalogProvider skills={briefsFromLore(names, lore, snapshotSkills)}>
+            <SkillBook
+              key={lineView?.id}
+              categories={book}
+              lastSeen={c.lastSeen}
+              characterClass={c.class}
+              lineOnly
+            />
+          </SkillCatalogProvider>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -186,6 +306,8 @@ export default async function CharacterModulePage({ params, searchParams }: Page
   const { id, module } = await params;
   const sp = await searchParams;
   const cat = typeof sp.cat === "string" ? sp.cat : undefined;
+  const lineName = typeof sp.line === "string" ? sp.line : undefined;
+  const view = sp.view === "scribing" ? "scribing" : "lines";
   if (!(module in MODULES)) notFound();
   const which = module as ModuleId;
   const c = safe(() => getCharacter(decodeURIComponent(id)), null);
@@ -194,35 +316,15 @@ export default async function CharacterModulePage({ params, searchParams }: Page
 
   return (
     <div className="mx-auto w-full max-w-[1320px]">
-      <Link href={base} className="mb-3 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg">
-        <ArrowLeft className="h-4 w-4" /> {c.name}
-      </Link>
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <h1 className="font-display text-[44px] leading-none text-fg">
-          {MODULES[which]}
-          <span className="ml-3 align-middle text-[15px]" style={{ color: classColor(c.class) }}>
-            {c.class}
-          </span>
-        </h1>
-        <nav aria-label="Character modules" className="flex flex-wrap gap-1 rounded-xl border border-border bg-surface/70 p-1">
-          {(Object.keys(MODULES) as ModuleId[]).map((m) => (
-            <Link
-              key={m}
-              href={`${base}/${m}`}
-              aria-current={m === which ? "page" : undefined}
-              className={`rounded-lg px-3 py-1.5 text-[13px] ${m === which ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg"}`}
-            >
-              {MODULES[m]}
-            </Link>
-          ))}
-        </nav>
-      </header>
+      <h1 className="sr-only">
+        {c.name}: {MODULES[which]}
+      </h1>
       {c.lastSeen == null ? (
         <p className="party-module px-5 py-8 text-center text-fg-muted">
           {c.name} hasn&apos;t logged out with the addon yet, so there&apos;s nothing to show here.
         </p>
       ) : which === "skills" ? (
-        <SkillsModule c={c} cat={cat} base={base} />
+        <SkillsModule c={c} cat={cat} lineName={lineName} view={view} base={base} />
       ) : which === "gear" ? (
         <GearModule c={c} />
       ) : which === "champion" ? (

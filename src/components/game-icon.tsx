@@ -89,8 +89,12 @@ export function GameIcon({
 
   useEffect(() => {
     const img = imgRef.current;
-    // A cached crest can finish loading before hydration attaches onLoad.
-    if (img?.complete) sharpen(img);
+    // A cached crest can finish loading before hydration attaches onLoad,
+    // and a missing one can fail before onError is attached: catch both.
+    if (img?.complete) {
+      if (img.naturalWidth === 0 && display === src) setAttempt((n) => n + 1);
+      else sharpen(img);
+    }
     // sharpen closes over the current source and size; re-run when those change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, size]);

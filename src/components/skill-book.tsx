@@ -236,12 +236,18 @@ export function SkillBook({
   lastSeen,
   characterClass,
   rememberKey,
+  lineOnly = false,
 }: {
   categories: SkillCategoryView[];
   lastSeen: number | null;
   characterClass?: string | null;
   /** Keeps the open line when a link leaves this page and the reader comes back. */
   rememberKey?: string | null;
+  /**
+   * The page already chose the line (Party's rail): show only its abilities
+   * and the detail, with no title, category tabs or line list.
+   */
+  lineOnly?: boolean;
 }) {
   const [catName, setCatName] = useState(categories[0]?.name ?? "");
   const category = categories.find((c) => c.name === catName) ?? categories[0];
@@ -251,7 +257,7 @@ export function SkillBook({
   const [abilityIndex, setAbilityIndex] = useState(0);
   const [morphSlot, setMorphSlot] = useState<number | null>(null);
   const [restored, setRestored] = useState(!rememberKey);
-  const storageKey = rememberKey ? `nirnside-skillbook:${rememberKey}` : null;
+  const storageKey = rememberKey && !lineOnly ? `nirnside-skillbook:${rememberKey}` : null;
 
   useEffect(() => {
     if (!storageKey) return;
@@ -305,9 +311,13 @@ export function SkillBook({
 
   return (
     <section className="w-full min-w-0">
-      <SectionTitle>Skills</SectionTitle>
+      {lineOnly ? null : <SectionTitle>Skills</SectionTitle>}
       <Card className="w-full min-w-0 p-4">
-        <div role="tablist" aria-label="Skill type" className="mb-4 flex flex-wrap gap-1 border-b border-border pb-3">
+        <div
+          role="tablist"
+          aria-label="Skill type"
+          className={lineOnly ? "hidden" : "mb-4 flex flex-wrap gap-1 border-b border-border pb-3"}
+        >
           {categories.map((c) => (
             <TabButton key={c.name} active={c.name === category?.name} onClick={() => pickCategory(c.name)}>
               {c.name}
@@ -315,9 +325,17 @@ export function SkillBook({
           ))}
         </div>
 
-        <div className="grid w-full min-w-0 min-h-[32rem] gap-4 lg:h-[42rem] lg:min-h-[42rem] lg:grid-cols-[12.5rem_16rem_minmax(0,1fr)] lg:overflow-hidden">
+        <div
+          className={
+            lineOnly
+              ? "grid w-full min-w-0 gap-4 lg:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)]"
+              : "grid w-full min-w-0 min-h-[32rem] gap-4 lg:h-[42rem] lg:min-h-[42rem] lg:grid-cols-[12.5rem_16rem_minmax(0,1fr)] lg:overflow-hidden"
+          }
+        >
           <ul
-            className="flex min-h-0 min-w-0 gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-y-auto lg:pr-1"
+            className={
+              lineOnly ? "hidden" : "flex min-h-0 min-w-0 gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-y-auto lg:pr-1"
+            }
             aria-label="Skill line"
           >
             {lineGroups(category?.lines ?? [], category?.name ?? "", characterClass).map((group) => (
@@ -364,7 +382,7 @@ export function SkillBook({
             ))}
           </ul>
 
-          <div className="min-h-0 min-w-0 lg:overflow-y-auto lg:pr-1">
+          <div className={lineOnly ? "min-w-0" : "min-h-0 min-w-0 lg:overflow-y-auto lg:pr-1"}>
             {line && line.abilities.length === 0 && (
               <p className="text-sm text-fg-muted">No abilities captured for this line.</p>
             )}
@@ -408,7 +426,7 @@ export function SkillBook({
                                   <GameIcon name={label} icon={icon} size={36} />
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                  <span className={`block truncate text-sm ${a.purchased ? "text-fg" : "text-fg-subtle"}`}>
+                                  <span className={`block text-sm ${lineOnly ? "" : "truncate"} ${a.purchased ? "text-fg" : "text-fg-subtle"}`}>
                                     {label}
                                   </span>
                                   <span className="text-[11px] text-fg-subtle">
@@ -447,7 +465,7 @@ export function SkillBook({
             )}
           </div>
 
-          <div className="min-h-0 min-w-0 lg:overflow-y-auto">
+          <div className={lineOnly ? "min-w-0 lg:sticky lg:top-28 lg:self-start" : "min-h-0 min-w-0 lg:overflow-y-auto"}>
             {line && (
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
