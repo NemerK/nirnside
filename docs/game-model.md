@@ -15,6 +15,11 @@ The model lives in `src/lib/game/`:
 | `set-profile.ts` | What a set comes in: which weights for which slots, jewelry, weapons; its shape (full, monster head-and-shoulders, weapons-only, single-piece) |
 | `loadout.ts` | How worn gear works together: set counts per bar, two-handers as two, active bonuses, body armor per weight |
 | `research.ts` | Trait research per piece kind, whether a piece can be crafted for a set and trait, idle research slots |
+| `character.ts` | Races, their home alliances, what a race–alliance pairing means (home, Imperial's choice, Any Race Any Alliance), racial lines |
+| `classes.ts` | Classes and their three lines (from the catalog), a character's own / borrowed / swapped-out lines, subclassing rules, Class Mastery |
+| `champion.ts` | The three constellations, the 3600 cap (1200 each), earning order, slottable vs passive stars, four slots per constellation |
+| `weapon-lines.ts` | The six weapon lines and what each needs on the bar (two one-handers make Dual Wield, one plus a shield One Hand and Shield, a lone one-hander nothing), staff elements, per-weapon passives, armor lines |
+| `understand.ts` | `readCharacter`: one character read through every system at once |
 | `item-index.ts` | What every scan teaches about items (below) |
 
 ## Where the facts come from
@@ -111,6 +116,37 @@ traitsNeeded, trait)` answers whether they can make that piece for a set: it
 needs enough known traits on the line, and the chosen trait among them.
 `idleSlots` counts the research slots not in use. A craft with every trait
 known has no idle slots, because there is nothing left to research.
+
+## Who a character is
+
+- **Race and alliance.** Each race has a home alliance; Imperials choose
+  theirs. `allianceFit(race, alliance)` gives `home`, `chosen` (Imperial),
+  or `any-race-any-alliance`: a Redguard in the Aldmeri Dominion means the
+  account owns that bundle. Alliance is fixed at creation. Race decides
+  the racial skill line (opens at level 5).
+- **Class.** Three class lines per class, mapped from the catalog
+  (`classLines()` in `src/lib/db/game-knowledge.ts`). `classLineup` reads a character's own lines, the ones
+  subclassing swapped out, and borrowed ones with their source class, from
+  the game's flags (`IsPlayerClassSkillLine`, `IsActive`). Subclassing
+  rules (since Update 46): up to two lines replaced, at least one kept, one
+  per other class. Class Mastery only while all three own lines are in.
+- **Champion Points.** Craft (green), Warfare (blue), Fitness (red); 3600
+  spendable, 1200 each, earned in turn; slottable stars work only on the
+  bar, four slots per constellation.
+- **Weapons.** A bar's weapons make one weapon line or none
+  (`barWeaponLine`). A weapon line's abilities and passives work only while
+  that bar holds its weapons (`lineUsableOnBar`). Some passives read the
+  exact weapon types or the staff element (`readBar`).
+- **Armor.** Each weight's line levels and scales with body pieces of that
+  weight.
+
+`readCharacter(character, classLines())` puts it all together: race fit,
+class lineup, Class Mastery, sets per bar, each bar's weapon line and
+element, armor per weight with its line, Champion Point slots, idle research.
+
+The addon (0.9.42) records for each class line whether it is the
+character's own and whether it is equipped, so swapped-out lines come from
+the game.
 
 ## Learning: the item index
 

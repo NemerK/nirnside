@@ -38,3 +38,16 @@ export function compareSkillCategory(a: string, b: string): number {
   const ib = SKILL_CATEGORIES.indexOf(b as SkillCategory);
   return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
 }
+
+/**
+ * Order of lines inside a category, as the Skills window lists them, where
+ * the game has a fixed order. Weapon and armor come from the weapon-line model.
+ */
+export const SKILL_WINDOW_LINE_ORDER: Record<string, readonly string[]> = {
+  Weapon: ["Two Handed", "One Hand and Shield", "Dual Wield", "Bow", "Destruction Staff", "Restoration Staff"],
+  Armor: ["Light Armor", "Medium Armor", "Heavy Armor"],
+  Guild: ["Fighters Guild", "Mages Guild", "Undaunted", "Thieves Guild", "Dark Brotherhood", "Psijic Order"],
+  World: ["Soul Magic", "Legerdemain", "Vampire", "Werewolf"],
+  "Alliance War": ["Assault", "Support"],
+  Craft: ["Blacksmithing", "Clothing", "Woodworking", "Jewelry Crafting", "Provisioning", "Enchanting", "Alchemy"],
+};

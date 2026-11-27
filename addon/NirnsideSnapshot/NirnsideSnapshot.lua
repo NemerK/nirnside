@@ -898,6 +898,8 @@ local function skillLineTraits(skillType, lineIndex)
       isClass = isClass,
       isOwnClass = isOwnClass,
       subclassed = isClass and active and not isOwnClass,
+      -- For the character's own class lines: false when subclassing swapped it out.
+      classActive = isClass and active or nil,
       mastered = isClass and mastered,
       name = data.GetName and zo_strformat("<<1>>", data:GetName()) or nil,
     }
@@ -947,6 +949,8 @@ local function gatherSkills(masteriesOut, classMasteryOut, playerClass)
             category = safe(function() return GetString("SI_SKILLTYPE", skillType) end, "Skill"),
             rank = rank or 0,
             subclassed = (traits and traits.subclassed) or false,
+            active = traits and traits.isClass and (traits.classActive == true) or nil,
+            ownClass = traits and traits.isClass and (traits.isOwnClass == true) or nil,
             classMastery = classMasteryLine,
             className = classMasteryLine and playerClass or nil,
             abilities = abilities,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ALLIANCES } from "../game/character";
 import { coerceCompletedAchievementIds } from "../achievements/pithka";
 
 /**
@@ -36,7 +37,7 @@ export function lenientArray<T extends z.ZodTypeAny>(element: T) {
 export const Region = z.enum(["EU", "NA"]);
 export type Region = z.infer<typeof Region>;
 
-export const Alliance = z.enum(["Aldmeri Dominion", "Daggerfall Covenant", "Ebonheart Pact"]);
+export const Alliance = z.enum(ALLIANCES);
 
 /** Where an item physically lives on the account. */
 export const ItemLocation = z.enum([
@@ -164,6 +165,10 @@ export const SkillLine = z.object({
   rank: z.number().int().default(0),
   /** True if this line comes from subclassing (borrowed from another class). */
   subclassed: z.boolean().default(false),
+  /** Class lines only: whether the line is equipped right now (false when subclassing swapped it out). Newer addons. */
+  active: z.boolean().nullable().optional(),
+  /** Class lines only: whether it is one of the character's own class lines (IsPlayerClassSkillLine). Newer addons. */
+  ownClass: z.boolean().nullable().optional(),
   /**
    * U50 Class Mastery skill line (five passives, two Class Mastery Points).
    * Distinct from subclassing "mastered" class lines.
