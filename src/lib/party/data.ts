@@ -119,13 +119,21 @@ export function targetChoices(lines: GridLineSource[]): ChoiceSource[] {
     seen.add(key);
     out.push(s);
   };
+  // A class line can arrive more than once, sometimes without its class
+  // (an older or partial scan). Every copy takes the class a sibling knows,
+  // so it lists once, under its class, never under a made-up "Other".
+  const classOf = new Map<string, string>();
+  for (const l of lines) if (l.className) classOf.set(l.name.trim().toLowerCase(), l.className);
+  const withClass = (l: GridLineSource): GridLineSource =>
+    l.className ? l : { ...l, className: classOf.get(l.name.trim().toLowerCase()) ?? null };
   const lineById = new Map<string, GridLineSource>();
   for (const { entry } of safe(() => getSkillLines(), [])) {
     const l = lines.find((x) => sameName(x.name, entry.name));
-    if (l) lineById.set(entry.id, l);
+    if (l) lineById.set(entry.id, withClass(l));
   }
-  for (const l of lines) {
-    if (sameName(l.name, "class mastery")) continue;
+  for (const raw of lines) {
+    if (sameName(raw.name, "class mastery")) continue;
+    const l = withClass(raw);
     add({
       domain: "skillline",
       name: l.name,

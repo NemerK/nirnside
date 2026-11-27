@@ -52,7 +52,7 @@ export function Sheet({
         aria-labelledby="sheet-title"
         className={
           variant === "center"
-            ? "nirn-dialog relative z-[81] flex h-[min(85vh,46rem)] w-full max-w-4xl flex-col rounded-2xl border border-border-strong bg-bg-elev shadow-[var(--shadow-pop)] focus:outline-none"
+            ? "nirn-dialog relative z-[81] flex h-[min(88vh,48rem)] w-full max-w-6xl flex-col rounded-2xl border border-border-strong bg-bg-elev shadow-[var(--shadow-pop)] focus:outline-none"
             : "nirn-sheet relative z-[81] flex h-full w-full max-w-md flex-col border-l border-border-strong bg-bg-elev shadow-[var(--shadow-pop)] focus:outline-none"
         }
       >

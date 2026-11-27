@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import { classColor } from "@/lib/classes";
 import { TIER_LABEL, type Goal, type GoalDomain } from "@/lib/goals/types";
@@ -54,10 +54,16 @@ export function TargetPicker({
   choices,
   goals,
   onPick,
+  selected = null,
+  aside,
 }: {
   choices: TargetSubject[];
   goals: Goal[];
   onPick: (s: TargetSubject) => void;
+  /** The item open in the editor, highlighted in the list. */
+  selected?: TargetSubject | null;
+  /** The editor, shown beside the list so picking never swaps the window out. */
+  aside?: ReactNode;
 }) {
   const targeted = useMemo(() => {
     const m = new Map<string, Goal[]>();
@@ -134,6 +140,9 @@ export function TargetPicker({
     const base = openPath.slice(0, depth);
     setPath([...base, node.id, ...(node.children ? firstLeaf(node.children) : [])]);
   }
+
+  const isSelected = (c: TargetSubject) =>
+    !!selected && subjectKey(c) === subjectKey(selected) && (c.className ?? null) === (selected.className ?? null);
 
   const term = q.trim().toLowerCase();
   const shown = (() => {
@@ -247,7 +256,17 @@ export function TargetPicker({
         </label>
       </div>
 
-      <div className={`grid min-h-0 flex-1 gap-4 ${!term && tab !== "targeted" ? "sm:grid-cols-[14rem_minmax(0,1fr)]" : ""}`}>
+      <div
+        className={`grid min-h-0 flex-1 gap-4 ${
+          !term && tab !== "targeted"
+            ? aside
+              ? "md:grid-cols-[13rem_minmax(0,1fr)_22rem]"
+              : "sm:grid-cols-[14rem_minmax(0,1fr)]"
+            : aside
+              ? "md:grid-cols-[minmax(0,1fr)_22rem]"
+              : ""
+        }`}
+      >
         {!term && tab !== "targeted" ? (
           <nav aria-label="Categories" className="min-h-0 overflow-y-auto pr-1">
             {rail(tree, 0)}
@@ -257,15 +276,20 @@ export function TargetPicker({
           <p className="mb-2 text-[13px] text-fg-muted">
             {heading} <span className="text-fg-subtle">· {shown.length}</span>
           </p>
-          <ul className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-1.5 overflow-y-auto pr-1 md:grid-cols-2">
-            {shown.length === 0 ? <li className="py-6 text-center text-sm text-fg-muted md:col-span-2">Nothing matches.</li> : null}
+          <ul className={`grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-1.5 overflow-y-auto pr-1 ${aside ? "xl:grid-cols-2" : "md:grid-cols-2"}`}>
+            {shown.length === 0 ? <li className="col-span-full py-6 text-center text-sm text-fg-muted">Nothing matches.</li> : null}
             {shown.map((c) => (
               <li key={`${c.domain}-${c.className ?? ""}-${c.name}`}>
                 <button
                   type="button"
                   onClick={() => onPick(c)}
+                  aria-current={isSelected(c) ? "true" : undefined}
                   className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left hover:border-border-strong hover:bg-surface-2 ${
-                    targeted.has(subjectKey(c)) ? "border-accent/35 bg-accent-soft/40" : "border-border bg-surface"
+                    isSelected(c)
+                      ? "border-accent bg-accent-soft ring-1 ring-inset ring-accent/40"
+                      : targeted.has(subjectKey(c))
+                        ? "border-accent/35 bg-accent-soft/40"
+                        : "border-border bg-surface"
                   }`}
                 >
                   {c.className ? (
@@ -281,6 +305,9 @@ export function TargetPicker({
             ))}
           </ul>
         </div>
+        {aside ? (
+          <aside className="min-h-0 border-t border-border pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">{aside}</aside>
+        ) : null}
       </div>
     </div>
   );
