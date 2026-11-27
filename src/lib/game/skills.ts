@@ -51,3 +51,6 @@ export const SKILL_WINDOW_LINE_ORDER: Record<string, readonly string[]> = {
   "Alliance War": ["Assault", "Support"],
   Craft: ["Blacksmithing", "Clothing", "Woodworking", "Jewelry Crafting", "Provisioning", "Enchanting", "Alchemy"],
 };
+
+/** Live ESO cap for active and ultimate morph-slot ranks (the game's MAX_RANKS_PER_ABILITY). */
+export const MAX_ABILITY_RANK = 4;

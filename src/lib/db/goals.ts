@@ -5,10 +5,10 @@ import { CLASSES } from "../game/classes";
 import type { Goal, GoalDomain, GoalScope, GoalTier } from "../goals/types";
 import { TIERS } from "../goals/types";
 import { normalizeLineName } from "../goals/progress";
-import { isExcludedLineName } from "../catalog/excluded";
-import { isClassMasteryLineName } from "../skills/class-mastery";
-import { skillLineCap } from "../skills/line-cap";
-import { MAX_ABILITY_RANK } from "../skills/ability";
+import { isExcludedLineName } from "../game/vengeance";
+import { isClassMasteryLineName } from "../game/class-mastery";
+import { skillLineCap } from "../game/skill-caps";
+import { MAX_ABILITY_RANK } from "../game/skills";
 
 export function ensureGoalTables() {
   getDb().exec(`

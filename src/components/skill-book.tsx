@@ -10,7 +10,7 @@ import { EsoText } from "@/components/eso-text";
 import { SkillHover } from "@/components/skill-hover";
 import type { AbilitySlotView, AbilityView, SkillCategoryView, SkillLineView } from "@/lib/skills/present";
 import { romanRank } from "@/lib/skills/ability";
-import { CLASS_MASTERY_POINTS } from "@/lib/skills/class-mastery";
+import { CLASS_MASTERY_POINTS } from "@/lib/game/class-mastery";
 import type { CatalogSource } from "@/lib/catalog/schema";
 import { classIcon } from "@/lib/classes";
 import { CLASSES } from "@/lib/game/classes";

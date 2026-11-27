@@ -32,21 +32,3 @@ export function isMythicCategory(category: string | null | undefined): boolean {
 export function isMythicSet(set: { category?: string | null; subcategory?: string | null }): boolean {
   return isMythicCategory(set.category) || isMythicCategory(set.subcategory);
 }
-
-export function mythicAnchor(setId: number): string {
-  return `mythic-${setId}`;
-}
-
-/** Where a mythic click shows the leads that are still missing. */
-export function mythicPageHref(setId: number): string {
-  return `/stickerbook#${mythicAnchor(setId)}`;
-}
-
-export function hrefForMythicOrSet(
-  mythics: readonly MythicIdentity[],
-  opts: { setId?: number | null; name?: string | null },
-  encyclopediaHref: string,
-): string {
-  const mythic = findMythic(mythics, opts);
-  return mythic ? mythicPageHref(mythic.setId) : encyclopediaHref;
-}

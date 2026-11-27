@@ -9,13 +9,13 @@ import {
   getOutfitStyles,
   getStickerbookStats,
 } from "../db/queries";
-import { ACCOUNT_CURRENCIES, canonicalizeCurrencies } from "../currencies";
+import { ACCOUNT_CURRENCIES, canonicalizeCurrencies } from "../game/currencies";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "../snapshot/roster";
 import { presentOutfitStyles, presentResearch } from "../knowledge/present";
-import { currentUnix, type EsoRegion } from "../dailies/day";
-import { communityPledgesForUnix } from "../dailies/pledges";
+import { currentUnix, type EsoRegion } from "../game/daily-reset";
+import { communityPledgesForUnix } from "../game/pledges";
 import { presentAccountDailies, summarizeDailies } from "../dailies/present";
-import { PITHKA_TABS, allTrackedIds } from "../achievements/pithka";
+import { PITHKA_TABS, allTrackedIds } from "../game/pithka";
 import type { Character } from "../snapshot/schema";
 import type { AccountMeta as Account } from "../db/queries";
 import { compareLines, craftingCharacters, dailiesCharacters, lightSubjects, roster } from "./data";

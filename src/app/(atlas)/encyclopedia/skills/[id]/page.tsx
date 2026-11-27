@@ -13,8 +13,8 @@ import { SkillLineTabs, type SkillLineTabId } from "@/components/skill-line-tabs
 import { SourceBadge } from "@/components/source-badge";
 import { plannerLineIcon } from "@/lib/icons/planner-icons";
 import { resolveSkillIcon, skillIconByName } from "@/lib/icons/skill-icons";
-import { CLASS_MASTERY_POINTS, isClassMasteryLineName } from "@/lib/skills/class-mastery";
-import { skillLineCap } from "@/lib/skills/line-cap";
+import { CLASS_MASTERY_POINTS, isClassMasteryLineName } from "@/lib/game/class-mastery";
+import { skillLineCap } from "@/lib/game/skill-caps";
 import { skillLineRoster } from "@/lib/skills/line-roster";
 
 export const dynamic = "force-dynamic";

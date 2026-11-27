@@ -7,15 +7,15 @@ import { Card, PageScroll, StickyMenu } from "@/components/ui";
 import { GameIcon } from "@/components/game-icon";
 import type { PresentedOutfitStyle, PresentedOutfitStyles } from "@/lib/knowledge/present";
 import {
-  ARMOR_SLOTS,
+  OUTFIT_SLOTS,
   WEAPON_KINDS,
-  WEIGHTS,
+  OUTFIT_WEIGHTS,
   outfitFacets,
   type ArmorSlot,
   type OutfitFacets,
   type OutfitWeight,
   type WeaponKind,
-} from "@/lib/knowledge/outfit-facets";
+} from "@/lib/game/outfits";
 
 type UnlockFilter = "all" | "unlocked" | "locked";
 type Kind = "armor" | "weapon";
@@ -152,7 +152,7 @@ export function OutfitStylesGrid({
             <button type="button" aria-pressed={!weight} onClick={() => setWeight(null)} className={pill(!weight)}>
               Any
             </button>
-            {WEIGHTS.map((w) => {
+            {OUTFIT_WEIGHTS.map((w) => {
               const n = tally(armor.filter((e) => passSlot(e) && e.facets.kind === "armor" && e.facets.weight === w.id));
               return (
                 <button
@@ -173,7 +173,7 @@ export function OutfitStylesGrid({
             <button type="button" aria-pressed={!slot} onClick={() => setSlot(null)} className={pill(!slot)}>
               Any
             </button>
-            {ARMOR_SLOTS.map((s) => {
+            {OUTFIT_SLOTS.map((s) => {
               const n = tally(armor.filter((e) => passWeight(e) && e.facets.kind === "armor" && e.facets.slot === s.id));
               return (
                 <button

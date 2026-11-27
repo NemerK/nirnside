@@ -8,7 +8,7 @@ import { profileMedia } from "@/lib/db/profile";
 import { getPartyProfile } from "@/lib/db/party-profile";
 import { profileImageUrl } from "@/lib/profile/media";
 import { livingHome } from "@/lib/home/living";
-import { skillLineCap } from "@/lib/skills/line-cap";
+import { skillLineCap } from "@/lib/game/skill-caps";
 import { classColor, classIcon } from "@/lib/classes";
 import { ALLIANCE_ACCENT, formatNumber, timeAgo } from "@/lib/format";
 import { roster } from "@/lib/party/data";

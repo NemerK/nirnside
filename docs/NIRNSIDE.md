@@ -144,6 +144,9 @@ The full map, with sources, is in `docs/game-model.md`. In short:
 | Mundus, food, companions | `mundus.ts`, `food.ts`, `companions.ts` | Blessings with the game's own text, buffs, companion rules |
 | Buffs, riding | `buffs.ts`, `riding.ts` | Lasting buffs and riding lessons, counted down from the save |
 | Where items belong | `item-category.ts` | The game's inventory tabs; `itemPlace` files every item |
+| Skills | `skills.ts`, `skill-caps.ts`, `class-mastery.ts`, `vengeance.ts` | Categories and order, rank caps, Class Mastery, lines left out |
+| Dailies | `daily-reset.ts`, `pledges.ts`, `pledge-objectives.ts`, `world-bosses.ts`, `zone-dailies.ts` | The reset clock, pledges, world bosses, zone dailies |
+| Account | `currencies.ts`, `pithka.ts`, `mythics.ts`, `outfits.ts`, `transmute.ts` | Wallet, content achievements, mythics, outfit styles, crystal costs |
 | Addons | `addons.ts`, `setups.ts` | What addons are, sources and freshness, Wizard's Wardrobe setups |
 | Everything at once | `understand.ts` | `readCharacter(c, classLines(), abilityLines())` |
 | The item index | `item-index.ts`, `db/game-items.ts` | Every item the account holds, by item id, in its place; set profiles |

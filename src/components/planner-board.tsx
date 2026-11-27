@@ -18,7 +18,7 @@ import { activeAbilityRowsOnPlannerLine, groupPlannerLines, plannerClassScopeAll
 import { groupPlacedGoals } from "@/lib/planner/goal-groups";
 import { overlapNotices, type OverlapNotice } from "@/lib/goals/overlap";
 import { GroupedTargets } from "./goal-groups";
-import { isExcludedSkillLine } from "@/lib/catalog/excluded";
+import { isExcludedSkillLine } from "@/lib/game/vengeance";
 
 /**
  * The planner starts with the kind of thing you are planning. Skills and abilities

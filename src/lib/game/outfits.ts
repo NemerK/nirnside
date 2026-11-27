@@ -13,11 +13,12 @@ import {
   WEIGHT_LABEL,
   parseWornSlot,
   pieceKindFromName,
+  pieceSlotFromText,
   weaponFromText,
   type ArmorSlot,
   type Weapon,
   type Weight,
-} from "../game/equipment";
+} from "./equipment";
 
 export type { ArmorSlot };
 export type OutfitWeight = Weight | "special";
@@ -28,12 +29,12 @@ export type OutfitFacets =
   | { kind: "armor"; weight: OutfitWeight; slot: ArmorSlot | null }
   | { kind: "weapon"; weapon: WeaponKind | null };
 
-export const WEIGHTS: { id: OutfitWeight; label: string }[] = [
+export const OUTFIT_WEIGHTS: { id: OutfitWeight; label: string }[] = [
   ...GAME_WEIGHTS.map((id) => ({ id, label: WEIGHT_LABEL[id] })),
   { id: "special", label: "Special" },
 ];
 
-export const ARMOR_SLOTS: { id: ArmorSlot; label: string }[] = GAME_SLOTS.map((id) => ({ id, label: SLOT_LABEL[id] }));
+export const OUTFIT_SLOTS: { id: ArmorSlot; label: string }[] = GAME_SLOTS.map((id) => ({ id, label: SLOT_LABEL[id] }));
 
 /** The outfit station groups the three destruction staves as one weapon type. */
 export const WEAPON_KINDS: { id: WeaponKind; label: string }[] = [
@@ -46,16 +47,11 @@ export const WEAPON_KINDS: { id: WeaponKind; label: string }[] = [
   { id: "shield", label: "Shield" },
 ];
 
-// Costume-like pieces have a slot but no weight; these words name the slot only.
-const SLOT_ONLY: [RegExp, ArmorSlot][] = [
-  [/\b(hood|mask|cowl|crown|circlet|headdress|cap|visor)\b/, "head"],
-  [/\b(mantle|spaulders?)\b/, "shoulders"],
-  [/\b(tunic|coat|vest)\b/, "chest"],
-  [/\b(wraps|handwraps)\b/, "hands"],
-  [/\b(cinch|tassets)\b/, "waist"],
-  [/\b(pants|trousers|leggings)\b/, "legs"],
-  [/\b(sandals|treaders)\b/, "feet"],
-];
+// Costume-like pieces have a slot but no weight: the model's slot-only words (equipment.ts) name it.
+function slotOnly(name: string): ArmorSlot | null {
+  const piece = pieceSlotFromText(name);
+  return piece?.kind === "armor" ? piece.slot : null;
+}
 
 function toOutfitWeapon(w: Weapon): WeaponKind {
   return w === "inferno" || w === "ice" || w === "lightning" ? "destruction" : w;
@@ -87,6 +83,6 @@ export function outfitFacets(
   const slot =
     parseWornSlot(addonSlot) && (GAME_SLOTS as readonly string[]).includes(parseWornSlot(addonSlot)!)
       ? (parseWornSlot(addonSlot) as ArmorSlot)
-      : (armorByName?.slot ?? SLOT_ONLY.find(([re]) => re.test(name))?.[1] ?? (/\b(hat|head)/.test(cat) ? "head" : null));
+      : (armorByName?.slot ?? slotOnly(name) ?? (/\b(hat|head)/.test(cat) ? "head" : null));
   return { kind: "armor", weight, slot };
 }

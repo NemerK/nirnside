@@ -1,4 +1,4 @@
-import { classMasteryPassivesFor, isClassMasteryLineName } from "../skills/class-mastery";
+import { classMasteryPassivesFor, isClassMasteryLineName } from "../game/class-mastery";
 
 /**
  * How the planner nests skill lines: a category, and for Class a class name

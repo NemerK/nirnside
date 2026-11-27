@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ChampionStar } from "../snapshot/schema";
-import { alignChampionDisciplines, groupChampionStars, type ChampionStarView } from "./champion";
+import { alignChampionDisciplines, groupChampionStars, type ChampionStarView } from "./champion-bar";
 
 function star(partial: Partial<ChampionStarView> & Pick<ChampionStarView, "name">): ChampionStarView {
   return { points: 50, slotted: false, ...partial };

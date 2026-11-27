@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ALLIANCES } from "../game/character";
-import { coerceCompletedAchievementIds } from "../achievements/pithka";
+import { coerceCompletedAchievementIds } from "../game/pithka";
 
 /**
  * The Nirnside snapshot contract.

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { esoDayKey, formatRemainingSeconds, nextEsoResetAt, resetAtForDayKey } from "./day";
+import { esoDayKey, formatRemainingSeconds, nextEsoResetAt, resetAtForDayKey } from "./daily-reset";
 
 describe("ESO daily reset clock", () => {
   it("rolls the EU day at 03:00 UTC and the NA day at 10:00 UTC", () => {

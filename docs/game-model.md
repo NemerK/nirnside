@@ -30,6 +30,14 @@ The model lives in `src/lib/game/`:
 | `food.ts` | One food or drink buff at a time; food raises maximums, drink recovery; recipe families and grades |
 | `companions.ts` | Companion levels (20), bar, ultimate at 20, account-wide progress, class themes, armor lines needing five pieces, rapport |
 | `understand.ts` | `readCharacter`: one character read through every system at once |
+| `skill-caps.ts`, `class-mastery.ts`, `vengeance.ts` | Each skill line's rank cap (never a guessed 50), Class Mastery's rules, and the Vengeance lines Nirnside leaves out |
+| `daily-reset.ts` | The megaserver reset clock (EU 03:00, NA 10:00 UTC; weekly on Tuesday) |
+| `pledges.ts`, `pledge-objectives.ts`, `world-bosses.ts`, `zone-dailies.ts` | Undaunted givers and the community rotation, how a pledge journal shows its difficulty, world-boss and zone dailies by quest id |
+| `currencies.ts` | The wallet: which currencies are character-bound and which account-wide |
+| `pithka.ts` | Trial, dungeon and arena achievements by id, as Pithka's tracker lists them |
+| `champion-bar.ts` | The Champion bar: equipped, off-bar and passive stars per constellation |
+| `outfits.ts`, `mythics.ts` | Outfit styles by weight and slot as the outfit station filters them; mythics by name |
+| `transmute.ts` | Transmute crystal costs: reconstruction and trait change |
 | `item-index.ts` | Every item the account holds, plus the set collection's pieces, filed in its place (below) |
 
 ## Where the facts come from
@@ -278,6 +286,12 @@ player's own files.
 
 Every page and module reads game facts from here. Presentation stays
 outside, keyed by the model's own values:
+
+Game rules and game content live only in `src/lib/game/`. Modules outside
+it present or store; they don't decide what the game is. Presentation of a
+game fact (a link, a label, a color) stays outside, keyed by the model:
+`collections/mythic-links.ts` links a mythic, and `db/vengeance-cleanup.ts`
+applies the Vengeance rule to stored rows.
 
 - `lib/classes.ts`: each class's crest and color, keyed by `CLASSES`;
 - `lib/format.ts`: each alliance's color, keyed by `ALLIANCES`

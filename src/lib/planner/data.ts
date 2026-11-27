@@ -4,7 +4,7 @@ import { getCharacters, getCharactersFull } from "../db/queries";
 import { liveCharacters } from "../snapshot/roster";
 import { listRoles, listAssignments } from "../db/roles";
 import { getSkillLines, getScripts, getSkills } from "../db/catalog-queries";
-import { isExcludedSkillLine } from "../catalog/excluded";
+import { isExcludedSkillLine } from "../game/vengeance";
 import {
   goalAppliesTo,
   goalProgress,
@@ -20,7 +20,7 @@ import { CLASSES } from "../game/classes";
 import { plannerAbilityIcon, plannerLineIcon, plannerScriptIcon } from "../icons/planner-icons";
 import { baseAndMorphsFromSlots, omitAbilitiesListedAsMorphs, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
 export type { PlannerAbilityRow };
-import { skillLineCap } from "../skills/line-cap";
+import { skillLineCap } from "../game/skill-caps";
 import type { AbilityMeta, GoalSubject, LineMeta, SkillLineChoice } from "../goals/types";
 
 /**

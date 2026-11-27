@@ -1,5 +1,5 @@
 import catalog from "../../../data/catalog/skills.json";
-import { isExcludedLineName } from "../catalog/excluded";
+import { isExcludedLineName } from "./vengeance";
 
 /**
  * Live rank cap for a skill line.

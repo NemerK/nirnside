@@ -9,7 +9,7 @@ import {
   allTrackedIds,
   type PithkaInstance,
   type PithkaTab,
-} from "@/lib/achievements/pithka";
+} from "@/lib/game/pithka";
 import { sortRows } from "@/lib/ui/column-sort";
 
 type Filter = "all" | "done" | "todo";

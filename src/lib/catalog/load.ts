@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { importCatalogBundle } from "./import";
-import { deleteExcludedCatalogAndGoals } from "./excluded";
+import { deleteExcludedCatalogAndGoals } from "../db/vengeance-cleanup";
 import { getDb } from "../db";
 import { parseLua, type LuaValue } from "../snapshot/lua-parser";
 

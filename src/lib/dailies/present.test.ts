@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { Character, CharacterDailies } from "../snapshot/schema";
-import { resetAtForDayKey } from "./day";
+import { resetAtForDayKey } from "../game/daily-reset";
 import { isDailyScanStale, presentCharacterDailies, zoneSlotKey } from "./present";
 
 function char(dailies: CharacterDailies | null, lastSeen: number | null = 1): Character {

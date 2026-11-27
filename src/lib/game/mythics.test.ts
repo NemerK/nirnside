@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { findMythic, hrefForMythicOrSet, isMythicCategory, isMythicSet, mythicNameKey } from "./mythic-match";
+import { findMythic, isMythicCategory, isMythicSet, mythicNameKey } from "./mythics";
+import { hrefForMythicOrSet } from "../collections/mythic-links";
 
 const mythics = [
   { setId: 574, name: "Ring of the Pale Order" },
