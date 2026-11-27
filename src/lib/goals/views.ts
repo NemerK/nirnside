@@ -10,6 +10,10 @@ export interface GoalMarkView {
   state: "done" | "short" | "undiscovered" | "unknown" | "notapplicable";
   label: string;
   reason?: string;
+  /** Current rank, when known. Skill lines count 1–50; abilities 1–4. */
+  rank?: number;
+  /** The rank this target asks for next: mandatory first, then extra. */
+  need?: number;
 }
 
 /** One character's row in a goal matrix. */

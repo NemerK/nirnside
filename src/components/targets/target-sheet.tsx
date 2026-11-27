@@ -52,16 +52,41 @@ function audienceLabel(a: Audience, people: TargetPerson[], roles: { id: string;
   return roles.find((r) => r.id === a.scopeKey)?.name ?? "A role";
 }
 
-function Picker({ choices, onPick }: { choices: TargetSubject[]; onPick: (s: TargetSubject) => void }) {
+type PickerTab = GoalDomain | "targeted";
+
+const keyOf = (c: TargetSubject) => `${c.domain}|${c.name.trim().toLowerCase()}`;
+
+function Picker({
+  choices,
+  goals,
+  onPick,
+}: {
+  choices: TargetSubject[];
+  goals: Goal[];
+  onPick: (s: TargetSubject) => void;
+}) {
   const [q, setQ] = useState("");
-  const [domain, setDomain] = useState<GoalDomain>("skillline");
+  // What already has a target, so changing or removing one is a click away.
+  const targeted = useMemo(() => {
+    const m = new Map<string, Goal[]>();
+    for (const g of goals) {
+      const k = `${g.domain}|${g.target.trim().toLowerCase()}`;
+      m.set(k, [...(m.get(k) ?? []), g]);
+    }
+    return m;
+  }, [goals]);
+  const [domain, setDomain] = useState<PickerTab>(() => (goals.length > 0 ? "targeted" : "skillline"));
+  const tabs: [PickerTab, string][] = [
+    ...(goals.length > 0 ? ([["targeted", "Your targets"]] as [PickerTab, string][]) : []),
+    ...(Object.keys(DOMAIN_WORD) as GoalDomain[]).map((d) => [d, DOMAIN_WORD[d]] as [PickerTab, string]),
+  ];
   const list = useMemo(() => {
     const term = q.trim().toLowerCase();
     return choices
-      .filter((c) => (term ? true : c.domain === domain))
+      .filter((c) => (term ? true : domain === "targeted" ? targeted.has(keyOf(c)) : c.domain === domain))
       .filter((c) => !term || c.name.toLowerCase().includes(term) || c.context.toLowerCase().includes(term))
       .slice(0, 80);
-  }, [choices, q, domain]);
+  }, [choices, q, domain, targeted]);
   return (
     <div>
       <label className="relative mb-3 block">
@@ -77,7 +102,7 @@ function Picker({ choices, onPick }: { choices: TargetSubject[]; onPick: (s: Tar
       </label>
       {!q.trim() ? (
         <div className="mb-3 flex gap-1">
-          {(Object.keys(DOMAIN_WORD) as GoalDomain[]).map((d) => (
+          {tabs.map(([d, word]) => (
             <button
               key={d}
               type="button"
@@ -87,7 +112,7 @@ function Picker({ choices, onPick }: { choices: TargetSubject[]; onPick: (s: Tar
                 domain === d ? "bg-accent-soft text-fg ring-1 ring-inset ring-accent/50" : "text-fg-muted hover:text-fg"
               }`}
             >
-              {DOMAIN_WORD[d]}
+              {word}
             </button>
           ))}
         </div>
@@ -111,6 +136,11 @@ function Picker({ choices, onPick }: { choices: TargetSubject[]; onPick: (s: Tar
                 <span className="h-2 w-2 shrink-0" aria-hidden />
               )}
               <span className="min-w-0 flex-1 truncate text-sm text-fg">{c.name}</span>
+              {targeted.has(keyOf(c)) ? (
+                <span className="shrink-0 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] text-fg-muted">
+                  {targeted.get(keyOf(c))!.length === 1 ? "Targeted" : `${targeted.get(keyOf(c))!.length} targets`}
+                </span>
+              ) : null}
               <span className="shrink-0 text-[12px] text-fg-subtle">{c.context}</span>
             </button>
           </li>
@@ -258,9 +288,10 @@ export function TargetSheet({
 
   if (!subject) {
     return (
-      <Sheet title="New target" subtitle="Pick what to work towards." onClose={onClose}>
+      <Sheet title="Edit targets" subtitle="Pick something to target, or one you already have to change or remove." onClose={onClose}>
         <Picker
           choices={choices}
+          goals={goals}
           onPick={(s) => {
             setSubject(s);
             load(audience, s);

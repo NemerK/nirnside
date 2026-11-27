@@ -75,7 +75,9 @@ function todayState(status: DailyCell["status"]): TodayRow["state"] {
 function presentEquipped(c: Character) {
   const hover = safe(() => loadSetHover().briefs, []);
   const brief = (name: string | null) => (name ? hover.find((b) => b.name.toLowerCase() === name.toLowerCase()) : undefined);
-  const isWeapon = (e: Character["equipped"][number]) => e.bar != null || /hand|weapon|poison/i.test(e.slot);
+  // "Hands" is armor: only a bar, or a weapon-slot name, makes a piece a weapon.
+  const isWeapon = (e: Character["equipped"][number]) =>
+    e.bar != null || /main.?hand|off.?hand|two.?hand|weapon|poison/i.test(e.slot);
   const body = c.equipped.filter((e) => !isWeapon(e));
   const front = c.equipped.filter((e) => isWeapon(e) && e.bar !== "back");
   const back = c.equipped.filter((e) => e.bar === "back");
