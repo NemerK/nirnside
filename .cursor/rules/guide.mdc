@@ -1,0 +1,14 @@
+---
+description: How Nirnside works and how to change it (data flow, game model, principles, workflow). ALWAYS read docs/NIRNSIDE.md before a change.
+globs:
+alwaysApply: true
+---
+
+# Read the guide first
+
+Before changing Nirnside, read `docs/NIRNSIDE.md` (how data flows, where
+it is stored, the principles, the game model, how to add knowledge, the
+release flow). Game rules and facts live once, in `src/lib/game/`
+(`docs/game-model.md` maps them): look there before writing any list or
+rule about the game, add missing ones there with a source and a test, and
+move any copy you find onto the model.
