@@ -196,6 +196,11 @@ You can still import/watch manually (`npm run import -- <file>`,
 
 ## Quick start (developers)
 
+Start with **[docs/NIRNSIDE.md](docs/NIRNSIDE.md)**: how data gets from the game
+into Nirnside, where it is stored, the principles, the game model
+([docs/game-model.md](docs/game-model.md)) and the build and release flow.
+
+
 ```bash
 npm install
 npm run seed      # loads data/sample/Nirnside.lua into the local DB
