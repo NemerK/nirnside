@@ -1,7 +1,8 @@
+// The account-wide and across-character sections of Party, shared by the
+// Account pages (inventory, sets, styles, houses, achievements) and the
+// Across characters pages (dailies, crafting).
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { PageHead } from "@/components/party/page-head";
-import { VAULT_SECTIONS, type VaultSection } from "@/components/party/vault-nav";
+import type { VaultSection } from "@/components/party/areas";
 import { Empty } from "@/components/party/module";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryCategories } from "@/components/inventory-categories";
@@ -39,7 +40,6 @@ import { knownMotifKeys, presentMotifs, presentOutfitStyles, presentRecipeLists,
 import { craftingCharacters, dailiesCharacters, roster } from "@/lib/party/data";
 import { whoCanCraft } from "@/lib/party/craft";
 
-export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 100;
 
@@ -74,7 +74,7 @@ function withParams(path: string, sp: Params, patch: Record<string, string | und
 
 /* ---------------- Inventory: filtered on the server, sent a page at a time ---------------- */
 
-function InventorySection({ sp }: { sp: Params }) {
+export function InventorySection({ sp }: { sp: Params }) {
   if (str(sp.view) === "currency") {
     const characters = roster();
     const account = safe(() => getAccount(), null);
@@ -82,7 +82,7 @@ function InventorySection({ sp }: { sp: Params }) {
     return (
       <>
         <p className="mb-4 text-[14px]">
-          <Link href="/party/vault/inventory" className="text-accent hover:underline">
+          <Link href="/party/account/inventory" className="text-accent hover:underline">
             Back to items
           </Link>
         </p>
@@ -147,7 +147,7 @@ function InventorySection({ sp }: { sp: Params }) {
           {formatNumber(groups.length)} kinds of item · {formatNumber(totalCount)} items in {formatNumber(items.length)} stacks
           {pages > 1 ? ` · showing ${(current - 1) * PAGE_SIZE + 1}–${Math.min(current * PAGE_SIZE, groups.length)}` : ""}
         </span>
-        <Link href="/party/vault/inventory?view=currency" className="text-accent hover:underline">
+        <Link href="/party/account/inventory?view=currency" className="text-accent hover:underline">
           Currencies per character
         </Link>
       </div>
@@ -159,7 +159,7 @@ function InventorySection({ sp }: { sp: Params }) {
       {pages > 1 ? (
         <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center gap-2 text-[14px]">
           {current > 1 ? (
-            <Link href={withParams("/party/vault/inventory", sp, { page: String(current - 1) })} className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong">
+            <Link href={withParams("/party/account/inventory", sp, { page: String(current - 1) })} className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong">
               Previous
             </Link>
           ) : null}
@@ -167,7 +167,7 @@ function InventorySection({ sp }: { sp: Params }) {
             Page {current} of {pages}
           </span>
           {current < pages ? (
-            <Link href={withParams("/party/vault/inventory", sp, { page: String(current + 1) })} className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong">
+            <Link href={withParams("/party/account/inventory", sp, { page: String(current + 1) })} className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong">
               Next
             </Link>
           ) : null}
@@ -179,7 +179,7 @@ function InventorySection({ sp }: { sp: Params }) {
 
 /* ---------------- Set collection: one category at a time ---------------- */
 
-function SetsSection({ sp }: { sp: Params }) {
+export function SetsSection({ sp }: { sp: Params }) {
   const cats = safe(
     () =>
       getDb()
@@ -207,7 +207,7 @@ function SetsSection({ sp }: { sp: Params }) {
         {cats.map((c) => (
           <Link
             key={c.category}
-            href={`/party/vault/sets?cat=${encodeURIComponent(c.category)}`}
+            href={`/party/account/sets?cat=${encodeURIComponent(c.category)}`}
             aria-current={c.category === chosen ? "page" : undefined}
             className={`shrink-0 rounded-xl border px-3 py-2 text-[13px] ${
               c.category === chosen ? "border-accent bg-accent-soft text-fg" : "border-border text-fg-muted hover:text-fg"
@@ -225,7 +225,7 @@ function SetsSection({ sp }: { sp: Params }) {
           {subs.map((x) => (
             <Link
               key={x}
-              href={`/party/vault/sets?cat=${encodeURIComponent(chosen)}&sub=${encodeURIComponent(x)}`}
+              href={`/party/account/sets?cat=${encodeURIComponent(chosen)}&sub=${encodeURIComponent(x)}`}
               aria-current={x === sub ? "page" : undefined}
               className={`rounded-lg px-2.5 py-1 text-[13px] ${x === sub ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg"}`}
             >
@@ -244,7 +244,7 @@ function SetsSection({ sp }: { sp: Params }) {
         <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center gap-2 text-[14px]">
           {setPage > 1 ? (
             <Link
-              href={withParams("/party/vault/sets", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage - 1) })}
+              href={withParams("/party/account/sets", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage - 1) })}
               className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong"
             >
               Previous
@@ -255,7 +255,7 @@ function SetsSection({ sp }: { sp: Params }) {
           </span>
           {setPage < setPages ? (
             <Link
-              href={withParams("/party/vault/sets", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage + 1) })}
+              href={withParams("/party/account/sets", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage + 1) })}
               className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong"
             >
               Next
@@ -269,7 +269,7 @@ function SetsSection({ sp }: { sp: Params }) {
 
 /* ---------------- Crafting: account totals per character, and who can craft a set ---------------- */
 
-function CraftingSection({ sp }: { sp: Params }) {
+export function CraftingSection({ sp }: { sp: Params }) {
   const characters = craftingCharacters().filter((c) => c.lastSeen != null);
   const crafted = safe(() => getSets({ category: "Crafted" }), []).map(({ entry }) => entry);
   const chosen = crafted.find((s) => s.name === str(sp.set)) ?? crafted[0] ?? null;
@@ -412,7 +412,7 @@ function CraftingSection({ sp }: { sp: Params }) {
 
 /* ---------------- The rest reuse the existing boards ---------------- */
 
-function DailiesSection() {
+export function DailiesSection() {
   const account = safe(() => getAccount(), null);
   const region: EsoRegion = account?.region === "NA" ? "NA" : "EU";
   const now = currentUnix();
@@ -429,7 +429,7 @@ function DailiesSection() {
   );
 }
 
-function StylesSection({ sp }: { sp: Params }) {
+export function StylesSection({ sp }: { sp: Params }) {
   const motifKeys = new Set<string>();
   for (const c of craftingCharacters()) for (const key of knownMotifKeys(c.motifs)) motifKeys.add(key);
   return (
@@ -442,7 +442,7 @@ function StylesSection({ sp }: { sp: Params }) {
   );
 }
 
-function HousesSection() {
+export function HousesSection() {
   const houses = safe(() => getAccount()?.houses ?? [], []);
   if (houses.length === 0) return <Empty>No houses owned. House banks are never collected.</Empty>;
   return (
@@ -463,7 +463,7 @@ function HousesSection() {
   );
 }
 
-const TITLES: Record<Exclude<VaultSection, "">, { title: string; lead: string }> = {
+export const SECTION_TITLES: Record<Exclude<VaultSection, "">, { title: string; lead: string }> = {
   inventory: { title: "Inventory", lead: "Every bag on the account: worn, backpacks, bank, subscriber bank and craft bag." },
   sets: { title: "Set collection", lead: "Collected and missing set pieces, one category at a time." },
   achievements: { title: "Achievements", lead: "Trial, dungeon and arena clears, as the game reports them." },
@@ -473,29 +473,7 @@ const TITLES: Record<Exclude<VaultSection, "">, { title: string; lead: string }>
   houses: { title: "Houses", lead: "Houses this account owns. House banks are never collected." },
 };
 
-export default async function VaultSectionPage({ params, searchParams }: PageProps<"/party/vault/[section]">) {
-  const { section } = await params;
-  const sp = (await searchParams) as Params;
-  if (!VAULT_SECTIONS.some((s) => s.id === section && s.id !== "")) notFound();
-  const id = section as Exclude<VaultSection, "">;
-  return (
-    <div className="mx-auto w-full max-w-[1320px]">
-      <PageHead title={TITLES[id].title} lead={TITLES[id].lead} />
-      {id === "inventory" ? (
-        <InventorySection sp={sp} />
-      ) : id === "sets" ? (
-        <SetsSection sp={sp} />
-      ) : id === "achievements" ? (
-        <AchievementsBoard completedIds={safe(() => getCompletedAchievementIds(), [])} />
-      ) : id === "dailies" ? (
-        <DailiesSection />
-      ) : id === "crafting" ? (
-        <CraftingSection sp={sp} />
-      ) : id === "styles" ? (
-        <StylesSection sp={sp} />
-      ) : (
-        <HousesSection />
-      )}
-    </div>
-  );
+
+export function AchievementsSection() {
+  return <AchievementsBoard completedIds={safe(() => getCompletedAchievementIds(), [])} />;
 }

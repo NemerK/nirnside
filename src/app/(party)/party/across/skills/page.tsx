@@ -16,7 +16,7 @@ function safe<T>(fn: () => T, fallback: T): T {
 }
 
 /** Every skill line for every character, with targets drawn on top. */
-export default function ComparePage() {
+export default function AcrossSkillsPage() {
   const characters = roster();
   const subjects = lightSubjects();
   const { lines, lineIndex } = compareLines(characters);
@@ -28,8 +28,8 @@ export default function ComparePage() {
     // The grid scrolls inside the screen, so the line and character names stay in view.
     <div className="mx-auto flex w-full max-w-[1600px] flex-col" style={{ height: "calc(100dvh - 7.5rem)" }}>
       <PageHead
-        title="Compare"
-        lead="Every skill line for every character."
+        title="Skill lines"
+        lead="Every skill line for every character. Click a cell or a line to set a target."
       />
       {subjects.length === 0 ? (
         <p className="party-module px-6 py-10 text-center text-fg-muted">No characters yet.</p>

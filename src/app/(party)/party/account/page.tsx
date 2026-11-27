@@ -6,7 +6,9 @@ import { getAccount, getCompletedAchievementIds, getDataSource, getOutfitStyles,
 import { ACCOUNT_CURRENCIES, canonicalizeCurrencies } from "@/lib/currencies";
 import { formatNumber, locationLabel } from "@/lib/format";
 import { accountAlliancePoints, accountTelVar, goldBreakdown } from "@/lib/snapshot/roster";
-import { presentOutfitStyles, summarizeAccountKnowledge } from "@/lib/knowledge/present";
+import { presentOutfitStyles, presentResearch } from "@/lib/knowledge/present";
+import { classColor } from "@/lib/classes";
+import { timeAgo } from "@/lib/format";
 import { currentUnix, type EsoRegion } from "@/lib/dailies/day";
 import { communityPledgesForUnix } from "@/lib/dailies/pledges";
 import { presentAccountDailies, summarizeDailies } from "@/lib/dailies/present";
@@ -36,12 +38,12 @@ function Tally({ label, done, total, href }: { label: string; done: number; tota
   return <li>{href ? <Link href={href} className="block hover:opacity-90">{body}</Link> : body}</li>;
 }
 
-export default function VaultPage() {
+export default function AccountPage() {
   const account = safe(() => getAccount(), null);
   if (!account) {
     return (
       <div className="mx-auto max-w-[1320px]">
-        <PageHead title="The Vault" lead="Nothing here yet. Log a character out with the addon on to fill it." />
+        <PageHead title="Account" lead="Nothing here yet. Log a character out with the addon on to fill it." />
       </div>
     );
   }
@@ -78,47 +80,145 @@ export default function VaultPage() {
   const now = currentUnix();
   const region: EsoRegion = account.region === "NA" ? "NA" : "EU";
   const isSample = safe(() => getDataSource(), null)?.kind === "sample";
-  const daily = summarizeDailies(
-    presentAccountDailies(dailiesCharacters(), now, { treatAsFresh: isSample, todayPledges: communityPledgesForUnix(now, region), region }),
+  const dailyRows = presentAccountDailies(dailiesCharacters(), now, {
+    treatAsFresh: isSample,
+    todayPledges: communityPledgesForUnix(now, region),
+    region,
+  });
+  const dailyBy = new Map(dailyRows.map((r) => [r.characterId, summarizeDailies([r])]));
+  const researchBy = new Map(
+    craftingCharacters().map((c) => {
+      const r = presentResearch(c.research);
+      const idle = r.crafts.reduce((n, cr) => n + Math.max(0, cr.maxSlots - cr.researching), 0);
+      // Research keeps running after logout: count what has finished since.
+      const elapsed = c.lastSeen != null ? Math.max(0, now - c.lastSeen) : 0;
+      const ready = r.inProgress.filter((x) => x.remainingSeconds != null && x.remainingSeconds - elapsed <= 0).length;
+      return [c.id, { idle, ready }];
+    }),
   );
-  const knowledge = summarizeAccountKnowledge(craftingCharacters());
   const styles = presentOutfitStyles(safe(() => getOutfitStyles(), []));
   const houses = account.houses ?? [];
   const mythics = account.mythics ?? [];
 
   return (
     <div className="mx-auto w-full max-w-[1320px]">
-      <PageHead title="The Vault" lead={`What ${account.displayName} owns, shared by every character.`} />
+      <PageHead
+        title={account.displayName}
+        lead={`${account.region}${account.esoPlus ? " · ESO Plus" : ""} · ${characters.length} characters · updated ${timeAgo(account.lastSnapshot)}`}
+      />
 
-      <section className="party-module mb-5 px-6 py-5">
-        <h2 className="mb-4 font-display text-[24px] text-accent">Treasury</h2>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
+      <section className="party-module mb-4 px-5 py-4">
+        <dl className="flex flex-wrap gap-x-9 gap-y-3">
           <div>
-            <dt className="text-[12.5px] text-fg-subtle">Gold</dt>
-            <dd className="font-display text-[30px] leading-tight tabular-nums text-accent">{formatNumber(gold.total)}</dd>
+            <dt className="text-[12px] text-fg-subtle">Gold, bank and every wallet</dt>
+            <dd className="font-display text-[26px] leading-tight tabular-nums text-accent">{formatNumber(gold.total)}</dd>
             {gold.bank > 0 ? <dd className="text-[12px] text-fg-subtle">{formatNumber(gold.bank)} in the bank</dd> : null}
           </div>
           {shown.map((c) => (
             <div key={c.key}>
-              <dt className="text-[12.5px] text-fg-subtle">{c.label}</dt>
-              <dd className="font-display text-[30px] leading-tight tabular-nums text-fg">{formatNumber(wallet[c.key] ?? 0)}</dd>
+              <dt className="text-[12px] text-fg-subtle">{c.label}</dt>
+              <dd className="font-display text-[26px] leading-tight tabular-nums text-fg">{formatNumber(wallet[c.key] ?? 0)}</dd>
             </div>
           ))}
+          <div className="self-end">
+            <Link href="/party/account/inventory?view=currency" className="text-[13px] text-accent hover:underline">
+              Per character
+            </Link>
+          </div>
         </dl>
-        <Link href="/party/vault/inventory?view=currency" className="mt-4 inline-block text-[13px] text-accent hover:underline">
-          Per character
-        </Link>
       </section>
 
-      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <Module title="Inventory" href="/party/vault/inventory" hrefLabel="Search bags">
+      <section className="party-module mb-4 overflow-hidden p-0">
+        <header className="flex items-baseline justify-between gap-3 px-5 pb-2 pt-3">
+          <h2 className="font-display text-[18px] text-fg">Characters</h2>
+          <span className="flex gap-4 text-[12px]">
+            <Link href="/party/across/dailies" className="text-accent hover:underline">
+              Dailies for everyone
+            </Link>
+            <Link href="/party/across/skills" className="text-accent hover:underline">
+              Skill lines for everyone
+            </Link>
+          </span>
+        </header>
+        <div className="max-h-[26rem] overflow-auto">
+          <table className="w-full text-[13px]">
+            <thead className="sticky top-0 z-10 bg-surface text-left text-[12px] text-fg-subtle">
+              <tr className="border-b border-border">
+                <th className="px-5 py-1.5 font-normal">Character</th>
+                <th className="px-3 py-1.5 font-normal">Class</th>
+                <th className="px-3 py-1.5 text-right font-normal">CP / level</th>
+                <th className="px-3 py-1.5 text-right font-normal">Gold</th>
+                <th className="px-3 py-1.5 font-normal">Today&apos;s dailies</th>
+                <th className="px-3 py-1.5 font-normal">Research</th>
+                <th className="px-5 py-1.5 text-right font-normal">Last logout</th>
+              </tr>
+            </thead>
+            <tbody>
+              {characters.map((c) => {
+                const d = dailyBy.get(c.id);
+                const done = d ? d.randomsDone + d.writsDone + d.pledgesDone + d.worldBossesDone : 0;
+                const total = d ? d.randomsTotal + d.writsTotal + d.pledgesTotal + d.worldBossesTotal : 0;
+                const r = researchBy.get(c.id);
+                return (
+                  <tr key={c.id} className="border-b border-border/50 last:border-0 hover:bg-surface-2/40">
+                    <td className="px-5 py-1.5">
+                      <Link href={`/party/c/${encodeURIComponent(c.id)}`} className="text-fg hover:text-accent">
+                        {c.name}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-1.5" style={{ color: classColor(c.class) ?? undefined }}>
+                      {c.class}
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-fg-muted">
+                      {c.level >= 50 ? formatNumber(c.championPoints) : `Lv ${c.level}`}
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-fg-muted">
+                      {c.lastSeen == null ? "—" : formatNumber(c.gold ?? 0)}
+                    </td>
+                    <td className="px-3 py-1.5">
+                      {!d || d.scanned === 0 ? (
+                        <span className="text-fg-subtle">Not since reset</span>
+                      ) : total === 0 ? (
+                        <span className="text-fg-subtle">—</span>
+                      ) : (
+                        <span className={done >= total ? "text-ok" : "text-fg"}>
+                          {done}/{total} done
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5">
+                      {!r ? (
+                        <span className="text-fg-subtle">—</span>
+                      ) : r.ready > 0 || r.idle > 0 ? (
+                        <span>
+                          {r.ready > 0 ? <span className="text-ok">{r.ready} finished</span> : null}
+                          {r.ready > 0 && r.idle > 0 ? <span className="text-fg-subtle"> · </span> : null}
+                          {r.idle > 0 ? <span className="text-accent">{r.idle} idle</span> : null}
+                        </span>
+                      ) : (
+                        <span className="text-fg-subtle">All slots busy</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-1.5 text-right text-fg-subtle">
+                      {c.lastSeen == null ? "not yet" : timeAgo(c.lastSeen)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Module title="Inventory" href="/party/account/inventory" hrefLabel="Search bags">
           {bags.length === 0 ? (
             <Empty>No items captured yet.</Empty>
           ) : (
             <ul className="space-y-2 text-[14px]">
               {bags.map((b) => (
                 <li key={b.location} className="flex justify-between gap-3">
-                  <Link href={`/party/vault/inventory?location=${encodeURIComponent(b.location)}`} className="text-fg hover:text-accent">
+                  <Link href={`/party/account/inventory?location=${encodeURIComponent(b.location)}`} className="text-fg hover:text-accent">
                     {locationLabel(b.location)}
                   </Link>
                   <span className="tabular-nums text-fg-muted">
@@ -130,7 +230,7 @@ export default function VaultPage() {
           )}
         </Module>
 
-        <Module title="Set collection" href="/party/vault/sets" hrefLabel="Open sets">
+        <Module title="Set collection" href="/party/account/sets" hrefLabel="Open sets">
           <ul className="space-y-3">
             <Tally label="Pieces collected" done={sticker.collected} total={sticker.total} />
           </ul>
@@ -149,7 +249,7 @@ export default function VaultPage() {
           ) : null}
         </Module>
 
-        <Module title="Achievements" href="/party/vault/achievements" hrefLabel="Open board">
+        <Module title="Achievements" href="/party/account/achievements" hrefLabel="Open board">
           <ul className="space-y-3">
             {achievementTabs.map((t) => (
               <Tally key={t.label} label={t.label} done={t.done} total={t.total} />
@@ -182,39 +282,13 @@ export default function VaultPage() {
           )}
         </Module>
 
-        <Module title="Dailies" href="/party/vault/dailies" hrefLabel="Every character">
-          {daily.scanned === 0 ? (
-            <Empty>No character has logged out since the reset.</Empty>
-          ) : (
-            <ul className="space-y-3">
-              <Tally label="Random dungeons" done={daily.randomsDone} total={daily.randomsTotal} />
-              <Tally label="Crafting writs" done={daily.writsDone} total={daily.writsTotal} />
-              <Tally label="Pledges" done={daily.pledgesDone} total={daily.pledgesTotal} />
-              <Tally label="World bosses" done={daily.worldBossesDone} total={daily.worldBossesTotal} />
-            </ul>
-          )}
-          <p className="mt-3 text-[12.5px] text-fg-subtle">
-            {daily.scanned} of {daily.total} characters logged out since the reset.
-          </p>
-        </Module>
-
-        <Module title="Crafting" href="/party/vault/crafting" hrefLabel="Who can craft it">
-          <ul className="space-y-3">
-            <Tally label="Traits researched" done={knowledge.researchKnown} total={knowledge.researchTotal} />
-            <Tally label="Motif chapters" done={knowledge.motifKnown} total={knowledge.motifTotal} />
-            <Tally label="Recipes" done={knowledge.recipeKnown} total={knowledge.recipeTotal} />
-            <Tally label="Furnishing plans" done={knowledge.planKnown} total={knowledge.planTotal} />
-          </ul>
-          <p className="mt-3 text-[12.5px] text-fg-subtle">Totals across every character.</p>
-        </Module>
-
-        <Module title="Outfit styles" href="/party/vault/styles" hrefLabel="Open styles">
+        <Module title="Outfit styles" href="/party/account/styles" hrefLabel="Open styles">
           <ul className="space-y-3">
             <Tally label="Unlocked" done={styles.unlocked} total={styles.total} />
           </ul>
         </Module>
 
-        <Module title="Houses" href="/party/vault/houses" hrefLabel="Open houses">
+        <Module title="Houses" href="/party/account/houses" hrefLabel="Open houses">
           {houses.length === 0 ? (
             <Empty>No houses owned.</Empty>
           ) : (
