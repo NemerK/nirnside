@@ -120,7 +120,11 @@ func (in *installer) handleState(w http.ResponseWriter, r *http.Request) {
 	// The app layer's revision straight from the updater's revision file, so
 	// the launcher window can show "app 1e8401e" at a glance.
 	if st.Dest != "" {
-		if rev := revisionSha(filepath.Join(st.Dest, ".nirnside-revision")); len(rev) >= 7 {
+		rev := installedBundleSha(st.Dest)
+		if rev == "" {
+			rev = revisionSha(filepath.Join(st.Dest, ".nirnside-revision"))
+		}
+		if len(rev) >= 7 {
 			st.AppRevision = rev[:7]
 		}
 	}

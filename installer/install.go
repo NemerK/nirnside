@@ -31,6 +31,22 @@ func (in *installer) runInstall(dest string, shortcut bool) error {
 
 	in.progress(4, "Creating the Nirnside folder", dest)
 
+	// Ready-built release: download and run, nothing to compile on this PC.
+	if ok, err := in.updateBundle(dest, log); err != nil {
+		return err
+	} else if ok {
+		if err := copySelf(dest); err != nil {
+			_, _ = fmt.Fprintf(log, "copy exe: %v\n", err)
+		}
+		if shortcut {
+			in.progress(96, "Creating a desktop shortcut", "")
+			if err := createShortcuts(dest); err != nil {
+				_, _ = fmt.Fprintf(log, "shortcut: %v\n", err)
+			}
+		}
+		return in.launch(dest, log, false)
+	}
+
 	rt := filepath.Join(dest, "runtime")
 	if _, err := os.Stat(runtimeNode(dest)); err != nil {
 		in.progress(8, "Downloading the app runtime", "A private Node.js copy for Nirnside only — not a system install.")
@@ -127,6 +143,12 @@ func (in *installer) launchExistingMode(root string, quiet bool) error {
 		return nil
 	}
 
+	if ok, err := in.updateBundle(root, log); err != nil {
+		return err
+	} else if ok {
+		return in.launch(root, log, quiet)
+	}
+
 	in.progress(20, "Checking for updates", "")
 	_ = runNodeScript(log, root, filepath.Join("scripts", "self-update.mjs"))
 
@@ -161,7 +183,8 @@ func (in *installer) launch(root string, log *os.File, quiet bool) error {
 			return err
 		}
 	}
-	if needBuild(root) {
+	bundle := hasBundle(root)
+	if !bundle && needBuild(root) {
 		in.progress(94, "Building Nirnside", "First run takes a minute. Later clicks are faster.")
 		if err := buildApp(log, root); err != nil {
 			return err
@@ -172,7 +195,11 @@ func (in *installer) launch(root string, log *os.File, quiet bool) error {
 		startDetail = "This window will reload in a moment."
 	}
 	in.progress(98, "Starting Nirnside", startDetail)
-	cmd, err := startApp(log, root)
+	start := startApp
+	if bundle {
+		start = startBundle
+	}
+	cmd, err := start(log, root)
 	if err != nil {
 		return fmt.Errorf("could not start Nirnside: %w", err)
 	}
@@ -196,6 +223,9 @@ func (in *installer) launch(root string, log *os.File, quiet bool) error {
 		return fmt.Errorf("%w\nThe start log is %s", err, logPath)
 	}
 	in.markReady()
+	if bundle {
+		go cleanupLegacyInstall(root)
+	}
 	if !quiet {
 		in.openAppOnce()
 	}

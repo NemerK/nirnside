@@ -1,3 +1,4 @@
+import { dataDir } from "../data-dir";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
@@ -48,11 +49,11 @@ export type SnapshotSource =
  * NirnsideSnapshot.lua here and it's imported and watched like a local file.
  */
 export function incomingPath(): string {
-  return join(process.cwd(), "data", "incoming", SNAPSHOT_FILENAME);
+  return join(/* turbopackIgnore: true */ dataDir(), "incoming", SNAPSHOT_FILENAME);
 }
 
 export function incomingCatalogPath(): string {
-  return join(process.cwd(), "data", "incoming", CATALOG_FILENAME);
+  return join(/* turbopackIgnore: true */ dataDir(), "incoming", CATALOG_FILENAME);
 }
 
 /** ESO "live" environment folders, most-preferred first. */

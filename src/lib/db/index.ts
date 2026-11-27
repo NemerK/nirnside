@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname } from "node:path";
+import { dbFile } from "../data-dir";
 import { deleteExcludedCatalogAndGoals, stripVengeanceFromCharacter } from "../catalog/excluded";
 import { skillLineCap } from "../skills/line-cap";
 
@@ -8,7 +9,7 @@ import { skillLineCap } from "../skills/line-cap";
  * Local SQLite database. Lives on the user's own disk only (see the privacy
  * rule). Default location is ./data/nirnside.db; override with NIRNSIDE_DB.
  */
-const DB_PATH = resolve(/* turbopackIgnore: true */ process.env.NIRNSIDE_DB ?? "./data/nirnside.db");
+const DB_PATH = dbFile();
 
 let _db: Database.Database | null = null;
 

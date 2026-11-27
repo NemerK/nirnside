@@ -1,5 +1,6 @@
+import { dataDir } from "../data-dir";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { join } from "node:path";
 import { getDb } from "./index";
 import { GalleryError, checkGalleryBytes, type GalleryImage } from "../gallery/rules";
 import { isProfileKind, type ProfileKind, type ProfileMedia } from "../profile/media";
@@ -16,13 +17,12 @@ export class ProfileError extends Error {
 }
 
 function profileRoot(): string {
-  const dbPath = resolve(/* turbopackIgnore: true */ process.env.NIRNSIDE_DB ?? "./data/nirnside.db");
-  return join(dirname(dbPath), "profile");
+  return join(/* turbopackIgnore: true */ dataDir(), "profile");
 }
 
 function mediaPath(kind: ProfileKind, ext: string): string {
   if (!EXTS.has(ext)) throw new ProfileError("That picture is not saved.");
-  return join(profileRoot(), `${kind}.${ext}`);
+  return join(/* turbopackIgnore: true */ profileRoot(), `${kind}.${ext}`);
 }
 
 type Row = { kind: ProfileKind; ext: string; bytes: number; updatedAt: number };
@@ -40,7 +40,7 @@ export function profileMedia(): ProfileMedia {
     const saved = row(kind);
     if (!saved) continue;
     try {
-      if (existsSync(mediaPath(kind, saved.ext))) media[kind] = saved.updatedAt;
+      if (existsSync(/* turbopackIgnore: true */ mediaPath(kind, saved.ext))) media[kind] = saved.updatedAt;
     } catch {
       /* A bad row must not take down Home. */
     }
