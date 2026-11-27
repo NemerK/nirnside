@@ -6,6 +6,7 @@ import { Check, ChevronRight, Minus, Search } from "lucide-react";
 import type { MythicSet } from "@/lib/snapshot/schema";
 import type { StickerbookSetView } from "@/lib/stickerbook/seen";
 import { findMythic, isMythicSet, mythicAnchor } from "@/lib/collections/mythic-match";
+import { ARMOR_SLOTS, ARMOR_WEIGHTS, arrangePieces } from "@/lib/stickerbook/arrange";
 import { GameIcon } from "./game-icon";
 
 type SetWithTotals = StickerbookSetView & { href?: string };
@@ -314,7 +315,7 @@ export function StickerbookGrid({
               No sets match these filters.
             </div>
           ) : (
-            <div className={compact ? "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3" : "grid grid-cols-1 gap-3 lg:grid-cols-2"}>
+            <div className={compact ? "grid grid-cols-1 gap-3 xl:grid-cols-2" : "grid grid-cols-1 gap-3 lg:grid-cols-2"}>
               {filtered.map((s, i) => (
                 <Fragment key={s.setId}>
                 {grouped && groupOf(s) !== groupOf(filtered[i - 1]) ? (
@@ -444,6 +445,79 @@ function useMythicHash(): string | null {
   return hash;
 }
 
+/**
+ * Every piece of a set at a glance, laid out like the game's sticker book:
+ * armor by weight and slot, then jewelry, then weapons. Collected pieces are
+ * lit; missing ones are faded with a dashed edge. Hover for the name.
+ */
+function SetPieces({
+  set: s,
+  pieceIsNew,
+  onSeePiece,
+}: {
+  set: SetWithTotals;
+  pieceIsNew: (p: { isNew: boolean; pieceKey: string }) => boolean;
+  onSeePiece: (key: string) => void;
+}) {
+  if (s.pieces.length === 0) return null;
+  const a = arrangePieces(s.pieces);
+  const missing = s.pieces.filter((p) => !p.collected).length;
+
+  const tile = (p: SetWithTotals["pieces"][number] | undefined, key: string, slotName?: string) => {
+    if (!p) return <span key={key} className="h-8 w-8" aria-hidden />;
+    const label = pieceLabel(p, s.name);
+    const fresh = pieceIsNew(p);
+    const state = fresh ? "newly collected" : p.collected ? "collected" : "missing";
+    return (
+      <span
+        key={key}
+        title={`${label}${slotName ? ` · ${slotName}` : p.type ? ` · ${p.type}` : ""} · ${state}`}
+        aria-label={`${label}, ${state}`}
+        tabIndex={fresh ? 0 : undefined}
+        onMouseEnter={() => fresh && onSeePiece(p.pieceKey)}
+        onFocus={() => fresh && onSeePiece(p.pieceKey)}
+        className={`relative flex h-8 w-8 items-center justify-center rounded-md ${
+          p.collected ? "bg-surface-2 ring-1 ring-inset ring-border-strong" : "border border-dashed border-border/80"
+        }`}
+      >
+        <span className={p.collected ? "" : "opacity-30 grayscale"}>
+          <GameIcon name={label || p.name || "?"} icon={p.icon} size={26} bare />
+        </span>
+        {fresh ? (
+          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent ring-2 ring-bg-elev" aria-hidden />
+        ) : null}
+      </span>
+    );
+  };
+
+  const rest = [
+    { label: "Jewelry", list: a.jewelry },
+    { label: "Weapons", list: a.weapons },
+    { label: "Other", list: a.other },
+  ].filter((g) => g.list.length > 0);
+
+  const row = (label: string, cells: ReactNode) => (
+    <div key={label} className="flex items-start gap-1">
+      <span className="w-14 shrink-0 pt-2 text-[11px] text-fg-subtle">{label}</span>
+      <div className="flex min-w-0 flex-1 flex-wrap gap-1">{cells}</div>
+    </div>
+  );
+
+  return (
+    <div className="mt-2.5 space-y-1">
+      {ARMOR_WEIGHTS.filter((w) => a.armor.has(w)).map((w) =>
+        row(w, ARMOR_SLOTS.map((slot) => tile(a.armor.get(w)?.get(slot), `${w}-${slot}`, `${w} ${slot}`))),
+      )}
+      {rest.map((g) => row(g.label, g.list.map((p, i) => tile(p, `${g.label}-${i}`))))}
+      <p className="mt-2 text-[12px] text-fg-subtle">
+        {missing === 0 ? <span className="text-ok">Every piece collected</span> : `${missing} missing`}
+        {s.pieces.some((p) => pieceIsNew(p)) ? " · a dot marks a newly collected piece" : ""}
+        {" · hover a piece for its name"}
+      </p>
+    </div>
+  );
+}
+
 function SetCard({
   set: s,
   mythic,
@@ -471,9 +545,7 @@ function SetCard({
   }, [openLeads, s.setId]);
   const complete = s.total > 0 && s.collected === s.total;
   const pct = s.total > 0 ? Math.round((s.collected / s.total) * 100) : 0;
-  const [allPieces, setAllPieces] = useState(false);
-  const missing = s.pieces.filter((p) => !p.collected).length;
-  const pieces = compact && !allPieces ? s.pieces.filter((p) => !p.collected || pieceIsNew(p)) : s.pieces;
+  const pieces = s.pieces;
 
   return (
     <div
@@ -524,32 +596,13 @@ function SetCard({
         </div>
       ) : null}
 
-      {compact && !allPieces ? (
-        <p className="mt-1.5 flex items-baseline justify-between gap-2 text-[12px]">
-          <span className="min-w-0 truncate text-fg-muted" title={s.pieces.filter((p) => !p.collected).map((p) => pieceLabel(p, s.name)).join(", ")}>
-            {missing > 0 ? (
-              <>
-                <span className="text-fg-subtle">Missing </span>
-                {s.pieces
-                  .filter((p) => !p.collected)
-                  .map((p) => pieceLabel(p, s.name))
-                  .join(", ")}
-              </>
-            ) : (
-              <span className="text-ok">Every piece collected</span>
-            )}
-          </span>
-          {s.pieces.length > 0 ? (
-            <button type="button" onClick={() => setAllPieces(true)} className="shrink-0 text-fg-subtle hover:text-accent">
-              Pieces
-            </button>
-          ) : null}
-        </p>
+      {compact ? (
+        <SetPieces set={s} pieceIsNew={pieceIsNew} onSeePiece={onSeePiece} />
       ) : null}
 
       <div
         className={`${compact ? "mt-2" : "mt-3"} grid grid-cols-1 gap-1.5 sm:grid-cols-2 ${
-          pieces.length === 0 || (compact && !allPieces) ? "hidden" : ""
+          pieces.length === 0 || compact ? "hidden" : ""
         }`}
       >
         {pieces.map((p, i) => {
@@ -593,13 +646,7 @@ function SetCard({
         })}
       </div>
 
-      {compact ? (
-        allPieces ? (
-          <button type="button" onClick={() => setAllPieces(false)} className="mt-2 text-[12px] text-fg-subtle hover:text-accent">
-            Hide pieces
-          </button>
-        ) : null
-      ) : (
+      {compact ? null : (
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
           <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
         </div>

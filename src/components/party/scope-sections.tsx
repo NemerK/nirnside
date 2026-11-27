@@ -219,6 +219,22 @@ export function SetsSection({ sp }: { sp: Params }) {
         aria-label="Set categories"
         className="max-h-64 overflow-y-auto pr-1 lg:sticky lg:top-4 lg:max-h-[calc(100vh-8rem)] lg:self-start"
       >
+        <div className="mb-3 grid grid-cols-2 gap-2 px-1">
+          <div>
+            <p className="text-[11.5px] text-fg-subtle">Pieces</p>
+            <p className="text-[14px] tabular-nums text-fg">
+              {all.reduce((n, x) => n + x.collected, 0).toLocaleString()}
+              <span className="text-fg-subtle"> / {all.reduce((n, x) => n + x.total, 0).toLocaleString()}</span>
+            </p>
+          </div>
+          <div>
+            <p className="text-[11.5px] text-fg-subtle">Complete sets</p>
+            <p className="text-[14px] tabular-nums text-fg">
+              {all.filter((x) => x.total > 0 && x.collected === x.total).length}
+              <span className="text-fg-subtle"> / {all.length}</span>
+            </p>
+          </div>
+        </div>
         <ul className="space-y-0.5">
           {tree.map((c) => {
             const on = c.name === chosen && !q;
