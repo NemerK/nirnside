@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { Sheet } from "@/components/sheet";
 import { overlapNotices, type OverlapPerson } from "@/lib/goals/overlap";
 import { TIER_LABEL, type Goal, type GoalDomain, type GoalScope, type GoalTier } from "@/lib/goals/types";
 import { targetTitle } from "@/lib/goals/review";
 import { MAX_ABILITY_RANK, romanRank } from "@/lib/skills/ability";
 import { classColor } from "@/lib/classes";
+import { TargetPicker } from "./target-picker";
 
 /** Something a target can point at. */
 export interface TargetSubject {
@@ -20,6 +21,10 @@ export interface TargetSubject {
   className: string | null;
   /** Where it lives, for the picker: "Alliance War", "Assassination", "Focus script". */
   context: string;
+  /** Skills window category: Class, Weapon, Armor, World, Guild, Alliance War, Racial, Craft. */
+  category?: string;
+  /** For abilities: the skill line it belongs to. */
+  line?: string;
 }
 
 export interface TargetPerson {
@@ -35,12 +40,6 @@ export interface Audience {
   scopeKey: string | null;
 }
 
-const DOMAIN_WORD: Record<GoalDomain, string> = {
-  skillline: "Skill lines",
-  ability: "Abilities",
-  script: "Scribing scripts",
-};
-
 function sameName(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
@@ -50,104 +49,6 @@ function audienceLabel(a: Audience, people: TargetPerson[], roles: { id: string;
   if (a.scope === "character") return people.find((c) => c.id === a.characterId)?.name ?? "One character";
   if (a.scope === "class") return `Every ${a.scopeKey}`;
   return roles.find((r) => r.id === a.scopeKey)?.name ?? "A role";
-}
-
-type PickerTab = GoalDomain | "targeted";
-
-const keyOf = (c: TargetSubject) => `${c.domain}|${c.name.trim().toLowerCase()}`;
-
-function Picker({
-  choices,
-  goals,
-  onPick,
-}: {
-  choices: TargetSubject[];
-  goals: Goal[];
-  onPick: (s: TargetSubject) => void;
-}) {
-  const [q, setQ] = useState("");
-  // What already has a target, so changing or removing one is a click away.
-  const targeted = useMemo(() => {
-    const m = new Map<string, Goal[]>();
-    for (const g of goals) {
-      const k = `${g.domain}|${g.target.trim().toLowerCase()}`;
-      m.set(k, [...(m.get(k) ?? []), g]);
-    }
-    return m;
-  }, [goals]);
-  const [domain, setDomain] = useState<PickerTab>(() => (goals.length > 0 ? "targeted" : "skillline"));
-  const tabs: [PickerTab, string][] = [
-    ...(goals.length > 0 ? ([["targeted", "Your targets"]] as [PickerTab, string][]) : []),
-    ...(Object.keys(DOMAIN_WORD) as GoalDomain[]).map((d) => [d, DOMAIN_WORD[d]] as [PickerTab, string]),
-  ];
-  const list = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return choices
-      .filter((c) => (term ? true : domain === "targeted" ? targeted.has(keyOf(c)) : c.domain === domain))
-      .filter((c) => !term || c.name.toLowerCase().includes(term) || c.context.toLowerCase().includes(term))
-      .slice(0, 80);
-  }, [choices, q, domain, targeted]);
-  return (
-    <div>
-      <label className="relative mb-3 block">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
-        <input
-          autoFocus
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search skill lines, abilities, scripts"
-          aria-label="Search what to target"
-          className="w-full rounded-md border border-border bg-surface py-2 pl-8 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-border-strong focus:outline-none"
-        />
-      </label>
-      {!q.trim() ? (
-        <div className="mb-3 flex gap-1">
-          {tabs.map(([d, word]) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDomain(d)}
-              aria-pressed={domain === d}
-              className={`rounded-md px-2.5 py-1 text-[13px] ${
-                domain === d ? "bg-accent-soft text-fg ring-1 ring-inset ring-accent/50" : "text-fg-muted hover:text-fg"
-              }`}
-            >
-              {word}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      <ul className="divide-y divide-border rounded-lg border border-border">
-        {list.length === 0 ? <li className="px-3 py-6 text-center text-sm text-fg-muted">Nothing matches.</li> : null}
-        {list.map((c) => (
-          <li key={`${c.domain}-${c.className ?? ""}-${c.name}`}>
-            <button
-              type="button"
-              onClick={() => onPick(c)}
-              className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-2"
-            >
-              {c.className ? (
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: classColor(c.className) ?? "var(--fg-subtle)" }}
-                  aria-hidden
-                />
-              ) : (
-                <span className="h-2 w-2 shrink-0" aria-hidden />
-              )}
-              <span className="min-w-0 flex-1 truncate text-sm text-fg">{c.name}</span>
-              {targeted.has(keyOf(c)) ? (
-                <span className="shrink-0 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] text-fg-muted">
-                  {targeted.get(keyOf(c))!.length === 1 ? "Targeted" : `${targeted.get(keyOf(c))!.length} targets`}
-                </span>
-              ) : null}
-              <span className="shrink-0 text-[12px] text-fg-subtle">{c.context}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 /**
@@ -288,8 +189,13 @@ export function TargetSheet({
 
   if (!subject) {
     return (
-      <Sheet title="Edit targets" subtitle="Pick something to target, or one you already have to change or remove." onClose={onClose}>
-        <Picker
+      <Sheet
+        variant="center"
+        title="Edit targets"
+        subtitle="Pick something to target, or one you already have to change or remove."
+        onClose={onClose}
+      >
+        <TargetPicker
           choices={choices}
           goals={goals}
           onPick={(s) => {
@@ -303,6 +209,7 @@ export function TargetSheet({
 
   return (
     <Sheet
+      variant={givenSubject ? "side" : "center"}
       title={subject.name}
       subtitle={
         <span className="flex items-center gap-2">
