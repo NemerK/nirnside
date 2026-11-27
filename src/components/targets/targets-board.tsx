@@ -223,17 +223,28 @@ export function TargetsBoard({
         </div>
       ) : (
         <div className="party-module overflow-x-auto p-0">
-          <table className="w-full border-separate border-spacing-0">
+          {/* Fixed columns: every character gets the same width and the grid
+              keeps to the left, so 13 characters leave room for 20 later. */}
+          <table
+            className="table-fixed border-separate border-spacing-0"
+            style={{ width: `calc(16rem + ${people.length} * 3.5rem)` }}
+          >
+            <colgroup>
+              <col style={{ width: "16rem" }} />
+              {people.map((p) => (
+                <col key={p.id} style={{ width: "3.5rem" }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
-                <th className="sticky left-0 top-0 z-20 min-w-[13rem] border-b border-border bg-surface px-4 pb-2 text-left align-bottom text-[12px] font-normal text-fg-subtle">
+                <th className="sticky left-0 top-0 z-20 border-b border-border bg-surface px-4 pb-2 text-left align-bottom text-[12px] font-normal text-fg-subtle">
                   {visible.length} {visible.length === 1 ? "target" : "targets"}
                 </th>
                 {people.map((p) => {
                   const active = focus === p.id;
                   const n = left.get(p.id) ?? 0;
                   return (
-                    <th key={p.id} className={`min-w-[3.25rem] border-b border-border px-0.5 pb-2 align-bottom font-normal ${active ? "bg-accent-soft" : ""}`}>
+                    <th key={p.id} className={`border-b border-border px-0.5 pb-2 align-bottom font-normal ${active ? "bg-accent-soft" : ""}`}>
                       <button
                         type="button"
                         onClick={() => setFocus(active ? "" : p.id)}
@@ -242,7 +253,7 @@ export function TargetsBoard({
                         className="mx-auto flex flex-col items-center gap-1.5 rounded-md px-1 pt-1 hover:bg-surface-2"
                       >
                         <span
-                          className="max-h-28 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-fg [writing-mode:vertical-rl] rotate-180"
+                          className="max-h-32 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-fg [writing-mode:vertical-rl] rotate-180"
                         >
                           {p.name}
                         </span>
@@ -281,7 +292,7 @@ export function TargetsBoard({
                           scope="row"
                           className="sticky left-0 z-10 border-b border-border/40 bg-surface px-4 py-0.5 text-left font-normal group-hover/row:bg-surface-2"
                         >
-                          <button type="button" onClick={() => editGoal(r.targets[0].goal)} className="block max-w-[16rem] text-left">
+                          <button type="button" onClick={() => editGoal(r.targets[0].goal)} className="block w-full text-left">
                             <span className={`block truncate text-[13px] leading-snug hover:text-accent ${r.complete ? "text-fg-muted" : "text-fg"}`}>
                               {r.name}
                             </span>
