@@ -315,8 +315,9 @@ export const WORN_SLOT_LABEL: Record<WornSlot, string> = {
 export function parseWornSlot(label: string | null | undefined): WornSlot | null {
   const n = norm(label).replace(/^(front|back|backup)\s+/, "");
   if (/\bpoison\b/.test(n)) return "poison";
-  if (/\bmain[ -]?hand\b/.test(n)) return "mainhand";
-  if (/\boff[ -]?hand\b/.test(n)) return "offhand";
+  // Wizard's Wardrobe writes "Backup Main" / "Backup Off" for the back bar.
+  if (/\bmain([ -]?hand)?\b/.test(n)) return "mainhand";
+  if (/\boff([ -]?hand)?\b/.test(n)) return "offhand";
   if (/\bring\s*2\b|\bring2\b/.test(n)) return "ring2";
   if (/\bring\b/.test(n)) return "ring1";
   if (/\b(neck|necklace|amulet)\b/.test(n)) return "necklace";

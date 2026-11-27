@@ -19,6 +19,8 @@ The model lives in `src/lib/game/`:
 | `classes.ts` | Classes and their three lines (from the catalog), a character's own / borrowed / swapped-out lines, subclassing rules, Class Mastery |
 | `champion.ts` | The three constellations, the 3600 cap (1200 each), earning order, slottable vs passive stars, four slots per constellation |
 | `weapon-lines.ts` | The six weapon lines and what each needs on the bar (two one-handers make Dual Wield, one plus a shield One Hand and Shield, a lone one-hander nothing), staff elements, per-weapon passives, armor lines |
+| `addons.ts` | What an ESO addon is, how its saved data reaches Nirnside, the addons Nirnside works with, where each fact comes from and how fresh it is |
+| `setups.ts` | A Wizard's Wardrobe setup read against the model: each bar's weapon line, skills a bar can't use, planned vs worn gear |
 | `understand.ts` | `readCharacter`: one character read through every system at once |
 | `item-index.ts` | What every scan teaches about items (below) |
 
@@ -116,6 +118,44 @@ traitsNeeded, trait)` answers whether they can make that piece for a set: it
 needs enough known traits on the line, and the chosen trait among them.
 `idleSlots` counts the research slots not in use. A craft with every trait
 known has no idle slots, because there is nothing left to research.
+
+## Addons: how the data gets here
+
+Nirnside never talks to the game directly. Everything arrives through ESO
+addons:
+
+- An addon is Lua the ESO client loads at login, described by a `.txt`
+  manifest (`## APIVersion`, `## SavedVariables`, `## DependsOn` /
+  `## OptionalDependsOn`). It runs inside the client, sees only what
+  ZeniMax's public API exposes, and can't act beyond it.
+- Its only storage is SavedVariables. They are held in game memory and
+  written to disk at a /reloadui, a zone change with a loading screen, a
+  logout or a quit. A crash or Alt+F4 can skip that write. So **every fact
+  is "as of the last save"**: research timers keep running in the game,
+  and dailies reset (`countDown`, `freshness`).
+- One addon can read another's tables in game when it loads after it
+  (`## OptionalDependsOn`).
+
+The addons Nirnside works with (`KNOWN_ADDONS`):
+
+| Addon | Who | What its data is |
+| --- | --- | --- |
+| Nirnside Snapshot | ours | The game's state, read from the API at logout |
+| Nirnside Catalog | ours, opt-in | The game's catalog, on `/nirncatalog` |
+| Wizard's Wardrobe | third party | **The player's plans**: setups per zone, page and boss (gear, both bars, Champion Points, food), swapped in when a boss bar appears |
+
+Nirnside Snapshot loads after Wizard's Wardrobe (`## OptionalDependsOn`) and
+copies the setups of the page the player has open (this character, another
+character, or account-wide storage). Those setups are another addon's
+record of intent, not the game's state, so the model reads them against
+the game (`readSetup`):
+
+- the weapon line each of the setup's bars makes;
+- the setup's skills from a weapon line that its own bar can't use;
+- which planned pieces differ from what the character wears now.
+
+Each fact carries a source (`FactSource`). In order of trust for "how the
+game is": game, catalog, addon, player, reference.
 
 ## Who a character is
 
