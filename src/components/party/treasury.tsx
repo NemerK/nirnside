@@ -9,7 +9,7 @@ export function TreasuryStrip({ t, perCharacterHref }: { t: Treasury; perCharact
       <dl className="flex flex-wrap gap-x-9 gap-y-3">
         <div>
           <dt className="text-[12px] text-fg-subtle">Gold, bank and every wallet</dt>
-          <dd className="font-display text-[24px] leading-tight tabular-nums text-accent">{formatNumber(t.gold)}</dd>
+          <dd className="font-display text-[24px] leading-tight tabular-nums text-gold">{formatNumber(t.gold)}</dd>
           {t.bankGold > 0 ? <dd className="text-[12px] text-fg-subtle">{formatNumber(t.bankGold)} in the bank</dd> : null}
         </div>
         {t.currencies.map((c) => (
