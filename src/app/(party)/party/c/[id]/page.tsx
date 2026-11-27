@@ -1,4 +1,6 @@
+import { idleSlots as idleSlots_ } from "@/lib/game/research";
 import { isWeaponSlot, parseWornSlot } from "@/lib/game/equipment";
+import { loadoutOf, readWornPiece } from "@/lib/game/loadout";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Droplet, Moon } from "lucide-react";
@@ -81,13 +83,12 @@ function presentEquipped(c: Character) {
   const body = c.equipped.filter((e) => !isWeapon(e));
   const front = c.equipped.filter((e) => isWeapon(e) && e.bar !== "back");
   const back = c.equipped.filter((e) => e.bar === "back");
-  const count = (list: typeof c.equipped) => {
-    const m = new Map<string, number>();
-    for (const e of list) if (e.setName) m.set(e.setName, (m.get(e.setName) ?? 0) + (/two/i.test(e.slot) ? 2 : 1));
-    return m;
-  };
-  const withFront = count([...body, ...front]);
-  const withBack = count([...body, ...back]);
+  // Set counts per bar, by the game model's rules (body on both bars, two-handers count twice).
+  const loadout = loadoutOf(c.equipped);
+  const twoHanded = (e: Character["equipped"][number]) => readWornPiece(e).weight === 2;
+  const countsFor = (bar: "front" | "back") => new Map(loadout.sets.map((s) => [s.name, s[bar]]));
+  const withFront = countsFor("front");
+  const withBack = countsFor("back");
   const hrefFor = (name: string | null, setId?: number | null) =>
     name || setId != null ? toPartyHref(safe(() => setHref({ name, setId: setId ?? null }), "")) || null : null;
 
@@ -108,6 +109,7 @@ function presentEquipped(c: Character) {
       bonuses: b?.bonuses ?? [],
     };
   };
+
   const bySlot = new Map(body.map((e) => [slotKey(e.slot), e]));
   const fill = (slots: string[], label = (s: string) => s) =>
     slots.map((s) => {
@@ -115,9 +117,9 @@ function presentEquipped(c: Character) {
       return e ? tile(e, label(s), withFront) : { empty: label(s) };
     });
   const bar = (list: typeof c.equipped, counts: Map<string, number>) => {
-    const main = list.find((e) => /main|two/i.test(e.slot)) ?? list[0];
+    const main = list.find((e) => parseWornSlot(e.slot) === "mainhand" || twoHanded(e)) ?? list[0];
     const off = list.find((e) => e !== main);
-    const two = main && /two/i.test(main.slot);
+    const two = !!main && twoHanded(main);
     return [
       main ? tile(main, two ? "Two-handed" : "Main hand", counts) : { empty: "Main hand" },
       ...(two ? [] : [off ? tile(off, "Off hand", counts) : { empty: "Off hand" }]),
@@ -232,7 +234,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
   const research = presentResearch(c.research);
   const elapsed = c.lastSeen != null ? Math.max(0, now - c.lastSeen) : 0;
   const running = research.inProgress.map((r) => ({ ...r, left: r.remainingSeconds == null ? null : Math.max(0, r.remainingSeconds - elapsed) }));
-  const idleSlots = research.crafts.reduce((n, cr) => n + Math.max(0, cr.maxSlots - cr.researching), 0);
+  const idleSlots = research.crafts.reduce((n, cr) => n + idleSlots_(cr), 0);
   const equipped = presentEquipped(c);
 
   const stat = (label: string, value: string, tone = "text-fg") => (
@@ -466,7 +468,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
               <ul className="space-y-2.5">
                 {research.crafts.map((cr) => {
                   const mine = running.filter((r) => r.craftName === cr.name);
-                  const idle = Math.max(0, cr.maxSlots - mine.length);
+                  const idle = idleSlots_({ ...cr, researching: mine.length });
                   return (
                     <li key={cr.name}>
                       <div className="mb-1 flex items-baseline justify-between gap-2 text-[13px]">

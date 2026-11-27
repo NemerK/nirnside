@@ -1069,8 +1069,13 @@ local function gatherEquipped()
     local link = safe(function() return GetItemLink(BAG_WORN, e.slot) end, "")
     if link and link ~= "" then
       local hasSet, setName, _, _, _, setId = safe(function() return GetItemLinkSetInfo(link, false) end, false)
+      -- The game's own count of this set's pieces worn (active bar), normal and perfected.
+      -- Kept as the game reports them, so the app never has to guess how pieces combine.
+      local _, _, _, wornCount, _, _, wornPerfected = safe(function() return GetItemLinkSetInfo(link, true) end, false)
       local _, _, enchantName = safe(function() return GetItemLinkEnchantInfo(link) end, nil)
       equipped[#equipped + 1] = {
+        setCount = hasSet and type(wornCount) == "number" and wornCount or nil,
+        setPerfectedCount = hasSet and type(wornPerfected) == "number" and wornPerfected or nil,
         slot = e.label,
         bar = e.bar,
         itemId = safe(function() return GetItemLinkItemId(link) end, 0),

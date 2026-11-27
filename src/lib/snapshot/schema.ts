@@ -208,6 +208,10 @@ export const EquippedItem = z.object({
   scribing: z.array(z.string()).default([]),
   /** What the piece is, from the game's types ("Heavy Head", "Inferno Staff"). Newer addons only. */
   type: z.string().nullable().optional(),
+  /** The game's count of this set's pieces worn on the active bar (GetItemLinkSetInfo). Newer addons only. */
+  setCount: z.number().int().nonnegative().nullable().optional(),
+  /** Of those, how many are perfected, as the game counts them. Newer addons only. */
+  setPerfectedCount: z.number().int().nonnegative().nullable().optional(),
 });
 
 export const Companion = z.object({

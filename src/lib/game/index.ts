@@ -7,3 +7,6 @@ export * from "./traits";
 export * from "./skills";
 export { ESO_CLASSES, classColor, classIcon, type EsoClass } from "../classes";
 export * from "./quality";
+export * from "./set-profile";
+export * from "./loadout";
+export * from "./research";
