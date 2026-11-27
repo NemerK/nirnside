@@ -390,3 +390,27 @@ html.party .craft-station-icon {
     animation: none;
   }
 }
+
+/* Shared Atlas components, in the Party look: sentence-case headers,
+   light trait marks, and research timers in the info blue instead of amber. */
+html.party .sort-header {
+  text-transform: none;
+  letter-spacing: 0;
+}
+html.party .trait-cell {
+  border-color: transparent;
+  background: transparent;
+}
+html.party .trait-known {
+  color: var(--ok);
+}
+html.party .trait-researching {
+  color: var(--info);
+  border-color: rgb(108 182 255 / 0.45);
+  background: rgb(108 182 255 / 0.12);
+}
+html.party .research-timer {
+  color: var(--info);
+  border-color: rgb(108 182 255 / 0.35);
+  background: rgb(108 182 255 / 0.1);
+}

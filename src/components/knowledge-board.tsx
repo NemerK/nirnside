@@ -129,10 +129,13 @@ export function KnowledgeDetail({
   character,
   initialTab,
   initialQuery,
+  fill = false,
 }: {
   character: KnowledgeCharacterView;
   initialTab?: KnowledgeTab;
   initialQuery?: string;
+  /** Let the page scroll the content instead of a fixed-height box. */
+  fill?: boolean;
 }) {
   const [tab, setTab] = useState<KnowledgeTab>(
     TABS.some((t) => t.key === initialTab) ? initialTab! : "research",
@@ -143,7 +146,7 @@ export function KnowledgeDetail({
 
   return (
     <div>
-      <p className="mb-3 text-sm text-fg-muted">{character.className}</p>
+      {fill ? null : <p className="mb-3 text-sm text-fg-muted">{character.className}</p>}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1">
           {TABS.map((t) => (
@@ -151,8 +154,9 @@ export function KnowledgeDetail({
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
-                tab === t.key ? "bg-accent-soft text-accent" : "text-fg-subtle hover:text-fg"
+              aria-pressed={tab === t.key}
+              className={`rounded-md px-2.5 py-1 text-[13px] ${
+                tab === t.key ? "bg-accent-soft text-fg ring-1 ring-inset ring-accent/40" : "text-fg-muted hover:text-fg"
               }`}
             >
               {t.label}
@@ -185,7 +189,7 @@ export function KnowledgeDetail({
           ))}
         </div>
       </div>
-      <div className="max-h-[min(68vh,42rem)] overflow-y-auto pr-1">
+      <div className={fill ? "" : "max-h-[min(68vh,42rem)] overflow-y-auto pr-1"}>
         {!character.scanned ? (
           <Card className="p-4 text-sm text-fg-muted">
             {character.name} has not been logged out with Snapshot 0.9.28 yet. Research, motifs, and recipes stay
@@ -221,18 +225,18 @@ export function KnowledgeDetail({
   );
 }
 
-function researchTally(character: KnowledgeCharacterView): CellTally {
+export function researchTally(character: KnowledgeCharacterView): CellTally {
   if (!character.scanned) return { scanned: false, known: 0, total: 0 };
   return { scanned: true, known: character.research.known, total: character.research.total };
 }
 
-function motifTally(character: KnowledgeCharacterView): CellTally {
+export function motifTally(character: KnowledgeCharacterView): CellTally {
   if (!character.scanned) return { scanned: false, known: 0, total: 0 };
   const motifs = presentMotifs(character.motifs);
   return { scanned: true, known: motifs.known, total: motifs.total };
 }
 
-function listTally(scanned: boolean, lists: RecipeList[]): CellTally {
+export function listTally(scanned: boolean, lists: RecipeList[]): CellTally {
   if (!scanned) return { scanned: false, known: 0, total: 0 };
   let known = 0;
   let total = 0;
@@ -243,7 +247,7 @@ function listTally(scanned: boolean, lists: RecipeList[]): CellTally {
   return { scanned: true, known, total };
 }
 
-interface CellTally {
+export interface CellTally {
   scanned: boolean;
   known: number;
   total: number;
@@ -333,7 +337,7 @@ function ResearchPanel({
               />
               <span>{craft.name}</span>
               {craft.researching > 0 ? (
-                <span className="rounded bg-amber-500/15 px-1 text-[10px] tabular-nums text-amber-600 dark:text-amber-400">
+                <span className="research-timer rounded bg-amber-500/15 px-1 text-[10px] tabular-nums text-amber-600 dark:text-amber-400">
                   {craft.researching}
                 </span>
               ) : null}
@@ -373,7 +377,7 @@ function ResearchPanel({
                   {timers.map((row) => (
                     <span
                       key={`${row.craft}-${row.line}-${row.trait}`}
-                      className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
+                      className="research-timer rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
                     >
                       {row.line} · {row.trait}
                       {row.remainingSeconds != null ? ` · ${formatResearchRemaining(row.remainingSeconds)}` : ""}
@@ -471,7 +475,7 @@ function TraitCell({
       : `${name} · unknown`;
   if (known) {
     return (
-      <span title={title} className="inline-flex h-5 w-5 items-center justify-center rounded border border-ok/40 bg-ok/10 text-ok">
+      <span title={title} className="trait-cell trait-known inline-flex h-5 w-5 items-center justify-center rounded border border-ok/40 bg-ok/10 text-ok">
         <Check className="h-3 w-3" />
       </span>
     );
@@ -480,14 +484,14 @@ function TraitCell({
     return (
       <span
         title={title}
-        className="inline-flex h-5 w-5 items-center justify-center rounded border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+        className="trait-cell trait-researching inline-flex h-5 w-5 items-center justify-center rounded border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
       >
         <Minus className="h-3 w-3" />
       </span>
     );
   }
   return (
-    <span title={title} className="inline-flex h-5 w-5 items-center justify-center rounded border border-border text-fg-subtle">
+    <span title={title} className="trait-cell trait-unknown inline-flex h-5 w-5 items-center justify-center rounded border border-border text-fg-subtle">
       <span className="h-1 w-1 rounded-full bg-fg-subtle/50" />
     </span>
   );

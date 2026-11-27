@@ -37,7 +37,7 @@ import { formatNumber } from "@/lib/format";
 import { currentUnix, dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/dailies/day";
 import { communityPledgesForUnix } from "@/lib/dailies/pledges";
 import { presentAccountDailies } from "@/lib/dailies/present";
-import { knownMotifKeys, presentMotifs, presentOutfitStyles, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
+import { knownMotifKeys, presentOutfitStyles } from "@/lib/knowledge/present";
 import { craftingCharacters, dailiesCharacters, roster } from "@/lib/party/data";
 import { craftCoverage, whoCanCraft, type CraftRow } from "@/lib/party/craft";
 import { CraftCheckControls } from "@/components/party/craft-check-controls";
@@ -546,43 +546,6 @@ export function CraftingSection({ sp }: { sp: Params }) {
         )}
       </section>
 
-      <section>
-        <h2 className="mb-3 font-display text-[26px] text-fg">Every character</h2>
-        <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full min-w-[640px] text-[14px]">
-            <thead>
-              <tr className="bg-surface text-left text-[12.5px] text-fg-subtle">
-                <th className="px-4 py-2.5 font-normal">Character</th>
-                <th className="px-4 py-2.5 font-normal">Traits</th>
-                <th className="px-4 py-2.5 font-normal">Motif chapters</th>
-                <th className="px-4 py-2.5 font-normal">Recipes</th>
-                <th className="px-4 py-2.5 font-normal">Plans</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {characters.map((c) => {
-                const r = presentResearch(c.research);
-                const m = presentMotifs(c.motifs);
-                const rec = presentRecipeLists(c.recipeLists, "provisioning");
-                const pl = presentRecipeLists(c.recipeLists, "furnishing");
-                return (
-                  <tr key={c.id}>
-                    <td className="px-4 py-2.5">
-                      <Link href={`/party/c/${encodeURIComponent(c.id)}/crafting`} className="hover:underline" style={{ color: classColor(c.class) }}>
-                        {c.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-2.5 tabular-nums text-fg-muted">{r.total ? `${r.known}/${r.total}` : "—"}</td>
-                    <td className="px-4 py-2.5 tabular-nums text-fg-muted">{m.total ? `${m.known}/${m.total}` : "—"}</td>
-                    <td className="px-4 py-2.5 tabular-nums text-fg-muted">{rec.total ? `${rec.known}/${rec.total}` : "—"}</td>
-                    <td className="px-4 py-2.5 tabular-nums text-fg-muted">{pl.total ? `${pl.known}/${pl.total}` : "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
   );
 }
@@ -645,7 +608,7 @@ export const SECTION_TITLES: Record<Exclude<VaultSection, "">, { title: string; 
   sets: { title: "Set collection", lead: "Collected and missing set pieces, one category at a time." },
   achievements: { title: "Achievements", lead: "Trial, dungeon and arena clears, as the game reports them." },
   dailies: { title: "Dailies", lead: "Randoms, writs, pledges and zone dailies for every character, against the daily reset." },
-  crafting: { title: "Crafting", lead: "Who can make what, and every character's research, motifs and recipes." },
+  crafting: { title: "Crafting", lead: "What each character has learned: trait research, motif chapters, recipes and furnishing plans." },
   styles: { title: "Outfit styles", lead: "Styles unlocked on the account, as the game's Collections tree lists them." },
   houses: { title: "Houses", lead: "Houses this account owns. House banks are never collected." },
 };

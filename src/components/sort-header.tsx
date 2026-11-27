@@ -33,7 +33,7 @@ export function SortHeader<K extends string>({
       title={title ?? `Sort by ${label}`}
       aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
       onClick={() => onSort(column)}
-      className={`inline-flex max-w-full items-center gap-1 uppercase tracking-wider ${
+      className={`sort-header inline-flex max-w-full items-center gap-1 uppercase tracking-wider ${
         align === "right" ? "w-full justify-end" : align === "center" ? "w-full justify-center" : "text-left"
       } ${active ? "text-fg" : "text-fg-subtle hover:text-fg"}`}
     >
