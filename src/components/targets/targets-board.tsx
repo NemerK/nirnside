@@ -4,18 +4,11 @@ import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, Pencil, X } from "lucide-react";
 import { classColor } from "@/lib/classes";
-import { TIER_LABEL, type Goal, type GoalScope, type GoalTier } from "@/lib/goals/types";
+import { TIER_COLOR, TIER_LABEL, TIERS, type Goal, type GoalScope, type GoalTier } from "@/lib/goals/types";
 import type { ReviewGroup } from "@/lib/goals/review";
 import { buildMatrix, cellProgress, cellText, isOpenMark, type MatrixCell, type MatrixRow } from "@/lib/goals/matrix";
 import { TargetSheet, type Audience, type TargetPerson, type TargetSubject } from "./target-sheet";
 
-const TIERS: GoalTier[] = ["essential", "optional", "completionist"];
-
-const TIER_COLOR: Record<GoalTier, string> = {
-  essential: "var(--rank-mandatory)",
-  optional: "var(--rank-extra)",
-  completionist: "var(--rank-completionist)",
-};
 
 type Show = "open" | "all";
 

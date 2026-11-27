@@ -1,4 +1,4 @@
-import { ESO_CLASSES } from "../classes";
+import { CLASSES } from "../game/classes";
 
 /**
  * Saved targets are grouped the way the skill window is: category, then the
@@ -163,8 +163,8 @@ export function groupPlacedGoals<
   ordered.sort((a, b) => {
     const rank = categoryRank(a.title, a.className) - categoryRank(b.title, b.className);
     if (rank !== 0) return rank;
-    const ai = a.className ? ESO_CLASSES.findIndex((name) => sameName(name, a.className ?? "")) : -1;
-    const bi = b.className ? ESO_CLASSES.findIndex((name) => sameName(name, b.className ?? "")) : -1;
+    const ai = a.className ? CLASSES.findIndex((name) => sameName(name, a.className ?? "")) : -1;
+    const bi = b.className ? CLASSES.findIndex((name) => sameName(name, b.className ?? "")) : -1;
     if (ai !== bi) return (ai < 0 ? 90 : ai) - (bi < 0 ? 90 : bi);
     return a.title.localeCompare(b.title);
   });

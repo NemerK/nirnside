@@ -16,7 +16,7 @@ import {
 } from "../goals/progress";
 import type { Goal, GoalIndexes } from "../goals/types";
 import type { GoalCardView, GoalMarkView, GoalRowItem } from "../goals/views";
-import { ESO_CLASSES } from "../classes";
+import { CLASSES } from "../game/classes";
 import { plannerAbilityIcon, plannerLineIcon, plannerScriptIcon } from "../icons/planner-icons";
 import { baseAndMorphsFromSlots, omitAbilitiesListedAsMorphs, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
 export type { PlannerAbilityRow };
@@ -489,7 +489,7 @@ export const loadPlannerData = cache(function loadPlannerData(): PlannerData {
   return {
     subjects,
     roles: roleRows.map((r) => ({ id: r.id, name: r.name })),
-    classes: [...ESO_CLASSES],
+    classes: [...CLASSES],
     lines,
     scripts,
     abilities,

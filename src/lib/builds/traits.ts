@@ -1,4 +1,12 @@
 import { ARMOR_TRAITS, JEWELRY_TRAITS, WEAPON_TRAITS } from "../game/traits";
+import {
+  ARMOR_SLOTS,
+  WEIGHTS,
+  WEIGHT_LABEL,
+  pieceSlotFromText,
+  researchLineNames as pieceResearchLines,
+  type Weight,
+} from "../game/equipment";
 import type { SlotKind } from "./slots";
 
 /**
@@ -9,19 +17,15 @@ import type { SlotKind } from "./slots";
  * A shield uses armor traits. Weight is Light, Medium, or Heavy, and only
  * body armor has one. Weapons and jewelry do not.
  */
-export type ArmorWeight = "light" | "medium" | "heavy";
+export type ArmorWeight = Weight;
 
-export const ARMOR_WEIGHTS: readonly { id: ArmorWeight; label: string }[] = [
-  { id: "light", label: "Light" },
-  { id: "medium", label: "Medium" },
-  { id: "heavy", label: "Heavy" },
-];
+export const ARMOR_WEIGHTS: readonly { id: ArmorWeight; label: string }[] = WEIGHTS.map((id) => ({ id, label: WEIGHT_LABEL[id] }));
 
 // The trait lists live in the game model, in the research grid's order.
 export { ARMOR_TRAITS, JEWELRY_TRAITS, WEAPON_TRAITS };
 
 /** The seven armor slots: head, shoulders, chest, hands, waist, legs, feet. */
-export const ARMOR_SLOT_COUNT = 7;
+export const ARMOR_SLOT_COUNT = ARMOR_SLOTS.length;
 
 export interface WeightMix {
   heavy: number;
@@ -128,14 +132,14 @@ export function stepMix(mix: WeightMix, which: ArmorWeight, delta: 1 | -1): Weig
 }
 
 export function isArmorWeight(value: unknown): value is ArmorWeight {
-  return value === "light" || value === "medium" || value === "heavy";
+  return (WEIGHTS as readonly unknown[]).includes(value);
 }
 
 export function weightLabel(weight: ArmorWeight): string {
   return ARMOR_WEIGHTS.find((row) => row.id === weight)?.label ?? weight;
 }
 
-const BODY_ARMOR = ["head", "shoulders", "chest", "hands", "waist", "legs", "feet"] as const;
+const BODY_ARMOR = ARMOR_SLOTS;
 
 type BodySlot = (typeof BODY_ARMOR)[number];
 
@@ -192,91 +196,25 @@ export function weightFromText(text: string | null | undefined): ArmorWeight | n
   return null;
 }
 
-/** Piece words that belong to one weight. Generic words such as Head do not. */
-const WEIGHT_WORDS: readonly (readonly [string, ArmorWeight])[] = [
-  ["arm cops", "medium"],
-  ["epaulets", "light"],
-  ["epaulet", "light"],
-  ["pauldron", "heavy"],
-  ["helmet", "medium"],
-  ["cuirass", "heavy"],
-  ["jerkin", "light"],
-  ["gauntlets", "heavy"],
-  ["gauntlet", "heavy"],
-  ["bracers", "medium"],
-  ["bracer", "medium"],
-  ["breeches", "light"],
-  ["sabatons", "heavy"],
-  ["sabaton", "heavy"],
-  ["greaves", "heavy"],
-  ["gloves", "light"],
-  ["glove", "light"],
-  ["girdle", "heavy"],
-  ["guards", "medium"],
-  ["helmets", "medium"],
-  ["robe", "light"],
-  ["jack", "medium"],
-  ["sash", "light"],
-  ["belt", "medium"],
-  ["helm", "heavy"],
-  ["hat", "light"],
-  ["boots", "medium"],
-  ["boot", "medium"],
-  ["shoes", "light"],
-  ["shoe", "light"],
-];
-
+/** The weight a piece name gives, by the game's piece words (Guards are medium). Generic words such as Head give none. */
 export function weightFromPieceName(name: string | null | undefined): ArmorWeight | null {
-  const blob = (name ?? "").toLowerCase();
-  if (!blob.trim()) return null;
-  for (const [phrase, weight] of WEIGHT_WORDS) {
-    const body = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp(`\\b${body}\\b`, "i").test(blob)) return weight;
-  }
-  return null;
+  const piece = pieceSlotFromText(name);
+  return piece?.kind === "armor" ? piece.weight : null;
 }
 
-/** Smithing line names for one armor slot at one weight. Light chests are Robe or Jerkin. */
-const LINES: Record<ArmorWeight, Record<(typeof BODY_ARMOR)[number], readonly string[]>> = {
-  light: {
-    head: ["hat"],
-    shoulders: ["epaulets"],
-    chest: ["robe", "jerkin"],
-    hands: ["gloves"],
-    waist: ["sash"],
-    legs: ["breeches"],
-    feet: ["shoes"],
-  },
-  medium: {
-    head: ["helmet"],
-    shoulders: ["arm cops"],
-    chest: ["jack"],
-    hands: ["bracers"],
-    waist: ["belt"],
-    legs: ["guards"],
-    feet: ["boots"],
-  },
-  heavy: {
-    head: ["helm"],
-    shoulders: ["pauldron"],
-    chest: ["cuirass"],
-    hands: ["gauntlets"],
-    waist: ["girdle"],
-    legs: ["greaves"],
-    feet: ["sabatons"],
-  },
-};
-
+/** Smithing line names, lowercase, from the game model. Light chests are Robe or Jerkin. */
 export function researchLineNames(kind: SlotKind, weight: ArmorWeight | null, weaponLine: string | null): readonly string[] {
   if (weaponLine) return [weaponLine];
   if (kind === "neck") return ["necklace"];
   if (kind === "ring") return ["ring"];
   if (kind === "shield") return ["shield"];
-  if (weight && isBodyArmor(kind)) return LINES[weight][kind];
+  if (weight && isBodyArmor(kind)) {
+    return pieceResearchLines({ kind: "armor", weight, slot: kind }).map((name) => name.toLowerCase());
+  }
   return [];
 }
 
-const ANY_WEIGHT = ["light", "medium", "heavy"] as const;
+const ANY_WEIGHT = WEIGHTS;
 
 function unique(weights: readonly ArmorWeight[]): ArmorWeight[] {
   return ANY_WEIGHT.filter((weight) => weights.includes(weight));

@@ -1,15 +1,9 @@
-/** Live ESO classes, in character-create order. */
-export const ESO_CLASSES = [
-  "Dragonknight",
-  "Sorcerer",
-  "Nightblade",
-  "Templar",
-  "Warden",
-  "Necromancer",
-  "Arcanist",
-] as const;
+import { CLASSES, type ClassName } from "./game/classes";
 
-export type EsoClass = (typeof ESO_CLASSES)[number];
+/**
+ * How each class looks in Nirnside: its crest and color. Which classes
+ * exist is the game model's (game/classes.ts CLASSES).
+ */
 
 /**
  * In-game class crest per class, served through our icon proxy.
@@ -17,7 +11,7 @@ export type EsoClass = (typeof ESO_CLASSES)[number];
  * when the profile draws it large. The gamepad set is the same symbol at
  * 64×64, which is the sharpest class crest the game ships.
  */
-export const CLASS_ICONS: Record<string, string> = {
+export const CLASS_ICONS: Record<ClassName, string> = {
   Dragonknight: "/esoui/art/icons/class/gamepad/gp_class_dragonknight.dds",
   Sorcerer: "/esoui/art/icons/class/gamepad/gp_class_sorcerer.dds",
   Nightblade: "/esoui/art/icons/class/gamepad/gp_class_nightblade.dds",
@@ -28,14 +22,14 @@ export const CLASS_ICONS: Record<string, string> = {
 };
 
 export function classIcon(className: string): string | undefined {
-  return CLASS_ICONS[className];
+  return CLASS_ICONS[className as ClassName];
 }
 
 /**
  * Class hues from the game: fire, storm, shadow, sun, green, grave, and
  * Apocrypha. Kept distinct so two classes never share a color.
  */
-export const CLASS_COLORS: Record<string, string> = {
+export const CLASS_COLORS: Record<ClassName, string> = {
   Dragonknight: "#e06a3a",
   Sorcerer: "#5b9fe8",
   Nightblade: "#b46ad4",
@@ -46,14 +40,14 @@ export const CLASS_COLORS: Record<string, string> = {
 };
 
 export function classColor(className: string): string | undefined {
-  return CLASS_COLORS[className];
+  return CLASS_COLORS[className as ClassName];
 }
 
 /** Live classes first, then any extra names a snapshot still carries. */
 export function classFilterOrder(present: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const name of [...ESO_CLASSES, ...present]) {
+  for (const name of [...CLASSES, ...present]) {
     if (!name || seen.has(name)) continue;
     seen.add(name);
     out.push(name);

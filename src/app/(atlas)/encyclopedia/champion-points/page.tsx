@@ -8,10 +8,10 @@ import { SourceBadge } from "@/components/source-badge";
 import { CatalogScanCallout } from "@/components/catalog-scan-callout";
 import { CPView, type CPDiscipline, type CPCharacterAlloc } from "@/components/cp-view";
 import type { CatalogSource } from "@/lib/catalog/schema";
+import { constellationRank } from "@/lib/ui/game-colors";
 
 export const dynamic = "force-dynamic";
 
-const ORDER = ["Warfare", "Fitness", "Craft"];
 
 export default function ChampionPointsPage() {
   const meta = safe(() => getCatalogMeta());
@@ -28,7 +28,8 @@ export default function ChampionPointsPage() {
       maxPoints: entry.maxPoints,
     });
   }
-  const disciplines = ORDER.filter((o) => byDisc.has(o)).map((o) => byDisc.get(o)!);
+  // The game's order: Craft, Warfare, Fitness.
+  const disciplines = [...byDisc.values()].sort((a, b) => constellationRank(a.name) - constellationRank(b.name));
 
   const characters: CPCharacterAlloc[] = (safe(() => getChampionAllocations()) ?? []).map((c) => {
     const alloc: CPCharacterAlloc["alloc"] = {};

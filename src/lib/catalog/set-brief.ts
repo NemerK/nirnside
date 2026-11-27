@@ -1,3 +1,4 @@
+import { ALL_PIECE_WORDS } from "../game/equipment";
 import type { CatalogSource } from "./schema";
 
 /** The set facts a hover card is allowed to show. Bonuses are the catalog's own text. */
@@ -89,75 +90,8 @@ function hasPhrase(haystack: string, needle: string): boolean {
   return before && after;
 }
 
-/** Gear words that follow a set name, longest first so "inferno staff" wins over "staff". */
-const PIECE_WORDS = [
-  "lightning staff",
-  "restoration staff",
-  "healing staff",
-  "inferno staff",
-  "frost staff",
-  "great helm",
-  "ice staff",
-  "greatsword",
-  "battle axe",
-  "handwraps",
-  "faceguard",
-  "arm cops",
-  "epaulets",
-  "pauldrons",
-  "pauldron",
-  "sabatons",
-  "gauntlets",
-  "bracers",
-  "breeches",
-  "breastplate",
-  "chausses",
-  "sollerets",
-  "greathelm",
-  "cuirass",
-  "necklace",
-  "hauberk",
-  "circlet",
-  "epaulet",
-  "pendant",
-  "amulet",
-  "choker",
-  "helmet",
-  "shoulders",
-  "shoulder",
-  "greaves",
-  "girdle",
-  "guards",
-  "gloves",
-  "dagger",
-  "shield",
-  "visage",
-  "casque",
-  "staff",
-  "sword",
-  "shirt",
-  "guise",
-  "mace",
-  "maul",
-  "coat",
-  "coif",
-  "cowl",
-  "mask",
-  "bow",
-  "axe",
-  "boots",
-  "shoes",
-  "jerkin",
-  "visor",
-  "jack",
-  "robe",
-  "helm",
-  "belt",
-  "sash",
-  "ring",
-  "hat",
-  "hood",
-];
+/** Gear words that follow a set name, longest first so "inferno staff" wins over "staff": the model's list. */
+const PIECE_WORDS = ALL_PIECE_WORDS;
 
 function isPieceWord(value: string): boolean {
   return PIECE_WORDS.includes(value.trim().toLowerCase());

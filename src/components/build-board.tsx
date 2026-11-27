@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { arrange, type ArrangeSet, type FrontBarWeapons, type GearRole, type PlacedPiece, sourceSummary } from "@/lib/builds/arrange";
 import { GameIcon } from "@/components/game-icon";
+import { ARMOR_SLOTS, SLOT_LABEL } from "@/lib/game/equipment";
 import { QuickSlot } from "@/components/quick-slot";
 import type { BuildPageData, BuildSetOption } from "@/lib/builds/options";
 import { emptyBuild, traitPlanOf, type SavedBuild } from "@/lib/builds/saved";
@@ -24,16 +25,8 @@ const ROLES: { role: GearRole; label: string; hint: string }[] = [
   { role: "back", label: "Back bar", hint: "Usually an arena two-hander" },
 ];
 
-/** Armor, then jewelry, in the order the inventory paper doll uses. */
-const ARMOR = [
-  { id: "head", label: "Head" },
-  { id: "shoulders", label: "Shoulders" },
-  { id: "chest", label: "Chest" },
-  { id: "hands", label: "Hands" },
-  { id: "waist", label: "Waist" },
-  { id: "legs", label: "Legs" },
-  { id: "feet", label: "Feet" },
-] as const;
+/** Armor, then jewelry, in the order the inventory paper doll uses (the game model's slot order). */
+const ARMOR = ARMOR_SLOTS.map((id) => ({ id, label: SLOT_LABEL[id] }));
 
 const JEWELRY = [
   { id: "neck", label: "Necklace" },

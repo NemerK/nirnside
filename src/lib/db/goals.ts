@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "./index";
 import { getRole } from "./roles";
-import { ESO_CLASSES } from "../classes";
+import { CLASSES } from "../game/classes";
 import type { Goal, GoalDomain, GoalScope, GoalTier } from "../goals/types";
 import { TIERS } from "../goals/types";
 import { normalizeLineName } from "../goals/progress";
@@ -93,9 +93,9 @@ function assertTier(tier: string): GoalTier {
 }
 
 function canonicalClass(name: string): string {
-  const hit = ESO_CLASSES.find((c) => c.toLowerCase() === name.trim().toLowerCase());
+  const hit = CLASSES.find((c) => c.toLowerCase() === name.trim().toLowerCase());
   if (!hit) {
-    throw new Error(`Unknown class "${name.trim()}". Live classes: ${ESO_CLASSES.join(", ")}.`);
+    throw new Error(`Unknown class "${name.trim()}". Live classes: ${CLASSES.join(", ")}.`);
   }
   return hit;
 }

@@ -11,6 +11,8 @@ import type {
   CatalogCPStar,
   CatalogAchievement,
   CatalogDomain,
+  CatalogFood,
+  CatalogMundus,
   CatalogSource,
 } from "../catalog/schema";
 
@@ -61,6 +63,16 @@ function categories(domain: CatalogDomain): string[] {
       .prepare("SELECT DISTINCT category FROM catalog WHERE domain = ? AND category IS NOT NULL ORDER BY category")
       .all(domain) as { category: string }[]
   ).map((r) => r.category);
+}
+
+/** Mundus blessings as the game describes them (catalog scan, or learned from a save). */
+export function getMundus() {
+  return query<CatalogMundus>("mundus");
+}
+
+/** Every provisioning dish and its buff, from the catalog scan. */
+export function getFood(filters: Filters = {}) {
+  return query<CatalogFood>("food", filters);
 }
 
 export function catalogCount(domain: CatalogDomain): number {

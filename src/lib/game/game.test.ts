@@ -14,6 +14,9 @@ import {
   skillCategory,
   traitFamilyOf,
   traitsFor,
+  pieceSlotFromText,
+  weaponHandFromText,
+  ALL_PIECE_WORDS,
 } from "./index";
 
 describe("piece kinds", () => {
@@ -90,5 +93,25 @@ describe("skill categories", () => {
     assert.equal(skillCategory("weapon", "Templar"), "Class");
     const sorted = ["Craft", "World", "Class", "Guild"].sort(compareSkillCategory);
     assert.deepEqual(sorted, ["Class", "World", "Guild", "Craft"]);
+  });
+});
+
+describe("piece slots from any wording", () => {
+  it("reads weighted words, unique-piece words, labels, jewelry and weapons", () => {
+    assert.deepEqual(pieceSlotFromText("Null Arca Guards"), { kind: "armor", slot: "legs", weight: "medium" });
+    assert.deepEqual(pieceSlotFromText("Gauntlet of the Dread"), { kind: "armor", slot: "hands", weight: "heavy" });
+    assert.deepEqual(pieceSlotFromText("Spaulder of Ruin"), { kind: "armor", slot: "shoulders", weight: null });
+    assert.deepEqual(pieceSlotFromText("Hands"), { kind: "armor", slot: "hands", weight: null });
+    assert.deepEqual(pieceSlotFromText("Velothi Ur-Mage's Amulet"), { kind: "jewelry", jewelry: "necklace" });
+    assert.deepEqual(pieceSlotFromText("Nord Battle Axe"), { kind: "weapon", weapon: "battleaxe" });
+    assert.equal(pieceSlotFromText("Slivers of the Null Arca"), null);
+    assert.equal(pieceSlotFromText("Main Hand"), null);
+    assert.equal(weaponHandFromText("Main Hand"), "one");
+    assert.equal(weaponHandFromText("Two-Handed"), "two");
+  });
+  it("lists every piece word, longest first, with plurals", () => {
+    assert.ok(ALL_PIECE_WORDS.includes("spaulders"));
+    assert.ok(ALL_PIECE_WORDS.includes("gauntlet"));
+    assert.ok(ALL_PIECE_WORDS.indexOf("inferno staff") < ALL_PIECE_WORDS.indexOf("staff"));
   });
 });

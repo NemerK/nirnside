@@ -2,7 +2,9 @@ import {
   TWO_HANDED,
   WEAPON_LABEL as GAME_WEAPON_LABEL,
   pieceForResearchLine,
+  pieceSlotFromText,
   weaponFromText,
+  weaponHandFromText,
   type PieceKind,
   type Weapon,
 } from "../game/equipment";
@@ -76,135 +78,22 @@ export function kindFromPiece(slot: string, type: string, name: string): SlotKin
 }
 
 /**
- * The game's own piece names, longest first.
- *
- * Light, medium, and heavy do not share words. Legs are Breeches, Guards, or
- * Greaves. Shoulders are Epaulets, Arm Cops, or Pauldrons. A set name such as
- * "Slivers of the Null Arca" contains none of these, so it must not pick a slot.
- * "Null Arca Guards" does: Guards are medium legs.
+ * A slot kind from any text that names a piece, read through the game
+ * model's piece words (game/equipment.ts pieceSlotFromText): "Null Arca
+ * Guards" are legs, "Spaulder of Ruin" shoulders, "Ring 1" a ring. A set
+ * name such as "Slivers of the Null Arca" contains no piece word, so it
+ * never picks a slot.
  */
-const PIECE_PHRASES: ReadonlyArray<readonly [string, SlotKind]> = [
-  ["arm cops", "shoulders"],
-  ["epaulets", "shoulders"],
-  ["epaulet", "shoulders"],
-  ["pauldrons", "shoulders"],
-  ["pauldron", "shoulders"],
-  ["spaulders", "shoulders"],
-  ["spaulder", "shoulders"],
-  ["shoulders", "shoulders"],
-  ["shoulder", "shoulders"],
-  ["warmasks", "head"],
-  ["warmask", "head"],
-  ["helmets", "head"],
-  ["helmet", "head"],
-  ["circlets", "head"],
-  ["circlet", "head"],
-  ["helms", "head"],
-  ["helm", "head"],
-  ["cowls", "head"],
-  ["cowl", "head"],
-  ["hoods", "head"],
-  ["hood", "head"],
-  ["masks", "head"],
-  ["mask", "head"],
-  ["hats", "head"],
-  ["hat", "head"],
-  ["head", "head"],
-  ["cuirasses", "chest"],
-  ["cuirass", "chest"],
-  ["jerkins", "chest"],
-  ["jerkin", "chest"],
-  ["robes", "chest"],
-  ["robe", "chest"],
-  ["jacks", "chest"],
-  ["jack", "chest"],
-  ["chest", "chest"],
-  ["gauntlets", "hands"],
-  ["gauntlet", "hands"],
-  ["bracers", "hands"],
-  ["bracer", "hands"],
-  ["gloves", "hands"],
-  ["glove", "hands"],
-  ["hands", "hands"],
-  ["girdles", "waist"],
-  ["girdle", "waist"],
-  ["sashes", "waist"],
-  ["sash", "waist"],
-  ["belts", "waist"],
-  ["belt", "waist"],
-  ["waist", "waist"],
-  ["breeches", "legs"],
-  ["greaves", "legs"],
-  ["guards", "legs"],
-  ["legs", "legs"],
-  ["sabatons", "feet"],
-  ["sabaton", "feet"],
-  ["treaders", "feet"],
-  ["shoes", "feet"],
-  ["shoe", "feet"],
-  ["boots", "feet"],
-  ["boot", "feet"],
-  ["feet", "feet"],
-  ["foot", "feet"],
-  ["necklaces", "neck"],
-  ["necklace", "neck"],
-  ["amulets", "neck"],
-  ["amulet", "neck"],
-  ["chokers", "neck"],
-  ["choker", "neck"],
-  ["torcs", "neck"],
-  ["torc", "neck"],
-  ["necks", "neck"],
-  ["neck", "neck"],
-  ["rings", "ring"],
-  ["ring", "ring"],
-  ["restoration staff", "twoHand"],
-  ["healing staff", "twoHand"],
-  ["inferno staff", "twoHand"],
-  ["fire staff", "twoHand"],
-  ["lightning staff", "twoHand"],
-  ["ice staff", "twoHand"],
-  ["frost staff", "twoHand"],
-  ["greatsword", "twoHand"],
-  ["battle axe", "twoHand"],
-  ["battleaxe", "twoHand"],
-  ["maul", "twoHand"],
-  ["shields", "shield"],
-  ["shield", "shield"],
-  ["bows", "twoHand"],
-  ["bow", "twoHand"],
-  ["staves", "twoHand"],
-  ["staff", "twoHand"],
-  ["two-handed", "twoHand"],
-  ["two hand", "twoHand"],
-  ["daggers", "oneHand"],
-  ["dagger", "oneHand"],
-  ["maces", "oneHand"],
-  ["mace", "oneHand"],
-  ["hammers", "oneHand"],
-  ["hammer", "oneHand"],
-  ["axes", "oneHand"],
-  ["axe", "oneHand"],
-  ["swords", "oneHand"],
-  ["sword", "oneHand"],
-  ["main hand", "oneHand"],
-  ["off hand", "oneHand"],
-  ["one-handed", "oneHand"],
-  ["one hand", "oneHand"],
-];
-
-function mentions(blob: string, phrase: string): boolean {
-  const body = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b${body}\\b`, "i").test(blob);
-}
-
 function specificKind(text: string): SlotKind | null {
-  const blob = text.toLowerCase();
-  if (!blob.trim()) return null;
-  for (const [phrase, kind] of PIECE_PHRASES) {
-    if (mentions(blob, phrase)) return kind;
+  const piece = pieceSlotFromText(text);
+  if (piece) {
+    if (piece.kind === "armor") return piece.slot;
+    if (piece.kind === "jewelry") return piece.jewelry === "necklace" ? "neck" : "ring";
+    if (piece.weapon === "shield") return "shield";
+    return TWO_HANDED.has(piece.weapon) ? "twoHand" : "oneHand";
   }
-  return null;
+  const hand = weaponHandFromText(text);
+  return hand === "two" ? "twoHand" : hand === "one" ? "oneHand" : null;
 }
 
 /** A bare "Weapon" label, once staves and bows have already been claimed. */

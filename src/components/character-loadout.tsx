@@ -8,6 +8,7 @@ import { getAccount } from "@/lib/db/queries";
 import { qualityText } from "@/lib/format";
 import { indexKnownSets, withResolvedSet, type KnownSet } from "@/lib/catalog/set-brief";
 import { placeEquipped, tallySets } from "@/lib/characters/loadout";
+import { baseSetName } from "@/lib/game/loadout";
 import { skillIconByName } from "@/lib/icons/skill-icons";
 import { EsoText } from "./eso-text";
 import { GameIcon } from "./game-icon";
@@ -67,7 +68,7 @@ export function CharacterLoadout({
               <SetHover
                 key={set.name}
                 name={set.name}
-                setId={withSets.find((item) => item.setName === set.name)?.setId}
+                setId={withSets.find((item) => item.setName && baseSetName(item.setName) === set.name)?.setId}
                 detail={`${set.count} worn`}
               >
                 <Link
@@ -152,7 +153,7 @@ function GearCell({
 }) {
   const { item, label } = slot;
   const meta = item ? [item.trait, item.enchant ? esoPlainText(item.enchant) : null, ...item.scribing].filter(Boolean) : [];
-  const wornCount = item?.setName ? worn.get(item.setName) : undefined;
+  const wornCount = item?.setName ? worn.get(baseSetName(item.setName)) : undefined;
   const detail = [...meta, wornCount ? `${wornCount} worn` : null].filter(Boolean).join(" · ");
   const name = item ? (
     <div className={`line-clamp-2 text-sm leading-snug ${item.quality ? qualityText(item.quality) : "text-fg"}`}>

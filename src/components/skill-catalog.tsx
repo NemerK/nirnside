@@ -4,7 +4,7 @@ import { SKILL_WINDOW_LINE_ORDER } from "@/lib/game/skills";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { ESO_CLASSES } from "@/lib/classes";
+import { CLASSES } from "@/lib/game/classes";
 import { omitClasslessDuplicates } from "@/lib/planner/skill-groups";
 import { SKILL_CATEGORY_ORDER } from "@/lib/skills/present";
 import { GameIcon } from "./game-icon";
@@ -122,8 +122,8 @@ function rank(category: string): number {
 }
 
 function classRank(name: string): number {
-  const index = (ESO_CLASSES as readonly string[]).indexOf(name);
-  return index < 0 ? ESO_CLASSES.length : index;
+  const index = (CLASSES as readonly string[]).indexOf(name);
+  return index < 0 ? CLASSES.length : index;
 }
 
 function byLine(a: SkillCatalogItem, b: SkillCatalogItem): number {
