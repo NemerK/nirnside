@@ -1,4 +1,5 @@
 import { qualityTextClass } from "../game/quality";
+import { styleKey } from "../game/motifs";
 import type {
   Character,
   CharacterResearch,
@@ -11,13 +12,9 @@ import type {
 } from "../snapshot/schema";
 
 /** Strip lore-book prefixes so "Crafting Motif 15: Dwemer Style" matches "Dwemer". */
+/** Style key shared by motifs and outfit styles, from the game model (punctuation-free for matching). */
 export function motifKey(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/^crafting motifs?\s+\d+\s*:\s*/i, "")
-    .replace(/^craft motifs?\s+\d+\s*:\s*/i, "")
-    .replace(/\s+style$/i, "")
-    .replace(/[^a-z0-9]+/g, "");
+  return styleKey(name).replace(/[^a-z0-9]+/g, "");
 }
 
 export function formatResearchRemaining(seconds: number): string {
