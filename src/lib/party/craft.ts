@@ -24,6 +24,33 @@ export interface CraftRow {
   can: CraftCandidate[];
   /** The closest character who can't yet, and how many traits they still need. */
   closest: (CraftCandidate & { missing: number }) | null;
+  /** Every character the snapshot has research for on this piece, by id. */
+  cells: Record<string, CraftCell>;
+}
+
+export interface CraftCell {
+  known: number;
+  hasTrait: boolean | null;
+  ok: boolean;
+  /** Traits still to research before this character can make it (counting the asked-for trait). */
+  missing: number;
+}
+
+/** Per character: how many of the set's pieces they can make now. */
+export function craftCoverage(rows: CraftRow[], ids: string[]): Map<string, { ok: number; total: number }> {
+  const out = new Map<string, { ok: number; total: number }>();
+  for (const id of ids) {
+    let ok = 0;
+    let total = 0;
+    for (const r of rows) {
+      const cell = r.cells[id];
+      if (!cell) continue;
+      total += 1;
+      if (cell.ok) ok += 1;
+    }
+    out.set(id, { ok, total });
+  }
+  return out;
 }
 
 export interface CraftSource {
@@ -45,14 +72,21 @@ export function whoCanCraft(characters: CraftSource[], traitsNeeded: number, tra
         const key = `${craft.name}|${line.name}`;
         let row = rows.get(key);
         if (!row) {
-          row = { craft: craft.name || craft.craft, line: line.name, can: [], closest: null };
+          row = { craft: craft.name || craft.craft, line: line.name, can: [], closest: null, cells: {} };
           rows.set(key, row);
         }
         const known = line.traits.filter((t) => t.known).length;
         const traitRow = trait ? line.traits.find((t) => same(t.name, trait)) : undefined;
         const hasTrait = trait ? (traitRow ? traitRow.known : false) : null;
         const candidate: CraftCandidate = { id: c.id, name: c.name, className: c.className, known, hasTrait };
-        if (known >= traitsNeeded && hasTrait !== false) {
+        const ok = known >= traitsNeeded && hasTrait !== false;
+        row.cells[c.id] = {
+          known,
+          hasTrait,
+          ok,
+          missing: ok ? 0 : Math.max(0, traitsNeeded - known) + (hasTrait === false ? 1 : 0),
+        };
+        if (ok) {
           row.can.push(candidate);
         } else {
           const missing = Math.max(0, traitsNeeded - known) + (hasTrait === false ? 1 : 0);
