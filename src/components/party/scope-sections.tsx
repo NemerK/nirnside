@@ -39,7 +39,10 @@ import { communityPledgesForUnix } from "@/lib/dailies/pledges";
 import { presentAccountDailies } from "@/lib/dailies/present";
 import { knownMotifKeys, presentMotifs, presentOutfitStyles, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
 import { craftingCharacters, dailiesCharacters, roster } from "@/lib/party/data";
-import { whoCanCraft } from "@/lib/party/craft";
+import { craftCoverage, whoCanCraft, type CraftRow } from "@/lib/party/craft";
+import { CraftCheckControls } from "@/components/party/craft-check-controls";
+import { Fragment } from "react";
+import { Check } from "lucide-react";
 
 
 const PAGE_SIZE = 100;
@@ -342,6 +345,163 @@ export function SetsSection({ sp }: { sp: Params }) {
 
 /* ---------------- Crafting: account totals per character, and who can craft a set ---------------- */
 
+/**
+ * Pieces down the side, characters across, like the Planner: a tick where a
+ * character can make the piece now, otherwise traits known out of needed.
+ * Above it, the answer most people came for: who can make the whole set.
+ */
+function CraftGrid({
+  rows,
+  characters,
+  needed,
+  trait,
+  setName,
+}: {
+  rows: CraftRow[];
+  characters: { id: string; name: string; class: string }[];
+  needed: number;
+  trait: string | null;
+  setName: string;
+}) {
+  const people = characters.filter((c) => rows.some((r) => r.cells[c.id]));
+  const cover = craftCoverage(rows, people.map((c) => c.id));
+  people.sort((a, b) => (cover.get(b.id)?.ok ?? 0) - (cover.get(a.id)?.ok ?? 0) || a.name.localeCompare(b.name));
+  const whole = people.filter((c) => {
+    const v = cover.get(c.id);
+    return v && v.total > 0 && v.ok === v.total;
+  });
+  const best = people[0];
+  const bestCover = best ? cover.get(best.id) : undefined;
+  const crafts = [...new Set(rows.map((r) => r.craft))];
+  const nobody = rows.filter((r) => r.can.length === 0);
+
+  return (
+    <div className="mt-4">
+      <div className="mb-4 rounded-lg border border-border bg-surface px-4 py-3 text-[14px]">
+        {whole.length > 0 ? (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <span className="text-fg-muted">Can make every piece{trait ? ` in ${trait}` : ""}:</span>
+            {whole.map((c) => (
+              <span key={c.id} className="inline-flex items-center gap-1.5 rounded-md bg-surface-2 px-2 py-0.5 text-fg">
+                <span className="h-2 w-2 rounded-full" style={{ background: classColor(c.class) ?? "var(--border)" }} aria-hidden />
+                {c.name}
+              </span>
+            ))}
+          </p>
+        ) : (
+          <p className="text-fg-muted">
+            Nobody can make every piece yet.
+            {best && bestCover ? (
+              <>
+                {" "}
+                Closest is <span className="text-fg">{best.name}</span>, with {bestCover.ok} of {bestCover.total} pieces.
+              </>
+            ) : null}
+          </p>
+        )}
+        {nobody.length > 0 ? (
+          <p className="mt-1.5 text-[13px] text-fg-subtle">
+            No one can make {nobody.map((r) => r.line).join(", ")} yet.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="overflow-x-auto">
+        <table
+          className="table-fixed border-separate border-spacing-0"
+          style={{ width: `calc(12rem + ${people.length} * 3.5rem)` }}
+        >
+          <colgroup>
+            <col style={{ width: "12rem" }} />
+            {people.map((c) => (
+              <col key={c.id} style={{ width: "3.5rem" }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-10 border-b border-border bg-surface pb-2 pr-3 text-left align-bottom text-[12px] font-normal text-fg-subtle">
+                {rows.length} pieces · {needed} traits each
+              </th>
+              {people.map((c) => {
+                const v = cover.get(c.id);
+                const full = v && v.total > 0 && v.ok === v.total;
+                return (
+                  <th key={c.id} className="border-b border-border px-0.5 pb-2 align-bottom font-normal" title={`${c.name} · ${c.class}\nCan make ${v?.ok ?? 0} of ${v?.total ?? 0} pieces`}>
+                    <span className="mx-auto flex flex-col items-center gap-1.5">
+                      <span className="max-h-32 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-fg [writing-mode:vertical-rl] rotate-180">
+                        {c.name}
+                      </span>
+                      <span className="h-1 w-5 rounded-full" style={{ background: classColor(c.class) ?? "var(--border)" }} aria-hidden />
+                      <span className={`text-[11px] tabular-nums ${full ? "text-ok" : "text-fg-muted"}`}>
+                        {v?.ok ?? 0}/{v?.total ?? 0}
+                      </span>
+                    </span>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {crafts.map((craft) => (
+              <Fragment key={craft}>
+                <tr>
+                  <th colSpan={people.length + 1} className="sticky left-0 border-b border-border/60 bg-surface-2/40 px-0 py-1.5 text-left text-[12px] font-normal text-fg">
+                    {craft}
+                  </th>
+                </tr>
+                {rows
+                  .filter((r) => r.craft === craft)
+                  .map((r) => (
+                    <tr key={`${r.craft}-${r.line}`} className="group/row hover:bg-surface-2/30">
+                      <th scope="row" className="sticky left-0 z-10 truncate border-b border-border/40 bg-surface py-1.5 pr-3 text-left text-[13px] font-normal text-fg group-hover/row:bg-surface-2">
+                        {r.line}
+                      </th>
+                      {people.map((c) => {
+                        const cell = r.cells[c.id];
+                        if (!cell) return <td key={c.id} className="border-b border-border/40 text-center text-fg-subtle/40">·</td>;
+                        const why = cell.ok
+                          ? `${c.name} can make the ${r.line} (${cell.known} traits known)`
+                          : `${c.name}: ${cell.known} of ${needed} traits${cell.hasTrait === false ? `, ${trait} not researched` : ""}`;
+                        return (
+                          <td key={c.id} title={why} className="relative h-8 border-b border-border/40 text-center text-[12px] tabular-nums">
+                            {cell.ok ? (
+                              <Check className="mx-auto h-3.5 w-3.5 text-ok" aria-label="Can make it" />
+                            ) : cell.known >= needed ? (
+                              // Enough traits; only the asked-for trait is missing.
+                              <span className="text-[11px] text-danger">no trait</span>
+                            ) : (
+                              <>
+                                <span className="text-fg-muted">
+                                  {Math.min(cell.known, needed)}/{needed}
+                                </span>
+                                {cell.hasTrait === false ? (
+                                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-danger" aria-hidden />
+                                ) : null}
+                                <span className="absolute inset-x-2 bottom-1 h-[2px] rounded-full bg-meter-track" aria-hidden>
+                                  <span className="block h-full rounded-full bg-meter" style={{ width: `${Math.min(100, (cell.known / needed) * 100)}%` }} />
+                                </span>
+                              </>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-[12.5px] text-fg-subtle">
+        {setName} needs {needed} traits researched on a piece
+        {trait ? `, and ${trait} researched to put it on` : ""}. A tick means they can make it now; otherwise, traits known out of {needed}
+        {trait ? `; a red dot or "no trait" means ${trait} itself isn't researched on that piece` : ""}.
+      </p>
+    </div>
+  );
+}
+
+
 export function CraftingSection({ sp }: { sp: Params }) {
   const characters = craftingCharacters().filter((c) => c.lastSeen != null);
   const crafted = safe(() => getSets({ category: "Crafted" }), []).map(({ entry }) => entry);
@@ -362,34 +522,17 @@ export function CraftingSection({ sp }: { sp: Params }) {
   return (
     <div className="space-y-8">
       <section className="party-module px-6 py-5">
-        <h2 className="font-display text-[26px] text-fg">Who can craft it?</h2>
-        <form method="get" className="mt-3 flex flex-wrap items-end gap-3 text-[14px]">
-          <label className="flex flex-col gap-1">
-            <span className="text-[12.5px] text-fg-subtle">Crafted set</span>
-            <select name="set" defaultValue={chosen?.name} className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-fg">
-              {crafted.map((s) => (
-                <option key={s.id} value={s.name}>
-                  {s.name}
-                  {s.traitsNeeded ? ` — ${s.traitsNeeded} traits` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[12.5px] text-fg-subtle">Trait</span>
-            <select name="trait" defaultValue={trait ?? ""} className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-fg">
-              <option value="">Any trait</option>
-              {traitNames.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="rounded-lg bg-accent px-4 py-2 font-medium text-accent-fg">
-            Check
-          </button>
-        </form>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h2 className="font-display text-[26px] text-fg">Who can craft it?</h2>
+          {chosen ? (
+            <CraftCheckControls
+              sets={crafted.map((s) => ({ name: s.name, traitsNeeded: s.traitsNeeded ?? null }))}
+              set={chosen.name}
+              traits={traitNames}
+              trait={trait ?? ""}
+            />
+          ) : null}
+        </div>
         {!chosen ? (
           <p className="mt-4 text-sm text-fg-muted">The catalog has no crafted sets yet. An in-game catalog scan fills them in.</p>
         ) : needed === 0 ? (
@@ -399,46 +542,7 @@ export function CraftingSection({ sp }: { sp: Params }) {
         ) : rows.length === 0 ? (
           <p className="mt-4 text-sm text-fg-muted">No research captured yet.</p>
         ) : (
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-[14px]">
-              <thead>
-                <tr className="text-left text-[12.5px] text-fg-subtle">
-                  <th className="pb-2 font-normal">Piece</th>
-                  <th className="pb-2 font-normal">Can make it now</th>
-                  <th className="pb-2 font-normal">Closest otherwise</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {rows.map((r) => (
-                  <tr key={`${r.craft}-${r.line}`}>
-                    <td className="py-2 pr-4 text-fg">
-                      {r.line} <span className="text-[12px] text-fg-subtle">{r.craft}</span>
-                    </td>
-                    <td className="py-2 pr-4">
-                      {r.can.length === 0 ? (
-                        <span className="text-fg-subtle">Nobody yet</span>
-                      ) : (
-                        r.can.map((c, i) => (
-                          <span key={c.id}>
-                            {i > 0 ? ", " : null}
-                            <span style={{ color: classColor(c.className) }}>{c.name}</span>
-                            <span className="text-fg-subtle"> ({c.known})</span>
-                          </span>
-                        ))
-                      )}
-                    </td>
-                    <td className="py-2 text-fg-muted">
-                      {r.closest ? `${r.closest.name}, ${r.closest.missing} short` : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-3 text-[12.5px] text-fg-subtle">
-              {chosen.name} needs {needed} traits researched on the piece{trait ? `, including ${trait}` : ""}. Numbers in brackets are
-              traits known.
-            </p>
-          </div>
+          <CraftGrid rows={rows} characters={characters} needed={needed} trait={trait} setName={chosen.name} />
         )}
       </section>
 

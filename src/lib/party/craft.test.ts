@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { whoCanCraft, type CraftSource } from "./craft";
+import { craftCoverage, whoCanCraft, type CraftSource } from "./craft";
 
 function line(name: string, known: string[], all: string[]) {
   return { name, traits: all.map((t) => ({ name: t, known: known.includes(t), researching: false })) };
@@ -70,5 +70,34 @@ describe("whoCanCraft", () => {
       rows.map((r) => r.line),
       ["Helm"],
     );
+  });
+});
+
+describe("craftCoverage", () => {
+  it("counts the pieces each character can make", () => {
+    const research = (known: number) => ({
+      crafts: [
+        {
+          craft: "blacksmithing",
+          name: "Blacksmithing",
+          lines: [
+            { name: "Axe", traits: Array.from({ length: 9 }, (_, i) => ({ name: `T${i}`, known: i < known })) },
+            { name: "Mace", traits: Array.from({ length: 9 }, (_, i) => ({ name: `T${i}`, known: i < 2 })) },
+          ],
+        },
+      ],
+    });
+    const rows = whoCanCraft(
+      [
+        { id: "a", name: "A", className: "Templar", research: research(4) as never },
+        { id: "b", name: "B", className: "Templar", research: research(1) as never },
+      ],
+      3,
+      null,
+    );
+    const cov = craftCoverage(rows, ["a", "b"]);
+    assert.deepEqual(cov.get("a"), { ok: 1, total: 2 });
+    assert.deepEqual(cov.get("b"), { ok: 0, total: 2 });
+    assert.equal(rows[0].cells.b.missing, 2);
   });
 });
