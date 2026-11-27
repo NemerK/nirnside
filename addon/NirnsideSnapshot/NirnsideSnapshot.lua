@@ -409,6 +409,22 @@ local function readItem(bagId, slotIndex, location, owner, ownerId)
   -- is what says these are pants.
   local typeLabel = pieceTypeInfo(link)
   if typeLabel and typeLabel ~= "" then item.equipSlot = typeLabel end
+  item.icon = safe(function() return normIcon(GetItemLinkIcon(link)) end, nil)
+  -- The game's own item type ("Food", "Style Material", "Furnishing") and its
+  -- finer kind, so Nirnside files every item where the game does.
+  local itemType, specializedType = safe(function() return GetItemLinkItemType(link) end, nil)
+  if type(itemType) == "number" and itemType > 0 then
+    item.itemType = itemType
+    item.itemTypeLabel = safe(function() return zo_strformat("<<1>>", GetString("SI_ITEMTYPE", itemType)) end, nil)
+    if item.itemTypeLabel == "" then item.itemTypeLabel = nil end
+  end
+  if type(specializedType) == "number" and specializedType > 0 then
+    item.specializedType = specializedType
+    item.specializedTypeLabel = safe(function()
+      return zo_strformat("<<1>>", GetString("SI_SPECIALIZEDITEMTYPE", specializedType))
+    end, nil)
+    if item.specializedTypeLabel == "" then item.specializedTypeLabel = nil end
+  end
   return item
 end
 
@@ -2829,6 +2845,128 @@ local function gatherOutfitStyles()
   return categories
 end
 
+-- Buffs on the character at the moment of the save: Mundus blessings, food
+-- and drink, and other lasting effects. Short combat effects (under a minute)
+-- are left out. Timers are kept as an end time, so the app counts down from
+-- the save. Read only at logout or reload, like everything else here.
+local MIN_BUFF_SECONDS = 60
+
+local function gatherBuffs()
+  local out = {}
+  if not GetNumBuffs or not GetUnitBuffInfo then return out end
+  local n = safe(function() return GetNumBuffs("player") end, 0) or 0
+  local nowGame = safe(function() return GetFrameTimeSeconds() end, nil)
+  local nowUnix = GetTimeStamp()
+  for i = 1, n do
+    local name, startedAt, endsAt, _, stacks, icon, _, _, _, _, abilityId = safe(function()
+      return GetUnitBuffInfo("player", i)
+    end, nil)
+    if type(name) == "string" and name ~= "" then
+      name = zo_strformat("<<1>>", name)
+      local permanent = type(endsAt) ~= "number" or type(startedAt) ~= "number" or endsAt <= startedAt
+      local remaining = nil
+      if not permanent and nowGame then remaining = math.floor(endsAt - nowGame) end
+      if permanent or (remaining and remaining >= MIN_BUFF_SECONDS) then
+        local boon = name:match("^[Bb]oon:%s*(.+)$")
+        out[#out + 1] = {
+          name = name,
+          abilityId = type(abilityId) == "number" and abilityId or nil,
+          icon = normIcon(icon),
+          stacks = type(stacks) == "number" and stacks > 1 and stacks or nil,
+          endsAt = remaining and (nowUnix + remaining) or nil,
+          mundus = boon ~= nil or nil,
+          -- The game's own text, with this patch's numbers, for blessings only.
+          description = boon and type(abilityId) == "number" and safe(function() return abilityDescription(abilityId) end, nil) or nil,
+        }
+      end
+    end
+  end
+  return out
+end
+
+-- The blessing names from the buffs ("The Warrior"). Two with Twice-Born Star.
+local function mundusFromBuffs(buffs)
+  local names = {}
+  for _, b in ipairs(buffs) do
+    if b.mundus then
+      local stone = b.name:match("^[Bb]oon:%s*(.+)$")
+      if stone and stone ~= "" then names[#names + 1] = stone end
+    end
+  end
+  return names
+end
+
+-- Riding lessons: each skill and its cap, and when the next lesson opens.
+local function gatherRiding()
+  if not GetRidingStats then return nil end
+  local capacity, maxCapacity, stamina, maxStamina, speed, maxSpeed = safe(function() return GetRidingStats() end, nil)
+  if type(speed) ~= "number" then return nil end
+  local untilMs = safe(function() return GetTimeUntilCanBeTrained and GetTimeUntilCanBeTrained() end, nil)
+  return {
+    speed = speed, maxSpeed = maxSpeed,
+    stamina = stamina, maxStamina = maxStamina,
+    capacity = capacity, maxCapacity = maxCapacity,
+    trainableAt = type(untilMs) == "number" and (GetTimeStamp() + math.floor(untilMs / 1000)) or nil,
+  }
+end
+
+-- Free and used slots in one bag, as the game counts them.
+local function bagSpace(bagId)
+  local size = safe(function() return GetBagSize(bagId) end, nil)
+  local used = safe(function() return GetNumBagUsedSlots(bagId) end, nil)
+  if type(size) ~= "number" or type(used) ~= "number" then return nil end
+  return { used = used, size = size }
+end
+
+-- Companions are account-wide: owned ones come from the collection, and the
+-- one out at the save adds its level and rapport. The others keep what an
+-- earlier save saw, with the time it was seen.
+local function gatherCompanions(previous)
+  local byId = {}
+  for _, c in ipairs(previous or {}) do
+    if type(c) == "table" and c.collectibleId then byId[c.collectibleId] = c end
+  end
+  safe(function()
+    local catType = COLLECTIBLE_CATEGORY_TYPE_COMPANION
+    if type(catType) ~= "number" or not GetTotalCollectiblesByCategoryType then return end
+    for i = 1, (GetTotalCollectiblesByCategoryType(catType) or 0) do
+      local id = GetCollectibleIdFromType(catType, i)
+      if id and id ~= 0 then
+        local row = byId[id] or { collectibleId = id }
+        row.name = zo_strformat("<<1>>", GetCollectibleName(id) or "")
+        row.icon = normIcon(GetCollectibleIcon(id))
+        row.owned = IsCollectibleUnlocked(id) and true or false
+        byId[id] = row
+      end
+    end
+  end)
+  safe(function()
+    if not HasActiveCompanion or not HasActiveCompanion() then return end
+    local defId = GetActiveCompanionDefId()
+    local id = GetCompanionCollectibleId and GetCompanionCollectibleId(defId) or nil
+    if not id or id == 0 then return end
+    local row = byId[id] or { collectibleId = id, owned = true }
+    row.name = row.name or zo_strformat("<<1>>", GetCompanionName(defId) or "")
+    local level = GetActiveCompanionLevelInfo and select(1, GetActiveCompanionLevelInfo()) or nil
+    if type(level) == "number" then row.level = level end
+    local rapport = GetActiveCompanionRapport and GetActiveCompanionRapport() or nil
+    if type(rapport) == "number" then row.rapportValue = rapport end
+    local rapportLevel = GetActiveCompanionRapportLevel and GetActiveCompanionRapportLevel() or nil
+    if type(rapportLevel) == "number" then
+      local label = GetString("SI_COMPANIONRAPPORTLEVEL", rapportLevel)
+      row.rapport = label and label ~= "" and zo_strformat("<<1>>", label) or nil
+    end
+    row.seenAt = GetTimeStamp()
+    byId[id] = row
+  end)
+  local out = {}
+  for _, row in pairs(byId) do
+    if row.name and row.name ~= "" then out[#out + 1] = row end
+  end
+  table.sort(out, function(a, b) return a.name < b.name end)
+  return out
+end
+
 local function gatherCharacter()
   local name = safe(function() return zo_strformat("<<1>>", GetUnitName("player")) end, "Unknown")
   local vampire, werewolf = gatherCurse()
@@ -2838,6 +2976,8 @@ local function gatherCharacter()
   local classMasteryState = { unlocked = false }
   local class = safe(function() return zo_strformat("<<1>>", GetUnitClass("player")) end, "Unknown")
   local skillLines = gatherSkills(classMasteries, classMasteryState, class)
+  local buffs = safe(function() return gatherBuffs() end, {})
+  local boons = mundusFromBuffs(buffs)
   return {
     id = charId,
     name = name,
@@ -2847,7 +2987,13 @@ local function gatherCharacter()
     gender = nil,
     level = level,
     championPoints = safe(function() return GetPlayerChampionPointsEarned() end, 0),
-    mundus = nil, -- best-effort; needs buff lookup, left nil until verified
+    mundus = boons[1],
+    mundusBoons = boons,
+    buffs = buffs,
+    riding = safe(function() return gatherRiding() end, nil),
+    skillPoints = safe(function() return GetAvailableSkillPoints() end, nil),
+    skyshards = safe(function() return GetNumSkyShards() end, nil),
+    backpack = safe(function() return bagSpace(BAG_BACKPACK) end, nil),
     attributes = {
       magicka = safe(function() return GetAttributeSpentPoints(ATTRIBUTE_MAGICKA) end, 0),
       health  = safe(function() return GetAttributeSpentPoints(ATTRIBUTE_HEALTH) end, 0),
@@ -3141,14 +3287,15 @@ local function bonusesForSet(setId)
   local bonuses = {}
   local count = tonumber(numBonuses) or 0
   for i = 1, count do
-    local numRequired, description = safe(function()
+    -- The third return marks the perfected line, which only perfected pieces count toward.
+    local numRequired, description, isPerfected = safe(function()
       return GetItemLinkSetBonusInfo(link, false, i)
     end, nil)
     if type(description) == "string" and description ~= "" then
       description = zo_strformat("<<1>>", description)
       local pieces = tonumber(numRequired) or i
       if description ~= "" and pieces >= 1 then
-        bonuses[#bonuses + 1] = { pieces = pieces, text = description }
+        bonuses[#bonuses + 1] = { pieces = pieces, text = description, perfected = isPerfected == true or nil }
       end
     end
   end
@@ -3623,6 +3770,18 @@ local function syncRosterWithGame()
   end
 
   sv.characters = roster
+
+  -- A deleted character's bags are gone from the game too. Items are kept per
+  -- owner between logouts, so drop the ones whose owner left the roster.
+  local keptItems = {}
+  for _, it in ipairs(sv.items or {}) do
+    local owned = it.ownerCharacterId or it.ownerCharacter
+    local live_ = not owned
+      or (it.ownerCharacterId and onRoster[it.ownerCharacterId])
+      or (it.ownerCharacter and onRoster["name:" .. it.ownerCharacter])
+    if live_ then keptItems[#keptItems + 1] = it end
+  end
+  sv.items = keptItems
 end
 
 local function totalLiveGold()
@@ -3752,6 +3911,12 @@ local function takeSnapshot(reason)
   sv.houses = gatherHouses()
   sv.mythics = safe(function() return gatherMythics() end, {})
   sv.outfitStyles = safe(function() return gatherOutfitStyles() end, {})
+  sv.companions = safe(function() return gatherCompanions(sv.companions) end, sv.companions or {})
+  sv.bankSpace = safe(function()
+    local bank, plus = bagSpace(BAG_BANK), bagSpace(BAG_SUBSCRIBER_BANK)
+    if not bank then return nil end
+    return { used = bank.used + (plus and plus.used or 0), size = bank.size + (plus and plus.size or 0) }
+  end, nil)
 
   upsertCharacter(gatherCharacter())
   syncRosterWithGame()

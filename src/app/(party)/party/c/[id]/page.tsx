@@ -157,7 +157,6 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
   const isSample = safe(() => getDataSource(), null)?.kind === "sample";
   const color = classColor(c.class) ?? "#b46ad4";
   const known = c.lastSeen != null;
-  const archived = c.archivedAt != null;
   const sheet = presentSheet(c, now);
   const roles = safe(() => listRoles(), []);
   const assigned = safe(() => rolesForCharacter(c.id, roles, listAssignments()), []);
@@ -277,13 +276,6 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
           {known && (c.telVar ?? 0) > 0 ? stat("Tel Var", formatNumber(c.telVar ?? 0)) : null}
         </dl>
       </header>
-
-      {archived ? (
-        <p className="mb-4 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg-muted">
-          This character was deleted from the game. You&apos;re seeing their last-known sheet; their gold and bags no
-          longer count towards the account.
-        </p>
-      ) : null}
 
       {!known ? (
         <div className="party-module px-6 py-10 text-center">

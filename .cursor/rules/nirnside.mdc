@@ -13,9 +13,11 @@ the product owner. Do not relax them without explicit approval.
 
 ## 1. Live patch only — never deprecated
 - All game data (skills, sets, items, scribing, Champion Points, tooltips, systems)
-  MUST match the **current live ESO patch**. As of this writing that is **Update 50 +
-  Season One (2026)**; on a new live patch the catalog must be re-ingested, not frozen
-  at an old update.
+  MUST match the **current live ESO patch**. As of this writing that is **Update 51
+  (live 28 September 2026)**; Update 52 is due 19 January 2027 and is PTS until then.
+  On a new live patch the catalog must be re-ingested, not frozen at an old update.
+- Numbers that move with patches (Mundus, food, set bonuses, skills) come from the
+  game: the catalog scan, or what a character's save carries. Never typed from memory.
 - If something is **removed from the live game, it must not appear in the catalog**.
   (Exception: an item that is no longer obtainable but is still physically sitting in a
   player's bags MUST still render in Inventory — hiding it would make the bag a lie.
@@ -37,12 +39,22 @@ the product owner. Do not relax them without explicit approval.
 - Missing data is shown as **unknown with a timestamp** (e.g. "not scanned since last
   patch"), never faked as empty or silently hidden.
 
-## 3. Privacy & security — local only
-- Nirnside runs **entirely on the user's own machine**. Account data never leaves the
-  device. No servers, no accounts, no telemetry, no analytics, no ads.
+## 3. Privacy & security
+- **Today Nirnside runs entirely on the user's own machine.** Account data never leaves
+  the device. No telemetry, no analytics, no ads. Until the web version below is built
+  and the player turns it on, nothing is sent anywhere.
+- **Planned: a web version** (approved by the owner, November 2026; details to be
+  agreed before any of it is built). Its fixed points:
+  - each player has an account; their account data is private to them;
+  - a player chooses which modules to share and with whom (friends, profile);
+    nothing is shared by default;
+  - the game catalog stays each player's own, built from their own scans and saves,
+    never pooled from other players;
+  - the host never sells data, shows ads or tracks players.
+  Moving there is mostly mechanical (docs/NIRNSIDE.md §9): the tables are keyed by
+  the game's ids, and no logic lives in SQL.
 - Each copy only ever handles **its own player's data**. Never build features that pull
-  another player's account data to a place the operator can read it. Any future sharing
-  must be end-to-end encrypted such that the host cannot decrypt it.
+  another player's account data without that player choosing to share it.
 - Never store or request ESO passwords or credentials. Never inject into, hook, read the
   memory of, or sniff packets from the ESO process. The **only** sanctioned data path is
   the game writing its own `SavedVariables`, which we parse from disk.
@@ -67,9 +79,15 @@ the product owner. Do not relax them without explicit approval.
   Champion Points, equipped incl. back bar, companions, research/motifs/recipes),
   currencies, guilds + trader status, Pithka-style trial/dungeon achievements, and a
   full live encyclopedia.
-- Out of scope (for now): combat math, food/potion/buff timers ("currently buffed"),
-  guild banks, house banks, mail/buyback/decon, PvP ranks, quest log, outfits/dyes as a
-  feature, Tales of Tribute, armory/loadout manager.
+- Also in scope (owner, November 2026): the whole game model (docs/game-model.md) and
+  everything the game lets an addon read about the account: lasting buffs at the save
+  (Mundus, food and drink) with their timers counted down from the save, riding
+  lessons, skill points, bag space, companions, outfit styles, Mundus and food with
+  the game's own numbers, and Wizard's Wardrobe setups read as plans.
+- Out of scope (for now): combat math (stat values such as base, critical and critical
+  damage are noted for later in docs/notes.md), guild banks, house banks,
+  mail/buyback/decon, PvP ranks, quest log, Tales of Tribute, an armory or loadout
+  manager that changes the game.
 
 ## 6. Coherence — one shared catalog
 - The account view and the encyclopedia are **one system over one database**, not two

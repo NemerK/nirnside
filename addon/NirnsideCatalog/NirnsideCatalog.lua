@@ -49,7 +49,8 @@ local function setBonusesFromId(setId)
   if not hasSet then return nil, nil end
   local bonuses = {}
   for i = 1, (tonumber(numBonuses) or 0) do
-    local numRequired, description = safe(function()
+    -- The third return marks the perfected line, which only perfected pieces count toward.
+    local numRequired, description, isPerfected = safe(function()
       return GetItemLinkSetBonusInfo(link, false, i)
     end, nil)
     if type(description) == "string" and description ~= "" then
@@ -58,7 +59,7 @@ local function setBonusesFromId(setId)
       if pieces < 1 then pieces = i end
       if pieces > 12 then pieces = 12 end
       if description ~= "" then
-        bonuses[#bonuses + 1] = { pieces = pieces, text = description }
+        bonuses[#bonuses + 1] = { pieces = pieces, text = description, perfected = isPerfected == true or nil }
       end
     end
   end
@@ -410,6 +411,80 @@ local function gatherScribing()
   end)
   return grimoires, scripts
 end
+----------------------------------------------------------------------
+-- Mundus blessings, with this patch's text and numbers. The ids are the
+-- thirteen "Boon:" abilities; each is kept only when the game names it a
+-- boon, so a wrong or retired id is skipped rather than recorded.
+----------------------------------------------------------------------
+local BOON_IDS = { 13940, 13943, 13974, 13975, 13976, 13977, 13978, 13979, 13980, 13981, 13982, 13984, 13985 }
+
+local function gatherMundus()
+  local out = {}
+  if not GetAbilityName or not GetAbilityDescription then return out end
+  for _, id in ipairs(BOON_IDS) do
+    safe(function()
+      local raw = GetAbilityName(id)
+      local stone = raw and zo_strformat("<<1>>", raw):match("^[Bb]oon:%s*(.+)$")
+      if not stone or stone == "" then return end
+      local description = zo_strformat("<<1>>", GetAbilityDescription(id) or "")
+      out[#out + 1] = {
+        id = "mundus-" .. slug(stone),
+        name = stone,
+        abilityId = id,
+        description = description,
+        icon = GetAbilityIcon and normIcon(GetAbilityIcon(id)) or nil,
+        source = "ingame",
+      }
+    end)
+  end
+  return out
+end
+
+----------------------------------------------------------------------
+-- Food and drink: every provisioning recipe, the dish it makes and the
+-- buff that dish gives, as the game's tooltip states it.
+----------------------------------------------------------------------
+local function gatherFood()
+  local out = {}
+  if not GetNumRecipeLists or not GetRecipeInfo or not GetRecipeResultItemLink then return out end
+  local seen = {}
+  for listIndex = 1, (safe(GetNumRecipeLists, 0) or 0) do
+    local listName, numRecipes = safe(function() return GetRecipeListInfo(listIndex) end, nil)
+    listName = listName and zo_strformat("<<1>>", listName) or ""
+    for recipeIndex = 1, (tonumber(numRecipes) or 0) do
+      safe(function()
+        local packed = { GetRecipeInfo(listIndex, recipeIndex) }
+        local special = packed[6]
+        if PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING and special == PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING then return end
+        local link = GetRecipeResultItemLink(listIndex, recipeIndex, LINK_STYLE_DEFAULT)
+        if not link or link == "" then return end
+        local itemId = GetItemLinkItemId(link)
+        if not itemId or itemId == 0 or seen[itemId] then return end
+        seen[itemId] = true
+        local name = zo_strformat("<<1>>", GetItemLinkName(link) or "")
+        if name == "" then return end
+        local _, header, buff = GetItemLinkOnUseAbilityInfo(link)
+        local itemType, specializedType = GetItemLinkItemType(link)
+        out[#out + 1] = {
+          id = "food-" .. tostring(itemId),
+          name = name,
+          itemId = itemId,
+          recipeList = listName,
+          quality = GetItemLinkDisplayQuality and GetItemLinkDisplayQuality(link) or nil,
+          kind = type(itemType) == "number" and zo_strformat("<<1>>", GetString("SI_ITEMTYPE", itemType)) or nil,
+          subtype = type(specializedType) == "number" and specializedType > 0
+            and zo_strformat("<<1>>", GetString("SI_SPECIALIZEDITEMTYPE", specializedType)) or nil,
+          buffName = header and header ~= "" and zo_strformat("<<1>>", header) or nil,
+          buff = buff and buff ~= "" and zo_strformat("<<1>>", buff) or "",
+          icon = normIcon(GetItemLinkIcon(link)),
+          source = "ingame",
+        }
+      end)
+    end
+  end
+  return out
+end
+
 local function scan()
   if IsUnitInCombat("player") then
     d("[Nirnside Catalog] In combat — scan refused. Run /nirncatalog while AFK.")
@@ -427,11 +502,13 @@ local function scan()
   local grimoires, scripts = gatherScribing()
   sv.grimoires = grimoires
   sv.scripts = scripts
+  sv.mundus = gatherMundus()
+  sv.food = gatherFood()
   sv.generatedAt = GetTimeStamp()
 
   d(string.format(
-    "[Nirnside Catalog] Done: %d CP, %d skill lines, %d abilities, %d sets, %d grimoires, %d scripts. /reloadui or log out to write the file.",
-    #sv.cp, #sv.skillLines, #sv.skills, #sv.sets, #sv.grimoires, #sv.scripts))
+    "[Nirnside Catalog] Done: %d CP, %d skill lines, %d abilities, %d sets, %d grimoires, %d scripts, %d Mundus stones, %d dishes. /reloadui or log out to write the file.",
+    #sv.cp, #sv.skillLines, #sv.skills, #sv.sets, #sv.grimoires, #sv.scripts, #sv.mundus, #sv.food))
 end
 
 local function onLoaded(_, name)
@@ -439,7 +516,7 @@ local function onLoaded(_, name)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
   sv = ZO_SavedVars:NewAccountWide("NirnsideCatalog", 1, nil, {
     patch = "live", source = "ingame",
-    cp = {}, skillLines = {}, skills = {}, sets = {}, grimoires = {}, scripts = {}, achievements = {},
+    cp = {}, skillLines = {}, skills = {}, sets = {}, grimoires = {}, scripts = {}, achievements = {}, mundus = {}, food = {},
   })
   SLASH_COMMANDS["/nirncatalog"] = function() safe(scan) end
 end

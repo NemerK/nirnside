@@ -1,5 +1,5 @@
 import { Backpack, Coins } from "lucide-react";
-import { getAccount, getArchivedCharacters, getCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
+import { getAccount, getCharacters, getItemFacets, getItems, type ItemFilters } from "@/lib/db/queries";
 import { setHref } from "@/lib/db/catalog-queries";
 import { loadSetHover } from "@/lib/catalog/hover-sets";
 import { withResolvedSet, type SetBrief } from "@/lib/catalog/set-brief";
@@ -11,7 +11,7 @@ import { CurrencyTable } from "@/components/currency-table";
 import { AtlasInventoryChrome } from "@/components/atlas/inventory";
 import { Card, EmptyState, PageScroll, StickyMenu } from "@/components/ui";
 import { formatGold, formatNumber } from "@/lib/format";
-import { tallyBagFilters } from "@/lib/inventory/bag-filters";
+import { tallyBagFilters } from "@/lib/game/item-category";
 import { InventoryCategories } from "@/components/inventory-categories";
 import { SetCatalogProvider } from "@/components/set-hover";
 
@@ -48,7 +48,6 @@ export default async function InventoryPage({
     traits: [],
     owners: [],
   };
-  let archivedOwner = false;
   let ownerWallet: {
     name: string;
     gold: number;
@@ -77,10 +76,7 @@ export default async function InventoryPage({
     }
     facets = { ...facets, sets: [...setNames].sort((a, b) => a.localeCompare(b, "en")) };
     if (filters.owner) {
-      const archived = getArchivedCharacters();
-      archivedOwner = archived.some((c) => c.name === filters.owner);
-      const owner =
-        getCharacters().find((c) => c.name === filters.owner) ?? archived.find((c) => c.name === filters.owner);
+      const owner = getCharacters().find((c) => c.name === filters.owner);
       if (owner) {
         ownerWallet = {
           name: owner.name,
@@ -104,7 +100,6 @@ export default async function InventoryPage({
       mythics={mythics}
       setBriefs={setBriefs}
       ownerWallet={ownerWallet}
-      archivedOwner={archivedOwner}
       totalStacks={totalStacks}
       totalCount={totalCount}
     />
@@ -156,7 +151,6 @@ function ItemsBody({
   mythics,
   setBriefs,
   ownerWallet,
-  archivedOwner,
   totalStacks,
   totalCount,
 }: {
@@ -170,7 +164,6 @@ function ItemsBody({
     alliancePoints: number;
     lastSeen: number | null;
   } | null;
-  archivedOwner: boolean;
   totalStacks: number;
   totalCount: number;
 }) {
@@ -196,12 +189,6 @@ function ItemsBody({
           </span>
         </Card>
       )}
-      {archivedOwner && (
-        <Card className="mb-4 px-4 py-3 text-sm text-fg-muted">
-          Showing last-known bags for a deleted character. These stacks are not part of the live inventory.
-        </Card>
-      )}
-
       {items.length === 0 ? (
         <EmptyState title="No items match" icon={<Backpack className="h-8 w-8" />}>
           Try clearing filters, or import a snapshot (<code className="rounded bg-surface-2 px-1">npm run seed</code> for

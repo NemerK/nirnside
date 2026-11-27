@@ -118,9 +118,10 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_catalog_name ON catalog(domain, name);
     CREATE INDEX IF NOT EXISTS idx_catalog_cat ON catalog(domain, category);
 
-    -- What Nirnside has learned about the game's items, by the game's item
-    -- id (src/lib/game/item-index.ts). Never cleared on import: it only
-    -- grows, so every item this account has ever shown the addon is known.
+    -- Every item the account holds now, plus every piece of the set
+    -- collection, by the game's item id (src/lib/game/item-index.ts), with
+    -- where it belongs. Each import brings it in line with the scan: an item
+    -- sold or destroyed leaves it.
     CREATE TABLE IF NOT EXISTS game_items (
       itemId    INTEGER PRIMARY KEY,
       name      TEXT NOT NULL,
@@ -212,6 +213,7 @@ function migrate(db: Database.Database) {
     );
   `);
   ensureCharacterSummaryColumns(db);
+  ensureGameItemPlaceColumns(db);
   migrateCharacterRolesToMany(db);
   migrateGoalsTable(db);
   ensureGoalExtraRank(db);
@@ -236,6 +238,21 @@ const SUMMARY_COLUMNS: [string, string][] = [
   ["mundus", "TEXT"],
   ["lines", "TEXT"],
 ];
+
+/** Where each item belongs (game/item-category.ts itemPlace), added after the index shipped. */
+function ensureGameItemPlaceColumns(db: Database.Database) {
+  const have = new Set((db.prepare("PRAGMA table_info(game_items)").all() as { name: string }[]).map((c) => c.name));
+  for (const [name, type] of [
+    ["category", "TEXT"],
+    ["subtype", "TEXT"],
+    ["typeLabel", "TEXT"],
+    ["specializedLabel", "TEXT"],
+    ["placeFrom", "TEXT"],
+  ] as const) {
+    if (!have.has(name)) db.exec(`ALTER TABLE game_items ADD COLUMN ${name} ${type}`);
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_game_items_category ON game_items(category, subtype)");
+}
 
 function ensureCharacterSummaryColumns(db: Database.Database) {
   const have = new Set((db.prepare("PRAGMA table_info(characters)").all() as { name: string }[]).map((c) => c.name));

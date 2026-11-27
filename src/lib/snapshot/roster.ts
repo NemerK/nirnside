@@ -1,4 +1,4 @@
-import type { Character } from "./schema";
+import type { AccountSnapshot, Character } from "./schema";
 
 export function isArchived(c: Character): boolean {
   return c.archivedAt != null && c.archivedAt > 0;
@@ -19,6 +19,26 @@ export function archivedOwnerNames(chars: Character[]): Set<string> {
 
 export function archivedOwnerIds(chars: Character[]): Set<string> {
   return new Set(archivedCharacters(chars).map((c) => c.id));
+}
+
+/**
+ * The snapshot without deleted characters. The addon notices a deletion when
+ * the game's own character list no longer has the character (it then files
+ * it under archivedCharacters), and a deleted character's bags left with it.
+ * Older addons kept those bags in the save, so they are dropped here too.
+ */
+export function withoutDeletedCharacters(snap: AccountSnapshot): { snap: AccountSnapshot; deleted: Character[] } {
+  const deleted = [...snap.archivedCharacters, ...archivedCharacters(snap.characters)];
+  if (deleted.length === 0) return { snap, deleted };
+  const live = liveCharacters(snap.characters);
+  const goneIds = new Set(deleted.map((c) => c.id));
+  const liveNames = new Set(live.map((c) => c.name));
+  const goneNames = new Set(deleted.map((c) => c.name).filter((n) => !liveNames.has(n)));
+  const items = snap.items.filter((it) => {
+    if (it.ownerCharacterId) return !goneIds.has(it.ownerCharacterId);
+    return !(it.ownerCharacter && goneNames.has(it.ownerCharacter));
+  });
+  return { snap: { ...snap, characters: live, archivedCharacters: [], items }, deleted };
 }
 
 export interface GoldBreakdown {

@@ -4,7 +4,7 @@ import { getDb, getMeta } from "./index";
 import type { AccountSnapshot, AchievementRecord, Character, House, Item, OutfitStyleCategory, SkillLine, StickerbookSet } from "../snapshot/schema";
 import { annotateStickerbookSets, collectedPieceKeys, type StickerbookSetView } from "../stickerbook/seen";
 import { stickerbookSeenIds } from "../stickerbook/seen-store";
-import { archivedCharacters, archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
+import { archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
 import { unionCompletedAchievementIds } from "../achievements/pithka";
 import { isExcludedSkillLine, stripVengeanceFromCharacter } from "../catalog/excluded";
 import type { AccountSetFacts } from "../catalog/set-brief";
@@ -243,13 +243,9 @@ export const getCharactersFull = cache(function getCharactersFull(): Character[]
   return rows.map((r) => stripVengeanceFromCharacter(JSON.parse(r.json) as Character));
 });
 
-/** Live ESO roster only. Deleted characters are in getArchivedCharacters(). */
+/** The live roster. Deleted characters never reach the database (snapshot/roster.ts withoutDeletedCharacters). */
 export function getCharacters(): Character[] {
   return liveCharacters(loadRoster());
-}
-
-export function getArchivedCharacters(): Character[] {
-  return archivedCharacters(loadRoster());
 }
 
 /** Champion allocations only, for the constellation page. */
@@ -283,8 +279,6 @@ export interface ItemFilters {
   setName?: string;
   trait?: string;
   owner?: string;
-  /** When true, include bags that belonged to deleted (archived) characters. */
-  includeArchived?: boolean;
   /** Backpack-tab id (`weapons`, `apparel`, …). */
   bagCategory?: string;
   /** Subfilter id inside that tab (`one-handed`, `food`, …). */
@@ -324,16 +318,6 @@ export function getItems(filters: ItemFilters = {}): Item[] {
     " ORDER BY name ASC, location ASC LIMIT 5000";
   const rows = getDb().prepare(sql).all(params) as { json: string }[];
   let items = rows.map((r) => JSON.parse(r.json) as Item);
-  if (!filters.includeArchived && !filters.owner) {
-    const all = loadRoster();
-    const names = archivedOwnerNames(all);
-    const ids = archivedOwnerIds(all);
-    items = items.filter(
-      (it) =>
-        !it.ownerCharacter ||
-        (!names.has(it.ownerCharacter) && (!it.ownerCharacterId || !ids.has(it.ownerCharacterId))),
-    );
-  }
   if (filters.bagCategory) {
     items = items.filter((it) => it.bagCategory === filters.bagCategory);
   }
@@ -357,19 +341,18 @@ export function getItemFacets(): FacetValues {
     (db
       .prepare(`SELECT DISTINCT ${c} AS v FROM items WHERE ${c} IS NOT NULL AND ${c} <> '' ORDER BY v ASC`)
       .all() as { v: string }[]).map((r) => r.v);
-  const archived = archivedOwnerNames(loadRoster());
   return {
     locations: col("location"),
     qualities: col("quality"),
     sets: col("setName"),
     traits: col("trait"),
-    owners: col("ownerCharacter").filter((name) => !archived.has(name)),
+    owners: col("ownerCharacter"),
   };
 }
 
-/** Last-known bags for one character (live or archived), matching id when present. */
+/** One character's bags, matching id when present. */
 export function getItemsForCharacter(c: Character): Item[] {
-  return getItems({ owner: c.name, includeArchived: true }).filter((it) => {
+  return getItems({ owner: c.name }).filter((it) => {
     if (it.ownerCharacterId) return it.ownerCharacterId === c.id;
     return it.ownerCharacter === c.name;
   });
