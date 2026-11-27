@@ -16,7 +16,7 @@ import { listAssignments, listRoles } from "@/lib/db/roles";
 import { listGoals } from "@/lib/db/goals";
 import { skillLineChoices } from "@/lib/planner/data";
 import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbilityLoreFor } from "@/lib/db/catalog-queries";
-import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
+import { hrefForMythicOrSet } from "@/lib/collections/mythic-links";
 import type { Character, Wardrobe as WardrobeData } from "@/lib/snapshot/schema";
 import { isArchived } from "@/lib/snapshot/roster";
 import { rolesForCharacter } from "@/lib/roles/filter";
@@ -39,7 +39,7 @@ import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatGold, formatNumber, locationLabel, qualityText, timeAgo } from "@/lib/format";
 import { formatResearchRemaining, presentMotifs, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
-import { skillLineCap } from "@/lib/skills/line-cap";
+import { skillLineCap } from "@/lib/game/skill-caps";
 import type { AbilityPlan, LineSkillView } from "@/lib/planner/line-plan";
 
 function skillLineHref(name: string, className?: string | null): string | null {

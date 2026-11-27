@@ -4,7 +4,7 @@ import {
   allTrackedIds,
   type PithkaTab,
   type PithkaType,
-} from "./pithka";
+} from "../game/pithka";
 
 /**
  * Presentation model for achievements.

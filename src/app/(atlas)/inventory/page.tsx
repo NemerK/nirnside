@@ -3,7 +3,7 @@ import { getAccount, getCharacters, getItemFacets, getItems, type ItemFilters } 
 import { setHref } from "@/lib/db/catalog-queries";
 import { loadSetHover } from "@/lib/catalog/hover-sets";
 import { withResolvedSet, type SetBrief } from "@/lib/catalog/set-brief";
-import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
+import { hrefForMythicOrSet } from "@/lib/collections/mythic-links";
 import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { InventoryFilters } from "@/components/inventory-filters";
 import { InventoryTable } from "@/components/inventory-table";

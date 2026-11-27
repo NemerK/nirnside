@@ -2,8 +2,8 @@ import { SKILL_CATEGORIES, skillCategory, type SkillCategory } from "../game/ski
 import { loadoutOf } from "../game/loadout";
 import type { Character } from "../snapshot/schema";
 import { presentMotifs, presentRecipeLists, presentResearch } from "../knowledge/present";
-import { skillLineCap } from "../skills/line-cap";
-import { isClassMasteryLineName } from "../skills/class-mastery";
+import { skillLineCap } from "../game/skill-caps";
+import { isClassMasteryLineName } from "../game/class-mastery";
 
 /**
  * The Party character sheet, as small module summaries. Each module carries

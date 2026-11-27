@@ -3,7 +3,7 @@ import { getSets } from "../db/catalog-queries";
 import { listGearBuilds } from "../db/gear-builds";
 import { getCharactersFull, getItems, getStickerbook } from "../db/queries";
 import { liveCharacters } from "../snapshot/roster";
-import { isMythicSet } from "../collections/mythic-match";
+import { isMythicSet } from "../game/mythics";
 import type { Crafter, OwnedGear } from "./arrange";
 import type { BuildPageData, BuildSetOption } from "./options";
 import {

@@ -1,7 +1,5 @@
 import type { MorphSlot, SkillMorph } from "../snapshot/schema";
 
-/** Live ESO cap for active/ultimate morph-slot ranks (MAX_RANKS_PER_ABILITY). */
-export const MAX_ABILITY_RANK = 4;
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const;
 

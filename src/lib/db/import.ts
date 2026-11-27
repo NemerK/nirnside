@@ -1,14 +1,14 @@
 import { getDb, getMeta } from "./index";
 import type { AccountSnapshot } from "../snapshot/schema";
 import { accountAlliancePoints, accountGold, accountTelVar, withoutDeletedCharacters } from "../snapshot/roster";
-import { canonicalizeCurrencies } from "../currencies";
+import { canonicalizeCurrencies } from "../game/currencies";
 import { collectedPieceKeys } from "../stickerbook/seen";
 import { seedStickerbookSeenIfNeeded } from "../stickerbook/seen-store";
 import {
   collectCompletedAchievementIdsFromSnapshot,
   unionCompletedAchievementIds,
-} from "../achievements/pithka";
-import { stripVengeanceFromCharacter } from "../catalog/excluded";
+} from "../game/pithka";
+import { stripVengeanceFromCharacter } from "../game/vengeance";
 import { itemsFromSnapshot } from "../game/item-index";
 import { syncItems } from "./game-items";
 import { importCatalogBundle } from "../catalog/import";

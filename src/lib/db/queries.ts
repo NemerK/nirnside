@@ -5,8 +5,8 @@ import type { AccountSnapshot, AchievementRecord, Character, House, Item, Outfit
 import { annotateStickerbookSets, collectedPieceKeys, type StickerbookSetView } from "../stickerbook/seen";
 import { stickerbookSeenIds } from "../stickerbook/seen-store";
 import { archivedOwnerIds, archivedOwnerNames, liveCharacters } from "../snapshot/roster";
-import { unionCompletedAchievementIds } from "../achievements/pithka";
-import { isExcludedSkillLine, stripVengeanceFromCharacter } from "../catalog/excluded";
+import { unionCompletedAchievementIds } from "../game/pithka";
+import { isExcludedSkillLine, stripVengeanceFromCharacter } from "../game/vengeance";
 import type { AccountSetFacts } from "../catalog/set-brief";
 
 export type AccountMeta = Pick<

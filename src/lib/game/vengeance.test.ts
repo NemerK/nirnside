@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import Database from "better-sqlite3";
+import { deleteExcludedCatalogAndGoals } from "../db/vengeance-cleanup";
 import {
-  deleteExcludedCatalogAndGoals,
   isExcludedCatalogLineId,
   isExcludedLineName,
   isExcludedSkillLine,
   stripVengeanceFromCharacter,
-} from "./excluded";
+} from "./vengeance";
 
 describe("vengeance exclusion", () => {
   it("matches the Vengeance line and every Vengeance-prefixed line", () => {

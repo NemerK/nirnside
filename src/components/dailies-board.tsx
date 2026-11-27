@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { SortHeader, useSort } from "@/components/sort-header";
 import { PageScroll, StickyMenu } from "@/components/ui";
-import { formatRemainingSeconds } from "@/lib/dailies/day";
+import { formatRemainingSeconds } from "@/lib/game/daily-reset";
 import {
   WRIT_ABBR,
   WRIT_CRAFTS,
@@ -13,7 +13,7 @@ import {
   type PresentedCharacterDailies,
   type WritCraft,
 } from "@/lib/dailies/present";
-import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "@/lib/dailies/pledges";
+import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "@/lib/game/pledges";
 import { sortRows, statusRank } from "@/lib/ui/column-sort";
 import type { SortState } from "@/lib/ui/column-sort";
 import { ZoneDailiesBoard } from "@/components/zone-dailies-board";

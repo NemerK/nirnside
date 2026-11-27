@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { SkillLine, SkillMorph } from "../snapshot/schema";
-import { abilityIsKnown } from "./ability";
-import { presentAbility, presentSkillBook } from "./present";
+import { abilityIsKnown } from "../skills/ability";
+import { presentAbility, presentSkillBook } from "../skills/present";
 import {
   CLASS_MASTERY_LINE_NAME,
   CLASS_MASTERY_PASSIVES,

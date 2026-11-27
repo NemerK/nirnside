@@ -341,13 +341,13 @@ export function weaponFromText(text: string | null | undefined): Weapon | null {
  * from real item names; extend when a new item shows another word.
  */
 export const SLOT_ONLY_WORDS: Record<ArmorSlot, string[]> = {
-  head: ["Mask", "Warmask", "Visage", "Circlet", "Cowl", "Hood", "Casque", "Coif", "Guise", "Visor", "Faceguard", "Greathelm", "Great Helm"],
-  shoulders: ["Spaulder", "Shoulder"],
-  chest: ["Breastplate", "Hauberk", "Shirt", "Coat"],
-  hands: ["Handwraps"],
-  waist: [],
-  legs: ["Chausses"],
-  feet: ["Sollerets", "Treaders"],
+  head: ["Mask", "Warmask", "Visage", "Circlet", "Cowl", "Hood", "Casque", "Coif", "Guise", "Visor", "Faceguard", "Greathelm", "Great Helm", "Crown", "Headdress", "Cap"],
+  shoulders: ["Spaulder", "Shoulder", "Mantle"],
+  chest: ["Breastplate", "Hauberk", "Shirt", "Coat", "Tunic", "Vest"],
+  hands: ["Handwraps", "Wraps"],
+  waist: ["Cinch", "Tassets"],
+  legs: ["Chausses", "Pants", "Trousers", "Leggings"],
+  feet: ["Sollerets", "Treaders", "Sandals"],
 };
 
 /** Jewelry words in item names. */

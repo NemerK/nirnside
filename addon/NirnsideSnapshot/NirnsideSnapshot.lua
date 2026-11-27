@@ -1760,7 +1760,7 @@ end
 -- <dungeon> in Veteran Mode", optional Death Challenge (Scroll / altar / …)
 -- which only appears after you enter Veteran. Incomplete optionals are not
 -- unfinished combat — treating them as such left every Normal clear as a
--- blank check. Mirror of src/lib/dailies/pledge-objectives.ts.
+-- blank check. Mirror of src/lib/game/pledge-objectives.ts.
 local function journalPledgeObjectives(journalIndex)
   local difficulty, hardMode = nil, nil
   local requiredDone, requiredOpen = false, false
@@ -3433,7 +3433,7 @@ local function recordLine(out, seen, listedId, category, content)
   end
 end
 
--- Pithka-tracked achievement ids (keep in sync with src/lib/achievements/pithka.ts).
+-- Pithka-tracked achievement ids (keep in sync with src/lib/game/pithka.ts).
 -- Querying these directly with IsAchievementComplete is how the in-game tracker
 -- works. Maelstrom Arena clears (1305 / 1330) are still CHARACTER-BOUND: an alt
 -- that has not run them reports false. We remember each toon's completions and

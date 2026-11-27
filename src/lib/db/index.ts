@@ -2,8 +2,9 @@ import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { dbFile } from "../data-dir";
-import { deleteExcludedCatalogAndGoals, stripVengeanceFromCharacter } from "../catalog/excluded";
-import { skillLineCap } from "../skills/line-cap";
+import { stripVengeanceFromCharacter } from "../game/vengeance";
+import { deleteExcludedCatalogAndGoals } from "./vengeance-cleanup";
+import { skillLineCap } from "../game/skill-caps";
 
 /**
  * Local SQLite database. Lives on the user's own disk only (see the privacy

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Check } from "lucide-react";
 import { SortHeader, useSort } from "@/components/sort-header";
 import { zoneSlotKey, type PresentedCharacterDailies, type ZoneSlotCell } from "@/lib/dailies/present";
-import { ZONE_DAILY_ZONES } from "@/lib/dailies/zone-dailies";
+import { ZONE_DAILY_ZONES } from "@/lib/game/zone-dailies";
 import { sortRows, statusRank } from "@/lib/ui/column-sort";
 
 function ZoneBox({ cell }: { cell: ZoneSlotCell }) {

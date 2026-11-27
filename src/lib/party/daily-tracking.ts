@@ -1,6 +1,6 @@
 import { WRIT_CRAFTS, WRIT_LABELS } from "../dailies/present";
-import { PLEDGE_GIVER_NAMES } from "../dailies/pledges";
-import { WORLD_BOSS_ZONES } from "../dailies/world-bosses";
+import { PLEDGE_GIVER_NAMES } from "../game/pledges";
+import { WORLD_BOSS_ZONES } from "../game/world-bosses";
 
 /**
  * Which dailies you want to see on a character's "Today": an account-wide

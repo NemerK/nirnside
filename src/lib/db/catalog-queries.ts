@@ -1,5 +1,5 @@
 import "server-only";
-import { isExcludedCatalogLineId, isExcludedLineName, isExcludedSkillLine } from "../catalog/excluded";
+import { isExcludedCatalogLineId, isExcludedLineName, isExcludedSkillLine } from "../game/vengeance";
 import { getDb } from "./index";
 import type { SetBrief } from "../catalog/set-brief";
 import type {

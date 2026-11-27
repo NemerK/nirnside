@@ -6,7 +6,7 @@ import {
   groupChampionStars,
   type ChampionKind,
   type ChampionStarView,
-} from "@/lib/characters/champion";
+} from "@/lib/game/champion-bar";
 import { GameIcon } from "@/components/game-icon";
 import { constellationColor, constellationRank } from "@/lib/ui/game-colors";
 

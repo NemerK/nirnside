@@ -1,5 +1,5 @@
 import { classIcon } from "../classes";
-import { isClassMasteryLineName } from "../skills/class-mastery";
+import { isClassMasteryLineName } from "../game/class-mastery";
 import { resolveSkillIcon } from "./skill-icons";
 
 /**

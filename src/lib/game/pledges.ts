@@ -13,7 +13,7 @@
  * against ESO-Hub for 2026-10-03). Never presented as an in-game scan.
  */
 
-import { esoDayKey, type EsoRegion } from "./day";
+import { esoDayKey, type EsoRegion } from "./daily-reset";
 
 export const PLEDGE_GIVERS = ["maj", "glirion", "urgarlag"] as const;
 export type PledgeGiver = (typeof PLEDGE_GIVERS)[number];

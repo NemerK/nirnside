@@ -7,8 +7,8 @@ import { listAssignments } from "../db/roles";
 import { toGoalSubject } from "../goals/progress";
 import type { GoalSubject, LineMeta } from "../goals/types";
 import type { GridLineSource } from "../progress/grid";
-import { skillLineCap } from "../skills/line-cap";
-import { isExcludedSkillLine } from "../catalog/excluded";
+import { skillLineCap } from "../game/skill-caps";
+import { isExcludedSkillLine } from "../game/vengeance";
 import { applyRosterOrder, getRosterOrder } from "../roster/order";
 import type { Character, CharacterDailies } from "../snapshot/schema";
 

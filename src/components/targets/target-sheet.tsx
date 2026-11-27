@@ -7,7 +7,8 @@ import { Sheet } from "@/components/sheet";
 import { overlapNotices, type OverlapPerson } from "@/lib/goals/overlap";
 import { TIER_LABEL, type Goal, type GoalDomain, type GoalScope, type GoalTier } from "@/lib/goals/types";
 import { targetTitle } from "@/lib/goals/review";
-import { MAX_ABILITY_RANK, romanRank } from "@/lib/skills/ability";
+import { romanRank } from "@/lib/skills/ability";
+import { MAX_ABILITY_RANK } from "@/lib/game/skills";
 import { classColor } from "@/lib/classes";
 import { TargetPicker } from "./target-picker";
 

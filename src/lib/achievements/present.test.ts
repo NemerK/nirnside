@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { isAchievementComplete, presentAchievements } from "./present";
-import { PITHKA_TABS, allTrackedIds } from "./pithka";
+import { PITHKA_TABS, allTrackedIds } from "../game/pithka";
 
 describe("presentAchievements", () => {
   it("tallies unique Pithka ids as done/total", () => {

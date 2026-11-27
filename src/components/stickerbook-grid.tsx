@@ -5,7 +5,8 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, ChevronRight, Minus, Search } from "lucide-react";
 import type { MythicSet } from "@/lib/snapshot/schema";
 import type { StickerbookSetView } from "@/lib/stickerbook/seen";
-import { findMythic, isMythicSet, mythicAnchor } from "@/lib/collections/mythic-match";
+import { findMythic, isMythicSet } from "@/lib/game/mythics";
+import { mythicAnchor } from "@/lib/collections/mythic-links";
 import { ARMOR_SLOTS, ARMOR_WEIGHTS, arrangePieces } from "@/lib/stickerbook/arrange";
 import { GameIcon } from "./game-icon";
 

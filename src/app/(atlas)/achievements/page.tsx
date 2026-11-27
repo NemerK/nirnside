@@ -6,7 +6,7 @@ import { AchievementsBoard } from "@/components/achievements-board";
 import { AchievementsStrip } from "@/components/achievements-strip";
 import { AtlasSection } from "@/components/atlas/section";
 import { presentAchievements } from "@/lib/achievements/present";
-import { PITHKA_TABS } from "@/lib/achievements/pithka";
+import { PITHKA_TABS } from "@/lib/game/pithka";
 
 export const dynamic = "force-dynamic";
 

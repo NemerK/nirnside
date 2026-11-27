@@ -3,7 +3,7 @@ import { qualityBorderClass } from "@/lib/game/quality";
 import { esoPlainText } from "@/lib/text/eso-markup";
 import type { Character, Wardrobe, WardrobeSetup } from "@/lib/snapshot/schema";
 import { setHref } from "@/lib/db/catalog-queries";
-import { hrefForMythicOrSet } from "@/lib/collections/mythic-match";
+import { hrefForMythicOrSet } from "@/lib/collections/mythic-links";
 import { getAccount } from "@/lib/db/queries";
 import { qualityText } from "@/lib/format";
 import { indexKnownSets, withResolvedSet, type KnownSet } from "@/lib/catalog/set-brief";

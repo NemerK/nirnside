@@ -4,9 +4,7 @@ import {
   lineMatchesKind,
   characterHolding,
   locationLabel,
-  reconstructionCost,
   setsShareKey,
-  TRAIT_CHANGE_CRYSTALS,
   wantsDivines,
   weaponLabel,
   weaponResearchLine,
@@ -14,6 +12,7 @@ import {
   type FrontWeapon,
   type SlotKind,
 } from "./slots";
+import { reconstructionCost, TRAIT_CHANGE_CRYSTALS } from "../game/transmute";
 import {
   isBodyArmor,
   researchLineNames,

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { outfitFacets } from "./outfit-facets";
+import { outfitFacets } from "./outfits";
 
 describe("outfitFacets", () => {
   it("reads weight and slot from the piece name", () => {

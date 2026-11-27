@@ -7,13 +7,13 @@ import {
   isMonsterSet,
   kindFromPiece,
   kindsForRole,
-  reconstructionCost,
   resolveOwnedPiece,
   setMatchKeys,
   weaponTypeFromPiece,
   type FrontWeapon,
   type SlotKind,
 } from "./slots";
+import { reconstructionCost } from "../game/transmute";
 
 const ALL: SlotKind[] = [
   "head",

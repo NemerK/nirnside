@@ -1,12 +1,12 @@
 import { LivingHomeView } from "@/components/living-home";
 import { classColor, classIcon } from "@/lib/classes";
-import { canonicalizeCurrencies } from "@/lib/currencies";
+import { canonicalizeCurrencies } from "@/lib/game/currencies";
 import { getAccount, getCharactersFull, getHouses } from "@/lib/db/queries";
 import { timeAgo } from "@/lib/format";
 import { profileMedia } from "@/lib/db/profile";
 import { profileImageUrl } from "@/lib/profile/media";
 import { livingHome, withGuilds } from "@/lib/home/living";
-import { skillLineCap } from "@/lib/skills/line-cap";
+import { skillLineCap } from "@/lib/game/skill-caps";
 import { accountAlliancePoints, accountTelVar, goldBreakdown, liveCharacters } from "@/lib/snapshot/roster";
 
 /** The account home: one character as the profile, built from the local snapshot. */

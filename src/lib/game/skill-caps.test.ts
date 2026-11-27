@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import catalog from "../../../data/catalog/skills.json";
-import { editSkillLineRanks, skillLineCap } from "./line-cap";
+import { editSkillLineRanks, skillLineCap } from "./skill-caps";
 
 describe("skillLineCap", () => {
   it("matches the catalog cap on every seeded line", () => {

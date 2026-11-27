@@ -1,5 +1,5 @@
 import type { CatalogSource } from "../catalog/schema";
-import { isExcludedSkillLine } from "../catalog/excluded";
+import { isExcludedSkillLine } from "../game/vengeance";
 import type { MorphSlot, SkillLine, SkillMorph } from "../snapshot/schema";
 import {
   abilityIsKnown,
@@ -10,7 +10,7 @@ import {
   xpProgress,
 } from "./ability";
 import { resolveSkillIcon, skillIconByName } from "../icons/skill-icons";
-import { isClassMasteryLineName, keepClassMasteryForCharacter } from "./class-mastery";
+import { isClassMasteryLineName, keepClassMasteryForCharacter } from "../game/class-mastery";
 
 export type LoreHit = {
   icon: string | null;

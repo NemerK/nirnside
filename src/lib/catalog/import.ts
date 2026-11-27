@@ -1,6 +1,6 @@
 import { getDb, setMeta } from "../db";
 import { CatalogBundle, SOURCE_RANK, type CatalogDomain, type CatalogSource } from "./schema";
-import { isExcludedCatalogLineId, isExcludedSkillLine } from "./excluded";
+import { isExcludedCatalogLineId, isExcludedSkillLine } from "../game/vengeance";
 
 type CatalogSourceKey = CatalogSource;
 
