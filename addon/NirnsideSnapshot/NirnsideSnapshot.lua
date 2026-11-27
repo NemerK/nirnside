@@ -2648,6 +2648,50 @@ local function itemStyleDisplayName(styleId)
   return nil
 end
 
+-- The weight the outfit station files a style under. Guarded per constant:
+-- a client without one of these simply leaves the field out, and the app
+-- reads the weight from the piece name instead.
+local function outfitStyleWeight(id)
+  local ref = collectibleReferenceId(id)
+  if not ref or not GetOutfitStyleVisualArmorType then return nil end
+  local t = safe(function() return GetOutfitStyleVisualArmorType(ref) end, nil)
+  if t == nil then return nil end
+  if VISUAL_ARMORTYPE_LIGHT and t == VISUAL_ARMORTYPE_LIGHT then return "light" end
+  if VISUAL_ARMORTYPE_MEDIUM and t == VISUAL_ARMORTYPE_MEDIUM then return "medium" end
+  if VISUAL_ARMORTYPE_HEAVY and t == VISUAL_ARMORTYPE_HEAVY then return "heavy" end
+  if VISUAL_ARMORTYPE_SIGNATURE and t == VISUAL_ARMORTYPE_SIGNATURE then return "special" end
+  return nil
+end
+
+local OUTFIT_SLOT_WORD = {}
+local function addOutfitSlot(const, word)
+  if const ~= nil then OUTFIT_SLOT_WORD[const] = word end
+end
+addOutfitSlot(OUTFIT_SLOT_HEAD, "head")
+addOutfitSlot(OUTFIT_SLOT_SHOULDERS, "shoulders")
+addOutfitSlot(OUTFIT_SLOT_CHEST, "chest")
+addOutfitSlot(OUTFIT_SLOT_HANDS, "hands")
+addOutfitSlot(OUTFIT_SLOT_WAIST, "waist")
+addOutfitSlot(OUTFIT_SLOT_LEGS, "legs")
+addOutfitSlot(OUTFIT_SLOT_FEET, "feet")
+addOutfitSlot(OUTFIT_SLOT_WEAPON_MAIN_HAND, "weapon")
+addOutfitSlot(OUTFIT_SLOT_WEAPON_OFF_HAND, "weapon")
+addOutfitSlot(OUTFIT_SLOT_WEAPON_TWO_HANDED, "weapon")
+addOutfitSlot(OUTFIT_SLOT_WEAPON_BOW, "weapon-bow")
+addOutfitSlot(OUTFIT_SLOT_WEAPON_STAFF, "weapon")
+addOutfitSlot(OUTFIT_SLOT_SHIELD, "weapon-shield")
+
+local function outfitStyleSlot(id)
+  if not GetEligibleOutfitSlotsForCollectible then return nil end
+  local packed = { pcall(GetEligibleOutfitSlotsForCollectible, id) }
+  if not packed[1] then return nil end
+  for i = 2, #packed do
+    local word = OUTFIT_SLOT_WORD[packed[i]]
+    if word then return word end
+  end
+  return nil
+end
+
 local function readOutfitCollectible(id)
   if not id or id == 0 then return nil end
   local namePacked = { pcall(GetCollectibleName, id) }
@@ -2658,6 +2702,8 @@ local function readOutfitCollectible(id)
     icon = safe(function() return normIcon(GetCollectibleIcon(id)) end, nil),
     unlocked = safe(function() return IsCollectibleUnlocked(id) == true end, false),
     itemStyleId = outfitStyleItemStyleId(id),
+    weight = outfitStyleWeight(id),
+    slot = outfitStyleSlot(id),
   }
 end
 

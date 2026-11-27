@@ -358,7 +358,23 @@ function toMark(
       domain: goal.domain,
     }),
     reason: progress.state === "notapplicable" ? progress.reason : undefined,
+    ...markRanks(progress, goal),
   };
+}
+
+/** The numbers behind a mark, for compact cells: current rank and the next rank asked for. */
+export function markRanks(
+  progress: ReturnType<typeof goalProgress>,
+  goal: Pick<Goal, "domain" | "targetRank" | "extraRank">,
+): { rank?: number; need?: number } {
+  if (progress.state !== "done" && progress.state !== "short") return {};
+  if (progress.state === "short" && progress.rankUnknown) return {};
+  const rank = progress.rank;
+  if (goal.domain !== "skillline") return progress.targetRank != null ? { rank, need: progress.targetRank } : { rank };
+  const mandatory = goal.targetRank ?? 0;
+  const extra = goal.extraRank ?? 0;
+  const need = mandatory > 0 && rank < mandatory ? mandatory : Math.max(mandatory, extra);
+  return need > 0 ? { rank, need } : { rank };
 }
 
 /**

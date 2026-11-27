@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, ChevronRight, Minus, Search } from "lucide-react";
 import type { MythicSet } from "@/lib/snapshot/schema";
 import type { StickerbookSetView } from "@/lib/stickerbook/seen";
@@ -40,10 +40,18 @@ export function StickerbookGrid({
   contained = false,
   mythics = [],
   compact = false,
+  searchSlot,
+  heading: headingOverride,
+  grouped = false,
 }: {
   sets: SetWithTotals[];
   contained?: boolean;
   mythics?: MythicSet[];
+  /** A search box the page owns (it searches every category on the server). Replaces the local one. */
+  searchSlot?: ReactNode;
+  heading?: string;
+  /** Head each run of sets with its category and zone, for results drawn from several. */
+  grouped?: boolean;
   /**
    * Party's set list: the page already chose the category, so no side list,
    * and each set shows only its missing pieces until opened.
@@ -139,7 +147,7 @@ export function StickerbookGrid({
     return sets.filter((s) => {
       if (parent && (s.category || "Unknown") !== parent) return false;
       if (sub && s.subcategory !== sub) return false;
-      if (q && !s.name.toLowerCase().includes(q)) return false;
+      if (q && !searchSlot && !s.name.toLowerCase().includes(q)) return false;
       const complete = s.total > 0 && s.collected === s.total;
       const fresh = (visibleNewBySet.get(s.setId) ?? 0) > 0;
       if (status === "new" && !fresh) return false;
@@ -147,7 +155,7 @@ export function StickerbookGrid({
       if (status === "incomplete" && complete) return false;
       return true;
     });
-  }, [sets, search, status, parent, sub, visibleNewBySet]);
+  }, [sets, search, status, parent, sub, visibleNewBySet, searchSlot]);
 
   function selectAll() {
     setParent(null);
@@ -162,8 +170,7 @@ export function StickerbookGrid({
     setExpanded((current) => (current.has(name) ? new Set() : new Set([name])));
   }
 
-  const heading =
-    sub ?? parent ?? "All Sets";
+  const heading = headingOverride ?? sub ?? parent ?? "All Sets";
 
   return (
     <div className={contained ? "flex flex-col gap-4 lg:flex-row" : "flex min-h-0 flex-1 flex-col gap-4 lg:flex-row"}>
@@ -268,15 +275,17 @@ export function StickerbookGrid({
       {/* Sets — search stays put; only the card list scrolls. */}
       <div className={contained ? "min-w-0 flex-1" : "flex min-h-0 min-w-0 flex-1 flex-col"}>
         <div className="flex shrink-0 flex-wrap items-center gap-2 bg-bg pb-3">
-          <div className="relative min-w-[200px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search sets…"
-              className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
-            />
-          </div>
+          {searchSlot ?? (
+            <div className="relative min-w-[200px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search sets…"
+                className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+              />
+            </div>
+          )}
           <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
             {STATUS.map((s) => (
               <button
@@ -306,10 +315,13 @@ export function StickerbookGrid({
             </div>
           ) : (
             <div className={compact ? "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3" : "grid grid-cols-1 gap-3 lg:grid-cols-2"}>
-              {filtered.map((s) => (
+              {filtered.map((s, i) => (
+                <Fragment key={s.setId}>
+                {grouped && groupOf(s) !== groupOf(filtered[i - 1]) ? (
+                  <p className={`col-span-full text-[13px] text-fg-muted ${i > 0 ? "mt-3" : ""}`}>{groupOf(s)}</p>
+                ) : null}
                 <SetCard
                   compact={compact}
-                  key={s.setId}
                   set={s}
                   mythic={mythicForSet(s, mythics)}
                   openLeads={openMythic === mythicAnchor(s.setId)}
@@ -317,6 +329,7 @@ export function StickerbookGrid({
                   pieceIsNew={pieceIsNew}
                   onSeePiece={markPieceSeen}
                 />
+                </Fragment>
               ))}
             </div>
           )}
@@ -324,6 +337,11 @@ export function StickerbookGrid({
       </div>
     </div>
   );
+}
+
+function groupOf(s: SetWithTotals | undefined): string {
+  if (!s) return "";
+  return s.subcategory ? `${s.category} › ${s.subcategory}` : s.category || "Other";
 }
 
 // Older snapshots stored a meaningless slot code (e.g. "Slot 1.97e-3"); never

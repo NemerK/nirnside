@@ -1,78 +1,100 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Plus } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 import { classColor } from "@/lib/classes";
 import { TIER_LABEL, type Goal, type GoalScope, type GoalTier } from "@/lib/goals/types";
-import type { ReviewGroup, ReviewTarget } from "@/lib/goals/review";
-import type { GoalMarkView } from "@/lib/goals/views";
+import type { ReviewGroup } from "@/lib/goals/review";
+import { buildMatrix, cellProgress, cellText, isOpenMark, type MatrixCell, type MatrixRow } from "@/lib/goals/matrix";
 import { TargetSheet, type Audience, type TargetPerson, type TargetSubject } from "./target-sheet";
 
 const TIERS: GoalTier[] = ["essential", "optional", "completionist"];
 
-const TIER_TONE: Record<GoalTier, { dot: string; ring: string }> = {
-  essential: { dot: "var(--accent)", ring: "color-mix(in srgb, var(--accent) 45%, transparent)" },
-  optional: { dot: "var(--info)", ring: "color-mix(in srgb, var(--info) 40%, transparent)" },
-  completionist: { dot: "var(--fg-subtle)", ring: "var(--border)" },
+const TIER_COLOR: Record<GoalTier, string> = {
+  essential: "var(--rank-mandatory)",
+  optional: "var(--rank-extra)",
+  completionist: "var(--rank-completionist)",
 };
 
-type View = "character" | "target";
 type Show = "open" | "all";
 
-interface Item {
-  t: ReviewTarget;
-  mark: GoalMarkView;
+function Dot({ tier }: { tier: GoalTier }) {
+  return <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: TIER_COLOR[tier] }} aria-hidden />;
 }
 
-const isDone = (m: GoalMarkView) => m.state === "done";
-
-/** Short name for a chip: "Fighters Guild 10" → the line, with the mark beside it. */
-function chipName(t: ReviewTarget): string {
-  return t.goal.domain === "skillline" ? t.goal.target : t.title;
-}
-
-function Chip({ item, onEdit, showTier }: { item: Item; onEdit: () => void; showTier?: boolean }) {
-  const done = isDone(item.mark);
-  const tone = TIER_TONE[item.t.goal.tier];
+/** One character's result for one row. */
+function Cell({
+  cell,
+  person,
+  rowTier,
+  focused,
+  onEdit,
+}: {
+  cell: MatrixCell | undefined;
+  person: TargetPerson;
+  rowTier: GoalTier;
+  focused: boolean;
+  onEdit: () => void;
+}) {
+  const base = `relative h-8 w-full border-b border-border/40 text-[12px] tabular-nums ${focused ? "bg-accent-soft" : ""}`;
+  if (!cell) {
+    return (
+      <td className={base} title={`No target covers ${person.name}`}>
+        <span className="block text-center text-fg-subtle/40" aria-label="No target">
+          ·
+        </span>
+      </td>
+    );
+  }
+  const { mark } = cell;
+  const done = mark.state === "done";
+  const open = isOpenMark(mark);
+  const p = cellProgress(cell);
   return (
-    <button
-      type="button"
-      onClick={onEdit}
-      title={`${item.t.title} · ${TIER_LABEL[item.t.goal.tier]} · ${item.t.audience}\n${item.mark.label}${item.mark.reason ? ` (${item.mark.reason})` : ""}\nClick to change this target`}
-      className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-0.5 text-[12px] transition-colors hover:bg-surface-2 ${
-        done ? "border-border/60 text-fg-subtle" : "text-fg"
-      }`}
-      style={done ? undefined : { borderColor: tone.ring }}
-    >
-      {done ? (
-        <Check className="h-3 w-3 text-ok" aria-label="Met" />
-      ) : (
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.dot }} aria-hidden />
-      )}
-      <span className="truncate">{chipName(item.t)}</span>
-      {showTier ? <span className="text-fg-subtle">{TIER_LABEL[item.t.goal.tier]}</span> : null}
-      <span className={`shrink-0 tabular-nums ${done ? "" : item.mark.state === "short" ? "text-fg-muted" : "text-fg-subtle"}`}>
-        {item.mark.label}
-      </span>
-    </button>
+    <td className={base}>
+      <button
+        type="button"
+        onClick={onEdit}
+        title={`${person.name}: ${mark.label}\n${TIER_LABEL[cell.tier]} target${mark.reason ? ` (${mark.reason})` : ""}\nClick to change the target that covers ${person.name}`}
+        className="group absolute inset-0 flex flex-col items-center justify-center rounded-md hover:bg-surface-2"
+      >
+        {done ? (
+          <Check className="h-3 w-3 text-ok opacity-45 group-hover:opacity-100" aria-label="Met" />
+        ) : (
+          <span className={mark.state === "undiscovered" ? "text-fg-subtle" : open ? "text-fg" : "text-fg-subtle"}>
+            {cellText(cell)}
+          </span>
+        )}
+        {open && mark.state === "short" ? (
+          <span className="absolute inset-x-2 bottom-1 h-[2px] rounded-full bg-meter-track" aria-hidden>
+            <span className="block h-full rounded-full" style={{ width: `${Math.round(p * 100)}%`, background: TIER_COLOR[cell.tier] }} />
+          </span>
+        ) : null}
+        {open && cell.tier !== rowTier ? (
+          <span className="absolute right-1 top-1">
+            <Dot tier={cell.tier} />
+          </span>
+        ) : null}
+      </button>
+    </td>
   );
 }
 
-function TierTally({ tier, items }: { tier: GoalTier; items: Item[] }) {
-  const mine = items.filter((i) => i.t.goal.tier === tier && i.mark.state !== "unknown");
-  if (mine.length === 0) return null;
-  const done = mine.filter((i) => isDone(i.mark)).length;
-  const all = done === mine.length;
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[12px]" title={`${TIER_LABEL[tier]}: ${done} of ${mine.length} met`}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: TIER_TONE[tier].dot }} aria-hidden />
-      <span className="text-fg-subtle">{TIER_LABEL[tier]}</span>
-      <span className={`tabular-nums ${all ? "text-ok" : "text-fg"}`}>
-        {done}/{mine.length}
-      </span>
-    </span>
-  );
+/** "Everyone · 10", or "Everyone 10 · Heimdall 20" when targets differ by audience. */
+function rowDetail(row: MatrixRow): string {
+  return row.targets
+    .map((t) => {
+      const g = t.goal;
+      const rank =
+        g.domain === "skillline"
+          ? g.targetRank > 0 && (g.extraRank ?? 0) > g.targetRank
+            ? `${g.targetRank}–${g.extraRank}`
+            : String(g.targetRank || g.extraRank || "")
+          : "";
+      return [t.audience, rank].filter(Boolean).join(" ");
+    })
+    .join(" · ");
 }
 
 export function TargetsBoard({
@@ -88,34 +110,20 @@ export function TargetsBoard({
   roles: { id: string; name: string }[];
   choices: TargetSubject[];
 }) {
-  const [view, setView] = useState<View>("character");
   const [show, setShow] = useState<Show>("open");
   const [focus, setFocus] = useState<string>("");
   const [sheet, setSheet] = useState<{ subject: TargetSubject | null; audience: Audience } | null>(null);
 
-  const all = useMemo(() => groups.flatMap((g) => g.targets), [groups]);
-  const total = all.length;
-  const finished = all.filter((t) => t.complete).length;
+  const rows = useMemo(() => buildMatrix(groups), [groups]);
+  const met = rows.filter((r) => r.complete).length;
 
-  // What each character still has to do: every target that governs them.
-  const byCharacter = useMemo(() => {
-    const map = new Map<string, Item[]>();
-    for (const t of all) {
-      for (const p of t.people) {
-        const list = map.get(p.id) ?? [];
-        list.push({ t, mark: p.mark });
-        map.set(p.id, list);
-      }
-    }
-    const rank = (i: Item) => TIERS.indexOf(i.t.goal.tier);
-    for (const list of map.values()) {
-      list.sort(
-        (a, b) =>
-          Number(isDone(a.mark)) - Number(isDone(b.mark)) || rank(a) - rank(b) || chipName(a.t).localeCompare(chipName(b.t)),
-      );
-    }
-    return map;
-  }, [all]);
+  // Per character: how many mandatory targets are still open.
+  const left = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of rows)
+      for (const [id, c] of r.cells) if (c.tier === "essential" && isOpenMark(c.mark)) m.set(id, (m.get(id) ?? 0) + 1);
+    return m;
+  }, [rows]);
 
   function subjectFor(goal: Goal): TargetSubject {
     return (
@@ -128,51 +136,50 @@ export function TargetsBoard({
       }
     );
   }
-  const edit = (t: ReviewTarget) =>
+  const editGoal = (goal: Goal) =>
     setSheet({
-      subject: subjectFor(t.goal),
-      audience: { scope: t.goal.scope as GoalScope, characterId: t.goal.characterId, scopeKey: t.goal.scopeKey },
+      subject: subjectFor(goal),
+      audience: { scope: goal.scope as GoalScope, characterId: goal.characterId, scopeKey: goal.scopeKey },
     });
 
-  const seg = <T extends string>(value: T, current: T, set: (v: T) => void, label: string) => (
+  const visible = rows.filter((r) => {
+    if (focus) {
+      const c = r.cells.get(focus);
+      return !!c && (show === "all" || isOpenMark(c.mark));
+    }
+    return show === "all" || !r.complete;
+  });
+  const focusPerson = people.find((p) => p.id === focus);
+
+  const seg = (value: Show, label: string) => (
     <button
       type="button"
-      onClick={() => set(value)}
-      aria-pressed={current === value}
-      className={`rounded-md px-2.5 py-1 text-[13px] ${current === value ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg"}`}
+      onClick={() => setShow(value)}
+      aria-pressed={show === value}
+      className={`rounded-md px-2.5 py-1 text-[13px] ${show === value ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg"}`}
     >
       {label}
     </button>
   );
 
-  const shownPeople = focus ? people.filter((p) => p.id === focus) : people;
-
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex rounded-lg border border-border bg-surface p-0.5" role="group" aria-label="Review by">
-          {seg<View>("character", view, setView, "By character")}
-          {seg<View>("target", view, setView, "By target")}
-        </div>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <div className="flex rounded-lg border border-border bg-surface p-0.5" role="group" aria-label="Show">
-          {seg<Show>("open", show, setShow, "Still to do")}
-          {seg<Show>("all", show, setShow, "Everything")}
+          {seg("open", "Still to do")}
+          {seg("all", "Everything")}
         </div>
-        <select
-          value={focus}
-          onChange={(e) => setFocus(e.target.value)}
-          aria-label="Show targets for"
-          className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-fg"
-        >
-          <option value="">Every character</option>
-          {people.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        {focusPerson ? (
+          <button
+            type="button"
+            onClick={() => setFocus("")}
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent-soft px-2.5 py-1 text-[13px] text-fg"
+          >
+            Only {focusPerson.name} <X className="h-3.5 w-3.5 text-fg-muted" aria-label="Show everyone" />
+          </button>
+        ) : null}
         <span className="text-[13px] text-fg-subtle">
-          {finished} of {total} {total === 1 ? "target" : "targets"} met by everyone
+          {met} of {rows.length} met by everyone
         </span>
         <button
           type="button"
@@ -186,146 +193,138 @@ export function TargetsBoard({
           }
           className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg"
         >
-          <Plus className="h-4 w-4" /> New target
+          <Pencil className="h-3.5 w-3.5" /> Edit targets
         </button>
       </div>
 
-      <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-fg-subtle">
+      <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-fg-subtle">
         {TIERS.map((tier) => (
           <span key={tier} className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: TIER_TONE[tier].dot }} aria-hidden />
+            <Dot tier={tier} />
             {TIER_LABEL[tier]}
           </span>
         ))}
-        <span>Click any target to change it. A target for one character or class replaces a broader one for them.</span>
+        <span>— not discovered</span>
+        <span>· no target</span>
+        <span>Click a name to change a target, a cell to change it for that character, a column to focus on one character.</span>
       </p>
 
-      {total === 0 ? (
+      {rows.length === 0 ? (
         <div className="party-module px-6 py-12 text-center">
           <h2 className="font-display text-2xl text-fg">No targets yet</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-fg-muted">
             A target is something to work towards: a skill line rank, an ability, a scribing script. Set it for
-            everyone, a class, a role or one character. The quickest way to set skill-line targets is the{" "}
+            everyone, a class, a role or one character with Edit targets, or straight from the{" "}
             <Link href="/party/characters?view=skills" className="text-accent hover:underline">
               skill line grid
             </Link>
             .
           </p>
         </div>
-      ) : view === "character" ? (
-        <ul className="party-module divide-y divide-border/60 p-0">
-          {shownPeople.map((p) => {
-            const items = byCharacter.get(p.id) ?? [];
-            const known = items.filter((i) => i.mark.state !== "unknown");
-            const open = items.filter((i) => !isDone(i.mark));
-            const chips = show === "open" ? open : items;
-            const unknown = items.length > 0 && known.length === 0;
-            return (
-              <li key={p.id} className="grid gap-x-6 gap-y-2 px-5 py-3 lg:grid-cols-[15rem_minmax(0,1fr)]">
-                <div className="min-w-0">
-                  <Link
-                    href={`/party/c/${encodeURIComponent(p.id)}/skills`}
-                    className="block truncate text-[14px] text-fg hover:text-accent"
-                  >
-                    {p.name}
-                  </Link>
-                  <span className="text-[12px]" style={{ color: classColor(p.className) ?? undefined }}>
-                    {p.className}
-                  </span>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                    {TIERS.map((tier) => (
-                      <TierTally key={tier} tier={tier} items={items} />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex min-w-0 flex-wrap content-start items-start gap-1.5">
-                  {items.length === 0 ? (
-                    <span className="text-[13px] text-fg-subtle">No targets apply to {p.name}.</span>
-                  ) : unknown ? (
-                    <span className="text-[13px] text-fg-subtle">
-                      Not snapshotted yet: log {p.name} out once and their {items.length} targets fill in.
-                    </span>
-                  ) : chips.length === 0 ? (
-                    <span className="inline-flex items-center gap-1.5 text-[13px] text-ok">
-                      <Check className="h-3.5 w-3.5" /> Every target met
-                    </span>
-                  ) : (
-                    chips.map((i) => <Chip key={i.t.goal.id} item={i} onEdit={() => edit(i.t)} />)
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
       ) : (
-        <div className="space-y-5">
-          {groups.map((g) => {
-            const targets = g.targets.filter((t) => {
-              if (focus) {
-                const mine = t.people.find((p) => p.id === focus);
-                return !!mine && (show === "all" || !isDone(mine.mark));
-              }
-              return show === "all" || !t.complete;
-            });
-            if (targets.length === 0) return null;
-            return (
-              <section key={g.scope}>
-                <h2 className="mb-2 font-display text-[17px] text-fg-muted">{g.title}</h2>
-                <ul className="party-module divide-y divide-border/60 p-0">
-                  {targets.map((t) => {
-                    const people = focus ? t.people.filter((p) => p.id === focus) : t.people;
-                    const short = people.filter((p) => !isDone(p.mark));
-                    const shown = show === "all" ? people : short;
-                    const done = people.length - short.length;
-                    return (
-                      <li key={t.goal.id} className="grid gap-x-6 gap-y-1.5 px-5 py-2.5 lg:grid-cols-[17rem_minmax(0,1fr)]">
-                        <div className="min-w-0">
-                          <button type="button" onClick={() => edit(t)} className="text-left text-[14px] text-fg hover:text-accent">
-                            <span
-                              className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
-                              style={{ background: TIER_TONE[t.goal.tier].dot }}
-                              aria-hidden
-                            />
-                            {t.title}
-                          </button>
-                          <p className="text-[12px] text-fg-subtle">
-                            {t.audience} · {TIER_LABEL[t.goal.tier]}
-                            {t.known > 0 ? ` · ${t.done} of ${t.known} met` : " · nobody snapshotted yet"}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap content-start items-start gap-1.5">
-                          {shown.map((p) => (
-                            <Link
-                              key={p.id}
-                              href={`/party/c/${encodeURIComponent(p.id)}/skills${
-                                t.goal.domain === "skillline" ? `?line=${encodeURIComponent(t.goal.target)}` : ""
-                              }`}
-                              title={`${p.name}: ${p.mark.label}`}
-                              className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[12px] hover:bg-surface-2 ${
-                                isDone(p.mark) ? "border-border/60 text-fg-subtle" : "border-border text-fg"
-                              }`}
-                            >
-                              {isDone(p.mark) ? <Check className="h-3 w-3 text-ok" /> : null}
-                              {p.name}
-                              <span className="tabular-nums text-fg-subtle">{p.mark.label}</span>
-                            </Link>
-                          ))}
-                          {show === "open" && done > 0 ? (
-                            <span className="px-1 py-0.5 text-[12px] text-fg-subtle">+ {done} met</span>
-                          ) : null}
-                          {t.overridden.length > 0 ? (
-                            <span className="px-1 py-0.5 text-[12px] text-fg-subtle" title={t.overridden.map((o) => `${o.name}: ${o.by}`).join("\n")}>
-                              {t.overridden.length} follow their own target
+        <div className="party-module overflow-x-auto p-0">
+          <table className="w-full border-separate border-spacing-0">
+            <thead>
+              <tr>
+                <th className="sticky left-0 top-0 z-20 min-w-[13rem] border-b border-border bg-surface px-4 pb-2 text-left align-bottom text-[12px] font-normal text-fg-subtle">
+                  {visible.length} {visible.length === 1 ? "target" : "targets"}
+                </th>
+                {people.map((p) => {
+                  const active = focus === p.id;
+                  const n = left.get(p.id) ?? 0;
+                  return (
+                    <th key={p.id} className={`min-w-[3.25rem] border-b border-border px-0.5 pb-2 align-bottom font-normal ${active ? "bg-accent-soft" : ""}`}>
+                      <button
+                        type="button"
+                        onClick={() => setFocus(active ? "" : p.id)}
+                        aria-pressed={active}
+                        title={`${p.name} · ${p.className}\n${n === 0 ? "Every mandatory target met" : `${n} mandatory left`}\nClick to show only ${p.name}`}
+                        className="mx-auto flex flex-col items-center gap-1.5 rounded-md px-1 pt-1 hover:bg-surface-2"
+                      >
+                        <span
+                          className="max-h-28 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-fg [writing-mode:vertical-rl] rotate-180"
+                        >
+                          {p.name}
+                        </span>
+                        <span className="h-1 w-5 rounded-full" style={{ background: classColor(p.className) ?? "var(--border)" }} aria-hidden />
+                        <span className={`text-[11px] tabular-nums ${n === 0 ? "text-ok" : "text-fg-muted"}`}>
+                          {n === 0 ? <Check className="h-3 w-3" aria-label="Mandatory met" /> : n}
+                        </span>
+                      </button>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {TIERS.map((tier) => {
+                const list = visible.filter((r) => r.tier === tier);
+                if (list.length === 0) return null;
+                const openRows = list.filter((r) => !r.complete).length;
+                return (
+                  <Fragment key={tier}>
+                    <tr>
+                      <th
+                        colSpan={people.length + 1}
+                        className="sticky left-0 border-b border-border/60 bg-surface-2/40 px-4 py-1.5 text-left text-[12px] font-normal"
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <Dot tier={tier} />
+                          <span className="text-fg">{TIER_LABEL[tier]}</span>
+                          <span className="text-fg-subtle">{openRows === 0 ? "all met" : `${openRows} with work left`}</span>
+                        </span>
+                      </th>
+                    </tr>
+                    {list.map((r) => (
+                      <tr key={r.key} className="group/row hover:bg-surface-2/30">
+                        <th
+                          scope="row"
+                          className="sticky left-0 z-10 border-b border-border/40 bg-surface px-4 py-0.5 text-left font-normal group-hover/row:bg-surface-2"
+                        >
+                          <button type="button" onClick={() => editGoal(r.targets[0].goal)} className="block max-w-[16rem] text-left">
+                            <span className={`block truncate text-[13px] leading-snug hover:text-accent ${r.complete ? "text-fg-muted" : "text-fg"}`}>
+                              {r.name}
                             </span>
-                          ) : null}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          })}
+                            <span className="block truncate text-[11px] leading-tight text-fg-subtle">{rowDetail(r)}</span>
+                          </button>
+                        </th>
+                        {people.map((p) => {
+                          const cell = r.cells.get(p.id);
+                          return (
+                            <Cell
+                              key={p.id}
+                              cell={cell}
+                              person={p}
+                              rowTier={r.tier}
+                              focused={focus === p.id}
+                              onEdit={() => cell && editGoal(cell.goal)}
+                            />
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </Fragment>
+                );
+              })}
+              {visible.length === 0 ? (
+                <tr>
+                  <td colSpan={people.length + 1} className="px-4 py-8 text-center text-[13px] text-ok">
+                    <Check className="mr-1.5 inline h-4 w-4" />
+                    {focusPerson ? `${focusPerson.name} has met every target.` : "Every target is met by everyone."}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+          {show === "open" && !focus && met > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShow("all")}
+              className="w-full border-t border-border/60 px-4 py-2 text-left text-[12px] text-fg-subtle hover:text-fg"
+            >
+              {met} {met === 1 ? "target is" : "targets are"} met by everyone. Show them
+            </button>
+          ) : null}
         </div>
       )}
 

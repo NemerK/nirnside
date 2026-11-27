@@ -11,10 +11,11 @@ import { groupItems } from "@/lib/party/inventory";
 import { CurrencyTable } from "@/components/currency-table";
 import { SetCatalogProvider } from "@/components/set-hover";
 import { StickerbookGrid } from "@/components/stickerbook-grid";
+import { CollectionSearch } from "@/components/party/collection-search";
+import { categoryTree, searchSets } from "@/lib/party/set-collection";
 import { AchievementsBoard } from "@/components/achievements-board";
 import { DailiesBoard } from "@/components/dailies-board";
 import { OutfitStylesGrid } from "@/components/outfit-styles-grid";
-import { getDb } from "@/lib/db";
 import {
   getAccount,
   getCompletedAchievementIds,
@@ -180,90 +181,162 @@ export function InventorySection({ sp }: { sp: Params }) {
 /* ---------------- Set collection: one category at a time ---------------- */
 
 export function SetsSection({ sp }: { sp: Params }) {
-  const cats = safe(
-    () =>
-      getDb()
-        .prepare("SELECT category, COUNT(*) AS sets, SUM(collected) AS collected, SUM(total) AS total FROM stickerbook GROUP BY category ORDER BY category")
-        .all() as { category: string; sets: number; collected: number; total: number }[],
-    [],
-  );
-  if (cats.length === 0) return <Empty>Your set collection fills in after a logout with the addon on.</Empty>;
-  const chosen = cats.find((c) => c.category === str(sp.cat))?.category ?? cats[0].category;
-  const inCategory = safe(() => getStickerbook(), []).filter((s) => s.category === chosen);
-  // Large categories (Overland, Dungeon…) split by zone, so one page never
-  // carries hundreds of sets and thousands of pieces.
-  const subs = [...new Set(inCategory.map((s) => s.subcategory).filter((x): x is string => !!x))].sort();
-  const split = inCategory.length > 30 && subs.length > 1;
-  const sub = split ? (subs.find((x) => x === str(sp.sub)) ?? subs[0]) : null;
+  const all = safe(() => getStickerbook(), []);
+  if (all.length === 0) return <Empty>Your set collection fills in after a logout with the addon on.</Empty>;
+  const tree = categoryTree(all);
+  const q = (str(sp.q) ?? "").trim();
+  const mythics = safe(() => getAccount()?.mythics ?? [], []);
+  const withHref = (list: typeof all) => list.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }));
+  const search = <CollectionSearch placeholder="Search every set or piece" initial={q} />;
+
+  // Searching looks through every category, so a set is found wherever it lives.
+  const found = q ? searchSets(all, q) : [];
+  const hits = new Map<string, number>();
+  for (const s of found) hits.set(s.category || "Other", (hits.get(s.category || "Other") ?? 0) + 1);
+
+  const chosen = q && hits.size > 0
+    ? [...hits.entries()].sort((a, b) => b[1] - a[1])[0][0]
+    : (tree.find((c) => c.name === str(sp.cat))?.name ?? tree[0].name);
+  const inCategory = all.filter((s) => (s.category || "Other") === chosen);
+  // Large categories (Overland, Dungeons…) open one zone at a time.
+  const node = tree.find((c) => c.name === chosen)!;
+  const split = inCategory.length > 30 && node.subs.length > 1;
+  const sub = split ? (node.subs.find((x) => x.name === str(sp.sub))?.name ?? node.subs[0].name) : null;
   const pool = sub ? inCategory.filter((s) => s.subcategory === sub) : inCategory;
-  // Whatever is still large after the zone split is shown a page at a time.
   const SETS_PER_PAGE = 60;
   const setPages = pool.length > SETS_PER_PAGE ? Math.ceil(pool.length / SETS_PER_PAGE) : 1;
   const setPage = Math.min(setPages, Math.max(1, Number(str(sp.page) ?? 1) || 1));
   const sets = setPages > 1 ? pool.slice((setPage - 1) * SETS_PER_PAGE, setPage * SETS_PER_PAGE) : pool;
+  const catHref = (cat: string, subName?: string) =>
+    `/party/collections?tab=sets&cat=${encodeURIComponent(cat)}${subName ? `&sub=${encodeURIComponent(subName)}` : ""}`;
+
   return (
-    <>
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        {cats.map((c) => (
-          <Link
-            key={c.category}
-            href={`/party/collections?tab=sets&cat=${encodeURIComponent(c.category)}`}
-            aria-current={c.category === chosen ? "page" : undefined}
-            className={`shrink-0 rounded-xl border px-3 py-2 text-[13px] ${
-              c.category === chosen ? "border-accent bg-accent-soft text-fg" : "border-border text-fg-muted hover:text-fg"
-            }`}
-          >
-            {c.category}
-            <span className="ml-2 tabular-nums text-fg-subtle">
-              {c.collected}/{c.total}
-            </span>
-          </Link>
-        ))}
+    <div className="grid gap-5 lg:grid-cols-[15.5rem_minmax(0,1fr)]">
+      <nav
+        aria-label="Set categories"
+        className="max-h-64 overflow-y-auto pr-1 lg:sticky lg:top-4 lg:max-h-[calc(100vh-8rem)] lg:self-start"
+      >
+        <ul className="space-y-0.5">
+          {tree.map((c) => {
+            const on = c.name === chosen && !q;
+            const n = hits.get(c.name) ?? 0;
+            const done = c.total > 0 && c.collected === c.total;
+            const pct = c.total > 0 ? Math.round((c.collected / c.total) * 100) : 0;
+            return (
+              <li key={c.name}>
+                <Link
+                  href={catHref(c.name)}
+                  aria-current={on ? "page" : undefined}
+                  className={`block rounded-lg px-3 py-2 ${
+                    on ? "bg-accent-soft text-fg" : q && n === 0 ? "text-fg-subtle/60 hover:text-fg-muted" : "text-fg-muted hover:bg-surface-2/60 hover:text-fg"
+                  }`}
+                >
+                  <span className="flex items-baseline justify-between gap-2 text-[13px]">
+                    <span className="truncate">{c.name}</span>
+                    {q ? (
+                      n > 0 ? <span className="shrink-0 rounded bg-accent-soft px-1.5 text-[11px] text-fg">{n}</span> : null
+                    ) : (
+                      <span className={`shrink-0 text-[11px] tabular-nums ${done ? "text-ok" : "text-fg-subtle"}`}>
+                        {c.collected}/{c.total}
+                      </span>
+                    )}
+                  </span>
+                  {q ? null : (
+                    <span className="mt-1.5 block h-[3px] rounded-full bg-meter-track" aria-hidden>
+                      <span
+                        className="block h-full rounded-full"
+                        style={{ width: `${pct}%`, background: done ? "var(--ok)" : "var(--meter)" }}
+                      />
+                    </span>
+                  )}
+                </Link>
+                {on && split ? (
+                  <ul className="mb-1 ml-3 mt-0.5 border-l border-border/70 pl-2">
+                    {c.subs.map((x) => (
+                      <li key={x.name}>
+                        <Link
+                          href={catHref(c.name, x.name)}
+                          aria-current={x.name === sub ? "page" : undefined}
+                          className={`flex items-baseline justify-between gap-2 rounded-md px-2 py-1 text-[12px] ${
+                            x.name === sub ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg"
+                          }`}
+                        >
+                          <span className="truncate">{x.name}</span>
+                          <span className={`shrink-0 tabular-nums ${x.collected === x.total ? "text-ok" : "text-fg-subtle"}`}>
+                            {x.collected}/{x.total}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className="min-w-0">
+        {q ? (
+          found.length === 0 ? (
+            <>
+              <div className="mb-3 flex">{search}</div>
+              <Empty>
+                No set or piece in your collection matches “{q}”. Check the spelling, or search the{" "}
+                <Link href={`/party/library/sets?search=${encodeURIComponent(q)}`} className="text-accent hover:underline">
+                  Library
+                </Link>
+                .
+              </Empty>
+            </>
+          ) : (
+            <StickerbookGrid
+              contained
+              compact
+              grouped
+              searchSlot={search}
+              heading={`Matching “${q}”`}
+              mythics={mythics}
+              sets={withHref(found.slice(0, 60))}
+            />
+          )
+        ) : (
+          <>
+            <StickerbookGrid
+              contained
+              compact
+              searchSlot={search}
+              heading={sub ? `${chosen} › ${sub}` : chosen}
+              mythics={mythics}
+              sets={withHref(sets)}
+            />
+            {setPages > 1 ? (
+              <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center gap-2 text-[14px]">
+                {setPage > 1 ? (
+                  <Link
+                    href={withParams("/party/collections", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage - 1) })}
+                    className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong"
+                  >
+                    Previous
+                  </Link>
+                ) : null}
+                <span className="px-2 text-fg-muted">
+                  Sets {(setPage - 1) * SETS_PER_PAGE + 1}–{Math.min(setPage * SETS_PER_PAGE, pool.length)} of {pool.length}
+                </span>
+                {setPage < setPages ? (
+                  <Link
+                    href={withParams("/party/collections", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage + 1) })}
+                    className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong"
+                  >
+                    Next
+                  </Link>
+                ) : null}
+              </nav>
+            ) : null}
+          </>
+        )}
       </div>
-      {split ? (
-        <div className="mb-4 flex flex-wrap gap-1.5">
-          {subs.map((x) => (
-            <Link
-              key={x}
-              href={`/party/collections?tab=sets&cat=${encodeURIComponent(chosen)}&sub=${encodeURIComponent(x)}`}
-              aria-current={x === sub ? "page" : undefined}
-              className={`rounded-lg px-2.5 py-1 text-[13px] ${x === sub ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg"}`}
-            >
-              {x}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-      <StickerbookGrid
-        contained
-        compact
-        mythics={safe(() => getAccount()?.mythics ?? [], [])}
-        sets={sets.map((s) => ({ ...s, href: setHref({ name: s.name, setId: s.setId }) }))}
-      />
-      {setPages > 1 ? (
-        <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center gap-2 text-[14px]">
-          {setPage > 1 ? (
-            <Link
-              href={withParams("/party/collections", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage - 1) })}
-              className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong"
-            >
-              Previous
-            </Link>
-          ) : null}
-          <span className="px-2 text-fg-muted">
-            Sets {(setPage - 1) * SETS_PER_PAGE + 1}–{Math.min(setPage * SETS_PER_PAGE, pool.length)} of {pool.length}
-          </span>
-          {setPage < setPages ? (
-            <Link
-              href={withParams("/party/collections", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage + 1) })}
-              className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong"
-            >
-              Next
-            </Link>
-          ) : null}
-        </nav>
-      ) : null}
-    </>
+    </div>
   );
 }
 

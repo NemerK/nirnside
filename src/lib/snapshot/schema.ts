@@ -376,6 +376,10 @@ export const OutfitStyle = z.object({
   unlocked: z.boolean().default(false),
   /** Crafting itemStyleId when the game exposes it — links to motif knowledge. */
   itemStyleId: z.number().int().nonnegative().nullable().optional(),
+  /** Armor weight the game draws it as: light, medium, heavy or special. Newer addons only. */
+  weight: z.string().nullable().optional(),
+  /** Outfit slot it fits: head … feet, or "weapon". Newer addons only. */
+  slot: z.string().nullable().optional(),
 });
 export type OutfitStyle = z.infer<typeof OutfitStyle>;
 
