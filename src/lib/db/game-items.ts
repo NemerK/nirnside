@@ -107,3 +107,4 @@ function parsePieces(json: string | null): { type?: string | null; weight?: stri
     return [];
   }
 }
+

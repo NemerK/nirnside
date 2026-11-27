@@ -10,3 +10,8 @@ export * from "./quality";
 export * from "./set-profile";
 export * from "./loadout";
 export * from "./research";
+export * from "./character";
+export * from "./classes";
+export * from "./champion";
+export * from "./weapon-lines";
+export * from "./understand";

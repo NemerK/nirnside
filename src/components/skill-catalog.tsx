@@ -1,5 +1,6 @@
 "use client";
 
+import { SKILL_WINDOW_LINE_ORDER } from "@/lib/game/skills";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
@@ -18,15 +19,8 @@ export interface SkillCatalogItem {
   owned: boolean;
 }
 
-/** Skill-window order inside a category, when the game has one. */
-const LINE_ORDER: Record<string, string[]> = {
-  Weapon: ["Two Handed", "One Hand and Shield", "Dual Wield", "Bow", "Destruction Staff", "Restoration Staff"],
-  Armor: ["Light Armor", "Medium Armor", "Heavy Armor"],
-  Guild: ["Fighters Guild", "Mages Guild", "Undaunted", "Thieves Guild", "Dark Brotherhood", "Psijic Order"],
-  World: ["Soul Magic", "Legerdemain", "Vampire", "Werewolf"],
-  "Alliance War": ["Assault", "Support"],
-  Craft: ["Blacksmithing", "Clothing", "Woodworking", "Jewelry Crafting", "Provisioning", "Enchanting", "Alchemy"],
-};
+/** Skill-window order inside a category, from the game model. */
+const LINE_ORDER = SKILL_WINDOW_LINE_ORDER;
 
 /**
  * Skills & Morphs in the same groups as the in-game skill window:
