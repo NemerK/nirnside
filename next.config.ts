@@ -38,6 +38,16 @@ const nextConfig: NextConfig = {
   // No next/image in the app, so the image library never needs to ship.
   outputFileTracingExcludes: { "*": ["node_modules/@img/**", "node_modules/sharp/**"] },
   serverExternalPackages: ["better-sqlite3"],
+  // Party's earlier addresses, so bookmarks and open tabs keep working.
+  async redirects() {
+    return [
+      { source: "/party/vault", destination: "/party/account", permanent: false },
+      { source: "/party/vault/:s(dailies|crafting)", destination: "/party/across/:s", permanent: false },
+      { source: "/party/vault/:s", destination: "/party/account/:s", permanent: false },
+      { source: "/party/compare", destination: "/party/across/skills", permanent: false },
+      { source: "/party/targets", destination: "/party/across/targets", permanent: false },
+    ];
+  },
   // Skip the developer type check on players' machines (see playerInstall).
   typescript: { ignoreBuildErrors: playerInstall },
   // The local app is opened via 127.0.0.1 / localhost in the browser.

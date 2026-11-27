@@ -219,8 +219,8 @@ export function TargetsBoard({
           <p className="mx-auto mt-2 max-w-md text-sm text-fg-muted">
             A target is something to work towards — a skill line rank, an ability, a scribing script — for everyone, a
             class, a role or one character. The easiest place to set skill-line targets is the{" "}
-            <Link href="/party/compare" className="text-accent hover:underline">
-              Compare page
+            <Link href="/party/across/skills" className="text-accent hover:underline">
+              Skill lines grid
             </Link>
             .
           </p>

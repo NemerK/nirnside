@@ -5,17 +5,18 @@
  */
 const PARTY_ROUTES: [RegExp, string][] = [
   [/^\/characters\/([^/?#]+)\/?(?:[?#].*)?$/, "/party/c/$1"],
-  [/^\/characters\/?(?:[?#].*)?$/, "/party"],
+  [/^\/characters\/?(?:[?#].*)?$/, "/party/characters"],
   [/^\/encyclopedia(?=$|[/?#])/, "/party/library"],
-  [/^\/inventory(?=$|[/?#])/, "/party/vault/inventory"],
-  [/^\/stickerbook(?=$|[/?#])/, "/party/vault/sets"],
-  [/^\/collections(?=$|[/?#])/, "/party/vault/sets"],
-  [/^\/achievements(?=$|[/?#])/, "/party/vault/achievements"],
-  [/^\/knowledge(?=$|[/?#])/, "/party/vault/crafting"],
-  [/^\/styles(?=$|[/?#])/, "/party/vault/styles"],
-  [/^\/houses(?=$|[/?#])/, "/party/vault/houses"],
-  [/^\/dailies(?=$|[/?#])/, "/party/vault/dailies"],
-  [/^\/(?:progress|goals|planner)(?=$|[/?#])/, "/party/targets"],
+  [/^\/inventory(?=$|[/?#])/, "/party/account/inventory"],
+  [/^\/stickerbook(?=$|[/?#])/, "/party/account/sets"],
+  [/^\/collections(?=$|[/?#])/, "/party/account/sets"],
+  [/^\/achievements(?=$|[/?#])/, "/party/account/achievements"],
+  [/^\/knowledge(?=$|[/?#])/, "/party/across/crafting"],
+  [/^\/styles(?=$|[/?#])/, "/party/account/styles"],
+  [/^\/houses(?=$|[/?#])/, "/party/account/houses"],
+  [/^\/dailies(?=$|[/?#])/, "/party/across/dailies"],
+  [/^\/progress(?=$|[/?#])/, "/party/across/skills"],
+  [/^\/(?:goals|planner)(?=$|[/?#])/, "/party/across/targets"],
   [/^\/setup(?=$|[/?#])/, "/party/setup"],
 ];
 

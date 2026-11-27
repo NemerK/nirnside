@@ -8,17 +8,34 @@ import { classColor } from "@/lib/classes";
 import { timeAgo } from "@/lib/format";
 import { CHARACTER_SECTIONS } from "@/lib/party/sections";
 import { toPartyHref } from "@/lib/party/links";
-import { VAULT_SECTIONS } from "./vault-nav";
+import { ACCOUNT_SECTIONS, ACROSS_SECTIONS } from "./areas";
 import { CharacterSwitcher } from "./character-switcher";
 import { CommandPalette } from "./command-palette";
 import type { PartyAccount, PartyLink, PartyMember } from "./types";
 
 const LAST_KEY = "nirnside-party-character";
 
+/** Party's four areas. Each one is about one scope, so it's always clear whose data you're reading. */
+const AREAS = [
+  { id: "account", label: "Account", href: "/party/account", match: ["/party/account"] },
+  { id: "characters", label: "Characters", href: "/party/characters", match: ["/party/characters", "/party/c/"] },
+  { id: "across", label: "Across characters", href: "/party/across/skills", match: ["/party/across"] },
+  { id: "library", label: "Library", href: "/party/library", match: ["/party/library"] },
+] as const;
+
+function inArea(pathname: string, match: readonly string[]): boolean {
+  return match.some((m) => (m.endsWith("/") ? pathname.startsWith(m) : pathname === m || pathname.startsWith(`${m}/`)));
+}
+
 export const PARTY_LINKS: PartyLink[] = [
-  { id: "compare", label: "Compare", href: "/party/compare", blurb: "Every skill line for every character, side by side." },
-  { id: "targets", label: "Targets", href: "/party/targets", blurb: "What you're working towards, and who is still short." },
-  { id: "vault", label: "Vault", href: "/party/vault", blurb: "Everything the account owns: gold, bags, collections, houses." },
+  { id: "account", label: "Account", href: "/party/account", blurb: "What the whole account shares, and every character at a glance." },
+  { id: "characters", label: "Characters", href: "/party/characters", blurb: "Pick a character to open their own pages." },
+  ...ACROSS_SECTIONS.map((s) => ({
+    id: `across-${s.id}`,
+    label: `Across characters: ${s.label}`,
+    href: `/party/across/${s.id}`,
+    blurb: "Everyone at once.",
+  })),
 ];
 
 /** The character a Party address is about, and the section after it (/skills, /gear…). */
@@ -48,9 +65,17 @@ function areaTabs(pathname: string, characterBase: string, characterRest: string
       on: here === s.id,
     }));
   }
-  if (pathname === "/party/vault" || pathname.startsWith("/party/vault/")) {
-    const here = seg("/party/vault");
-    return VAULT_SECTIONS.map((s) => ({ href: s.id ? `/party/vault/${s.id}` : "/party/vault", label: s.label, on: here === s.id }));
+  if (pathname === "/party/account" || pathname.startsWith("/party/account/")) {
+    const here = seg("/party/account");
+    return ACCOUNT_SECTIONS.map((s) => ({
+      href: s.id ? `/party/account/${s.id}` : "/party/account",
+      label: s.label,
+      on: here === s.id,
+    }));
+  }
+  if (pathname.startsWith("/party/across/")) {
+    const here = seg("/party/across");
+    return ACROSS_SECTIONS.map((s) => ({ href: `/party/across/${s.id}`, label: s.label, on: here === s.id }));
   }
   if (pathname === "/party/library" || pathname.startsWith("/party/library/")) {
     const here = seg("/party/library");
@@ -123,7 +148,7 @@ export function PartyShell({
       if (e.key === "/") {
         e.preventDefault();
         setPalette(true);
-      } else if (e.key === "[" || e.key === "]") {
+      } else if (currentId && (e.key === "[" || e.key === "]")) {
         e.preventDefault();
         step(e.key === "]" ? 1 : -1);
       }
@@ -156,11 +181,11 @@ export function PartyShell({
   const pages = useMemo<PartyLink[]>(
     () => [
       ...PARTY_LINKS,
-      ...VAULT_SECTIONS.filter((v) => v.id).map((v) => ({
-        id: `vault-${v.id}`,
-        label: `Vault: ${v.label}`,
-        href: `/party/vault/${v.id}`,
-        blurb: "Account-wide, every character.",
+      ...ACCOUNT_SECTIONS.filter((v) => v.id).map((v) => ({
+        id: `account-${v.id}`,
+        label: `Account: ${v.label}`,
+        href: `/party/account/${v.id}`,
+        blurb: "Shared by every character.",
       })),
       { id: "library", label: "Library", href: "/party/library", blurb: "Sets, skills, Champion Points and scribing." },
       ...LIBRARY_SECTIONS.filter((v) => v.id).map((v) => ({
@@ -194,36 +219,38 @@ export function PartyShell({
     <div className="party-sky flex min-h-full flex-col" style={{ "--hero": hero } as CSSProperties}>
       <header className="sticky top-0 z-40 border-b border-border/70 bg-bg/85 backdrop-blur-md">
         <div className="flex h-14 items-center gap-3 px-4 md:px-6">
-          <Link href="/party" className="mr-1 hidden font-display text-[19px] tracking-[0.08em] text-fg sm:block">
+          <Link href="/party/account" className="mr-1 hidden font-display text-[19px] tracking-[0.08em] text-fg sm:block">
             NIRNSIDE
           </Link>
-          {members.length > 1 ? (
-            <button
-              type="button"
-              onClick={() => step(-1)}
-              aria-label="Previous character"
-              title="Previous character  [ "
-              className="hidden h-8 w-6 items-center justify-center rounded-md text-fg-subtle hover:text-fg md:flex"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          ) : null}
-          <CharacterSwitcher members={members} current={current} hrefFor={hrefFor} />
-          {members.length > 1 ? (
-            <button
-              type="button"
-              onClick={() => step(1)}
-              aria-label="Next character"
-              title="Next character  ] "
-              className="hidden h-8 w-6 items-center justify-center rounded-md text-fg-subtle hover:text-fg md:flex"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+          {currentId && current ? (
+            <>
+              {members.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => step(-1)}
+                  aria-label="Previous character"
+                  title="Previous character  [ "
+                  className="hidden h-8 w-6 items-center justify-center rounded-md text-fg-subtle hover:text-fg md:flex"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              ) : null}
+              <CharacterSwitcher members={members} current={current} hrefFor={hrefFor} />
+              {members.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => step(1)}
+                  aria-label="Next character"
+                  title="Next character  ] "
+                  className="hidden h-8 w-6 items-center justify-center rounded-md text-fg-subtle hover:text-fg md:flex"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : null}
+            </>
           ) : null}
           <nav aria-label="Main" className="ml-2 flex items-center gap-0.5 overflow-x-auto">
-            {navLink(characterBase, "Character", !!currentId)}
-            {PARTY_LINKS.map((l) => navLink(l.href, l.label, pathname === l.href || pathname.startsWith(`${l.href}/`)))}
-              {navLink("/party/library", "Library", pathname === "/party/library" || pathname.startsWith("/party/library/"))}
+            {AREAS.map((a) => navLink(a.href, a.label, inArea(pathname, a.match)))}
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <button
