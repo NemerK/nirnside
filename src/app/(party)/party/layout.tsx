@@ -6,6 +6,7 @@ import type { PartyAccount, PartyMember } from "@/components/party/types";
 import { getAccount, getCharacters } from "@/lib/db/queries";
 import { classIcon } from "@/lib/classes";
 import { applyRosterOrder, getRosterOrder } from "@/lib/roster/order";
+import { getDisabledModules } from "@/lib/modules";
 
 // Bundled, not fetched: Nirnside has to work with no network at all.
 const body = localFont({
@@ -67,7 +68,7 @@ export default function PartyLayout({ children }: { children: React.ReactNode })
   return (
     <html lang="en" className={`party ${body.variable} ${display.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <PartyShell account={account} members={members}>
+        <PartyShell account={account} members={members} disabled={safe(() => getDisabledModules(), [])}>
           {children}
         </PartyShell>
       </body>

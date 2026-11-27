@@ -174,7 +174,7 @@ export function CharacterSwitcher({
             </ul>
           )}
           <p className="mt-2 px-1 text-[11px] text-fg-subtle">
-            Arrow keys and Enter to pick. Anywhere in Nirnside, <kbd className="rounded border border-border px-1">[</kbd>{" "}
+            Arrow keys and Enter to pick. On character pages, <kbd className="rounded border border-border px-1">[</kbd>{" "}
             and <kbd className="rounded border border-border px-1">]</kbd> step to the previous or next character.
           </p>
         </div>

@@ -3,12 +3,12 @@ import { CraftingSection, SECTION_TITLES } from "@/components/party/scope-sectio
 
 export const dynamic = "force-dynamic";
 
-/** Across characters: crafting for everyone at once. */
-export default async function AcrossCraftingPage({ searchParams }: PageProps<"/party/across/crafting">) {
+/** Characters: Craft knowledge. */
+export default async function Page({ searchParams }: PageProps<"/party/knowledge">) {
   const sp = (await searchParams) as Record<string, string | string[] | undefined>;
   return (
     <div className="mx-auto w-full max-w-[1400px]">
-      <PageHead title={SECTION_TITLES.crafting.title} lead={SECTION_TITLES.crafting.lead} />
+      <PageHead title="Craft knowledge" lead={SECTION_TITLES.crafting.lead} />
       <CraftingSection sp={sp} />
     </div>
   );

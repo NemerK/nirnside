@@ -82,7 +82,7 @@ export function InventorySection({ sp }: { sp: Params }) {
     return (
       <>
         <p className="mb-4 text-[14px]">
-          <Link href="/party/account/inventory" className="text-accent hover:underline">
+          <Link href="/party/inventory" className="text-accent hover:underline">
             Back to items
           </Link>
         </p>
@@ -147,7 +147,7 @@ export function InventorySection({ sp }: { sp: Params }) {
           {formatNumber(groups.length)} kinds of item · {formatNumber(totalCount)} items in {formatNumber(items.length)} stacks
           {pages > 1 ? ` · showing ${(current - 1) * PAGE_SIZE + 1}–${Math.min(current * PAGE_SIZE, groups.length)}` : ""}
         </span>
-        <Link href="/party/account/inventory?view=currency" className="text-accent hover:underline">
+        <Link href="/party/inventory?view=currency" className="text-accent hover:underline">
           Currencies per character
         </Link>
       </div>
@@ -159,7 +159,7 @@ export function InventorySection({ sp }: { sp: Params }) {
       {pages > 1 ? (
         <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center gap-2 text-[14px]">
           {current > 1 ? (
-            <Link href={withParams("/party/account/inventory", sp, { page: String(current - 1) })} className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong">
+            <Link href={withParams("/party/inventory", sp, { page: String(current - 1) })} className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong">
               Previous
             </Link>
           ) : null}
@@ -167,7 +167,7 @@ export function InventorySection({ sp }: { sp: Params }) {
             Page {current} of {pages}
           </span>
           {current < pages ? (
-            <Link href={withParams("/party/account/inventory", sp, { page: String(current + 1) })} className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong">
+            <Link href={withParams("/party/inventory", sp, { page: String(current + 1) })} className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong">
               Next
             </Link>
           ) : null}
@@ -207,7 +207,7 @@ export function SetsSection({ sp }: { sp: Params }) {
         {cats.map((c) => (
           <Link
             key={c.category}
-            href={`/party/account/sets?cat=${encodeURIComponent(c.category)}`}
+            href={`/party/collections?tab=sets&cat=${encodeURIComponent(c.category)}`}
             aria-current={c.category === chosen ? "page" : undefined}
             className={`shrink-0 rounded-xl border px-3 py-2 text-[13px] ${
               c.category === chosen ? "border-accent bg-accent-soft text-fg" : "border-border text-fg-muted hover:text-fg"
@@ -225,7 +225,7 @@ export function SetsSection({ sp }: { sp: Params }) {
           {subs.map((x) => (
             <Link
               key={x}
-              href={`/party/account/sets?cat=${encodeURIComponent(chosen)}&sub=${encodeURIComponent(x)}`}
+              href={`/party/collections?tab=sets&cat=${encodeURIComponent(chosen)}&sub=${encodeURIComponent(x)}`}
               aria-current={x === sub ? "page" : undefined}
               className={`rounded-lg px-2.5 py-1 text-[13px] ${x === sub ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg"}`}
             >
@@ -244,7 +244,7 @@ export function SetsSection({ sp }: { sp: Params }) {
         <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center gap-2 text-[14px]">
           {setPage > 1 ? (
             <Link
-              href={withParams("/party/account/sets", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage - 1) })}
+              href={withParams("/party/collections", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage - 1) })}
               className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong"
             >
               Previous
@@ -255,7 +255,7 @@ export function SetsSection({ sp }: { sp: Params }) {
           </span>
           {setPage < setPages ? (
             <Link
-              href={withParams("/party/account/sets", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage + 1) })}
+              href={withParams("/party/collections", sp, { cat: chosen, sub: sub ?? undefined, page: String(setPage + 1) })}
               className="rounded-lg border border-border px-3 py-1.5 text-fg hover:border-border-strong"
             >
               Next

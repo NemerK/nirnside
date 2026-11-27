@@ -5,25 +5,30 @@
  */
 const PARTY_ROUTES: [RegExp, string][] = [
   [/^\/characters\/([^/?#]+)\/?(?:[?#].*)?$/, "/party/c/$1"],
-  [/^\/characters\/?(?:[?#].*)?$/, "/party/characters"],
+  [/^\/characters\/?(?=$|[?#])/, "/party/characters"],
   [/^\/encyclopedia(?=$|[/?#])/, "/party/library"],
-  [/^\/inventory(?=$|[/?#])/, "/party/account/inventory"],
-  [/^\/stickerbook(?=$|[/?#])/, "/party/account/sets"],
-  [/^\/collections(?=$|[/?#])/, "/party/account/sets"],
-  [/^\/achievements(?=$|[/?#])/, "/party/account/achievements"],
-  [/^\/knowledge(?=$|[/?#])/, "/party/across/crafting"],
-  [/^\/styles(?=$|[/?#])/, "/party/account/styles"],
-  [/^\/houses(?=$|[/?#])/, "/party/account/houses"],
-  [/^\/dailies(?=$|[/?#])/, "/party/across/dailies"],
-  [/^\/progress(?=$|[/?#])/, "/party/across/skills"],
-  [/^\/(?:goals|planner)(?=$|[/?#])/, "/party/across/targets"],
+  [/^\/inventory(?=$|[/?#])/, "/party/inventory"],
+  [/^\/(?:stickerbook|collections)(?=$|[/?#])/, "/party/collections"],
+  [/^\/styles(?=$|[?#])/, "/party/collections?tab=styles"],
+  [/^\/houses(?=$|[?#])/, "/party/collections?tab=houses"],
+  [/^\/achievements(?=$|[/?#])/, "/party/achievements"],
+  [/^\/knowledge(?=$|[/?#])/, "/party/knowledge"],
+  [/^\/dailies(?=$|[/?#])/, "/party/dailies"],
+  [/^\/progress(?=$|[?#])/, "/party/characters?view=skills"],
+  [/^\/(?:goals|planner)(?=$|[/?#])/, "/party/planner"],
+  [/^\/builds(?=$|[/?#])/, "/party/builds"],
   [/^\/setup(?=$|[/?#])/, "/party/setup"],
 ];
 
 export function toPartyHref(href: string): string {
   if (href.startsWith("/party")) return href;
   for (const [from, to] of PARTY_ROUTES) {
-    if (from.test(href)) return href.replace(from, to);
+    if (from.test(href)) {
+      const out = href.replace(from, to);
+      // "/styles?x=1" → "/party/collections?tab=styles?x=1" must join with &.
+      const first = out.indexOf("?");
+      return first < 0 ? out : out.slice(0, first + 1) + out.slice(first + 1).replace(/\?/g, "&");
+    }
   }
   return href;
 }

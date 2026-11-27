@@ -278,7 +278,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
 
           <Module
             title="Today"
-            href="/party/across/dailies"
+            href="/party/dailies"
             hrefLabel="Everyone's dailies"
             meta={<ResetCountdown compact resetAt={nextEsoResetAt(now, region)} resetHourUtc={dailyResetHourUtc(region)} />}
             className="xl:col-span-3"
@@ -304,15 +304,15 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
 
           <Module
             title="Targets"
-            href="/party/across/targets"
-            hrefLabel="All targets"
+            href="/party/planner"
+            hrefLabel="Planner"
             meta={targetRows.length > 0 ? `${targetRows.length - openTargets.length} of ${targetRows.length} met` : undefined}
             className="xl:col-span-4"
           >
             {targetRows.length === 0 ? (
               <Empty>
                 No targets for {c.name}.{" "}
-                <Link href="/party/across/skills" className="text-accent hover:underline">
+                <Link href="/party/characters?view=skills" className="text-accent hover:underline">
                   Set one on the skill line grid
                 </Link>
                 .
@@ -329,7 +329,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
                     </li>
                   ))}
                 </ul>
-                <More count={openTargets.length - 7} href="/party/across/targets" />
+                <More count={openTargets.length - 7} href="/party/planner" />
               </>
             )}
           </Module>
@@ -431,7 +431,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
 
           <Module
             title="Bags"
-            href={`/party/account/inventory?owner=${encodeURIComponent(c.name)}`}
+            href={`/party/inventory?owner=${encodeURIComponent(c.name)}`}
             hrefLabel="Open this character's bags"
             className="xl:col-span-4"
           >
@@ -441,7 +441,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
             </p>
             <p className="mt-1.5 text-[12px] text-fg-subtle">
               Bank and craft bag are shared:{" "}
-              <Link href="/party/account/inventory" className="text-accent hover:underline">
+              <Link href="/party/inventory" className="text-accent hover:underline">
                 account inventory
               </Link>
               . {sheet.scripts} scribing {sheet.scripts === 1 ? "script" : "scripts"} known (

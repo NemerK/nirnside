@@ -23,7 +23,7 @@ function safe<T>(fn: () => T, fallback: T): T {
  * from line ranks alone; full snapshots are read only when an ability or
  * script target needs them.
  */
-export default function TargetsPage() {
+export default function PlannerPage() {
   const goals = safe(() => listGoals(), []);
   const roles = safe(() => listRoles(), []).map((r) => ({ id: r.id, name: r.name }));
   const characters = roster();
@@ -51,10 +51,7 @@ export default function TargetsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1320px]">
-      <PageHead
-        title="Targets"
-        lead="What you're working towards, and who is still short. A target for one character or class replaces a broader one for them."
-      />
+      <PageHead title="Planner" lead="Your targets, and what each character still has to do." />
       <TargetsBoard groups={groups} goals={goals} people={people} roles={roles} choices={targetChoices(lines)} />
     </div>
   );

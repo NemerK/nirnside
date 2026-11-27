@@ -40,14 +40,25 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3"],
   // Party's earlier addresses, so bookmarks and open tabs keep working.
   async redirects() {
+    const to = (source: string, destination: string) => ({ source, destination, permanent: false });
     return [
-      { source: "/party/vault", destination: "/party/account", permanent: false },
-      { source: "/party/vault/:s(dailies|crafting)", destination: "/party/across/:s", permanent: false },
-      { source: "/party/vault/:s", destination: "/party/account/:s", permanent: false },
-      { source: "/party/compare", destination: "/party/across/skills", permanent: false },
-      { source: "/party/targets", destination: "/party/across/targets", permanent: false },
+      to("/party/account", "/party"),
+      to("/party/vault", "/party"),
+      to("/party/:area(account|vault)/inventory", "/party/inventory"),
+      to("/party/:area(account|vault)/sets", "/party/collections"),
+      to("/party/:area(account|vault)/styles", "/party/collections?tab=styles"),
+      to("/party/:area(account|vault)/houses", "/party/collections?tab=houses"),
+      to("/party/:area(account|vault)/achievements", "/party/achievements"),
+      to("/party/:area(across|vault)/dailies", "/party/dailies"),
+      to("/party/:area(across|vault)/crafting", "/party/knowledge"),
+      to("/party/across", "/party/characters?view=skills"),
+      to("/party/across/skills", "/party/characters?view=skills"),
+      to("/party/compare", "/party/characters?view=skills"),
+      to("/party/across/targets", "/party/planner"),
+      to("/party/targets", "/party/planner"),
     ];
   },
+
   // Skip the developer type check on players' machines (see playerInstall).
   typescript: { ignoreBuildErrors: playerInstall },
   // The local app is opened via 127.0.0.1 / localhost in the browser.

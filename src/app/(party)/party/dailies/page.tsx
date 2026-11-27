@@ -3,11 +3,11 @@ import { DailiesSection, SECTION_TITLES } from "@/components/party/scope-section
 
 export const dynamic = "force-dynamic";
 
-/** Across characters: dailies for everyone at once. */
-export default function AcrossDailiesPage() {
+/** Account: Dailies. */
+export default function Page() {
   return (
     <div className="mx-auto w-full max-w-[1400px]">
-      <PageHead title={SECTION_TITLES.dailies.title} lead={SECTION_TITLES.dailies.lead} />
+      <PageHead title="Dailies" lead={SECTION_TITLES.dailies.lead} />
       <DailiesSection />
     </div>
   );
