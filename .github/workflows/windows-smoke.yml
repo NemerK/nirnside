@@ -8,30 +8,12 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: "24" }
-      - uses: actions/setup-go@v5
-        with: { go-version: "1.22" }
-      - run: npm ci --no-audit --no-fund
-      - run: npx next build
-        env: { NIRNSIDE_BUNDLE: "1", NEXT_TELEMETRY_DISABLED: "1" }
-      - run: node scripts/make-bundle.mjs ${{ github.sha }}
-      - name: Zip + manifest
+      - name: Download the published launcher
         shell: pwsh
-        run: |
-          Push-Location dist/bundle; 7z a -tzip -mx=7 ..\nirnside-win-x64.zip * | Out-Null; Pop-Location
-          $zip = Get-Item dist\nirnside-win-x64.zip
-          @{ sha = "${{ github.sha }}"; node = (node -v).Trim(); sha256 = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower(); size = $zip.Length } | ConvertTo-Json | Set-Content -Encoding utf8NoBOM dist\nirnside-win-x64.json
-          "zip MB: " + [math]::Round($zip.Length / 1MB, 1)
-      - name: Build launcher
-        working-directory: installer
-        run: go build -o ../Nirnside.exe .
+        run: Invoke-WebRequest https://github.com/NemerK/nirnside/releases/latest/download/Nirnside.exe -OutFile Nirnside.exe
       - name: Fresh install, then upgrade over an old-style install
         shell: pwsh
         run: |
-          $srv = Start-Process -FilePath python -ArgumentList "-m","http.server","8765","--directory","dist" -PassThru -NoNewWindow
-          $env:NIRNSIDE_BUNDLE_URL = "http://127.0.0.1:8765"
-          $env:NIRNSIDE_SKIP_UPDATE = "1"
           $sv = [Environment]::GetFolderPath("MyDocuments") + "\Elder Scrolls Online\live\SavedVariables"
           New-Item -ItemType Directory -Force $sv | Out-Null
           $in = [IO.File]::OpenRead("$PWD\.ci\big.lua.gz"); $gz = New-Object IO.Compression.GZipStream($in, [IO.Compression.CompressionMode]::Decompress); $o = [IO.File]::Create("$sv\NirnsideSnapshot.lua"); $gz.CopyTo($o); $o.Close(); $gz.Close()
