@@ -28,10 +28,6 @@ work and delete it here.
   that a character is fed and for how long, but not with what. Matching the
   buff's ability id to the dish would need the dish's ability id, which the
   item API doesn't give.
-- **Addon API version.** The addons still declare `## APIVersion: 101046`.
-  Update 51's number wasn't confirmed; the addon records the live version
-  in every save (`apiVersion`), so read it from a real save and update both
-  manifests.
 - **Companion level and rapport** are only readable while that companion is
   out. Companions never summoned since addon 0.9.43 show no level yet.
 - **Update 52** (19 January 2027) is on the PTS: subclassing talk there
