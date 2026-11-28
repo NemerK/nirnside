@@ -1,7 +1,6 @@
 import { Bar } from "@/components/party/module";
 import { EsoText } from "@/components/eso-text";
 import { HoverTip } from "@/components/party/hover-tip";
-import { SKYSHARDS_PER_POINT } from "@/lib/game/skills";
 import type { CharacterReading } from "@/lib/game/understand";
 import { formatTimeLeft } from "@/lib/today/present";
 
@@ -10,7 +9,14 @@ import { formatTimeLeft } from "@/lib/today/present";
  * training, unspent skill points and backpack space. Every value is read by
  * the game model (readCharacter) and counted down from the save.
  */
-export function CharacterStatus({ reading }: { reading: CharacterReading }) {
+export function CharacterStatus({
+  reading,
+  skyshardsPerPoint,
+}: {
+  reading: CharacterReading;
+  /** The game's count (rules), the reference until a save carries it. */
+  skyshardsPerPoint: number;
+}) {
   const timed = reading.buffs.filter((b) => !b.mundus && b.remaining != null);
   const lasting = reading.buffs.filter((b) => !b.mundus && b.remaining == null);
   const riding = reading.riding;
@@ -120,7 +126,7 @@ export function CharacterStatus({ reading }: { reading: CharacterReading }) {
         )}
         {reading.skyshards != null ? (
           <p className="mt-1.5 text-[12px] text-fg-muted">
-            Skyshards: {reading.skyshards} of {SKYSHARDS_PER_POINT} toward the next point
+            Skyshards: {reading.skyshards} of {skyshardsPerPoint} toward the next point
           </p>
         ) : null}
       </div>

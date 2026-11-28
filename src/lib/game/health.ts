@@ -43,8 +43,8 @@ export interface HealthInput {
   /** The catalog scan's patch label ("API101051"), when an in-game scan was read. */
   catalogPatch: string | null;
   characters: Character[];
-  /** From the latest save. */
-  account: { apiVersion: number | null; lastSnapshot: number | null } | null;
+  /** From the latest save. `rulesFromGame`: which of the game's caps and timers the save carried (readRules().source). */
+  account: { apiVersion: number | null; lastSnapshot: number | null; rulesFromGame?: Record<string, string> } | null;
   /** Bag items: whether each has a place (an inventory tab). */
   items: { name: string; placed: boolean }[];
   /** The highest API version the addons Nirnside ships declare. */
@@ -57,9 +57,9 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 const DAY = 86_400;
 
-/** The fields the newest snapshot addon writes (0.9.46: the character sheet); a save without them came from an older one. */
+/** The fields the newest snapshot addon writes (0.9.47: each skill line's cap); a save without them came from an older one. */
 function savedByCurrentAddon(c: Character): boolean {
-  return c.stats !== undefined && c.stats !== null;
+  return c.stats != null && c.skillLines.some((l) => l.maxRank != null);
 }
 
 export function checkHealth(input: HealthInput): HealthCheck[] {
@@ -213,6 +213,25 @@ export function checkHealth(input: HealthInput): HealthCheck[] {
     );
   }
 
+  // 7b. The game's own caps, timers and costs.
+  if (input.account?.rulesFromGame) {
+    const fallback = Object.entries(input.account.rulesFromGame)
+      .filter(([, source]) => source !== "game")
+      .map(([key]) => key);
+    out.push(
+      fallback.length
+        ? {
+            id: "game-rules",
+            title: "Game rules",
+            status: "note",
+            detail: `${plural(fallback.length, "cap or timer")} still use reference values until a save carries the game's own.`,
+            fix: "Log in once (or /reloadui) with Snapshot 0.9.47 or later.",
+            examples: examples(fallback),
+          }
+        : { id: "game-rules", title: "Game rules", status: "ok", detail: "Caps, timers and costs come from the game." },
+    );
+  }
+
   // 8. Characters saved by the current addon.
   const older = input.characters.filter((c) => !savedByCurrentAddon(c));
   out.push(
@@ -221,7 +240,7 @@ export function checkHealth(input: HealthInput): HealthCheck[] {
           id: "character-saves",
           title: "Character saves",
           status: "note",
-          detail: `${plural(older.length, "character")} last saved by an older addon, so their stats, slotted skills and values are missing (and, before 0.9.43, buffs, riding, skill points and bag space).`,
+          detail: `${plural(older.length, "character")} last saved by an older addon, so the game's skill line caps, their stats, slotted skills and values may be missing.`,
           fix: "Log each of them in once (or /reloadui on each).",
           examples: examples(older.map((c) => c.name)),
         }

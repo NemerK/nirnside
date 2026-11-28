@@ -7,7 +7,7 @@ import { listAssignments } from "../db/roles";
 import { toGoalSubject } from "../goals/progress";
 import type { GoalSubject, LineMeta } from "../goals/types";
 import type { GridLineSource } from "../progress/grid";
-import { skillLineCap } from "../game/skill-caps";
+import { gameRules, lineCap } from "../db/game-knowledge";
 import { isExcludedSkillLine } from "../game/vengeance";
 import { applyRosterOrder, getRosterOrder } from "../roster/order";
 import type { Character, CharacterDailies } from "../snapshot/schema";
@@ -68,7 +68,7 @@ export function compareLines(characters: Character[] = roster()): {
       name: entry.name,
       category: entry.category,
       className: isClass ? entry.className : null,
-      maxRank: entry.maxRank ?? skillLineCap(entry.name),
+      maxRank: lineCap(entry.name) ?? entry.maxRank,
       icon: entry.icon,
     });
     remember(entry.name, entry.category, isClass ? entry.className : null);
@@ -81,7 +81,7 @@ export function compareLines(characters: Character[] = roster()): {
       // The class the game named for the line (addon 0.9.44+); before that, a
       // character's own class line tells us its owner, a subclassed one doesn't.
       const owner = isClass ? (l.className?.trim() || (!l.subclassed ? c.class : null)) : null;
-      lines.push({ name: l.name, category: l.category, className: owner, maxRank: skillLineCap(l.name), icon: null });
+      lines.push({ name: l.name, category: l.category, className: owner, maxRank: lineCap(l.name), icon: null });
       remember(l.name, l.category, owner);
     }
   }
@@ -132,15 +132,17 @@ export function targetChoices(lines: GridLineSource[]): ChoiceSource[] {
       category: choiceCategory(l.category, l.className),
     });
   }
+  // An ability's rank cap: the game's (rules), the reference until a save carries it.
+  const abilityCap = safe(() => gameRules().maxAbilityRank, null);
   for (const { entry } of safe(() => getSkills(), [])) {
     const line = lineById.get(entry.lineId);
     const className = line?.className ?? null;
     const category = line ? choiceCategory(line.category, className) : "Other";
     const lineName = line?.name ?? "Other";
-    add({ domain: "ability", name: entry.name, cap: null, className, context: lineName, category, line: lineName });
+    add({ domain: "ability", name: entry.name, cap: abilityCap, className, context: lineName, category, line: lineName });
     for (const m of entry.morphs) {
       if (!m.isMorph || !m.name) continue;
-      add({ domain: "ability", name: m.name, cap: null, className, context: `${entry.name} morph`, category, line: lineName });
+      add({ domain: "ability", name: m.name, cap: abilityCap, className, context: `${entry.name} morph`, category, line: lineName });
     }
   }
   for (const { entry } of safe(() => getScripts(), [])) {

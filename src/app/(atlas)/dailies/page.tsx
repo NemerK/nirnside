@@ -1,8 +1,9 @@
 import { CalendarDays, RefreshCw } from "lucide-react";
-import { getAccount, getCharactersFull, getDataSource, hasData } from "@/lib/db/queries";
+import { getCharactersFull, getDataSource, hasData } from "@/lib/db/queries";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { dailiesHaveAnyScan, presentAccountDailies, summarizeDailies } from "@/lib/dailies/present";
-import { currentUnix, dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/game/daily-reset";
+import { currentUnix, nextEsoResetAt, resetLabel } from "@/lib/game/daily-reset";
+import { resetClock } from "@/lib/db/game-knowledge";
 import { communityPledgesForUnix } from "@/lib/game/pledges";
 import { EmptyState } from "@/components/ui";
 import { SourceBadge } from "@/components/source-badge";
@@ -16,7 +17,7 @@ export default function DailiesPage() {
   const source = safe(() => getDataSource());
   const isSample = source?.kind === "sample";
   const characters = liveCharacters(safe(() => getCharactersFull()) ?? []);
-  const region: EsoRegion = safe(() => getAccount()?.region) === "NA" ? "NA" : "EU";
+  const region = safe(() => resetClock()) ?? "EU";
   const now = currentUnix();
   const todayPledges = communityPledgesForUnix(now, region);
   const rows = presentAccountDailies(characters, now, { treatAsFresh: isSample, todayPledges, region });
@@ -86,7 +87,7 @@ export default function DailiesPage() {
       rows={rows}
       resetAt={resetAt}
       todayPledges={todayPledges}
-      resetLabel={`${region} ${String(dailyResetHourUtc(region)).padStart(2, "0")}:00 UTC`}
+      resetLabel={resetLabel(region)}
     />
   );
 

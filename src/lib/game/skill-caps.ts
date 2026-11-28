@@ -4,6 +4,12 @@ import { isExcludedLineName } from "./vengeance";
 /**
  * Live rank cap for a skill line.
  *
+ * The game's own number comes first: Snapshot 0.9.47+ and Catalog 0.2.10+
+ * read each line's last rank where the game's skill XP bar does
+ * (GetSkillLineRankXPExtents). Callers pass those as `learned` (by lower-case
+ * line name); the reference below answers only lines the game hasn't
+ * reported yet.
+ *
  * The reference catalog (`data/catalog/skills.json`) is the source for lines
  * it lists — those numbers are the line's own maximum (Assault 10, Soul Magic
  * 6, Legerdemain 20, Thieves Guild 12, …), not a blanket 50. Antiquities lines
@@ -27,9 +33,11 @@ for (const [name, cap] of Object.entries(UNLISTED)) {
   if (!CAPS.has(name)) CAPS.set(name, cap);
 }
 
-export function skillLineCap(name: string): number | null {
+export function skillLineCap(name: string, learned?: ReadonlyMap<string, number> | null): number | null {
   const key = name.trim().toLowerCase();
   if (!key || key === "class mastery" || isExcludedLineName(name)) return null;
+  const fromGame = learned?.get(key);
+  if (typeof fromGame === "number" && fromGame > 0) return fromGame;
   if (!CAPS.has(key)) return null;
   return CAPS.get(key) ?? null;
 }

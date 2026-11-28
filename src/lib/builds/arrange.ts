@@ -44,6 +44,10 @@ export interface ArrangeSet {
   weaponIcons?: Partial<Record<FrontWeapon, string>>;
   collected: number;
   total: number;
+  /** Crystals the game charges to reconstruct a piece (snapshot 0.9.47+); the reference curve until saved. */
+  reconstructCost?: number | null;
+  /** Crystals for a trait change: the game's (rules), else the reference. */
+  retraitCost?: number | null;
   crafted: boolean;
   traitsNeeded: number | null;
   /**
@@ -344,7 +348,8 @@ function fallbackChoice(set: ArrangeSet, kind: SlotKind, crafters: Crafter[], we
   const wanted = goal ? traitFor(goal.plan, goal.slotId, kind, set.role) : null;
   const crafter = goal ? traitCrafter(goal, kind, crafters, weapon) : divineCrafter(set, kind, crafters, weapon);
   const collected = weaponCollected(set, kind, weapon);
-  const crystals = collected ? reconstructionCost(set.collected, set.total) : null;
+  // The game's cost for this set when saved, else the reference curve.
+  const crystals = collected ? (set.reconstructCost ?? reconstructionCost(set.collected, set.total)) : null;
   const divine = wantsDivines(kind) && divinesKnown(kind, crafters);
   const pieceWeight = goal && isBodyArmor(kind) && set.role !== "mythic" ? goal.slotWeight : null;
   const options: Choice[] = [];
@@ -406,7 +411,14 @@ function ownedWeightBlocks(item: OwnedGear, kind: SlotKind, goal: Goal): boolean
   return item.weight !== goal.slotWeight;
 }
 
-function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Crafter[], goal?: Goal | null): Choice | null {
+function itemChoice(
+  item: OwnedGear,
+  index: number,
+  kind: SlotKind,
+  crafters: Crafter[],
+  goal: Goal | null | undefined,
+  retrait: number,
+): Choice | null {
   if (goal && (weightBlocked(goal, kind) || ownedWeightBlocks(item, kind, goal))) return null;
   const wanted = goal ? traitFor(goal.plan, goal.slotId, kind, goal.set.role) : null;
   if (goal) {
@@ -419,11 +431,11 @@ function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Cr
       };
     }
     return {
-      cost: TRAIT_CHANGE_CRYSTALS,
+      cost: retrait,
       item: index,
       source: ownedSource(item, {
         divines: sameTrait(wanted, "Divines"),
-        traitChangeCrystals: TRAIT_CHANGE_CRYSTALS,
+        traitChangeCrystals: retrait,
         wantedTrait: wanted,
         weight,
       }),
@@ -439,9 +451,9 @@ function itemChoice(item: OwnedGear, index: number, kind: SlotKind, crafters: Cr
   }
   if (divinesKnown(kind, crafters)) {
     return {
-      cost: TRAIT_CHANGE_CRYSTALS,
+      cost: retrait,
       item: index,
-      source: ownedSource(item, { divines: true, traitChangeCrystals: TRAIT_CHANGE_CRYSTALS }),
+      source: ownedSource(item, { divines: true, traitChangeCrystals: retrait }),
     };
   }
   return {
@@ -492,7 +504,7 @@ function allocate(
     mine.forEach(({ item, index }) => {
       if (item.kind !== unit.kind) return;
       if (unit.weapon && item.weapon !== unit.weapon) return;
-      const choice = itemChoice(item, index, unit.kind, crafters, goalFor(plan, set, unit.id, weights));
+      const choice = itemChoice(item, index, unit.kind, crafters, goalFor(plan, set, unit.id, weights), set.retraitCost ?? TRAIT_CHANGE_CRYSTALS);
       if (!choice) return;
       const save = fallbacks[unitIndex]!.cost - choice.cost;
       if (save > 0) offers.push({ unit: unitIndex, choice, save });
@@ -549,7 +561,7 @@ function asideFor(
     }
   }
   const item = leftover
-    .map((entry) => itemChoice(entry, 0, unit.kind, crafters, goal))
+    .map((entry) => itemChoice(entry, 0, unit.kind, crafters, goal, set.retraitCost ?? TRAIT_CHANGE_CRYSTALS))
     .filter((choice): choice is Choice => choice != null)
     .sort((a, b) => a.cost - b.cost)[0];
   if (!item) return null;
@@ -864,7 +876,7 @@ function priceBook(
     const fallback = fallbackChoice(set, kind, crafters, undefined, goal).cost;
     const items = owned
       .filter((item) => sameSet(set, item) && item.kind === kind)
-      .map((item, index) => itemChoice(item, index, kind, crafters, goal))
+      .map((item, index) => itemChoice(item, index, kind, crafters, goal, set.retraitCost ?? TRAIT_CHANGE_CRYSTALS))
       .filter((choice): choice is Choice => choice != null && choice.cost < fallback)
       .map((choice) => choice.cost)
       .sort((a, b) => a - b);

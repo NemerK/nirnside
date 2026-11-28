@@ -24,11 +24,15 @@ export interface BuildSetOption {
   mythic: boolean;
   /** Body weights this set can be made in. Empty when no armor weight was scanned. */
   armorWeights: ArmorWeight[];
+  /** Crystals the game charges to reconstruct a piece of this set (snapshot 0.9.47+); null until saved. */
+  reconstructCost?: number | null;
 }
 
 export interface BuildPageData {
   sets: BuildSetOption[];
   owned: OwnedGear[];
   crafters: Crafter[];
+  /** Crystals for a trait change: the game's (rules), the reference until a save carries it. */
+  retraitCost: number;
   builds: SavedBuild[];
 }

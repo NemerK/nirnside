@@ -76,7 +76,7 @@ function pieceCount(role: GearRole, option: BuildSetOption, monsterPieces: 1 | 2
   return Math.min(5, cap);
 }
 
-function toArrange(option: BuildSetOption, role: GearRole, pieces: number): ArrangeSet {
+function toArrange(option: BuildSetOption, role: GearRole, pieces: number, retraitCost: number): ArrangeSet {
   return {
     role,
     name: option.name,
@@ -93,6 +93,8 @@ function toArrange(option: BuildSetOption, role: GearRole, pieces: number): Arra
     crafted: option.crafted,
     traitsNeeded: option.traitsNeeded,
     armorWeights: option.armorWeights,
+    reconstructCost: option.reconstructCost ?? null,
+    retraitCost,
   };
 }
 
@@ -118,11 +120,11 @@ export function BuildBoard({ data }: { data: BuildPageData }) {
     const mythic = findOption(data.sets, draft.mythicSetId, draft.mythicName);
     const front = findOption(data.sets, draft.frontSetId, draft.frontName);
     const back = findOption(data.sets, draft.backSetId, draft.backName);
-    if (body) sets.push(toArrange(body, "body", pieceCount("body", body, draft.monsterPieces)));
-    if (monster) sets.push(toArrange(monster, "monster", pieceCount("monster", monster, draft.monsterPieces)));
-    if (mythic) sets.push(toArrange(mythic, "mythic", 1));
-    if (front) sets.push(toArrange(front, "front", pieceCount("front", front, draft.monsterPieces)));
-    if (back) sets.push(toArrange(back, "back", pieceCount("back", back, draft.monsterPieces)));
+    if (body) sets.push(toArrange(body, "body", pieceCount("body", body, draft.monsterPieces), data.retraitCost));
+    if (monster) sets.push(toArrange(monster, "monster", pieceCount("monster", monster, draft.monsterPieces), data.retraitCost));
+    if (mythic) sets.push(toArrange(mythic, "mythic", 1, data.retraitCost));
+    if (front) sets.push(toArrange(front, "front", pieceCount("front", front, draft.monsterPieces), data.retraitCost));
+    if (back) sets.push(toArrange(back, "back", pieceCount("back", back, draft.monsterPieces), data.retraitCost));
     const weapons: FrontBarWeapons | null = draft.frontMain
       ? { main: draft.frontMain, off: isTwoHandedWeapon(draft.frontMain) ? null : draft.frontOff }
       : null;

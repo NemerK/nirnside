@@ -54,28 +54,42 @@ export function earnedPerConstellation(earned: number): Record<Constellation, nu
 export interface ScannedDiscipline {
   name: string;
   stars: { name: string; points: number; slotted: boolean; kind?: StarType }[];
+  /** The game's own counts (snapshot 0.9.47+). */
+  spent?: number | null;
+  unspent?: number | null;
 }
 
 export interface ConstellationState {
   constellation: Constellation;
+  /** The game's count when saved, else the stars' points added up. */
   spent: number;
+  /** Points earned and not yet spent here, as the game counts them; null before snapshot 0.9.47. */
+  unspent: number | null;
   slotted: string[];
   freeSlots: number;
   /** Stars with points in them that only work slotted, and aren't. */
   idleSlottables: string[];
 }
 
-/** A character's CP, per constellation: spent, slotted, open slots, points sitting in unslotted slottables. */
-export function championState(disciplines: readonly ScannedDiscipline[]): ConstellationState[] {
+/**
+ * A character's CP, per constellation: spent, slotted, open slots, points
+ * sitting in unslotted slottables. `slots` is the game's bar size per
+ * constellation (rules), the reference until a save carries it.
+ */
+export function championState(
+  disciplines: readonly ScannedDiscipline[],
+  slots: Record<Constellation, number> = { Craft: SLOTS_PER_CONSTELLATION, Warfare: SLOTS_PER_CONSTELLATION, Fitness: SLOTS_PER_CONSTELLATION },
+): ConstellationState[] {
   return CONSTELLATIONS.map((constellation) => {
     const d = disciplines.find((x) => findConstellation(x.name) === constellation);
     const stars = d?.stars ?? [];
     const slotted = stars.filter((s) => s.slotted).map((s) => s.name);
     return {
       constellation,
-      spent: stars.reduce((n, s) => n + (s.points || 0), 0),
+      spent: d?.spent ?? stars.reduce((n, s) => n + (s.points || 0), 0),
+      unspent: d?.unspent ?? null,
       slotted,
-      freeSlots: Math.max(0, SLOTS_PER_CONSTELLATION - slotted.length),
+      freeSlots: Math.max(0, slots[constellation] - slotted.length),
       idleSlottables: stars.filter((s) => s.kind === "slottable" && !s.slotted && s.points > 0).map((s) => s.name),
     };
   });

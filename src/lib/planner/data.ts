@@ -20,7 +20,7 @@ import { CLASSES } from "../game/classes";
 import { plannerAbilityIcon, plannerLineIcon, plannerScriptIcon } from "../icons/planner-icons";
 import { baseAndMorphsFromSlots, omitAbilitiesListedAsMorphs, plannerLineKey, type PlannerAbilityRow } from "./skill-groups";
 export type { PlannerAbilityRow };
-import { skillLineCap } from "../game/skill-caps";
+import { lineCap } from "../db/game-knowledge";
 import type { AbilityMeta, GoalSubject, LineMeta, SkillLineChoice } from "../goals/types";
 
 /**
@@ -82,7 +82,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
       name: entry.name,
       category: entry.category,
       className: entry.className ?? null,
-      maxRank: entry.maxRank ?? skillLineCap(entry.name),
+      maxRank: lineCap(entry.name) ?? entry.maxRank,
       icon: null,
     };
     lines.push(choice);
@@ -103,7 +103,7 @@ function collectLineAbilityData(live: ReturnType<typeof getCharactersFull>) {
         name: line.name,
         category: meta.category,
         className: meta.className,
-        maxRank: skillLineCap(line.name),
+        maxRank: lineCap(line.name),
         icon: null,
       });
     }
@@ -447,7 +447,7 @@ export const skillLineChoices = cache(function skillLineChoices(): SkillLineChoi
       .map(({ entry }) => ({
         name: entry.name,
         category: entry.category,
-        maxRank: entry.maxRank ?? skillLineCap(entry.name),
+        maxRank: lineCap(entry.name) ?? entry.maxRank,
       }));
   } catch {
     catalog = [];
@@ -457,7 +457,7 @@ export const skillLineChoices = cache(function skillLineChoices(): SkillLineChoi
     for (const c of getCharacters()) {
       for (const l of c.skillLines) {
         if (isExcludedSkillLine(l)) continue;
-        fromChars.push({ name: l.name, category: l.category, maxRank: skillLineCap(l.name) });
+        fromChars.push({ name: l.name, category: l.category, maxRank: lineCap(l.name) });
       }
     }
   } catch {

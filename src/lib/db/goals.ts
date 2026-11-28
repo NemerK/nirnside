@@ -7,8 +7,7 @@ import { TIERS } from "../goals/types";
 import { normalizeLineName } from "../goals/progress";
 import { isExcludedLineName } from "../game/vengeance";
 import { isClassMasteryLineName } from "../game/class-mastery";
-import { skillLineCap } from "../game/skill-caps";
-import { MAX_ABILITY_RANK } from "../game/skills";
+import { gameRules, lineCap } from "./game-rules";
 
 export function ensureGoalTables() {
   getDb().exec(`
@@ -132,7 +131,7 @@ function assertSkillLineRanks(
   if (isClassMasteryLineName(name) || isExcludedLineName(name)) {
     throw new Error(`${name} is not a rank line.`);
   }
-  const cap = skillLineCap(name);
+  const cap = lineCap(name);
   if (cap == null) throw new Error(`No confirmed rank cap for ${name}.`);
   if (!Number.isInteger(mandatory) || mandatory < 0 || mandatory > cap) {
     throw new Error(`${name} mandatory rank must be a whole number from 0 to ${cap}.`);
@@ -202,8 +201,9 @@ export function createGoal(input: {
     extraRank = ranks.extraRank;
   } else if (domain === "ability") {
     const rank = Number(input.targetRank ?? 0);
-    if (!Number.isInteger(rank) || rank < 0 || rank > MAX_ABILITY_RANK) {
-      throw new Error(`An ability rank is 0 (its live cap) through ${MAX_ABILITY_RANK}.`);
+    const maxRank = gameRules().maxAbilityRank;
+    if (!Number.isInteger(rank) || rank < 0 || rank > maxRank) {
+      throw new Error(`An ability rank is 0 (its live cap) through ${maxRank}.`);
     }
     targetRank = rank;
   }
@@ -245,8 +245,9 @@ export function updateGoal(
   if (patch.targetRank != null || patch.extraRank != null) {
     if (existing.domain === "ability") {
       const rank = Number(patch.targetRank ?? targetRank);
-      if (!Number.isInteger(rank) || rank < 0 || rank > MAX_ABILITY_RANK) {
-        throw new Error(`An ability rank is 0 (its live cap) through ${MAX_ABILITY_RANK}.`);
+      const maxRank = gameRules().maxAbilityRank;
+      if (!Number.isInteger(rank) || rank < 0 || rank > maxRank) {
+        throw new Error(`An ability rank is 0 (its live cap) through ${maxRank}.`);
       }
       targetRank = rank;
       extraRank = 0;

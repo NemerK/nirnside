@@ -1,4 +1,7 @@
 import "server-only";
+
+// The game's rules and caps live in game-rules.ts (no server-only marker, so the goal store can use them).
+export { gameRules, learnedLineCaps, lineCap, resetClock } from "./game-rules";
 import { classLineMap } from "../game/classes";
 import { getMundus, getSkillLines, getSkills } from "./catalog-queries";
 import type { MundusText } from "../game/mundus";

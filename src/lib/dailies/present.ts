@@ -1,5 +1,5 @@
 import type { Character, CharacterDailies, DailyPledge, DailyStatus, DailyWorldBoss, DailyWrit, DailyZoneQuest } from "../snapshot/schema";
-import { esoDayKey, type EsoRegion } from "../game/daily-reset";
+import { esoDayKey, type ResetClock } from "../game/daily-reset";
 import { PLEDGE_GIVER_NAMES, sameDungeon, type PledgeGiver } from "../game/pledges";
 import { WORLD_BOSS_ZONES, type WorldBossZoneId } from "../game/world-bosses";
 import {
@@ -83,7 +83,7 @@ function cell(status: DailyStatus, title: string, extra?: Partial<DailyCell>): D
 export function isDailyScanStale(
   dailies: CharacterDailies | null | undefined,
   nowUnix: number,
-  region: EsoRegion = "EU",
+  region: ResetClock = "EU",
 ): boolean {
   if (!dailies) return true;
   if (dailies.resetAt > 0 && nowUnix >= dailies.resetAt) return true;
@@ -335,7 +335,7 @@ export function unknownCharacterDailies(
 export function presentCharacterDailies(
   character: Character,
   nowUnix: number,
-  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string>; region?: EsoRegion },
+  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string>; region?: ResetClock },
 ): PresentedCharacterDailies {
   const dailies = character.dailies;
   const neverLogged = character.lastSeen == null;
@@ -375,7 +375,7 @@ export function presentCharacterDailies(
 export function presentAccountDailies(
   characters: Character[],
   nowUnix: number,
-  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string>; region?: EsoRegion },
+  options?: { treatAsFresh?: boolean; todayPledges?: Record<PledgeGiver, string>; region?: ResetClock },
 ): PresentedCharacterDailies[] {
   return characters.map((c) => presentCharacterDailies(c, nowUnix, options));
 }

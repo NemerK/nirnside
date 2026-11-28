@@ -27,6 +27,7 @@ const char = (over: Record<string, unknown> = {}) =>
     champion: [{ name: "Warfare", stars: [{ name: "Deadly Aim" }] }],
     riding: { speed: 60 },
     stats: { main: [{ key: "health_max", stat: 1, value: 20000 }], advanced: [] },
+    skillLines: [{ name: "Assault", category: "Alliance War", rank: 10, maxRank: 10 }],
     ...over,
   });
 

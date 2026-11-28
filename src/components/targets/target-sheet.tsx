@@ -16,7 +16,7 @@ import { TargetPicker } from "./target-picker";
 export interface TargetSubject {
   domain: GoalDomain;
   name: string;
-  /** Skill-line rank cap. Null for abilities and scripts. */
+  /** Rank cap: a skill line's, or an ability's (the game's when saved). Null for scripts. */
   cap: number | null;
   /** Owning class for class lines and class abilities. Null when anyone can train it. */
   className: string | null;
@@ -83,7 +83,7 @@ export function TargetSheet({
   // In the picker window, saving keeps the window open and says so briefly.
   const [saved, setSaved] = useState(0);
 
-  const cap = subject?.domain === "skillline" ? (subject.cap ?? 50) : MAX_ABILITY_RANK;
+  const cap = subject?.domain === "skillline" ? (subject.cap ?? 50) : (subject?.cap ?? MAX_ABILITY_RANK);
   const onTarget = subject
     ? goals.filter((g) => g.domain === subject.domain && sameName(g.target, subject.name))
     : [];
@@ -316,7 +316,7 @@ export function TargetSheet({
             <div>
               <h3 className="mb-2 text-sm font-medium text-fg">Rank</h3>
               <div className="flex flex-wrap gap-1.5">
-                {[0, ...Array.from({ length: MAX_ABILITY_RANK }, (_, i) => i + 1)].map((n) => (
+                {[0, ...Array.from({ length: subject.cap ?? MAX_ABILITY_RANK }, (_, i) => i + 1)].map((n) => (
                   <button
                     key={n}
                     type="button"

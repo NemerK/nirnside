@@ -100,6 +100,7 @@ export function importSnapshot(
         mythics: snap.mythics ?? [],
         companions: snap.companions ?? [],
         bankSpace: snap.bankSpace ?? null,
+        rules: snap.rules ?? null,
       }),
     );
 

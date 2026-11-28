@@ -6,7 +6,7 @@ import { loadSetHover } from "@/lib/catalog/hover-sets";
 import { withResolvedSet } from "@/lib/catalog/set-brief";
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-links";
 import { presentSkillBook, SKILL_CATEGORY_ORDER } from "@/lib/skills/present";
-import { skillLineCap } from "@/lib/game/skill-caps";
+import { lineCap } from "@/lib/db/game-knowledge";
 import { isClassMasteryLineName } from "@/lib/game/class-mastery";
 import { briefsFromLore } from "@/lib/skills/skill-brief";
 import { presentRecipeLists, presentResearch, characterHasKnowledgeScan } from "@/lib/knowledge/present";
@@ -143,7 +143,7 @@ function SkillsModule({
   };
   const railLines: RailLine[] = c.skillLines
     .filter((l) => !isClassMasteryLineName(l.name))
-    .map((l) => ({ name: l.name, category: l.category, rank: l.rank, cap: skillLineCap(l.name), subclassed: !!l.subclassed }));
+    .map((l) => ({ name: l.name, category: l.category, rank: l.rank, cap: l.maxRank ?? lineCap(l.name), subclassed: !!l.subclassed }));
   const groups = [...new Set(railLines.map((l) => l.category))]
     .sort((a, b) => order(a) - order(b))
     .map((category) => ({

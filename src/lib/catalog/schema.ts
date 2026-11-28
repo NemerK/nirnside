@@ -68,6 +68,8 @@ export const CatalogSkillLine = z.object({
   className: z.string().nullable().default(null),
   /** Live rank cap for this line (50 for most; guild/PvP/curse lines cap lower). */
   maxRank: z.number().int().positive().nullable().default(null),
+  /** The same cap as the game reported it (Catalog 0.2.10+); reference rows never have it. */
+  gameMaxRank: z.number().int().positive().nullable().optional().catch(undefined),
   icon: z.string().nullable().default(null),
 });
 export type CatalogSkillLine = z.infer<typeof CatalogSkillLine>;

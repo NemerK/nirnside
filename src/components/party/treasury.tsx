@@ -15,7 +15,10 @@ export function TreasuryStrip({ t, perCharacterHref }: { t: Treasury; perCharact
         {t.currencies.map((c) => (
           <div key={c.key}>
             <dt className="text-[12px] text-fg-subtle">{c.label}</dt>
-            <dd className="font-display text-[24px] leading-tight tabular-nums text-fg">{formatNumber(c.value)}</dd>
+            <dd className="font-display text-[24px] leading-tight tabular-nums text-fg">
+              {formatNumber(c.value)}
+              {c.cap != null ? <span className="ml-1 font-sans text-[13px] text-fg-subtle">/ {formatNumber(c.cap)}</span> : null}
+            </dd>
           </div>
         ))}
         {perCharacterHref ? (

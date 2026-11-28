@@ -110,7 +110,8 @@ export function presentLines(lines: Character["skillLines"]): LineSummary[] {
       name: l.name,
       category: l.category,
       rank: l.rank,
-      cap: skillLineCap(l.name),
+      // The line's own cap from the save (the game's), else the reference.
+      cap: l.maxRank ?? skillLineCap(l.name),
       subclassed: l.subclassed,
     }))
     .sort((a, b) => {

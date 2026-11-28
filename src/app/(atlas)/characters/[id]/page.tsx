@@ -18,7 +18,7 @@ import { getSkillLineByName, getSkillsForLine, getScripts, setHref, catalogAbili
 import { hrefForMythicOrSet } from "@/lib/collections/mythic-links";
 import type { Character, Wardrobe as WardrobeData } from "@/lib/snapshot/schema";
 import { readCharacter } from "@/lib/game/understand";
-import { abilityLines, classLines, mundusTexts } from "@/lib/db/game-knowledge";
+import { abilityLines, classLines, gameRules, lineCap, mundusTexts } from "@/lib/db/game-knowledge";
 import { rolesForCharacter } from "@/lib/roles/filter";
 import { presentSkillBook } from "@/lib/skills/present";
 import { briefsFromLore } from "@/lib/skills/skill-brief";
@@ -38,7 +38,6 @@ import { goalAppliesTo, toGoalSubject } from "@/lib/goals/progress";
 import { buildGoalIndexes, characterGoalRows } from "@/lib/planner/data";
 import { ALLIANCE_ACCENT, formatGold, formatNumber, timeAgo } from "@/lib/format";
 import { formatResearchRemaining, presentMotifs, presentRecipeLists, presentResearch } from "@/lib/knowledge/present";
-import { skillLineCap } from "@/lib/game/skill-caps";
 import type { AbilityPlan, LineSkillView } from "@/lib/planner/line-plan";
 
 function skillLineHref(name: string, className?: string | null): string | null {
@@ -70,7 +69,7 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
     c,
     safe(classLines) ?? new Map(),
     safe(abilityLines) ?? new Map(),
-    { mundus: safe(mundusTexts) ?? [], companions: account?.companions ?? [] },
+    { rules: safe(gameRules) ?? undefined, mundus: safe(mundusTexts) ?? [], companions: account?.companions ?? [] },
   );
   let roles: ReturnType<typeof listRoles> = [];
   let assigned: ReturnType<typeof rolesForCharacter> = [];
@@ -190,7 +189,7 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
       const key = line.name.trim().toLowerCase();
       if (!key || lineBook[key]) continue;
       lineBook[key] = {
-        maxRank: skillLineCap(line.name),
+        maxRank: lineCap(line.name),
         skills: line.abilities.map((ability) => ({
           name: ability.name,
           icon: ability.icon,
@@ -220,7 +219,7 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
     } catch {
       skills = [];
     }
-    lineBook[key] = { maxRank: skillLineCap(goal.target), skills };
+    lineBook[key] = { maxRank: lineCap(goal.target), skills };
   }
   const linePlanNames: string[] = [];
   for (const book of Object.values(lineBook)) {

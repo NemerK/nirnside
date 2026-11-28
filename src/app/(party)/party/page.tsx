@@ -8,8 +8,8 @@ import { profileMedia } from "@/lib/db/profile";
 import { getPartyProfile } from "@/lib/db/party-profile";
 import { profileImageUrl } from "@/lib/profile/media";
 import { livingHome } from "@/lib/home/living";
-import { skillLineCap } from "@/lib/game/skill-caps";
-import { COMPANION_MAX_LEVEL, readAccountCompanions } from "@/lib/game/companions";
+import { gameRules, lineCap } from "@/lib/db/game-knowledge";
+import { readAccountCompanions } from "@/lib/game/companions";
 import { classColor, classIcon } from "@/lib/classes";
 import { ALLIANCE_ACCENT, formatNumber, timeAgo } from "@/lib/format";
 import { roster } from "@/lib/party/data";
@@ -62,7 +62,7 @@ export default function ProfilePage() {
   const mainLight = characters.find((c) => c.id === profile.mainCharacterId) ?? lastPlayed ?? characters[0];
   const main = safe(() => getCharacter(mainLight.id), null);
   const houses = safe(() => getHouses(), []);
-  const face = main ? livingHome([main], houses, skillLineCap).faces[0] : null;
+  const face = main ? livingHome([main], houses, lineCap).faces[0] : null;
   const media = safe(() => profileMedia(), { avatar: null, banner: null });
   const color = classColor(mainLight.class) ?? "#b46ad4";
 
@@ -163,7 +163,9 @@ export default function ProfilePage() {
   );
 
   // Companions are account-wide: every owned one, read through the model.
-  const companions = readAccountCompanions(a.companions ?? []);
+  // The game's companion level cap from the save; the reference until then.
+  const companionMaxLevel = gameRules().companionMaxLevel;
+  const companions = readAccountCompanions(a.companions ?? [], companionMaxLevel);
   const companionsKnown = (a.companions ?? []).length;
   modules.companions =
     companions.length === 0 ? (
@@ -183,7 +185,7 @@ export default function ProfilePage() {
                 </span>
               </span>
               <span className="shrink-0 text-[12px] tabular-nums text-fg-muted">
-                {m.level == null ? "" : m.maxed ? "Max level" : `Level ${m.level}/${COMPANION_MAX_LEVEL}`}
+                {m.level == null ? "" : m.maxed ? "Max level" : `Level ${m.level}/${companionMaxLevel}`}
               </span>
             </li>
           ))}

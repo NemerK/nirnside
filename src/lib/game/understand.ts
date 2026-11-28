@@ -1,5 +1,6 @@
 import type { BarSkill, Character } from "../snapshot/schema";
 import { readStats, type StatsReading } from "./stats";
+import type { GameRules } from "./rules";
 import { allianceFit, findRace, type AllianceFit } from "./character";
 import { championState, type ConstellationState } from "./champion";
 import { classLineup, classMasteryAvailable, type ClassLineup } from "./classes";
@@ -88,6 +89,8 @@ export interface CharacterReading {
 
 /** What else a reading can use: the game's own Mundus text, and the account's companions. */
 export interface GameKnowledge {
+  /** The game's caps, timers and costs (readRules); the reference values when absent. */
+  rules?: GameRules;
   mundus?: readonly MundusText[];
   /** The account's companions (account-wide since addon 0.9.43). */
   companions?: readonly (CompanionInput & { owned?: boolean | null })[];
@@ -118,7 +121,7 @@ export function readCharacter(
       back: readBar(weaponOn("back", "mainhand"), weaponOn("back", "offhand")),
     },
     armor: WEIGHTS.map((weight) => ({ weight, pieces: loadout.armorWeights[weight], line: ARMOR_LINES[weight] })),
-    champion: championState(c.champion),
+    champion: championState(c.champion, knowledge.rules?.championSlots),
     idleResearch: idleResearchSlots(c.research),
     savedAt: c.lastSeen ?? null,
     provenance: {
@@ -153,7 +156,9 @@ export function readCharacter(
         return family ? [{ family, known: l.known, total: l.total }] : [];
       }),
     // Companions are account-wide; older saves kept a per-character list instead.
-    companions: knowledge.companions?.length ? readAccountCompanions(knowledge.companions) : c.companions.map(readCompanion),
+    companions: knowledge.companions?.length
+      ? readAccountCompanions(knowledge.companions, knowledge.rules?.companionMaxLevel)
+      : c.companions.map((m) => readCompanion(m, knowledge.rules?.companionMaxLevel)),
     setups: (c.wardrobe?.zones ?? []).flatMap((z) =>
       z.pages.flatMap((p) =>
         p.setups.map((setup) => ({
