@@ -82,12 +82,13 @@ describe("one id per skill line", () => {
     // A scan once blanked the class column.
     db.prepare("UPDATE catalog SET subcategory = NULL WHERE domain = 'skillline' AND id = 'line-dawns-wrath'").run();
 
-    assert.deepEqual(heal.healSkillLineIds(db), { folded: 1, dropped: 1 });
-    assert.deepEqual(heal.healSkillLineIds(db), { folded: 0, dropped: 0 });
+    // The stray line, and the ability stored under an id of its own making (sk-radiant).
+    assert.deepEqual(heal.healCatalog(db), { folded: 2, dropped: 1, relabelled: 0 });
+    assert.deepEqual(heal.healCatalog(db), { folded: 0, dropped: 0, relabelled: 0 });
     const lines = rows("skillline");
     assert.deepEqual(lines.map((l) => l.id), ["line-class-mastery-templar", "line-dawns-wrath", "line-two-handed"]);
     assert.equal(lines.find((l) => l.id === "line-dawns-wrath")!.subcategory, "Templar");
-    assert.equal(rows("skill").find((s) => s.id === "sk-radiant")!.entry.lineId, "line-dawns-wrath");
+    assert.equal(rows("skill").find((s) => s.id === "sk-radiant-destruction")!.entry.lineId, "line-dawns-wrath");
   });
 
   it("never leaves a class line without its class", () => {

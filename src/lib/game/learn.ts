@@ -1,4 +1,5 @@
 import type { Character } from "../snapshot/schema";
+import { catalogSlug } from "./catalog-ids";
 
 /**
  * Facts about the game itself that a character's save carries, turned into
@@ -9,14 +10,6 @@ import type { Character } from "../snapshot/schema";
  *   patch's numbers ("Boon: The Warrior"). Its id matches the catalog
  *   scan's ("mundus-" + slug), so either source fills the same row.
  */
-
-/** Same folding as the catalog addon's slug(), so rows from either source meet. */
-export function catalogSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 export interface LearnedBlessing {
   id: string;

@@ -1,27 +1,11 @@
 import { getDb, setMeta } from "../db";
 import { CatalogBundle, SOURCE_RANK, type CatalogDomain, type CatalogSource } from "./schema";
 import { isExcludedCatalogLineId, isExcludedSkillLine } from "../game/vengeance";
-import { skillLineId } from "../game/skills";
+import { catalogId } from "../game/catalog-ids";
+import { columnsOf, mergeEntry } from "./merge";
+import { healCatalog } from "./heal";
 
 type CatalogSourceKey = CatalogSource;
-
-/** True for values we treat as "not provided" and therefore don't overwrite with. */
-function isEmpty(v: unknown): boolean {
-  if (v == null) return true;
-  if (typeof v === "string") return v.trim() === "";
-  if (Array.isArray(v)) return v.length === 0;
-  return false;
-}
-
-/** Merge `next` over `prev`, keeping `prev`'s value wherever `next` is empty. */
-export function mergeEntry(prev: Record<string, unknown>, next: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = { ...prev };
-  for (const [k, v] of Object.entries(next)) {
-    if (!isEmpty(v)) out[k] = v;
-    else if (!(k in out)) out[k] = v;
-  }
-  return out;
-}
 
 type Row = {
   domain: CatalogDomain;
@@ -48,18 +32,24 @@ export function importCatalogBundle(
   const db = getDb();
 
   const rows: Row[] = [];
+  // Every entry is filed under its one id (game/catalog-ids.ts), whatever id
+  // the scan or seed sent. An entry with no id (Class Mastery without its
+  // class) is left out: the seed has each class's tree.
   const push = (
     domain: CatalogDomain,
-    e: { id: string; name: string; source: string; patch: string },
+    e: { id: string; name: string; source: string; patch: string; className?: string | null },
     category: string | null,
     subcategory: string | null,
-  ) => rows.push({ domain, id: e.id, name: e.name, category, subcategory, source: e.source, patch: e.patch, json: JSON.stringify(e) });
+  ) => {
+    const id = catalogId(domain, e);
+    if (!id) return;
+    const filed = { ...e, id };
+    rows.push({ domain, id, name: e.name, category, subcategory, source: e.source, patch: e.patch, json: JSON.stringify(filed) });
+  };
 
   // Vengeance lines never enter the catalog, nor do abilities filed under them.
   const excludedIds = new Set<string>();
-  // Every line is filed under its one id (game/skills.ts skillLineId), whatever
-  // id the scan sent, and its abilities follow it. A line with no id (Class
-  // Mastery without its class) is left out: the seed has each class's tree.
+  // Abilities follow their line to its one id.
   const lineIdOf = new Map<string, string | null>();
   for (const s of bundle.sets) push("set", s, s.category, s.dlc);
   for (const l of bundle.skillLines) {
@@ -67,10 +57,8 @@ export function importCatalogBundle(
       excludedIds.add(l.id.toLowerCase());
       continue;
     }
-    const id = skillLineId(l.name, l.className);
-    lineIdOf.set(l.id, id);
-    const filed: typeof l = { ...l, id: id ?? l.id };
-    if (id) push("skillline", filed, l.category, l.className);
+    lineIdOf.set(l.id, catalogId("skillline", l));
+    push("skillline", l, l.category, l.className);
   }
   for (const s of bundle.skills) {
     if (isExcludedCatalogLineId(s.lineId) || excludedIds.has(s.lineId.toLowerCase())) continue;
@@ -119,6 +107,9 @@ export function importCatalogBundle(
   });
   tx(rows);
 
+  // Fold anything stored under another id, and correct what the game has since shown wrong.
+  healCatalog(db);
+
   if (opts.touchMeta === false) return counts;
   // Record the highest-precedence source present, for UI honesty.
   const prev = (getCatalogMeta()?.source ?? "reference") as keyof typeof SOURCE_RANK;
@@ -127,25 +118,6 @@ export function importCatalogBundle(
   setMeta("catalog", { patch: bundle.patch, source: bestSource, updatedAt: Date.now() });
 
   return counts;
-}
-
-/** The category / subcategory columns for an entry, as `push` files them. */
-function columnsOf(
-  domain: CatalogDomain,
-  e: Record<string, unknown>,
-  fallback: { category: string | null; subcategory: string | null },
-): { category: string | null; subcategory: string | null } {
-  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
-  switch (domain) {
-    case "skillline":
-      return { category: str(e.category), subcategory: str(e.className) };
-    case "skill":
-      return { category: str(e.lineId), subcategory: str(e.type) };
-    case "set":
-      return { category: str(e.category), subcategory: str(e.dlc) };
-    default:
-      return fallback;
-  }
 }
 
 export interface CatalogMeta {

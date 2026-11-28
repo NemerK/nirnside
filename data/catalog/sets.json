@@ -1,161 +1,418 @@
 {
-  "patch": "U50",
+  "patch": "U51",
   "source": "reference",
   "sets": [
     {
-      "id": "set-coral-riptide", "name": "Coral Riptide", "setId": 693, "category": "Trial",
-      "dlc": "Firesong", "dropSource": "Dreadsail Reef", "maxEquip": 5,
+      "id": "set-coral-riptide",
+      "name": "Coral Riptide",
+      "setId": 647,
+      "category": "Dreadsail Reef",
+      "dlc": "Firesong",
+      "dropSource": "Dreadsail Reef",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 3, "text": "Adds Critical Chance (Weapon and Spell)." },
-        { "pieces": 4, "text": "Adds Maximum Stamina." },
-        { "pieces": 5, "text": "Gain Weapon and Spell Damage that scales up the lower your Stamina is, reaching its maximum at low Stamina." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 618 Critical Chance"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Gain Minor Slayer, increasing damage done to monsters by |cffffff5|r%."
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 121 Weapon and Spell Damage"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) Increases your Weapon and Spell Damage by up to |cffffff600|r, based on your missing Stamina, reaching the maximum at 50% Stamina.\n\nCurrent bonus: |cffffff0|r Weapon and Spell Damage."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_amenossea_med_head_a.dds"
     },
     {
-      "id": "set-turning-tide", "name": "Turning Tide", "setId": 800, "category": "Trial",
-      "dlc": "Lucent Citadel", "dropSource": "Lucent Citadel", "maxEquip": 5,
+      "id": "set-turning-tide",
+      "name": "Turning Tide",
+      "setId": 622,
+      "category": "Shipwright's Regret",
+      "dlc": "Lucent Citadel",
+      "dropSource": "Lucent Citadel",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 3, "text": "Adds Maximum Health." },
-        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 5, "text": "Bash attacks apply a stacking bonus that increases your damage done, building the more you Bash." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 1136 Maximum Health"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Adds 1032 Maximum Stamina"
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 1136 Maximum Health"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) When you Block, you gain Flowing Water for |cffffff10|r seconds, causing your next Bash attack to deal |cffffff3964|r Magic Damage to up to 6 enemies in a 5 by 10 meter line, and apply Major Vulnerability for |cffffff10|r seconds, increasing their damage taken by |cffffff10|r%. This effect can occur once every |cffffff15|r seconds and scales off your Max Health."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_krakenheavy_head_a.dds"
     },
     {
-      "id": "set-lucent-echoes", "name": "Lucent Echoes", "setId": 801, "category": "Trial",
-      "dlc": "Lucent Citadel", "dropSource": "Lucent Citadel", "maxEquip": 5,
+      "id": "set-lucent-echoes",
+      "name": "Lucent Echoes",
+      "setId": 768,
+      "category": "Lucent Citadel",
+      "dlc": "Lucent Citadel",
+      "dropSource": "Lucent Citadel",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Critical Chance (Weapon and Spell)." },
-        { "pieces": 3, "text": "Adds Maximum Magicka." },
-        { "pieces": 4, "text": "Adds Critical Chance (Weapon and Spell)." },
-        { "pieces": 5, "text": "Grants nearby group members a portion of your Critical Damage as a group buff (support-oriented)." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 4% Healing Taken"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Gain Minor Aegis, reducing damage taken from monsters by |cffffff5|r%."
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 1136 Maximum Health"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) While you have more than 50% Health, the Critical Damage and Critical Healing of any group members not wearing Lucent Echoes within 28 meters of you increases by |cffffff11|r%.\n\nWhile you have 50% or less Health, your damage taken from monsters is reduced by |cffffff20|r%."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_lucentguardian_heavy_head_a.dds"
     },
     {
-      "id": "set-corpseburster", "name": "Corpseburster", "setId": 802, "category": "Trial",
-      "dlc": "Lucent Citadel", "dropSource": "Lucent Citadel", "maxEquip": 5,
+      "id": "set-corpseburster",
+      "name": "Corpseburster",
+      "setId": 777,
+      "category": "Necromancer",
+      "dlc": "Lucent Citadel",
+      "dropSource": "Lucent Citadel",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 3, "text": "Adds Offensive Penetration." },
-        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 5, "text": "Damaging enemies builds corpse-charges that detonate for area damage." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds |cffffff121|r Weapon and Spell Damage"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Adds |cffffff121|r Weapon and Spell Damage"
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 618 Critical Chance"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) Consuming a corpse causes the corpse to explode, dealing |cffffff9326|r Disease Damage to enemies within 5 meters and applying the Diseased status effect and Minor Breach to them for |cffffff5|r seconds, reducing their Physical and Spell Resistance by |cffffff2974|r. This effect can occur once every |cffffff0.5|r seconds, scales off the higher of your Weapon or Spell Damage, and deals |cffffff10|r% more damage for each Grave Lord ability slotted."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_necromancerclass_head_a.dds"
     },
     {
-      "id": "set-ansuuls-torment", "name": "Ansuul's Torment", "setId": 750, "category": "Trial",
-      "dlc": "Necrom", "dropSource": "Sanity's Edge", "maxEquip": 5,
+      "id": "set-ansuuls-torment",
+      "name": "Ansuul's Torment",
+      "setId": 702,
+      "category": "Sanity's Edge",
+      "dlc": "Necrom",
+      "dropSource": "Sanity's Edge",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 3, "text": "Adds Critical Chance (Weapon and Spell)." },
-        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 5, "text": "Damaging a nearby enemy grants stacking Offensive Penetration, and consuming the stacks empowers your damage." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 618 Critical Chance"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Gain Minor Slayer, increasing damage done to monsters by |cffffff5|r%."
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 1401 Offensive Penetration"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) Increases your damage done against monsters by |cffffff7|r%. When you interrupt a target while in combat, you increase your damage done against monsters by an additional |cffffff13|r% for |cffffff30|r seconds."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_clandreamcarver_medium_head_a.dds"
     },
     {
-      "id": "set-sul-xans-torment", "name": "Sul-Xan's Torment", "setId": 660, "category": "Trial",
-      "dlc": "Ascending Tide", "dropSource": "Rockgrove", "maxEquip": 5,
+      "id": "set-sul-xans-torment",
+      "name": "Sul-Xan's Torment",
+      "setId": 586,
+      "category": "Rockgrove",
+      "dlc": "Ascending Tide",
+      "dropSource": "Rockgrove",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 3, "text": "Adds Maximum Stamina." },
-        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 5, "text": "Killing an enemy releases souls that deal damage to nearby foes." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds |cffffff121|r Weapon and Spell Damage"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Gain Minor Slayer, increasing damage done to monsters by |cffffff5|r%."
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds |cffffff618|r Critical Chance"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) When an enemy you recently damaged dies, they leave behind a vengeful soul for |cffffff6|r seconds. You can only create one vengeful soul at a time. Touching the soul increases your Critical Chance by |cffffff2034|r and your Critical Damage by |cffffff12|r% for |cffffff30|r seconds."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_rockgrove_med_head_a.dds"
     },
     {
-      "id": "set-ozezan-the-inferno", "name": "Ozezan the Inferno", "setId": 700, "category": "Monster Set",
-      "dlc": "Lucent Citadel", "dropSource": "Lucent Citadel (Undaunted)", "maxEquip": 2,
+      "id": "set-ozezan-the-inferno",
+      "name": "Ozezan the Inferno",
+      "setId": 687,
+      "category": "Scrivener's Hall",
+      "dlc": "Lucent Citadel",
+      "dropSource": "Lucent Citadel (Undaunted)",
+      "maxEquip": 2,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 1, "text": "Adds Maximum Health." },
-        { "pieces": 2, "text": "Casting a heal grants you and your target increased healing taken and Physical/Spell Resistance for a short time." }
-      ]
+        {
+          "pieces": 1,
+          "text": "(1 item) Adds 124 Magicka Recovery"
+        },
+        {
+          "pieces": 2,
+          "text": "(2 items) Overhealing yourself or an ally grants them |cffffff4272|r Armor for |cffffff1.1|r seconds. Healing yourself or an ally grants them Minor Vitality for |cffffff1.1|r seconds, increasing their healing received and damage shield strength by |cffffff6|r%."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_undinfernium_head_a.dds"
     },
     {
-      "id": "set-nazaray", "name": "Nazaray", "setId": 740, "category": "Monster Set",
-      "dlc": "Necrom", "dropSource": "Sanity's Edge (Undaunted)", "maxEquip": 2,
+      "id": "set-nazaray",
+      "name": "Nazaray",
+      "setId": 633,
+      "category": "Shipwright's Regret",
+      "dlc": "Necrom",
+      "dropSource": "Sanity's Edge (Undaunted)",
+      "maxEquip": 2,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 1, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 2, "text": "Dealing damage with a Heavy Attack grants you a stacking Weapon and Spell Damage buff." }
-      ]
+        {
+          "pieces": 1,
+          "text": "(1 item) Adds 1164 Maximum Health"
+        },
+        {
+          "pieces": 2,
+          "text": "(2 items) When you use an Ultimate ability, the closest 6 enemies within 12 meters have all Major and Minor debuffs applied to them extended by |cffffff1|r second per |cffffff20|r Ultimate spent. This effect can occur once every |cffffff30|r seconds per target."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_undspriggan_head_a.dds"
     },
     {
-      "id": "set-slimecraw", "name": "Slimecraw", "setId": 154, "category": "Monster Set",
-      "dlc": "Base", "dropSource": "Wayrest Sewers I (Undaunted)", "maxEquip": 2,
+      "id": "set-slimecraw",
+      "name": "Slimecraw",
+      "setId": 270,
+      "category": "Wayrest Sewers",
+      "dlc": "Base",
+      "dropSource": "Wayrest Sewers I (Undaunted)",
+      "maxEquip": 2,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 1, "text": "Adds Critical Chance (Weapon and Spell)." },
-        { "pieces": 2, "text": "Grants Minor Berserk, increasing your damage done." }
-      ]
+        {
+          "pieces": 1,
+          "text": "(1 item) Adds |cffffff634|r Critical Chance"
+        },
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 109 Critical Chance"
+        },
+        {
+          "pieces": 2,
+          "text": "(2 items) Gain Minor Berserk at all times, increasing your damage done by |cffffff5|r%."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_undauntedcrocodile_head_a.dds"
     },
     {
-      "id": "set-pale-order", "name": "Ring of the Pale Order", "setId": 574, "category": "Mythic",
-      "dlc": "Deadlands", "dropSource": "Antiquities (Mythic)", "maxEquip": 1,
+      "id": "set-ring-of-the-pale-order",
+      "name": "Ring of the Pale Order",
+      "setId": 575,
+      "category": "Mythics",
+      "dlc": "Deadlands",
+      "dropSource": "Antiquities (Mythic)",
+      "maxEquip": 1,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 1, "text": "Heal for a percentage of your damage done, scaling down with each group member near you. Prevents most other sources of healing." }
-      ]
+        {
+          "pieces": 1,
+          "text": "(1 item) Restore |cffffff20|r% of the damage you deal as Health. This value is decreased by |cffffff4|r% per ally you are grouped with. You cannot be healed by anyone but yourself, your pets, or your Companions."
+        }
+      ],
+      "icon": "/esoui/art/icons/antiquities_ornate_ring_4.dds"
     },
     {
-      "id": "set-spaulder-of-ruin", "name": "Spaulder of Ruin", "setId": 583, "category": "Mythic",
-      "dlc": "Ascending Tide", "dropSource": "Antiquities (Mythic)", "maxEquip": 1,
+      "id": "set-spaulder-of-ruin",
+      "name": "Spaulder of Ruin",
+      "setId": 627,
+      "category": "Mythics",
+      "dlc": "Ascending Tide",
+      "dropSource": "Antiquities (Mythic)",
+      "maxEquip": 1,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 1, "text": "Creates a persistent aura that grants you and nearby allies Weapon and Spell Damage and resource recovery." }
-      ]
+        {
+          "pieces": 1,
+          "text": "(1 item) Activating crouch or Prowl activates and deactivates a 12 meter Aura of Pride. Up to 6 group members in the aura gain |cffffff260|r Weapon and Spell Damage. Reduce your Health, Magicka, and Stamina Recovery by |cffffff70|r for every target benefiting from your Aura of Pride."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_razorhorndaedric_shoulder_a.dds"
     },
     {
-      "id": "set-deadly-strike", "name": "Deadly Strike", "setId": 356, "category": "PvP",
-      "dlc": "Base", "dropSource": "Battlegrounds / Cyrodiil vendors", "maxEquip": 5,
+      "id": "set-deadly-strike",
+      "name": "Deadly Strike",
+      "setId": 127,
+      "category": "Cyrodiil",
+      "dlc": "Base",
+      "dropSource": "Battlegrounds / Cyrodiil vendors",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 3, "text": "Adds Maximum Stamina." },
-        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 5, "text": "Increases the damage of your damage over time and channeled/area abilities." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 121 Weapon and Spell Damage"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Adds 618 Critical Chance"
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 121 Weapon and Spell Damage"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) Increase the damage your damage over time and channeled attacks do by |cffffff15|r%."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_aldmeri_medium_head_a.dds"
     },
     {
-      "id": "set-order's-wrath", "name": "Order's Wrath", "setId": 583000, "category": "Crafted",
-      "dlc": "High Isle", "dropSource": "Crafted (High Isle)", "maxEquip": 5, "traitsNeeded": 4,
+      "id": "set-briarheart",
+      "name": "Briarheart",
+      "setId": 212,
+      "category": "Wrothgar",
+      "dlc": "Wrathstone",
+      "dropSource": "Crafted (Deadlands)",
+      "maxEquip": 5,
+      "traitsNeeded": 6,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Critical Chance (Weapon and Spell)." },
-        { "pieces": 3, "text": "Adds Maximum Health, Magicka and Stamina." },
-        { "pieces": 4, "text": "Adds Critical Chance (Weapon and Spell)." },
-        { "pieces": 5, "text": "Increases your Critical Damage and Critical Healing." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 595 Critical Chance"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Adds 994 Maximum Stamina"
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 595 Critical Chance"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) When you deal Critical Damage, you increase your Weapon and Spell Damage by |cffffff409|r for |cffffff10|r seconds. While this effect is active, dealing Critical Damage heals you for |cffffff251|r Health. This effect can occur once every |cffffff15|r seconds and the heal scales off the higher of your Max Magicka or Stamina."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_snowreach_medium_head_a.dds"
     },
     {
-      "id": "set-briarheart", "name": "Briarheart", "setId": 392, "category": "Crafted",
-      "dlc": "Wrathstone", "dropSource": "Crafted (Deadlands)", "maxEquip": 5, "traitsNeeded": 6,
+      "id": "set-mothers-sorrow",
+      "name": "Mother's Sorrow",
+      "setId": 292,
+      "category": "Deshaan",
+      "dlc": "Morrowind",
+      "dropSource": "Deshaan (Overland)",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 3, "text": "Adds Maximum Stamina." },
-        { "pieces": 4, "text": "Adds Weapon Critical." },
-        { "pieces": 5, "text": "Dealing direct critical damage grants a stacking Weapon and Spell Damage buff and heals you." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 994 Maximum Magicka"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Adds 595 Critical Chance"
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 595 Critical Chance"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) Adds 1386 Critical Chance"
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_argonian_light_head_d.dds"
     },
     {
-      "id": "set-mothers-sorrow", "name": "Mother's Sorrow", "setId": 209, "category": "Overland",
-      "dlc": "Morrowind", "dropSource": "Deshaan (Overland)", "maxEquip": 5,
+      "id": "set-tarnished-nightmare",
+      "name": "Tarnished Nightmare",
+      "setId": 736,
+      "category": "Bedlam Veil",
+      "dlc": "Scions of Ithelia",
+      "dropSource": "Oathsworn Pit",
+      "maxEquip": 5,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Maximum Magicka." },
-        { "pieces": 3, "text": "Adds Spell Critical." },
-        { "pieces": 4, "text": "Adds Maximum Magicka." },
-        { "pieces": 5, "text": "Adds a large amount of Critical Chance (Spell)." }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 items) Adds 618 Critical Chance"
+        },
+        {
+          "pieces": 3,
+          "text": "(3 items) Adds 618 Critical Chance"
+        },
+        {
+          "pieces": 4,
+          "text": "(4 items) Adds 618 Critical Chance"
+        },
+        {
+          "pieces": 5,
+          "text": "(5 items) When you deal Critical Damage to an enemy, glass shards burst 8 meters around them after |cffffff1.3|r seconds, dealing |cffffff8118|r Physical Damage to enemies in the burst and applying the Sundered status effect. This effect can occur once every |cffffff8|r seconds and the damage scales off the higher of your Weapon or Spell Damage."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_blindpath_medium_head_a.dds"
     },
     {
-      "id": "set-tarnished-nightmare", "name": "Tarnished Nightmare", "setId": 760, "category": "Dungeon",
-      "dlc": "Scions of Ithelia", "dropSource": "Oathsworn Pit", "maxEquip": 5,
+      "id": "set-perfected-crushing-wall",
+      "name": "Perfected Crushing Wall",
+      "setId": 526,
+      "category": "Maelstrom Arena",
+      "dlc": "Wolfhunter",
+      "dropSource": "Maelstrom Arena (Veteran)",
+      "maxEquip": 2,
+      "traitsNeeded": null,
       "bonuses": [
-        { "pieces": 2, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 3, "text": "Adds Offensive Penetration." },
-        { "pieces": 4, "text": "Adds Weapon and Spell Damage." },
-        { "pieces": 5, "text": "Applying a status effect deals additional damage over time to the target." }
-      ]
-    },
-    {
-      "id": "set-maelstrom-inferno", "name": "Perfected Crushing Wall", "setId": 401, "category": "Arena",
-      "dlc": "Wolfhunter", "dropSource": "Maelstrom Arena (Veteran)", "maxEquip": 2,
-      "bonuses": [
-        { "pieces": 2, "text": "Your Light and Heavy Attacks deal additional damage to enemies affected by your damage over time abilities. (Perfected variant adds a stat line.)" }
-      ]
+        {
+          "pieces": 2,
+          "text": "(2 perfected items) Adds 1148 Offensive Penetration"
+        },
+        {
+          "pieces": 2,
+          "text": "(2 items) Increases the damage Wall of Elements deals by |cffffff1206|r."
+        }
+      ],
+      "icon": "/esoui/art/icons/gear_dwarvenscavenged_staff_a.dds"
     }
   ]
 }

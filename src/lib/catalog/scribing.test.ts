@@ -1,16 +1,12 @@
+import { catalogSlug } from "../game/catalog-ids";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { plannerGrimoireIcon, plannerScriptIcon } from "../icons/planner-icons";
 import { CatalogBundle } from "./schema";
 
-/** Same folding as NirnsideCatalog's slug(), so a later in-game scan hits the same id. */
-function slug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+/** The catalog's one id rule (game/catalog-ids.ts), which the catalog addon follows too. */
+const slug = catalogSlug;
 
 describe("scribing seed", () => {
   const bundle = CatalogBundle.parse(JSON.parse(readFileSync("data/catalog/scribing.json", "utf8")));

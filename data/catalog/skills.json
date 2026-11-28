@@ -599,7 +599,7 @@
       ]
     },
     {
-      "id": "sk-unblinking-eye",
+      "id": "sk-the-unblinking-eye",
       "name": "The Unblinking Eye",
       "lineId": "line-herald-of-the-tome",
       "type": "ultimate",
@@ -1131,245 +1131,245 @@
       ]
     },
     {
-      "id": "sk-cm-dk-inexorable-descent",
+      "id": "sk-inexorable-descent",
       "name": "Inexorable Descent",
       "lineId": "line-class-mastery-dragonknight",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-dk-booming-voice",
+      "id": "sk-booming-voice",
       "name": "Booming Voice",
       "lineId": "line-class-mastery-dragonknight",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-dk-wildfire-embers",
+      "id": "sk-wildfire-embers",
       "name": "Wildfire Embers",
       "lineId": "line-class-mastery-dragonknight",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-dk-resolute-defense",
+      "id": "sk-resolute-defense",
       "name": "Resolute Defense",
       "lineId": "line-class-mastery-dragonknight",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-dk-lead-from-the-front",
+      "id": "sk-lead-from-the-front",
       "name": "Lead from the Front",
       "lineId": "line-class-mastery-dragonknight",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-nb-nocturnal-inspiration",
+      "id": "sk-nocturnal-inspiration",
       "name": "Nocturnal Inspiration",
       "lineId": "line-class-mastery-nightblade",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-nb-eye-for-exploitation",
+      "id": "sk-an-eye-for-exploitation",
       "name": "An Eye for Exploitation",
       "lineId": "line-class-mastery-nightblade",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-nb-above-and-beyond",
+      "id": "sk-above-and-beyond",
       "name": "Above and Beyond",
       "lineId": "line-class-mastery-nightblade",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-nb-cutthroats-focus",
+      "id": "sk-cutthroats-focus",
       "name": "Cutthroat's Focus",
       "lineId": "line-class-mastery-nightblade",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-nb-share-the-spoils",
+      "id": "sk-share-the-spoils",
       "name": "Share the Spoils",
       "lineId": "line-class-mastery-nightblade",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-sorc-conservation-of-energy",
+      "id": "sk-conservation-of-energy",
       "name": "Conservation of Energy",
       "lineId": "line-class-mastery-sorcerer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-sorc-font-of-power",
+      "id": "sk-font-of-power",
       "name": "Font of Power",
       "lineId": "line-class-mastery-sorcerer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-sorc-static-reverberation",
+      "id": "sk-static-reverberation",
       "name": "Static Reverberation",
       "lineId": "line-class-mastery-sorcerer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-sorc-calculated-defense",
+      "id": "sk-calculated-defense",
       "name": "Calculated Defense",
       "lineId": "line-class-mastery-sorcerer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-sorc-sphere-of-influence",
+      "id": "sk-sphere-of-influence",
       "name": "Sphere of Influence",
       "lineId": "line-class-mastery-sorcerer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-templar-bastion-of-light",
+      "id": "sk-bastion-of-light",
       "name": "Bastion of Light",
       "lineId": "line-class-mastery-templar",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-templar-devout-guardian",
+      "id": "sk-devout-guardian",
       "name": "Devout Guardian",
       "lineId": "line-class-mastery-templar",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-templar-bright-harbinger",
+      "id": "sk-bright-harbinger",
       "name": "Bright Harbinger",
       "lineId": "line-class-mastery-templar",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-templar-judgments-brand",
+      "id": "sk-judgments-brand",
       "name": "Judgment's Brand",
       "lineId": "line-class-mastery-templar",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-templar-steadfast-candescence",
+      "id": "sk-steadfast-candescence",
       "name": "Steadfast Candescence",
       "lineId": "line-class-mastery-templar",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-warden-tundras-maw",
+      "id": "sk-tundras-maw",
       "name": "Tundra's Maw",
       "lineId": "line-class-mastery-warden",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-warden-wild-adaptation",
+      "id": "sk-wild-adaptation",
       "name": "Wild Adaptation",
       "lineId": "line-class-mastery-warden",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-warden-glacial-obstinance",
+      "id": "sk-glacial-obstinance",
       "name": "Glacial Obstinance",
       "lineId": "line-class-mastery-warden",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-warden-green-keepers-hide",
+      "id": "sk-green-keepers-hide",
       "name": "Green-Keeper's Hide",
       "lineId": "line-class-mastery-warden",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-warden-bountiful-harvest",
+      "id": "sk-bountiful-harvest",
       "name": "Bountiful Harvest",
       "lineId": "line-class-mastery-warden",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-necro-nothing-wasted",
+      "id": "sk-nothing-wasted",
       "name": "Nothing Wasted",
       "lineId": "line-class-mastery-necromancer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-necro-malevolent-promise",
+      "id": "sk-malevolent-promise",
       "name": "Malevolent Promise",
       "lineId": "line-class-mastery-necromancer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-necro-cycle-unending",
+      "id": "sk-cycle-unending",
       "name": "Cycle Unending",
       "lineId": "line-class-mastery-necromancer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-necro-pound-of-flesh",
+      "id": "sk-pound-of-flesh",
       "name": "Pound of Flesh",
       "lineId": "line-class-mastery-necromancer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-necro-veils-forfeit",
+      "id": "sk-veils-forfeit",
       "name": "Veil's Forfeit",
       "lineId": "line-class-mastery-necromancer",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-arc-abyssal-emergence",
+      "id": "sk-abyssal-emergence",
       "name": "Abyssal Emergence",
       "lineId": "line-class-mastery-arcanist",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-arc-fate-realigned",
+      "id": "sk-fate-realigned",
       "name": "Fate Realigned",
       "lineId": "line-class-mastery-arcanist",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-arc-unbound-potential",
+      "id": "sk-unbound-potential",
       "name": "Unbound Potential",
       "lineId": "line-class-mastery-arcanist",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-arc-erudites-rigor",
+      "id": "sk-erudites-rigor",
       "name": "Erudite's Rigor",
       "lineId": "line-class-mastery-arcanist",
       "type": "passive",
       "description": ""
     },
     {
-      "id": "sk-cm-arc-ink-scribes-verve",
+      "id": "sk-ink-scribes-verve",
       "name": "Ink-Scribe's Verve",
       "lineId": "line-class-mastery-arcanist",
       "type": "passive",

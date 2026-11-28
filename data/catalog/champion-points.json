@@ -1,52 +1,384 @@
 {
-  "patch": "U50",
+  "patch": "U51",
   "source": "reference",
   "cp": [
-    { "id": "cp-warfare-deadly-aim", "name": "Deadly Aim", "category": "Warfare", "type": "slottable", "description": "Increases the damage of your damage over time and channeled abilities against monsters.", "maxPoints": 50 },
-    { "id": "cp-warfare-master-at-arms", "name": "Master-at-Arms", "category": "Warfare", "type": "slottable", "description": "Increases your direct damage done.", "maxPoints": 50 },
-    { "id": "cp-warfare-fighting-finesse", "name": "Fighting Finesse", "category": "Warfare", "type": "slottable", "description": "Increases your Critical Damage done.", "maxPoints": 50 },
-    { "id": "cp-warfare-backstabber", "name": "Backstabber", "category": "Warfare", "type": "slottable", "description": "Increases your Critical Damage done against enemies you attack from the flank or rear.", "maxPoints": 50 },
-    { "id": "cp-warfare-wrathful-strikes", "name": "Wrathful Strikes", "category": "Warfare", "type": "slottable", "description": "Increases your Weapon and Spell Damage for direct-damage abilities.", "maxPoints": 50 },
-    { "id": "cp-warfare-biting-aura", "name": "Biting Aura", "category": "Warfare", "type": "slottable", "description": "Increases the damage of your area of effect abilities.", "maxPoints": 50 },
-    { "id": "cp-warfare-thaumaturge", "name": "Thaumaturge", "category": "Warfare", "type": "slottable", "description": "Increases the damage of your damage over time effects.", "maxPoints": 50 },
-    { "id": "cp-warfare-force-of-nature", "name": "Force of Nature", "category": "Warfare", "type": "slottable", "description": "For each different status effect on an enemy, you deal increased damage to them.", "maxPoints": 50 },
-    { "id": "cp-warfare-occult-overload", "name": "Occult Overload", "category": "Warfare", "type": "slottable", "description": "Dealing non-Ultimate damage builds a meter that unleashes an Overload explosion.", "maxPoints": 50 },
-    { "id": "cp-warfare-exploiter", "name": "Exploiter", "category": "Warfare", "type": "slottable", "description": "Enemies you put Off Balance take increased damage.", "maxPoints": 50 },
-    { "id": "cp-warfare-focused-mending", "name": "Focused Mending", "category": "Warfare", "type": "slottable", "description": "Increases your healing done to allies you have directly healed recently.", "maxPoints": 50 },
-    { "id": "cp-warfare-enlivening-overflow", "name": "Enlivening Overflow", "category": "Warfare", "type": "slottable", "description": "Your healing over time abilities have a chance to grant you and allies resources.", "maxPoints": 50 },
-    { "id": "cp-warfare-from-the-brink", "name": "From the Brink", "category": "Warfare", "type": "slottable", "description": "Grants a group-wide damage shield when an ally nearby falls below a health threshold.", "maxPoints": 50 },
-    { "id": "cp-warfare-piercing", "name": "Piercing", "category": "Warfare", "type": "passive", "description": "Increases your Offensive Penetration.", "maxPoints": 50 },
-    { "id": "cp-warfare-eldritch-insight", "name": "Eldritch Insight", "category": "Warfare", "type": "passive", "description": "Increases the duration of your damage over time and healing over time abilities.", "maxPoints": 20 },
-    { "id": "cp-warfare-blessed", "name": "Blessed", "category": "Warfare", "type": "passive", "description": "Increases your healing done.", "maxPoints": 50 },
-    { "id": "cp-warfare-tireless-discipline", "name": "Tireless Discipline", "category": "Warfare", "type": "passive", "description": "Increases your Magicka and Stamina Recovery.", "maxPoints": 50 },
-
-    { "id": "cp-fitness-boundless-vitality", "name": "Boundless Vitality", "category": "Fitness", "type": "slottable", "description": "Increases your Maximum Health.", "maxPoints": 50 },
-    { "id": "cp-fitness-rejuvenation", "name": "Rejuvenation", "category": "Fitness", "type": "slottable", "description": "Increases your Health, Magicka and Stamina Recovery.", "maxPoints": 50 },
-    { "id": "cp-fitness-fortified", "name": "Fortified", "category": "Fitness", "type": "slottable", "description": "Increases the amount of Physical and Spell Resistance you gain from armor.", "maxPoints": 50 },
-    { "id": "cp-fitness-ironclad", "name": "Ironclad", "category": "Fitness", "type": "slottable", "description": "Reduces the damage you take from direct-damage attacks.", "maxPoints": 50 },
-    { "id": "cp-fitness-bastion", "name": "Bastion", "category": "Fitness", "type": "slottable", "description": "Increases the strength of your damage shields.", "maxPoints": 50 },
-    { "id": "cp-fitness-hardy", "name": "Hardy", "category": "Fitness", "type": "slottable", "description": "Reduces damage taken from Stamina-based attacks.", "maxPoints": 50 },
-    { "id": "cp-fitness-elemental-aegis", "name": "Elemental Aegis", "category": "Fitness", "type": "slottable", "description": "Reduces damage taken from Magic and elemental attacks.", "maxPoints": 50 },
-    { "id": "cp-fitness-slippery", "name": "Slippery", "category": "Fitness", "type": "slottable", "description": "Reduces the duration of disabling and immobilization effects on you.", "maxPoints": 50 },
-    { "id": "cp-fitness-unchained", "name": "Unchained", "category": "Fitness", "type": "slottable", "description": "After breaking free, your next Bash costs no Stamina and deals increased damage.", "maxPoints": 50 },
-    { "id": "cp-fitness-expert-evasion", "name": "Expert Evasion", "category": "Fitness", "type": "slottable", "description": "Reduces the cost of Roll Dodge briefly after dodging.", "maxPoints": 50 },
-    { "id": "cp-fitness-survival-instinct", "name": "Survival Instinct", "category": "Fitness", "type": "slottable", "description": "Reduces damage taken while under a crowd control effect.", "maxPoints": 50 },
-    { "id": "cp-fitness-hero-vigor", "name": "Hero's Vigor", "category": "Fitness", "type": "passive", "description": "Increases your Health Recovery while in combat.", "maxPoints": 10 },
-    { "id": "cp-fitness-sustained-suffering", "name": "Sustained by Suffering", "category": "Fitness", "type": "passive", "description": "Increases resource restoration from your class and weapon passives.", "maxPoints": 50 },
-    { "id": "cp-fitness-tireless-guardian", "name": "Tireless Guardian", "category": "Fitness", "type": "passive", "description": "Increases your Health Recovery.", "maxPoints": 50 },
-    { "id": "cp-fitness-siphoning-attacks", "name": "Siphoning Attacks", "category": "Fitness", "type": "passive", "description": "Heavy Attacks restore additional resources.", "maxPoints": 50 },
-
-    { "id": "cp-craft-steeds-blessing", "name": "Steed's Blessing", "category": "Craft", "type": "slottable", "description": "Increases your Movement Speed while out of combat.", "maxPoints": 50 },
-    { "id": "cp-craft-gifted-rider", "name": "Gifted Rider", "category": "Craft", "type": "slottable", "description": "Increases your Mount Speed and Mount Stamina.", "maxPoints": 75 },
-    { "id": "cp-craft-treasure-hunter", "name": "Treasure Hunter", "category": "Craft", "type": "slottable", "description": "Increases the quality of loot found in treasure chests.", "maxPoints": 50 },
-    { "id": "cp-craft-master-gatherer", "name": "Master Gatherer", "category": "Craft", "type": "slottable", "description": "Reduces the time to harvest crafting resource nodes and hides them on your compass.", "maxPoints": 50 },
-    { "id": "cp-craft-meticulous-disassembly", "name": "Meticulous Disassembly", "category": "Craft", "type": "slottable", "description": "Increases materials gained from deconstruction and extraction.", "maxPoints": 50 },
-    { "id": "cp-craft-homemaker", "name": "Homemaker", "category": "Craft", "type": "slottable", "description": "Increases the furnishing cap for your homes.", "maxPoints": 75 },
-    { "id": "cp-craft-wanderer", "name": "Wanderer", "category": "Craft", "type": "slottable", "description": "Reduces the cost of fast travelling between wayshrines.", "maxPoints": 50 },
-    { "id": "cp-craft-fortunes-favor", "name": "Fortune's Favor", "category": "Craft", "type": "slottable", "description": "Increases the chance to find gold on defeated enemies.", "maxPoints": 50 },
-    { "id": "cp-craft-plentiful-harvest", "name": "Plentiful Harvest", "category": "Craft", "type": "slottable", "description": "Chance to gain additional resources when harvesting.", "maxPoints": 50 },
-    { "id": "cp-craft-liquid-efficiency", "name": "Liquid Efficiency", "category": "Craft", "type": "slottable", "description": "Chance to not consume potions and poisons when used.", "maxPoints": 50 },
-    { "id": "cp-craft-breakfall", "name": "Breakfall", "category": "Craft", "type": "passive", "description": "Reduces fall damage taken.", "maxPoints": 30 },
-    { "id": "cp-craft-sustaining-shadows", "name": "Sustaining Shadows", "category": "Craft", "type": "passive", "description": "Reduces the time it takes to enter Sneak.", "maxPoints": 20 }
+    {
+      "id": "cp-deadly-aim",
+      "name": "Deadly Aim",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increase your damage done with single target attacks by |cffffff3|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-master-at-arms",
+      "name": "Master-at-Arms",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increases your damage done with direct damage attacks by |cffffff3|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-fighting-finesse",
+      "name": "Fighting Finesse",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increases your Critical Damage and Critical Healing done by |cffffff4|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-backstabber",
+      "name": "Backstabber",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increases your Critical Damage done by |cffffff2|r% per stage against enemies you are flanking.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-wrathful-strikes",
+      "name": "Wrathful Strikes",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Grants |cffffff41|r Weapon and Spell Damage to your damaging abilities per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-biting-aura",
+      "name": "Biting Aura",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increases your damage done with area of effect attacks by |cffffff3|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-thaumaturge",
+      "name": "Thaumaturge",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increases your damage done with damage over time effects by |cffffff3|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-force-of-nature",
+      "name": "Force of Nature",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increases your Offensive Penetration by |cffffff660|r for every status effect your target has.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-occult-overload",
+      "name": "Occult Overload",
+      "category": "Warfare",
+      "type": "passive",
+      "description": "Whenever you kill an enemy under the effect of a status effect, they violently explode for |cffffff1037|r Oblivion Damage per stage to all other enemies in a |cffffff4|r meter radius, and applying a random status effect to each enemy hit. This effect can occur once every second.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-exploiter",
+      "name": "Exploiter",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increases your damage done against Off Balance enemies by |cffffff2|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-focused-mending",
+      "name": "Focused Mending",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Increases your Healing Done with single target heals by |cffffff2|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-enlivening-overflow",
+      "name": "Enlivening Overflow",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Overhealing yourself or an ally grants them Health, Magicka, and Stamina Recovery equal to |cffffff.5|r% of your Max Magicka, up to a cap of |cffffff150|r, for |cffffff6|r seconds. This effect can occur once every |cffffff12|r seconds per target.\n\nCurrent bonus: |cffffff82|r",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-from-the-brink",
+      "name": "From the Brink",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Whenever you heal yourself or an ally under |cffffff25|r% Health, you grant them a damage shield that absorbs up to |cffffff2200|r damage per stage, for |cffffff6|r seconds. This effect can occur once every |cffffff30|r seconds per target.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-piercing",
+      "name": "Piercing",
+      "category": "Warfare",
+      "type": "cluster",
+      "description": "Grants |cffffff350|r Offensive Penetration per stage.",
+      "maxPoints": 20,
+      "icon": null
+    },
+    {
+      "id": "cp-eldritch-insight",
+      "name": "Eldritch Insight",
+      "category": "Warfare",
+      "type": "passive",
+      "description": "Grants |cffffff260|r Max Magicka per stage.",
+      "maxPoints": 20,
+      "icon": null
+    },
+    {
+      "id": "cp-blessed",
+      "name": "Blessed",
+      "category": "Warfare",
+      "type": "cluster",
+      "description": "Increases your Healing Done by |cffffff1|r% per stage.",
+      "maxPoints": 20,
+      "icon": null
+    },
+    {
+      "id": "cp-tireless-discipline",
+      "name": "Tireless Discipline",
+      "category": "Warfare",
+      "type": "passive",
+      "description": "Grants |cffffff260|r Max Stamina per stage.",
+      "maxPoints": 20,
+      "icon": null
+    },
+    {
+      "id": "cp-boundless-vitality",
+      "name": "Boundless Vitality",
+      "category": "Fitness",
+      "type": "slottable",
+      "description": "Grants |cffffff28|r Max Health per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-rejuvenation",
+      "name": "Rejuvenation",
+      "category": "Fitness",
+      "type": "slottable",
+      "description": "Grants |cffffff1.8|r Health, Magicka, and Stamina Recovery per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-fortified",
+      "name": "Fortified",
+      "category": "Fitness",
+      "type": "slottable",
+      "description": "Grants |cffffff34.6|r Armor per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-ironclad",
+      "name": "Ironclad",
+      "category": "Warfare",
+      "type": "slottable",
+      "description": "Reduces your damage taken by direct damage attacks by |cffffff3|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-bastion",
+      "name": "Bastion",
+      "category": "Fitness",
+      "type": "slottable",
+      "description": "Increases the effectiveness of your damage shields and damage against shielded enemies by |cffffff3|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-hardy",
+      "name": "Hardy",
+      "category": "Warfare",
+      "type": "passive",
+      "description": "Reduces the damage you take from Martial attacks by |cffffff1|r% per stage.\n\nAffects Physical, Poison, Disease, and Bleed Damage.",
+      "maxPoints": 20,
+      "icon": null
+    },
+    {
+      "id": "cp-elemental-aegis",
+      "name": "Elemental Aegis",
+      "category": "Warfare",
+      "type": "passive",
+      "description": "Reduces the damage you take from Magical attacks by |cffffff1|r% per stage.\n\nAffects Magic, Flame, Frost, and Shock Damage.",
+      "maxPoints": 20,
+      "icon": null
+    },
+    {
+      "id": "cp-slippery",
+      "name": "Slippery",
+      "category": "Fitness",
+      "type": "slottable",
+      "description": "When you are affected by a disabling effect, you automatically Break Free for no cost. After using this effect, you become Winded and cannot trigger this effect or others like it for |cffffff21|r seconds.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-unchained",
+      "name": "Unchained",
+      "category": "Fitness",
+      "type": "passive",
+      "description": "When you use Break Free, the cost of your next Stamina ability used within |cffffff5|r seconds is reduced by |cffffff11%|r per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-expert-evasion",
+      "name": "Expert Evasion",
+      "category": "Fitness",
+      "type": "slottable",
+      "description": "Your next Roll Dodge is free of cost. After consuming this effect, you cannot gain it again for |cffffff30|r seconds.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-heros-vigor",
+      "name": "Hero's Vigor",
+      "category": "Fitness",
+      "type": "passive",
+      "description": "Grants |cffffff280|r Max Health per stage.",
+      "maxPoints": 20,
+      "icon": null
+    },
+    {
+      "id": "cp-sustained-by-suffering",
+      "name": "Sustained by Suffering",
+      "category": "Fitness",
+      "type": "slottable",
+      "description": "Increases your Health, Magicka, and Stamina Recovery by |cffffff30|r per stage while under the effects of a negative effect.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-tireless-guardian",
+      "name": "Tireless Guardian",
+      "category": "Fitness",
+      "type": "passive",
+      "description": "Reduces the cost of Block by |cffffff20|r Stamina per stage.",
+      "maxPoints": 20,
+      "icon": null
+    },
+    {
+      "id": "cp-steeds-blessing",
+      "name": "Steed's Blessing",
+      "category": "Craft",
+      "type": "slottable",
+      "description": "Increases your out of combat Movement Speed by |cffffff.4|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-gifted-rider",
+      "name": "Gifted Rider",
+      "category": "Craft",
+      "type": "slottable",
+      "description": "Increases your Mount Speed by |cffffff2|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-treasure-hunter",
+      "name": "Treasure Hunter",
+      "category": "Craft",
+      "type": "passive",
+      "description": "Increase the quality of items you find in treasure chests.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-master-gatherer",
+      "name": "Master Gatherer",
+      "category": "Craft",
+      "type": "slottable",
+      "description": "Reduces the time it takes to harvest by |cffffff10|r% per stage.",
+      "maxPoints": 75,
+      "icon": null
+    },
+    {
+      "id": "cp-meticulous-disassembly",
+      "name": "Meticulous Disassembly",
+      "category": "Craft",
+      "type": "passive",
+      "description": "Improves the chances of extracting Woodworking, Blacksmithing, Clothing, and Jewelry Crafting ingredients and allows the refining of more powerful resins, tempers, tannins, and platings from raw materials.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-homemaker",
+      "name": "Homemaker",
+      "category": "Craft",
+      "type": "passive",
+      "description": "You have a |cffffff10|r% chance to find a second furnishing plan whenever you find a furnishing plan in the world.",
+      "maxPoints": 25,
+      "icon": null
+    },
+    {
+      "id": "cp-wanderer",
+      "name": "Wanderer",
+      "category": "Craft",
+      "type": "passive",
+      "description": "Reduces the cost of Wayshrine usage by |cffffff10|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-fortunes-favor",
+      "name": "Fortune's Favor",
+      "category": "Craft",
+      "type": "passive",
+      "description": "Increases the amount of gold you find in treasure chests and safeboxes by |cffffff10|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-plentiful-harvest",
+      "name": "Plentiful Harvest",
+      "category": "Craft",
+      "type": "passive",
+      "description": "You have a |cffffff10|r% chance to gain double the yield from normal resource nodes per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-liquid-efficiency",
+      "name": "Liquid Efficiency",
+      "category": "Craft",
+      "type": "passive",
+      "description": "Whenever you use a potion or poison you have a |cffffff10|r% chance to not consume it.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-breakfall",
+      "name": "Breakfall",
+      "category": "Craft",
+      "type": "passive",
+      "description": "Reduces your fall damage taken by |cffffff7|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    },
+    {
+      "id": "cp-sustaining-shadows",
+      "name": "Sustaining Shadows",
+      "category": "Craft",
+      "type": "slottable",
+      "description": "Reduces the cost of Sneak by |cffffff1|r% per stage.",
+      "maxPoints": 50,
+      "icon": null
+    }
   ]
 }
