@@ -16,6 +16,12 @@ export interface EquippedPiece {
   quality: string | null;
   trait: string | null;
   enchant: string | null;
+  /** The trait's effect with its numbers, as the tooltip says it. Snapshot 0.9.46+. */
+  traitText?: string | null;
+  /** Armor rating, or a weapon's damage, from the item. Snapshot 0.9.46+. */
+  armor?: number | null;
+  weaponPower?: number | null;
+  charges?: { now: number; max: number } | null;
   setName: string | null;
   setHref: string | null;
   /** Pieces of this set worn with this piece's bar out, and how many the set has bonuses up to. */
@@ -46,6 +52,22 @@ function Tile({ p }: { p: EquippedPiece }) {
       <span className="mt-0.5 block text-fg-subtle">
         {[p.slot, p.trait, p.quality ? p.quality[0].toUpperCase() + p.quality.slice(1) : null].filter(Boolean).join(" · ")}
       </span>
+      {p.armor || p.weaponPower ? (
+        <span className="mt-1.5 block tabular-nums text-fg">
+          {/* The tooltip's own labels (SI_ITEM_FORMAT_STR_DAMAGE, SI_ITEM_FORMAT_STR_ARMOR). */}
+          {p.weaponPower ? `Damage ${p.weaponPower.toLocaleString("en-US")}` : `Armor ${p.armor!.toLocaleString("en-US")}`}
+        </span>
+      ) : null}
+      {p.traitText ? (
+        <span className="mt-1 block text-fg-muted">
+          <EsoText text={p.traitText} />
+        </span>
+      ) : null}
+      {p.charges ? (
+        <span className="mt-1 block tabular-nums text-fg-subtle">
+          Enchant charges {p.charges.now.toLocaleString("en-US")}/{p.charges.max.toLocaleString("en-US")}
+        </span>
+      ) : null}
       {p.enchant ? (
         <span className="mt-1.5 block text-fg-muted">
           <EsoText text={p.enchant} />

@@ -80,6 +80,35 @@ describe("mundus", () => {
     assert.equal(fromCatalog.blessings[0].textFrom, "catalog");
     assert.equal(readMundus({ mundus: null }, []).blessings.length, 0);
   });
+  it("takes the amount from the character's buff, then the catalog's base", () => {
+    const catalog = [
+      {
+        name: "The Shadow",
+        description: "increases Critical Damage",
+        effects: [{ key: "critical_damage", stat: 101, label: "Critical Damage", value: 11, advanced: true, format: "percent" }],
+      },
+    ];
+    const withDivines = readMundus(
+      {
+        mundusBoons: ["The Shadow"],
+        buffs: [
+          {
+            name: "Boon: The Shadow",
+            mundus: true,
+            effects: [{ key: "critical_damage", stat: 101, label: "Critical Damage", value: 15, advanced: true, format: "percent" }],
+          },
+        ],
+      },
+      [],
+      catalog,
+    );
+    assert.equal(withDivines.blessings[0].amount, "+15% Critical Damage");
+    assert.equal(withDivines.blessings[0].amountFrom, "buff");
+    const base = readMundus({ mundus: "The Shadow" }, [], catalog);
+    assert.equal(base.blessings[0].amount, "+11% Critical Damage");
+    assert.equal(base.blessings[0].amountFrom, "catalog");
+    assert.equal(readMundus({ mundus: "The Shadow" }, []).blessings[0].amount, null);
+  });
 });
 
 describe("food", () => {

@@ -221,3 +221,35 @@ SLASH_COMMANDS["/nirnside"] = takeSnapshot`;
     assert.equal(parsed.data.characters[0].dailies, null);
   });
 });
+
+describe("values (snapshot 0.9.46)", () => {
+  it("reads stats, bars, effect amounts, star bonuses and item values, and still reads saves without them", async () => {
+    const { Character, Item, EquippedItem } = await import("./schema");
+    const base = { id: "1", name: "Test", class: "Sorcerer", race: "Breton", alliance: "Daggerfall Covenant" };
+    const c = Character.parse({
+      ...base,
+      stats: {
+        main: [{ key: "magicka_max", stat: 7, label: "Maximum Magicka", value: 38215 }],
+        advanced: [{ category: "Combat", key: "critical_damage", stat: 22, label: "Critical Damage", format: "percent", percent: 71.5 }],
+      },
+      bars: [{ bar: "front", skills: [{ slot: 6, ultimate: true, abilityId: 23634, name: "Summon Charged Atronach", description: "Deals 1000 Shock Damage." }] }],
+      buffs: [{ name: "Boon: The Shadow", mundus: true, effects: [{ advanced: true, key: "critical_damage", stat: 22, value: 11, format: "percent" }] }],
+      champion: [{ name: "Warfare", stars: [{ name: "Deadly Aim", points: 50, slotted: true, bonus: "Increases damage by 10%." }] }],
+    });
+    assert.equal(c.stats?.main[0].value, 38215);
+    assert.equal(c.bars?.[0].skills[0].ultimate, true);
+    assert.equal(c.buffs?.[0].effects?.[0].value, 11);
+    assert.equal(c.champion[0].stars[0].bonus, "Increases damage by 10%.");
+
+    const old = Character.parse(base);
+    assert.equal(old.stats, undefined);
+    assert.equal(old.bars, undefined);
+
+    const potion = Item.parse({ itemId: 1, name: "Essence of Spell Power", location: "backpack", value: 12, use: ["Restore 4000 Magicka."] });
+    assert.deepEqual(potion.use, ["Restore 4000 Magicka."]);
+    const helm = EquippedItem.parse({ slot: "Head", name: "Helm", armor: 1396, traitText: "Increases Mundus Stone effects by 9.1%.", enchant: "Adds 868 Maximum Magicka." });
+    assert.equal(helm.armor, 1396);
+    // An odd `use` value never blanks the item.
+    assert.equal(Item.parse({ itemId: 2, name: "Odd", location: "backpack", use: "text" }).use, undefined);
+  });
+});

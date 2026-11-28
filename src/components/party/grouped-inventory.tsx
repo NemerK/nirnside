@@ -5,12 +5,13 @@ import { useMemo } from "react";
 import { Hand } from "lucide-react";
 import { SetHover } from "@/components/set-hover";
 import { SortHeader, useSort } from "@/components/sort-header";
-import { locationLabel, qualityText } from "@/lib/format";
+import { formatGold, locationLabel, qualityText } from "@/lib/format";
+import { esoPlainText } from "@/lib/text/eso-markup";
 import { bagSubtypeLabel } from "@/lib/game/item-category";
 import { sortRows } from "@/lib/ui/column-sort";
-import type { ItemGroup } from "@/lib/party/inventory";
+import { itemValuesLine, type ItemGroup } from "@/lib/party/inventory";
 
-type Column = "item" | "qty" | "set" | "trait";
+type Column = "item" | "qty" | "set" | "trait" | "value";
 
 function value(g: ItemGroup, key: Column): string | number | null {
   switch (key) {
@@ -22,6 +23,8 @@ function value(g: ItemGroup, key: Column): string | number | null {
       return g.item.setName;
     case "trait":
       return g.item.trait;
+    case "value":
+      return g.item.value ?? null;
   }
 }
 
@@ -62,6 +65,9 @@ export function GroupedInventory({
               <th className="px-3 py-2 font-normal">
                 <SortHeader label="Trait" column="trait" sort={sort} onSort={onSort} />
               </th>
+              <th className="px-3 py-2 font-normal">
+                <SortHeader label="Value" column="value" sort={sort} onSort={onSort} align="right" />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -88,6 +94,7 @@ export function GroupedInventory({
                           {[kind, it.level ? `CP${it.level}` : null].filter(Boolean).join(" · ")}
                         </span>
                       ) : null}
+                      {itemValuesLine(it) ? <span className="block max-w-[40rem] text-[11px] text-fg-muted">{itemValuesLine(it)}</span> : null}
                     </SetHover>
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-fg">{g.total.toLocaleString("en-US")}</td>
@@ -143,7 +150,15 @@ export function GroupedInventory({
                       <span className="text-fg-subtle">—</span>
                     )}
                   </td>
-                  <td className="px-3 py-1.5 text-fg-muted">{it.trait ?? <span className="text-fg-subtle">—</span>}</td>
+                  <td className="px-3 py-1.5 text-fg-muted" title={it.traitText ? esoPlainText(it.traitText) : undefined}>
+                    {it.trait ?? <span className="text-fg-subtle">—</span>}
+                  </td>
+                  <td
+                    className="px-3 py-1.5 text-right tabular-nums text-gold"
+                    title={it.value && g.total > 1 ? `${formatGold(it.value * g.total)} for all ${g.total.toLocaleString("en-US")}` : undefined}
+                  >
+                    {it.value ? formatGold(it.value) : <span className="text-fg-subtle">—</span>}
+                  </td>
                 </tr>
               );
             })}

@@ -57,9 +57,9 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 const DAY = 86_400;
 
-/** The fields the newest snapshot addon writes; a save without them came from an older one. */
+/** The fields the newest snapshot addon writes (0.9.46: the character sheet); a save without them came from an older one. */
 function savedByCurrentAddon(c: Character): boolean {
-  return c.riding !== undefined || c.buffs !== undefined || c.backpack !== undefined;
+  return c.stats !== undefined && c.stats !== null;
 }
 
 export function checkHealth(input: HealthInput): HealthCheck[] {
@@ -221,7 +221,7 @@ export function checkHealth(input: HealthInput): HealthCheck[] {
           id: "character-saves",
           title: "Character saves",
           status: "note",
-          detail: `${plural(older.length, "character")} last saved by an older addon, so buffs, riding, skill points and bag space are unknown for them.`,
+          detail: `${plural(older.length, "character")} last saved by an older addon, so their stats, slotted skills and values are missing (and, before 0.9.43, buffs, riding, skill points and bag space).`,
           fix: "Log each of them in once (or /reloadui on each).",
           examples: examples(older.map((c) => c.name)),
         }

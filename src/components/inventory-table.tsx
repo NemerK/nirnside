@@ -6,12 +6,14 @@ import { Ban, Hand } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import { SetHover } from "@/components/set-hover";
 import { SortHeader, useSort } from "@/components/sort-header";
-import { locationLabel, qualityText } from "@/lib/format";
+import { formatGold, locationLabel, qualityText } from "@/lib/format";
+import { esoPlainText } from "@/lib/text/eso-markup";
+import { itemValuesLine } from "@/lib/party/inventory";
 import { bagSubtypeLabel } from "@/lib/game/item-category";
 import { sortRows } from "@/lib/ui/column-sort";
 import type { Item } from "@/lib/snapshot/schema";
 
-type InventoryColumn = "item" | "qty" | "location" | "owner" | "set" | "trait";
+type InventoryColumn = "item" | "qty" | "location" | "owner" | "set" | "trait" | "value";
 
 function columnValue(item: Item, key: InventoryColumn): string | number | null {
   switch (key) {
@@ -27,8 +29,12 @@ function columnValue(item: Item, key: InventoryColumn): string | number | null {
       return item.setName;
     case "trait":
       return item.trait;
+    case "value":
+      return item.value ?? null;
   }
 }
+
+
 
 function setKey(item: Item): string {
   return `${item.setId ?? ""}|${item.setName ?? ""}`;
@@ -65,6 +71,9 @@ export function InventoryTable({ items, setHrefs }: { items: Item[]; setHrefs: R
               </th>
               <th className="px-3 py-2.5">
                 <SortHeader label="Trait" column="trait" sort={sort} onSort={onSort} />
+              </th>
+              <th className="px-3 py-2.5">
+                <SortHeader label="Value" column="value" sort={sort} onSort={onSort} align="right" />
               </th>
             </tr>
           </thead>
@@ -103,6 +112,7 @@ export function InventoryTable({ items, setHrefs }: { items: Item[]; setHrefs: R
                     </div>
                   ) : null}
                   {it.level && <div className="text-xs text-fg-subtle">CP{it.level}</div>}
+                  {itemValuesLine(it) ? <div className="max-w-[44rem] text-xs text-fg-muted">{itemValuesLine(it)}</div> : null}
                   </SetHover>
                 </td>
                 <td className="px-3 py-2.5 text-right tabular-nums text-fg-muted">
@@ -123,7 +133,15 @@ export function InventoryTable({ items, setHrefs }: { items: Item[]; setHrefs: R
                     "—"
                   )}
                 </td>
-                <td className="px-3 py-2.5 text-fg-muted">{it.trait ?? "—"}</td>
+                <td className="px-3 py-2.5 text-fg-muted" title={it.traitText ? esoPlainText(it.traitText) : undefined}>
+                  {it.trait ?? "—"}
+                </td>
+                <td
+                  className="px-3 py-2.5 text-right tabular-nums text-gold"
+                  title={it.value && it.count > 1 ? `${formatGold(it.value * it.count)} for the stack` : undefined}
+                >
+                  {it.value ? formatGold(it.value) : <span className="text-fg-subtle">—</span>}
+                </td>
               </tr>
             ))}
           </tbody>

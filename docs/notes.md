@@ -13,9 +13,11 @@ work and delete it here.
   (prompt after a patch? read more of it at logout, where that is cheap?).
 - **Nirnhoned on armor vs weapons.** The same trait name does different
   things on armor and on weapons. The model should know both.
-- **Stat values.** Base, critical chance, critical damage, and so on. We
-  might incorporate these. That would be combat math, which the rules leave
-  out today, so it needs its own decision first.
+- **Stat values.** Recorded since Snapshot 0.9.46: the character sheet at
+  each save (the Stats window's rows and every Advanced Stat, critical
+  chance and damage included), with the game's own numbers. Still open:
+  working values out (what a change of gear would do). That is combat math,
+  which the rules leave out today, so it needs its own decision first.
 - **Web version and privacy.** The rules now record the direction: private
   accounts, sharing chosen modules, no pooled catalog. Still to decide:
   how shared data is protected (the old rule asked for end-to-end

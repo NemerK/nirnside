@@ -26,6 +26,7 @@ const char = (over: Record<string, unknown> = {}) =>
     alliance: "Ebonheart Pact",
     champion: [{ name: "Warfare", stars: [{ name: "Deadly Aim" }] }],
     riding: { speed: 60 },
+    stats: { main: [{ key: "health_max", stat: 1, value: 20000 }], advanced: [] },
     ...over,
   });
 
@@ -77,7 +78,7 @@ describe("health check", () => {
         input({
           catalogPatch: "API101046",
           addonApiVersion: 101046,
-          characters: [char(), char({ id: "c2", name: "Old", riding: undefined })],
+          characters: [char(), char({ id: "c2", name: "Old", riding: undefined, stats: undefined })],
           items: [{ name: "Bread", placed: false }],
           account: { apiVersion: 101051, lastSnapshot: 1_000_000 - 9 * 86_400 },
         }),

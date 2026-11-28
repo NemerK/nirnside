@@ -142,7 +142,7 @@ The full map, with sources, is in `docs/game-model.md`. In short:
 | Champion Points | `champion.ts` | Constellations, cap, slots, unslotted slottables |
 | Weapons and armor lines | `weapon-lines.ts` | What each bar's weapons make, which abilities work there |
 | Mundus, food, companions | `mundus.ts`, `food.ts`, `companions.ts` | Blessings with the game's own text, buffs, companion rules |
-| Buffs, riding | `buffs.ts`, `riding.ts` | Lasting buffs and riding lessons, counted down from the save |
+| Buffs, riding, stats | `buffs.ts`, `riding.ts`, `stats.ts` | Lasting buffs and riding lessons, counted down from the save; the character sheet and every value, worded as the game shows it |
 | Where items belong | `item-category.ts` | The game's inventory tabs; `itemPlace` files every item |
 | Skills | `skills.ts`, `skill-caps.ts`, `class-mastery.ts`, `vengeance.ts` | Categories and order, rank caps, Class Mastery, lines left out |
 | Dailies | `daily-reset.ts`, `pledges.ts`, `pledge-objectives.ts`, `world-bosses.ts`, `zone-dailies.ts`, `writs.ts`, `riding.ts` | The reset clock, pledges, world bosses, zone dailies, crafting writs, riding lessons |

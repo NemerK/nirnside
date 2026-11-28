@@ -1,4 +1,5 @@
-import type { Character } from "../snapshot/schema";
+import type { BarSkill, Character } from "../snapshot/schema";
+import { readStats, type StatsReading } from "./stats";
 import { allianceFit, findRace, type AllianceFit } from "./character";
 import { championState, type ConstellationState } from "./champion";
 import { classLineup, classMasteryAvailable, type ClassLineup } from "./classes";
@@ -73,6 +74,10 @@ export interface CharacterReading {
   skyshards: number | null;
   /** Backpack slots used and total at the save. */
   backpack: { used: number; size: number } | null;
+  /** The character sheet at the save, worded as the game's window. Null before snapshot 0.9.46. */
+  stats: StatsReading | null;
+  /** The skills slotted on each bar at the save, with each one's skill line. Null before snapshot 0.9.46. */
+  skillBars: { bar: "front" | "back"; skills: (BarSkill & { line: string | null })[] }[] | null;
   /** Motif knowledge per style: complete books and known chapters. */
   styles: StyleKnowledge[];
   /** Provisioning recipe families this character knows recipes in, with what they boost. */
@@ -133,6 +138,13 @@ export function readCharacter(
     skillPoints: c.skillPoints ?? null,
     skyshards: c.skyshards ?? null,
     backpack: c.backpack ?? null,
+    stats: readStats(c.stats),
+    skillBars: c.bars
+      ? c.bars.map((b) => ({
+          bar: b.bar,
+          skills: b.skills.map((s) => ({ ...s, line: (s.name && abilityLines.get(s.name.trim().toLowerCase())) || null })),
+        }))
+      : null,
     styles: c.motifs.map(styleKnowledge),
     recipeFamilies: c.recipeLists
       .filter((l) => l.kind === "provisioning")

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { StatEffect } from "../snapshot/schema";
 
 /**
  * The Tamriel catalog contract — the "everything about ESO" half of the app.
@@ -119,6 +120,8 @@ export const CatalogMundus = z.object({
   abilityId: z.number().int().nonnegative().nullable().default(null),
   description: z.string().default(""),
   icon: z.string().nullable().default(null),
+  /** The stone's amounts in the game's numbers. Catalog 0.2.9+. */
+  effects: z.array(StatEffect).default([]).catch([]),
 });
 export type CatalogMundus = z.infer<typeof CatalogMundus>;
 

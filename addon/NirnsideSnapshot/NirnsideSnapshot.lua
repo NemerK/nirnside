@@ -91,6 +91,209 @@ local ALLIANCE = buildLookup({
   { ALLIANCE_EBONHEART_PACT,      "Ebonheart Pact" },
 })
 
+----------------------------------------------------------------------
+-- Values: the numbers the game itself shows, read the way its own windows
+-- read them. Source: ESOUI API 101051 (ESOUIDocumentation.txt) and the
+-- game's UI code (esoui/esoui 12.1.7): ingame/stats/keyboard/
+-- zo_stats_keyboard.lua and zo_statentry_keyboard.lua (Stats, Advanced
+-- Stats, Mundus), ingame/champion/championdatamanager.lua (star bonus),
+-- ingame/actionbar/actionbar.lua (bar slots), item tooltips (gear values).
+----------------------------------------------------------------------
+
+local STAT_FORMAT = buildLookup({
+  { ADVANCED_STAT_DISPLAY_FORMAT_FLAT,             "flat" },
+  { ADVANCED_STAT_DISPLAY_FORMAT_PERCENT,          "percent" },
+  { ADVANCED_STAT_DISPLAY_FORMAT_FLAT_AND_PERCENT, "flatAndPercent" },
+  { ADVANCED_STAT_DISPLAY_FORMAT_FLAT_OR_PERCENT,  "flatOrPercent" },
+})
+
+-- Every stat's constant name, from the API's DerivedStats and
+-- AdvancedStatDisplayType lists (ESOUI API 101051). The game identifies a
+-- stat by a number that can change between patches; the name does not, so
+-- each stat is saved with its name as `key` ("critical_damage").
+local DERIVED_STAT_NAMES = {
+  "ARMOR_RATING", "ATTACK_POWER", "BLOCK", "CRITICAL_CHANCE", "CRITICAL_RESISTANCE",
+  "CRITICAL_STRIKE", "DAMAGE_RESIST_BLEED", "DAMAGE_RESIST_COLD", "DAMAGE_RESIST_DISEASE",
+  "DAMAGE_RESIST_DROWN", "DAMAGE_RESIST_EARTH", "DAMAGE_RESIST_FIRE", "DAMAGE_RESIST_GENERIC",
+  "DAMAGE_RESIST_MAGIC", "DAMAGE_RESIST_OBLIVION", "DAMAGE_RESIST_PHYSICAL",
+  "DAMAGE_RESIST_POISON", "DAMAGE_RESIST_SHOCK", "DODGE", "HEALING_DONE", "HEALING_TAKEN",
+  "HEALTH_MAX", "HEALTH_REGEN_COMBAT", "HEALTH_REGEN_IDLE", "MAGICKA_MAX", "MAGICKA_REGEN_COMBAT",
+  "MAGICKA_REGEN_IDLE", "MISS", "MITIGATION", "MOUNT_STAMINA_MAX", "MOUNT_STAMINA_REGEN_COMBAT",
+  "MOUNT_STAMINA_REGEN_MOVING", "OFFENSIVE_PENETRATION", "PHYSICAL_PENETRATION", "PHYSICAL_RESIST",
+  "POWER", "SPELL_CRITICAL", "SPELL_MITIGATION", "SPELL_PENETRATION", "SPELL_POWER",
+  "SPELL_RESIST", "STAMINA_MAX", "STAMINA_REGEN_COMBAT", "STAMINA_REGEN_IDLE",
+  "WEAPON_AND_SPELL_DAMAGE",
+}
+local ADVANCED_STAT_NAMES = {
+  "ALLIANCE_POINTS_BONUS", "ALL_XP", "ARMOR", "ARMOR_CAP", "BASH_COST", "BASH_DAMAGE",
+  "BLEED_DAMAGE", "BLEED_RESIST", "BLOCK_COST", "BLOCK_MITIGATION", "BLOCK_SPEED", "CC_BREAK_COST",
+  "COIN_BONUS", "COLD_DAMAGE", "COLD_RESIST", "CRITICAL_CHANCE", "CRITICAL_DAMAGE",
+  "CRITICAL_HEALING", "CRITICAL_PERCENT", "CRITICAL_PERCENT_CAP", "CRITICAL_RESIST",
+  "DISEASE_DAMAGE", "DISEASE_RESIST", "DODGE_COST", "EARTH_DAMAGE", "EARTH_RESIST", "FIRE_DAMAGE",
+  "FIRE_RESIST", "FROST_RESIST", "GENERIC_DAMAGE", "GENERIC_RESIST", "HEALING_DONE",
+  "HEALING_DONE_BONUSES", "HEALING_TAKEN", "HEALING_TAKEN_BONUSES", "INSPIRATION_BONUS",
+  "MAGIC_DAMAGE", "MAGIC_RESIST", "MONSTER_KILL_XP", "OBLIVION_DAMAGE", "OBLIVION_RESIST",
+  "PHYSICAL_DAMAGE", "PHYSICAL_PENETRATION", "PHYSICAL_RESIST", "PLAYER_KILL_XP", "POISON_DAMAGE",
+  "POISON_RESIST", "SHOCK_DAMAGE", "SHOCK_RESIST", "SNEAK_COST", "SNEAK_SPEED_REDUCTION",
+  "SPELL_PENETRATION", "SPELL_RESIST", "SPRINT_COST", "SPRINT_SPEED",
+  "SUBSCRIBER_ALLIANCE_POINTS_BONUS", "SUBSCRIBER_ALL_XP", "SUBSCRIBER_COIN_BONUS",
+  "SUBSCRIBER_INSPIRATION_BONUS", "SUBSCRIBER_TELVAR_BONUS", "TELVAR_BONUS",
+  "ULTIMATE_REGEN_COMBAT",
+}
+local function keysFor(prefix, names)
+  local t = {}
+  for _, n in ipairs(names) do
+    local v = _G[prefix .. n]
+    if type(v) == "number" then t[v] = n:lower() end
+  end
+  return t
+end
+local DERIVED_KEY = keysFor("STAT_", DERIVED_STAT_NAMES)
+local ADVANCED_KEY = keysFor("ADVANCED_STAT_DISPLAY_TYPE_", ADVANCED_STAT_NAMES)
+
+-- The Stats window's rows, in its order (zo_stats_keyboard.lua). Constants
+-- are looked up by name, so one missing on some client only drops its row.
+local MAIN_STATS = {
+  "STAT_MAGICKA_MAX", "STAT_MAGICKA_REGEN_COMBAT",
+  "STAT_HEALTH_MAX", "STAT_HEALTH_REGEN_COMBAT",
+  "STAT_STAMINA_MAX", "STAT_STAMINA_REGEN_COMBAT",
+  "STAT_SPELL_POWER", "STAT_POWER",
+  "STAT_SPELL_CRITICAL", "STAT_CRITICAL_STRIKE",
+  "STAT_SPELL_PENETRATION", "STAT_PHYSICAL_PENETRATION",
+  "STAT_SPELL_RESIST", "STAT_PHYSICAL_RESIST",
+  "STAT_CRITICAL_RESISTANCE",
+}
+
+-- The game's name for a derived stat ("Maximum Magicka").
+local function statLabel(stat)
+  local s = safe(function() return GetString("SI_DERIVEDSTATS", stat) end, "")
+  if not s or s == "" then return nil end
+  return zo_strformat("<<1>>", s)
+end
+
+-- Walk the Advanced Stats window's categories, as the game does.
+local function eachAdvancedStat(fn)
+  if not GetNumAdvancedStatCategories or not GetAdvancedStatsCategoryId
+    or not GetAdvancedStatCategoryInfo or not GetAdvancedStatInfo then return end
+  for ci = 1, (safe(GetNumAdvancedStatCategories, 0) or 0) do
+    safe(function()
+      local categoryId = GetAdvancedStatsCategoryId(ci)
+      local categoryName, numStats = GetAdvancedStatCategoryInfo(categoryId)
+      for si = 1, (numStats or 0) do
+        local statType, displayName = GetAdvancedStatInfo(categoryId, si)
+        fn(zo_strformat("<<1>>", categoryName or ""), statType, zo_strformat("<<1>>", displayName or ""))
+      end
+    end)
+  end
+end
+
+local advancedNames = nil
+local function advancedStatLabel(statType)
+  if not advancedNames then
+    advancedNames = {}
+    eachAdvancedStat(function(_, statType_, name) advancedNames[statType_] = name end)
+  end
+  local name = advancedNames[statType]
+  return name ~= "" and name or nil
+end
+
+-- The character sheet at the save: the Stats window's rows and every
+-- Advanced Stat. These include whatever was active at that moment.
+local function gatherStats()
+  local main = {}
+  if GetPlayerStat then
+    for _, constName in ipairs(MAIN_STATS) do
+      local stat = _G[constName]
+      if type(stat) == "number" then
+        local value = safe(function() return GetPlayerStat(stat, STAT_BONUS_OPTION_APPLY_BONUS) end, nil)
+        if type(value) == "number" then
+          main[#main + 1] = {
+            key = (constName:gsub("^STAT_", ""):lower()),
+            stat = stat,
+            label = statLabel(stat),
+            value = value,
+          }
+        end
+      end
+    end
+  end
+  local advanced = {}
+  if GetAdvancedStatValue then
+    eachAdvancedStat(function(category, statType, name)
+      local format, flat, percent = safe(function() return GetAdvancedStatValue(statType) end, nil)
+      advanced[#advanced + 1] = {
+        category = category ~= "" and category or nil,
+        key = ADVANCED_KEY[statType],
+        stat = statType,
+        label = name ~= "" and name or nil,
+        format = STAT_FORMAT[format],
+        flat = type(flat) == "number" and flat or nil,
+        percent = type(percent) == "number" and percent or nil,
+      }
+    end)
+  end
+  return { main = main, advanced = advanced }
+end
+
+-- What an ability adds to the stat sheet: the game's own numbers (the Mundus
+-- tooltip reads these). Empty for abilities that change no listed stat.
+local function abilityStatEffects(abilityId)
+  local out = {}
+  if type(abilityId) ~= "number" or abilityId == 0 then return out end
+  safe(function()
+    if not GetAbilityNumDerivedStats then return end
+    for i = 1, (GetAbilityNumDerivedStats(abilityId) or 0) do
+      local stat, effect = GetAbilityDerivedStatAndEffectByIndex(abilityId, i)
+      if type(effect) == "number" and effect ~= 0 then
+        out[#out + 1] = { key = DERIVED_KEY[stat], stat = stat, label = statLabel(stat), value = effect }
+      end
+    end
+  end)
+  safe(function()
+    if not GetAbilityNumAdvancedStats then return end
+    for i = 1, (GetAbilityNumAdvancedStats(abilityId) or 0) do
+      local stat, format, effect = GetAbilityAdvancedStatAndEffectByIndex(abilityId, i)
+      if type(effect) == "number" and effect ~= 0 then
+        out[#out + 1] = { advanced = true, key = ADVANCED_KEY[stat], stat = stat, label = advancedStatLabel(stat), format = STAT_FORMAT[format], value = effect }
+      end
+    end
+  end)
+  return out
+end
+
+-- An item's numbers, as its tooltip shows them. Only what the item has is
+-- kept, so jewelry has no armor and a potion no weapon damage.
+local function itemValues(link, item)
+  local armor = safe(function() return GetItemLinkArmorRating(link, false) end, nil)
+  if type(armor) == "number" and armor > 0 then item.armor = armor end
+  local power = safe(function() return GetItemLinkWeaponPower(link) end, nil)
+  if type(power) == "number" and power > 0 then item.weaponPower = power end
+  local _, traitText = safe(function() return GetItemLinkTraitInfo(link) end, nil)
+  if type(traitText) == "string" and traitText ~= "" then item.traitText = zo_strformat("<<1>>", traitText) end
+  local _, _, enchantText = safe(function() return GetItemLinkEnchantInfo(link) end, nil)
+  if type(enchantText) == "string" and enchantText ~= "" then item.enchant = zo_strformat("<<1>>", enchantText) end
+  local maxCharges = safe(function() return GetItemLinkMaxEnchantCharges(link) end, nil)
+  if type(maxCharges) == "number" and maxCharges > 0 then
+    item.charges = safe(function() return GetItemLinkNumEnchantCharges(link) end, nil)
+    item.maxCharges = maxCharges
+  end
+  local value = safe(function() return GetItemLinkValue(link, false) end, nil)
+  if type(value) == "number" and value > 0 then item.value = value end
+  -- What using it does: food, drink and set potions say it on the item;
+  -- crafted potions and poisons say it per trait.
+  local uses = {}
+  local hasUse, _, useText = safe(function() return GetItemLinkOnUseAbilityInfo(link) end, nil)
+  if hasUse and type(useText) == "string" and useText ~= "" then uses[#uses + 1] = zo_strformat("<<1>>", useText) end
+  if GetItemLinkTraitOnUseAbilityInfo then
+    for i = 1, 4 do
+      local has, text = safe(function() return GetItemLinkTraitOnUseAbilityInfo(link, i) end, nil)
+      if has and type(text) == "string" and text ~= "" then uses[#uses + 1] = zo_strformat("<<1>>", text) end
+    end
+  end
+  if #uses > 0 then item.use = uses end
+  return item
+end
+
 local function qualityString(link)
   local isMythic = safe(function()
     return ITEM_DISPLAY_QUALITY_MYTHIC_OVERRIDE ~= nil
@@ -425,6 +628,7 @@ local function readItem(bagId, slotIndex, location, owner, ownerId)
     end, nil)
     if item.specializedTypeLabel == "" then item.specializedTypeLabel = nil end
   end
+  safe(function() itemValues(link, item) end)
   return item
 end
 
@@ -1066,6 +1270,11 @@ local function gatherChampion()
             slotted = slot ~= nil,
           }
           if type(slot) == "number" then star.slot = slot end
+          -- What these points give right now, as the Champion window says it.
+          local bonus = safe(function()
+            return GetChampionSkillCurrentBonusText and GetChampionSkillCurrentBonusText(skillId, spent) or nil
+          end, nil)
+          if type(bonus) == "string" and bonus ~= "" then star.bonus = zo_strformat("<<1>>", bonus) end
           local kind = championKind(skillId)
           if kind then star.kind = kind end
           if type(GetChampionSkillIcon) == "function" then
@@ -1127,6 +1336,7 @@ local function gatherEquipped()
         type = safe(function() return (pieceTypeInfo(link)) end, nil),
         scribing = {},
       }
+      safe(function() itemValues(link, equipped[#equipped]) end)
     end
   end
   return equipped
@@ -2875,7 +3085,7 @@ local function gatherBuffs()
   local nowGame = safe(function() return GetFrameTimeSeconds() end, nil)
   local nowUnix = GetTimeStamp()
   for i = 1, n do
-    local name, startedAt, endsAt, _, stacks, icon, _, _, _, _, abilityId = safe(function()
+    local name, startedAt, endsAt, buffSlot, stacks, icon, _, _, _, _, abilityId = safe(function()
       return GetUnitBuffInfo("player", i)
     end, nil)
     if type(name) == "string" and name ~= "" then
@@ -2892,9 +3102,19 @@ local function gatherBuffs()
           stacks = type(stacks) == "number" and stacks > 1 and stacks or nil,
           endsAt = remaining and (nowUnix + remaining) or nil,
           mundus = boon ~= nil or nil,
-          -- The game's own text, with this patch's numbers, for blessings only.
-          description = boon and type(abilityId) == "number" and safe(function() return abilityDescription(abilityId) end, nil) or nil,
         }
+        local entry = out[#out]
+        -- The effect's own text with this character's numbers, as the buff
+        -- tooltip shows it; the ability's text when the game has none.
+        local text = type(buffSlot) == "number" and GetAbilityEffectDescription
+          and safe(function() return GetAbilityEffectDescription(buffSlot) end, nil) or nil
+        if type(text) ~= "string" or text == "" then
+          text = type(abilityId) == "number" and safe(function() return abilityDescription(abilityId) end, nil) or nil
+        end
+        if type(text) == "string" and text ~= "" then entry.description = zo_strformat("<<1>>", text) end
+        -- What it adds to the stat sheet (a Mundus stone's amount).
+        local effects = abilityStatEffects(abilityId)
+        if #effects > 0 then entry.effects = effects end
       end
     end
   end
@@ -2984,6 +3204,48 @@ local function gatherCompanions(previous)
   return out
 end
 
+-- The skills slotted on the front and back bars, slot 1 to 5 and the
+-- ultimate, the way the action bar reads them (actionbar.lua).
+local function gatherBars()
+  local bars = {}
+  if not GetSlotBoundId or type(ACTION_BAR_FIRST_NORMAL_SLOT_INDEX) ~= "number"
+    or type(ACTION_BAR_ULTIMATE_SLOT_INDEX) ~= "number" then return bars end
+  local first, last = ACTION_BAR_FIRST_NORMAL_SLOT_INDEX + 1, ACTION_BAR_ULTIMATE_SLOT_INDEX + 1
+  for _, b in ipairs({ { HOTBAR_CATEGORY_PRIMARY, "front" }, { HOTBAR_CATEGORY_BACKUP, "back" } }) do
+    local category, barName = b[1], b[2]
+    if type(category) == "number" then
+      local skills = {}
+      for slot = first, last do
+        safe(function()
+          local id = GetSlotBoundId(slot, category)
+          if type(id) ~= "number" or id == 0 then return end
+          local slotType = GetSlotType and GetSlotType(slot, category) or nil
+          local crafted = ACTION_TYPE_CRAFTED_ABILITY ~= nil and slotType == ACTION_TYPE_CRAFTED_ABILITY
+          if not crafted and ACTION_TYPE_ABILITY ~= nil and slotType ~= nil and slotType ~= ACTION_TYPE_ABILITY then return end
+          local abilityId = crafted and craftedAbilityIdToAbilityId(id) or id
+          local description = nil
+          if crafted and GetCraftedAbilityDescription then
+            description = safe(function() return GetCraftedAbilityDescription(id) end, nil)
+          end
+          if type(description) ~= "string" or description == "" then description = abilityDescription(abilityId) end
+          local name = GetSlotName and GetSlotName(slot, category) or nil
+          skills[#skills + 1] = {
+            slot = slot - first + 1,
+            ultimate = slot == last or nil,
+            abilityId = abilityId,
+            craftedAbilityId = crafted and id or nil,
+            name = name and name ~= "" and zo_strformat("<<1>>", name) or nil,
+            icon = GetSlotTexture and normIcon((GetSlotTexture(slot, category))) or nil,
+            description = description and description ~= "" and zo_strformat("<<1>>", description) or nil,
+          }
+        end)
+      end
+      bars[#bars + 1] = { bar = barName, skills = skills }
+    end
+  end
+  return bars
+end
+
 local function gatherCharacter()
   local name = safe(function() return zo_strformat("<<1>>", GetUnitName("player")) end, "Unknown")
   local vampire, werewolf = gatherCurse()
@@ -3011,6 +3273,8 @@ local function gatherCharacter()
     skillPoints = safe(function() return GetAvailableSkillPoints() end, nil),
     skyshards = safe(function() return GetNumSkyShards() end, nil),
     backpack = safe(function() return bagSpace(BAG_BACKPACK) end, nil),
+    stats = safe(function() return gatherStats() end, nil),
+    bars = safe(function() return gatherBars() end, nil),
     attributes = {
       magicka = safe(function() return GetAttributeSpentPoints(ATTRIBUTE_MAGICKA) end, 0),
       health  = safe(function() return GetAttributeSpentPoints(ATTRIBUTE_HEALTH) end, 0),

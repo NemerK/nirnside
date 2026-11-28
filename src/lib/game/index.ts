@@ -39,3 +39,4 @@ export * from "./vengeance";
 export * from "./mythics";
 export * from "./transmute";
 export * from "./writs";
+export * from "./stats";
