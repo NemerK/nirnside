@@ -73,6 +73,7 @@ export function importCatalogBundle(
   for (const a of bundle.achievements) push("achievement", a, a.category, a.subtype);
   for (const m of bundle.mundus) push("mundus", m, null, null);
   for (const f of bundle.food) push("food", f, f.kind, f.recipeList || null);
+  for (const r of bundle.recipes) push("recipe", r, r.kind, r.craft);
 
   const selectStmt = db.prepare("SELECT source, json FROM catalog WHERE domain = ? AND id = ?");
   const upsertStmt = db.prepare(`

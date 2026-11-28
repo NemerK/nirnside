@@ -1,21 +1,14 @@
+import { TRADESKILLS, type Tradeskill } from "./tradeskills";
+
 /**
  * Crafting writs: one daily writ per crafting profession, from that
  * profession's writ board, once the character has certified in it.
  * Source: UESP Online:Crafting Writs.
  *
- * The order is the game's crafting order: the three equipment crafts, then
- * enchanting, alchemy, provisioning, and jewelry crafting.
+ * One writ per craft, in the game's crafting order (tradeskills.ts).
  */
-export const WRIT_CRAFTS = [
-  "blacksmithing",
-  "clothing",
-  "woodworking",
-  "enchanting",
-  "alchemy",
-  "provisioning",
-  "jewelry",
-] as const;
-export type WritCraft = (typeof WRIT_CRAFTS)[number];
+export const WRIT_CRAFTS = TRADESKILLS;
+export type WritCraft = Tradeskill;
 
 /** Who the writ is for, as the game names the writ ("Blacksmith Writ"). */
 export const WRIT_LABELS: Record<WritCraft, string> = {

@@ -13,7 +13,7 @@ import { StatEffect } from "../snapshot/schema";
 export const CatalogSource = z.enum(["ingame", "community", "reference"]);
 export type CatalogSource = z.infer<typeof CatalogSource>;
 
-export const CatalogDomain = z.enum(["set", "skillline", "skill", "cp", "grimoire", "script", "achievement", "mundus", "food"]);
+export const CatalogDomain = z.enum(["set", "skillline", "skill", "cp", "grimoire", "script", "achievement", "mundus", "food", "recipe"]);
 export type CatalogDomain = z.infer<typeof CatalogDomain>;
 
 const base = {
@@ -142,6 +142,54 @@ export const CatalogFood = z.object({
 });
 export type CatalogFood = z.infer<typeof CatalogFood>;
 
+/**
+ * A provisioning recipe or furnishing plan, as the game's crafting station
+ * and tooltip describe it (Catalog 0.2.11+). Keyed by what it makes:
+ * `recipe-<result item id>`. The game doesn't say where a plan drops.
+ */
+const RecipeItem = z.object({
+  itemId: z.number().int().positive().nullable().optional().catch(undefined),
+  name: z.string().default(""),
+  icon: z.string().nullable().optional(),
+  quantity: z.number().int().nonnegative().nullable().optional(),
+  quality: z.number().int().nonnegative().nullable().optional(),
+});
+export const CatalogRecipe = z.object({
+  ...base,
+  list: z.string().nullable().default(null),
+  kind: z.enum(["provisioning", "furnishing"]).default("provisioning"),
+  /** Nirnside's key for the craft whose station makes it (blacksmithing, clothing, …). */
+  craft: z.string().nullable().default(null),
+  /** The game's name for that craft ("Jewelry Crafting"). */
+  craftName: z.string().nullable().default(null),
+  /** "Requires Recipe Quality N". */
+  qualityReq: z.number().int().nonnegative().nullable().default(null),
+  levelReq: z.number().int().nonnegative().nullable().default(null),
+  /** "Requires Metalworking 3": the craft, its level passive's name, and the level. */
+  requires: z
+    .array(z.object({ craft: z.string().nullable().optional(), passive: z.string().nullable().optional(), level: z.number().int().positive() }))
+    .default([])
+    .catch([]),
+  ingredients: z.array(RecipeItem).default([]).catch([]),
+  result: RecipeItem.extend({
+    stack: z.number().int().positive().nullable().optional(),
+    sellPrice: z.number().int().nonnegative().nullable().optional(),
+    flavor: z.string().nullable().optional(),
+  }).nullable().default(null).catch(null),
+  /** Where the game files a furnishing, its theme and placement limit. */
+  furnishing: z
+    .object({
+      category: z.string().nullable().optional(),
+      subcategory: z.string().nullable().optional(),
+      theme: z.string().nullable().optional(),
+      limit: z.string().nullable().optional(),
+    })
+    .nullable()
+    .default(null)
+    .catch(null),
+});
+export type CatalogRecipe = z.infer<typeof CatalogRecipe>;
+
 /** A domain -> entries bundle, as stored in the reference JSON seeds. */
 export const CatalogBundle = z.object({
   patch: z.string().default("U50"),
@@ -155,6 +203,7 @@ export const CatalogBundle = z.object({
   achievements: z.array(CatalogAchievement).default([]),
   mundus: z.array(CatalogMundus).default([]),
   food: z.array(CatalogFood).default([]),
+  recipes: z.array(CatalogRecipe).default([]).catch([]),
 });
 export type CatalogBundle = z.infer<typeof CatalogBundle>;
 

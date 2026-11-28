@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { classColor } from "@/lib/classes";
+import type { CatalogRecipe } from "@/lib/catalog/schema";
 import {
   KnowledgeDetail,
   listTally,
@@ -48,10 +49,13 @@ export function PartyKnowledge({
   characters,
   initialCharId,
   initialTab,
+  recipeBook = [],
 }: {
   characters: KnowledgeCharacterView[];
   initialCharId?: string;
   initialTab?: KnowledgeTab;
+  /** Every recipe and plan from the catalog scan; empty until one. */
+  recipeBook?: CatalogRecipe[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -118,7 +122,7 @@ export function PartyKnowledge({
                 {open.className}
               </span>
             </header>
-            <KnowledgeDetail key={open.id} character={open} initialTab={initialTab} fill />
+            <KnowledgeDetail key={open.id} character={open} initialTab={initialTab} recipeBook={recipeBook} fill />
           </>
         ) : null}
       </section>

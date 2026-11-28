@@ -19,6 +19,7 @@ import { Wardrobe } from "@/components/wardrobe";
 import { CharacterChampion } from "@/components/character-champion";
 import { CharacterScripts, type CharacterScript } from "@/components/character-scripts";
 import { KnowledgeDetail } from "@/components/knowledge-board";
+import { getRecipes } from "@/lib/db/catalog-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -280,6 +281,15 @@ function GearModule({ c }: { c: Character }) {
   );
 }
 
+/** Every recipe and plan from the catalog scan; empty until one (Catalog 0.2.11+). */
+function recipeBookEntries() {
+  try {
+    return getRecipes().map((r) => r.entry);
+  } catch {
+    return [];
+  }
+}
+
 function CraftingModule({ c }: { c: Character }) {
   return (
     <div className="party-module p-5">
@@ -294,9 +304,11 @@ function CraftingModule({ c }: { c: Character }) {
           motifs: c.motifs ?? [],
           recipes: presentRecipeLists(c.recipeLists, "provisioning").lists,
           plans: presentRecipeLists(c.recipeLists, "furnishing").lists,
+          craftLevels: c.craftLevels ?? null,
           scribingCount: c.scribingScripts.length,
         }
       }
+      recipeBook={recipeBookEntries()}
     />
     </div>
   );

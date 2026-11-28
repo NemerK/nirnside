@@ -12,10 +12,11 @@ import {
   formatResearchRemaining,
   motifKey,
   presentMotifs,
-  recipeQualityClass,
   type PresentedResearch,
 } from "@/lib/knowledge/present";
 import type { MotifStyle, RecipeList, ResearchLine } from "@/lib/snapshot/schema";
+import type { CatalogRecipe } from "@/lib/catalog/schema";
+import { RecipeBook, type KnownFilter } from "@/components/party/recipe-book";
 import { sortRows } from "@/lib/ui/column-sort";
 
 export type KnowledgeTab = "research" | "motifs" | "recipes" | "plans";
@@ -29,6 +30,8 @@ export interface KnowledgeCharacterView {
   motifs: MotifStyle[];
   recipes: RecipeList[];
   plans: RecipeList[];
+  /** Level in each craft's level passive and Recipe Quality (snapshot 0.9.48+). */
+  craftLevels?: Record<string, number> | null;
   scribingCount: number;
 }
 
@@ -39,7 +42,6 @@ const TABS: { key: KnowledgeTab; label: string }[] = [
   { key: "plans", label: "Plans" },
 ];
 
-type KnownFilter = "all" | "known" | "missing";
 
 const COLUMNS =
   "grid-cols-[2.5rem_minmax(0,1fr)] sm:grid-cols-[2.5rem_minmax(7rem,1.15fr)_repeat(4,minmax(6.5rem,1fr))]";
@@ -130,12 +132,15 @@ export function KnowledgeDetail({
   initialTab,
   initialQuery,
   fill = false,
+  recipeBook = [],
 }: {
   character: KnowledgeCharacterView;
   initialTab?: KnowledgeTab;
   initialQuery?: string;
   /** Let the page scroll the content instead of a fixed-height box. */
   fill?: boolean;
+  /** Every recipe and plan from the catalog scan (Catalog 0.2.11+); empty until one. */
+  recipeBook?: CatalogRecipe[];
 }) {
   const [tab, setTab] = useState<KnowledgeTab>(
     TABS.some((t) => t.key === initialTab) ? initialTab! : "research",
@@ -199,6 +204,13 @@ export function KnowledgeDetail({
           <ResearchPanel research={character.research} query={q} filter={filter} />
         ) : tab === "motifs" ? (
           <MotifPanel styles={character.motifs} query={q} filter={filter} />
+        ) : recipeBook.some((r) => r.kind === (tab === "plans" ? "furnishing" : "provisioning")) ? (
+          <RecipeBook
+            entries={recipeBook.filter((r) => r.kind === (tab === "plans" ? "furnishing" : "provisioning"))}
+            character={{ recipeLists: [...character.recipes, ...character.plans], craftLevels: character.craftLevels }}
+            query={q}
+            known={filter}
+          />
         ) : (
           <RecipePanel
             lists={tab === "plans" ? character.plans : character.recipes}
@@ -603,7 +615,7 @@ function RecipePanel({
                   ) : (
                     <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-border" />
                   )}
-                  <span className={recipe.known ? recipeQualityClass(recipe.quality) : "text-fg-subtle"}>{recipe.name}</span>
+                  <span className={recipe.known ? "text-fg" : "text-fg-subtle"}>{recipe.name}</span>
                 </li>
               ))}
             </ul>
