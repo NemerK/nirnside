@@ -34,6 +34,19 @@ function manifestVersion(txtPath: string): string | null {
   }
 }
 
+/** The version and API version an addon Nirnside ships declares in its manifest. */
+export function bundledAddonManifest(addon: string): { version: string | null; apiVersion: number | null } {
+  try {
+    const text = readFileSync(join(sourceDir(addon), `${addon}.txt`), "utf8");
+    const version = text.match(/^##\s*Version:\s*(.+)$/im)?.[1].trim() ?? null;
+    // A manifest may list two versions ("101050 101051"); the highest counts.
+    const apis = (text.match(/^##\s*APIVersion:\s*(.+)$/im)?.[1] ?? "").split(/\s+/).map(Number).filter(Number.isFinite);
+    return { version, apiVersion: apis.length ? Math.max(...apis) : null };
+  } catch {
+    return { version: null, apiVersion: null };
+  }
+}
+
 /** Every ESO AddOns directory we can find (creating it under a real env dir). */
 export function findAddOnsDirs(): string[] {
   const dirs: string[] = [];

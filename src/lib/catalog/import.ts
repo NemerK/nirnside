@@ -114,8 +114,10 @@ export function importCatalogBundle(
   // Record the highest-precedence source present, for UI honesty.
   const prev = (getCatalogMeta()?.source ?? "reference") as keyof typeof SOURCE_RANK;
   const incoming = bundle.source;
-  const bestSource = SOURCE_RANK[incoming] >= SOURCE_RANK[prev] ? incoming : prev;
-  setMeta("catalog", { patch: bundle.patch, source: bestSource, updatedAt: Date.now() });
+  // The label describes the best source present: a seed loaded after a scan doesn't relabel the scan's patch.
+  if (SOURCE_RANK[incoming] >= SOURCE_RANK[prev]) {
+    setMeta("catalog", { patch: bundle.patch, source: incoming, updatedAt: Date.now() });
+  }
 
   return counts;
 }
