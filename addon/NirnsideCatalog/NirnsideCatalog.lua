@@ -69,8 +69,11 @@ local function setBonusesFromId(setId)
   return bonuses, maxEquip
 end
 
+-- Ids: lowercase, apostrophes dropped, other runs of non-letters a hyphen.
+-- The app files every row by the same rule (src/lib/game/catalog-ids.ts).
 local function slug(s)
   s = zo_strformat("<<1>>", s or "")
+  s = s:gsub("'", ""):gsub("\226\128\153", "")
   s = s:lower():gsub("[^%w]+", "-"):gsub("^-+", ""):gsub("-+$", "")
   return s
 end
@@ -78,8 +81,6 @@ end
 -- Skill-line ids in the seed drop apostrophes (line-dawns-wrath). The general
 -- slug keeps them as hyphens, which would file a second copy with no class.
 local function lineSlug(s)
-  s = zo_strformat("<<1>>", s or "")
-  s = s:gsub("['’]", "")
   return slug(s)
 end
 
@@ -99,21 +100,35 @@ local function gatherCP()
   safe(function()
     local numDisc = GetNumChampionDisciplines()
     for d = 1, numDisc do
+      -- The game names a constellation by its id but lists its stars by its
+      -- position. Passing the id to both filed every star under another
+      -- constellation (before 0.2.7); the snapshot addon always used the position.
       local discId = GetChampionDisciplineId(d)
       local discName = zo_strformat("<<1>>", GetChampionDisciplineName(discId))
-      local numSkills = GetNumChampionDisciplineSkills(discId)
+      local numSkills = GetNumChampionDisciplineSkills(d)
       for s = 1, numSkills do
-        local skillId = GetChampionSkillId(discId, s)
+        local skillId = GetChampionSkillId(d, s)
         local name = safe(function() return zo_strformat("<<1>>", GetChampionSkillName(skillId)) end, nil)
         if name and name ~= "" then
-          local slottable = safe(function()
-            return GetChampionSkillType(skillId) == CHAMPION_SKILL_TYPE_SLOTTABLE
-          end, false)
+          -- Ask the game whether the star's type can be slotted, as the snapshot
+          -- addon does. Before 0.2.7 this compared against a constant ESO doesn't
+          -- define, so every star was stored as passive.
+          local kind = safe(function()
+            if type(IsChampionSkillClusterRoot) == "function" and IsChampionSkillClusterRoot(skillId) then
+              return "cluster"
+            end
+            if type(CanChampionSkillTypeBeSlotted) == "function"
+              and CanChampionSkillTypeBeSlotted(GetChampionSkillType(skillId)) then
+              return "slottable"
+            end
+            return "passive"
+          end, "passive")
           out[#out + 1] = {
-            id = "cp-" .. slug(discName) .. "-" .. slug(name),
+            -- A star's name is unique in the game; its constellation is a fact about it.
+            id = "cp-" .. slug(name),
             name = name,
             category = discName,
-            type = slottable and "slottable" or "passive",
+            type = kind,
             description = safe(function() return zo_strformat("<<1>>", GetChampionSkillDescription(skillId)) end, ""),
             maxPoints = safe(function() return GetChampionSkillMaxPoints(skillId) end, 50) or 50,
             icon = safe(function()
@@ -231,7 +246,8 @@ local function gatherSkills()
                 }
               end
             else
-            local aName, texture, _, passive = GetSkillAbilityInfo(skillType, lineIndex, a)
+            -- The fifth return marks an ultimate (before 0.2.7 every ultimate was stored as "active").
+            local aName, texture, _, passive, ultimate = GetSkillAbilityInfo(skillType, lineIndex, a)
             aName = zo_strformat("<<1>>", aName)
             if aName and aName ~= "" then
               local abilityId = safe(function()
@@ -279,7 +295,7 @@ local function gatherSkills()
                 id = "sk-" .. slug(aName),
                 name = aName,
                 lineId = lineId,
-                type = passive and "passive" or "active",
+                type = (passive and "passive") or (ultimate and "ultimate") or "active",
                 description = safe(function()
                   return abilityId and GetAbilityDescription and zo_strformat("<<1>>", GetAbilityDescription(abilityId)) or ""
                 end, ""),

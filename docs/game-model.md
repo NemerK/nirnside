@@ -247,33 +247,39 @@ Sources: UESP (Online:Crafting_Motifs, Online:Mundus_Stones,
 Online:Divines, Online:Provisioning, Online:Recipes, Online:Rapport) and the
 ZOS Companions System Guide.
 
-## Skill lines: one id, always with its class
+## The catalog: one row per thing, the game's facts
 
-Every skill line has one catalog id, `skillLineId(name, className)` in
-`skills.ts`: "line-" + its name, lowercase, apostrophes dropped
-("Dawn's Wrath" → `line-dawns-wrath`). Class Mastery is one tree per class
-under one name, so its id carries the class (`line-class-mastery-templar`).
+Every catalog row has one id, from `game/catalog-ids.ts`: a kind prefix
+and the name, lowercase, accents and apostrophes dropped ("Mother's Sorrow"
+→ `set-mothers-sorrow`). Skill lines use `skillLineId` (Class Mastery's
+carries its class); Champion stars are keyed by name alone, since a star's
+name is unique and its constellation is a fact about it. Achievements and
+dishes keep their own ids.
 
-- **Import.** The catalog import files every line, and every ability's
-  line, under that id, whatever id a scan sent. The indexed columns come
-  from the merged entry, so a scan that sends no class can't blank it.
-- **Repair on load.** `catalog/heal.ts` folds lines stored under any other
-  id into their one row (the higher-ranked source wins per field, the other
-  fills gaps), moves their abilities, and drops Class Mastery rows with no
-  class. It runs at every start and leaves a clean catalog untouched.
-- **The game names the class.** From Snapshot 0.9.44 and Catalog 0.2.6,
-  every class line carries its class: the player's class for their own
-  lines, else the class id the game gives the line.
+- **Import.** Every row, and every ability's line, is filed under its id,
+  whatever id a scan or seed sent. The indexed columns come from the merged
+  entry, so a scan that sends no class can't blank it.
+- **Repair** (`catalog/heal.ts`, after every import and at every start):
+  rows under any other id are folded into their one row (the higher-ranked
+  source wins per field, the other fills gaps), a line's abilities move
+  with it, and Class Mastery with no class is dropped. Champion stars get
+  the constellation and type the characters' saves show; a star no save
+  covers moves only when the scanned evidence agrees unanimously.
+  Idempotent: a clean catalog is left as it is.
+- **The game names things right** (Catalog 0.2.7, Snapshot 0.9.44): class
+  lines carry their class, Champion stars are read by their constellation's
+  position and asked whether they can be slotted, ultimates are marked.
+- **The seed is the game's data.** `data/catalog/sets.json` and
+  `champion-points.json` are copied from an in-game scan (set ids, zones,
+  bonuses with numbers); hand-written facts were wrong.
 
-Why: before November 2026 the catalog addon slugged the apostrophe into a
-hyphen (`line-dawn-s-wrath`) and never sent a class. The catalog never
-forgets, so those rows stayed beside the seed's as a second copy with no
-class, and every list of class lines (the roster's skill grid, the target
-picker) showed them in a classless "Class" group. The addon was fixed on
-24 November, but the stored rows weren't, and a later patch hid them in one
-picker only. `catalog/skill-lines.test.ts` fails if any of this comes back:
-a scan's line under another id, a stored duplicate, a class line without
-its class, or a seed line off its id.
+What went wrong before (November 2026, found on the owner's own catalog):
+ids built by the addon and by hand disagreed on apostrophes and wording, so
+one thing was stored twice (Dawn's Wrath, Mother's Sorrow, Assassin's
+Blade); the Champion scan filed every star under another constellation and
+as passive; ultimates were stored as active; the seed's set ids were
+invented. Tests in `catalog/skill-lines.test.ts` and
+`catalog/catalog-heal.test.ts` fail if any of it comes back.
 
 ## The item index: where everything belongs
 

@@ -1,8 +1,9 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { importCatalogBundle } from "./import";
+import { healCatalog } from "./heal";
 import { deleteExcludedCatalogAndGoals } from "../db/vengeance-cleanup";
-import { healSkillLineIds } from "./heal";
+
 import { getDb } from "../db";
 import { parseLua, type LuaValue } from "../snapshot/lua-parser";
 
@@ -20,10 +21,12 @@ function pruneExcludedCatalogRows(): void {
   // non-ingame script and grimoire so a replaced seed cannot leave those
   // rows behind. An in-game catalog scan is kept.
   db.prepare(`DELETE FROM catalog WHERE domain IN ('script', 'grimoire') AND source != 'ingame'`).run();
-  // One id per skill line: fold in copies an older scan filed under another id.
-  const healed = healSkillLineIds(db);
-  if (healed.folded || healed.dropped) {
-    console.log(`[nirnside] catalog: folded ${healed.folded} duplicate skill line(s), dropped ${healed.dropped} classless Class Mastery row(s).`);
+  // Every import also heals the catalog (catalog/heal.ts); report what this start repaired.
+  const healed = healCatalog(db);
+  if (healed.folded || healed.dropped || healed.relabelled) {
+    console.log(
+      `[nirnside] catalog: folded ${healed.folded} duplicate row(s), dropped ${healed.dropped}, corrected ${healed.relabelled} Champion star(s).`,
+    );
   }
 }
 
