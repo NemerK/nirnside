@@ -7,12 +7,10 @@ import { PageScroll, StickyMenu } from "@/components/ui";
 import { formatRemainingSeconds } from "@/lib/game/daily-reset";
 import {
   WRIT_ABBR,
-  WRIT_CRAFTS,
-  WRIT_LABELS,
   type DailyCell,
   type PresentedCharacterDailies,
-  type WritCraft,
 } from "@/lib/dailies/present";
+import { WRIT_CRAFTS, WRIT_LABELS, type WritCraft } from "@/lib/game/writs";
 import { PLEDGE_GIVER_NAMES, type PledgeGiver } from "@/lib/game/pledges";
 import { sortRows, statusRank } from "@/lib/ui/column-sort";
 import type { SortState } from "@/lib/ui/column-sort";
@@ -29,6 +27,7 @@ function rowOpen(row: PresentedCharacterDailies): boolean {
     row.pledges.maj,
     row.pledges.glirion,
     row.pledges.urgarlag,
+    row.riding,
   ];
   return cells.some((c) => c.status === "available" || c.status === "accepted" || c.status === "ready");
 }
@@ -53,6 +52,20 @@ function DailyCellView({ cell }: { cell: DailyCell }) {
     >
       {done ? <Check className="h-3 w-3" /> : null}
       {held ? <span className="h-1.5 w-1.5 rounded-[2px] bg-amber-500" /> : null}
+    </span>
+  );
+}
+
+/**
+ * The riding lesson: its own timer, not the reset. An empty box is a lesson
+ * waiting; a check is taken, with the hours until the next one beside it.
+ */
+function RidingCellView({ cell }: { cell: DailyCell }) {
+  const hours = cell.status === "cooldown" && cell.remainingSeconds != null ? Math.ceil(cell.remainingSeconds / 3600) : null;
+  return (
+    <span className="inline-flex items-center gap-1" title={cell.title}>
+      <DailyCellView cell={cell} />
+      {hours != null ? <span className="text-[10px] tabular-nums text-fg-subtle">{hours}h</span> : null}
     </span>
   );
 }
@@ -83,6 +96,7 @@ function todayValue(row: PresentedCharacterDailies, key: string): string | numbe
   if (key === "rv") return statusRank(row.randomVeteran.status);
   if (key.startsWith("writ:")) return statusRank(row.writs[key.slice(5) as WritCraft]?.status);
   if (key.startsWith("pledge:")) return statusRank(row.pledges[key.slice(7) as PledgeGiver]?.status);
+  if (key === "riding") return statusRank(row.riding.status);
   return null;
 }
 
@@ -250,6 +264,9 @@ export function DailiesBoard({
                 <PledgeHead giver="maj" today={todayPledges.maj} sort={sort} onSort={onSort} />
                 <PledgeHead giver="glirion" today={todayPledges.glirion} sort={sort} onSort={onSort} />
                 <PledgeHead giver="urgarlag" today={todayPledges.urgarlag} sort={sort} onSort={onSort} />
+                <th className="px-1.5 py-1 text-center font-medium">
+                  <SortHeader label="Ride" column="riding" sort={sort} onSort={onSort} align="center" title="Riding lesson, on its own timer" />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -281,6 +298,9 @@ export function DailiesBoard({
                   <td className="px-1.5 py-0.5 text-center">
                     <DailyCellView cell={r.pledges.urgarlag} />
                   </td>
+                  <td className="px-1.5 py-0.5 text-left">
+                    <RidingCellView cell={r.riding} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -288,7 +308,8 @@ export function DailiesBoard({
         </div>
         <p className="mt-2 text-[11px] leading-relaxed text-fg-subtle">
           Empty box = no quest. A mark in the box = the right quest is picked up and not finished.
-          Check = done for the day. These reset with the daily reset. Zone dailies are on Zones.
+          Check = done for the day. These reset with the daily reset, except the riding lesson, which runs on
+          each character&apos;s own timer (hours to the next lesson beside it). Zone dailies are on Zones.
         </p>
         </>
         )}

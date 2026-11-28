@@ -56,6 +56,8 @@ export function TodayPanel({
   const [error, setError] = useState<string | null>(null);
 
   const shown = rows.filter((r) => initialTracked.includes(r.key));
+  // On their own timer (the riding lesson), so still known after the reset.
+  const known = shown.filter((r) => r.state !== "unknown");
   const done = shown.filter((r) => r.state === "done").length;
 
   async function save(body: object) {
@@ -175,25 +177,34 @@ export function TodayPanel({
         </button>
       </div>
       {!scanned ? (
-        <p className="text-[13px] text-fg-muted">Not logged out since the reset, so today&apos;s dailies are unknown.</p>
+        <>
+          <p className="text-[13px] text-fg-muted">Not logged out since the reset, so today&apos;s dailies are unknown.</p>
+          {known.length > 0 ? <RowList rows={known} className="mt-2" /> : null}
+        </>
       ) : shown.length === 0 ? (
         <p className="text-[13px] text-fg-muted">Nothing tracked. Press Choose to pick dailies.</p>
       ) : (
-        <ul className="max-h-[21rem] space-y-1 overflow-y-auto pr-1">
-          {shown.map((r) => (
-            <li key={r.key} className="flex items-center justify-between gap-3 text-[13px]">
-              <span className="min-w-0 truncate text-fg">
-                {r.label}
-                {r.detail ? <span className="ml-1.5 text-[12px] text-fg-subtle">{r.detail}</span> : null}
-              </span>
-              <span className={`flex shrink-0 items-center gap-1 ${TONE[r.state]}`}>
-                {r.state === "done" ? <Check className="h-3.5 w-3.5" aria-hidden /> : null}
-                {WORD[r.state]}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <RowList rows={shown} />
       )}
     </div>
+  );
+}
+
+function RowList({ rows, className = "" }: { rows: TodayRow[]; className?: string }) {
+  return (
+    <ul className={`max-h-[21rem] space-y-1 overflow-y-auto pr-1 ${className}`}>
+      {rows.map((r) => (
+        <li key={r.key} className="flex items-center justify-between gap-3 text-[13px]">
+          <span className="min-w-0 truncate text-fg">
+            {r.label}
+            {r.detail ? <span className="ml-1.5 text-[12px] text-fg-subtle">{r.detail}</span> : null}
+          </span>
+          <span className={`flex shrink-0 items-center gap-1 ${TONE[r.state]}`}>
+            {r.state === "done" ? <Check className="h-3.5 w-3.5" aria-hidden /> : null}
+            {WORD[r.state]}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

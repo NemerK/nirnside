@@ -23,10 +23,11 @@ export const SHOWCASE_MODULES: ShowcaseModuleDef[] = [
   { id: "wearing", label: "Wearing now", blurb: "The sets your main character has on.", visibility: "public", size: "half" },
   { id: "achievements", label: "Trials, dungeons and arenas", blurb: "Clears, as the game reports them.", visibility: "public", size: "half" },
   { id: "collections", label: "Collections", blurb: "Set pieces, mythics and outfit styles collected.", visibility: "friends", size: "half" },
+  { id: "companions", label: "Companions", blurb: "Companions you've unlocked, with level and rapport.", visibility: "friends", size: "half" },
   { id: "houses", label: "Houses", blurb: "Houses you own, with their photos.", visibility: "public", size: "half" },
   { id: "guilds", label: "Guilds", blurb: "Your guilds and ranks.", visibility: "friends", size: "half" },
   { id: "plan", label: "Plan progress", blurb: "How far each character is towards your targets.", visibility: "friends", size: "half" },
-  { id: "treasury", label: "Treasury", blurb: "Gold and account currencies.", visibility: "private", size: "half" },
+  { id: "treasury", label: "Treasury", blurb: "Gold, account currencies and bank space.", visibility: "private", size: "half" },
   { id: "dailies", label: "Today", blurb: "Today's dailies for every character.", visibility: "private", size: "half" },
 ];
 

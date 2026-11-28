@@ -9,6 +9,7 @@ import { getPartyProfile } from "@/lib/db/party-profile";
 import { profileImageUrl } from "@/lib/profile/media";
 import { livingHome } from "@/lib/home/living";
 import { skillLineCap } from "@/lib/game/skill-caps";
+import { COMPANION_MAX_LEVEL, readAccountCompanions } from "@/lib/game/companions";
 import { classColor, classIcon } from "@/lib/classes";
 import { ALLIANCE_ACCENT, formatNumber, timeAgo } from "@/lib/format";
 import { roster } from "@/lib/party/data";
@@ -161,6 +162,38 @@ export default function ProfilePage() {
     </div>
   );
 
+  // Companions are account-wide: every owned one, read through the model.
+  const companions = readAccountCompanions(a.companions ?? []);
+  const companionsKnown = (a.companions ?? []).length;
+  modules.companions =
+    companions.length === 0 ? (
+      <Empty>
+        {companionsKnown > 0 ? "No companions unlocked yet." : "Not saved yet: log in once with the latest Snapshot addon."}
+      </Empty>
+    ) : (
+      <div>
+        <ul className="space-y-2">
+          {companions.map((m) => (
+            <li key={m.name} className="flex items-center gap-2.5">
+              <GameIcon name={m.name} icon={m.icon} size={28} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] text-fg">{m.name}</span>
+                <span className="text-[11px] text-fg-subtle">
+                  {m.level == null ? "Not seen out yet" : m.rapport ?? (m.theme ? m.theme : "")}
+                </span>
+              </span>
+              <span className="shrink-0 text-[12px] tabular-nums text-fg-muted">
+                {m.level == null ? "" : m.maxed ? "Max level" : `Level ${m.level}/${COMPANION_MAX_LEVEL}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[12px] text-fg-muted">
+          {companions.length} of {companionsKnown} unlocked
+        </p>
+      </div>
+    );
+
   modules.houses =
     houses.length === 0 ? (
       <Empty>No houses owned.</Empty>
@@ -237,6 +270,20 @@ export default function ProfilePage() {
           <dd className="tabular-nums text-fg">{formatNumber(c.value)}</dd>
         </div>
       ))}
+      {a.bankSpace ? (
+        <div className="col-span-2">
+          <dt className="mb-1 flex justify-between text-[12px] text-fg-subtle">
+            <span>Bank space</span>
+            <span className="tabular-nums text-fg-muted">
+              {formatNumber(a.bankSpace.used)} of {formatNumber(a.bankSpace.size)}
+              {a.bankSpace.used >= a.bankSpace.size ? " · full" : ""}
+            </span>
+          </dt>
+          <dd>
+            <Bar value={a.bankSpace.used} max={a.bankSpace.size} color="var(--meter)" />
+          </dd>
+        </div>
+      ) : null}
     </dl>
   );
 
@@ -265,6 +312,7 @@ export default function ProfilePage() {
     wearing: `/party/c/${encodeURIComponent(mainLight.id)}/gear`,
     achievements: "/party/achievements",
     collections: "/party/collections",
+    companions: "",
     houses: "/party/collections?tab=houses",
     guilds: "",
     plan: "/party/planner",

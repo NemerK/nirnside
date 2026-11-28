@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { WRIT_CRAFTS } from "../game/writs";
 import { ALLIANCES } from "../game/character";
 import { coerceCompletedAchievementIds } from "../game/pithka";
 
@@ -294,15 +295,7 @@ export const DailyRandom = z.object({
 });
 export type DailyRandom = z.infer<typeof DailyRandom>;
 
-export const WritCraft = z.enum([
-  "blacksmithing",
-  "clothing",
-  "woodworking",
-  "enchanting",
-  "alchemy",
-  "provisioning",
-  "jewelry",
-]);
+export const WritCraft = z.enum(WRIT_CRAFTS);
 
 export const DailyWrit = z.object({
   craft: WritCraft,

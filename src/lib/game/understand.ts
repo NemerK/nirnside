@@ -69,6 +69,8 @@ export interface CharacterReading {
   riding: RidingReading | null;
   /** Unspent skill points at the save. */
   skillPoints: number | null;
+  /** Skyshard pieces toward the next skill point at the save (GetNumSkyShards). */
+  skyshards: number | null;
   /** Backpack slots used and total at the save. */
   backpack: { used: number; size: number } | null;
   /** Motif knowledge per style: complete books and known chapters. */
@@ -129,6 +131,7 @@ export function readCharacter(
     buffs: readBuffs(c.buffs, now),
     riding: readRiding(c.riding, now),
     skillPoints: c.skillPoints ?? null,
+    skyshards: c.skyshards ?? null,
     backpack: c.backpack ?? null,
     styles: c.motifs.map(styleKnowledge),
     recipeFamilies: c.recipeLists

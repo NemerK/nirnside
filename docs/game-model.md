@@ -11,7 +11,7 @@ The model lives in `src/lib/game/`:
 | `equipment.ts` | Piece kinds (armor weight × slot, jewelry, weapons, shields), the game's piece words (weighted ones, and the words unique pieces use, which give a slot but no weight), worn slots, reading a slot from any wording (`pieceSlotFromText`), which craft makes a piece, which research line covers it, which trait family it takes |
 | `traits.ts` | The 27 researchable traits in research-grid order, plus Ornate and Intricate |
 | `quality.ts` | Item qualities in the game's order, their theme colors |
-| `skills.ts` | Skill line categories in the Skills window's order |
+| `skills.ts` | Skill line categories in the Skills window's order; skyshards per skill point (3) |
 | `set-profile.ts` | What a set comes in: which weights for which slots, jewelry, weapons; its shape (full, monster head-and-shoulders, weapons-only, single-piece) |
 | `loadout.ts` | How worn gear works together: set counts per bar, perfected and normal pieces as one set, two-handers as two, active bonuses (the perfected line needs perfected pieces), body armor per weight |
 | `research.ts` | Trait research per piece kind, whether a piece can be crafted for a set and trait, idle research slots |
@@ -32,6 +32,7 @@ The model lives in `src/lib/game/`:
 | `understand.ts` | `readCharacter`: one character read through every system at once |
 | `skill-caps.ts`, `class-mastery.ts`, `vengeance.ts` | Each skill line's rank cap (never a guessed 50), Class Mastery's rules, and the Vengeance lines Nirnside leaves out |
 | `daily-reset.ts` | The megaserver reset clock (EU 03:00, NA 10:00 UTC; weekly on Tuesday) |
+| `writs.ts` | The seven crafting writs in crafting order, and what the game calls each |
 | `pledges.ts`, `pledge-objectives.ts`, `world-bosses.ts`, `zone-dailies.ts` | Undaunted givers and the community rotation, how a pledge journal shows its difficulty, world-boss and zone dailies by quest id |
 | `currencies.ts` | The wallet: which currencies are character-bound and which account-wide |
 | `pithka.ts` | Trial, dungeon and arena achievements by id, as Pithka's tracker lists them |
@@ -235,6 +236,8 @@ the game.
   buff with its timer; which dish it came from isn't knowable (docs/notes.md).
 - **Riding.** Three lessons (speed, stamina, capacity) up to the caps the
   game reports, and when the next lesson opens, counted from the save.
+  The lesson is shown as a daily (board column, character's Today), but on
+  each character's own timer, so it stays known after the daily reset.
 - **Companions.** Level 1–20, shared across the account. One bar with five
   abilities, and the ultimate at 20. Abilities cost no skill points and
   don't morph. Armor lines need five pieces of a weight. Rapport changes

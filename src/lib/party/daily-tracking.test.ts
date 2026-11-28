@@ -19,3 +19,7 @@ test("the account default applies to every character without their own list", ()
   t = changeTracking(t, { scope: "character", characterId: "c2", keys: null });
   assert.deepEqual(trackedFor(t, "c2"), { keys: ["random-veteran", "writ-clothing"], own: false });
 });
+
+test("the riding lesson is tracked by default", () => {
+  assert.ok(DEFAULT_TRACKED.includes("riding"));
+});

@@ -9,27 +9,9 @@ import {
   type ZoneDailyKind,
   type ZoneDailyZoneId,
 } from "../game/zone-dailies";
-
-export const WRIT_CRAFTS = [
-  "blacksmithing",
-  "clothing",
-  "woodworking",
-  "enchanting",
-  "alchemy",
-  "provisioning",
-  "jewelry",
-] as const;
-export type WritCraft = (typeof WRIT_CRAFTS)[number];
-
-export const WRIT_LABELS: Record<WritCraft, string> = {
-  blacksmithing: "Blacksmith",
-  clothing: "Clothier",
-  woodworking: "Woodworker",
-  enchanting: "Enchanter",
-  alchemy: "Alchemist",
-  provisioning: "Provisioner",
-  jewelry: "Jewelry",
-};
+import { WRIT_CRAFTS, WRIT_LABELS, type WritCraft } from "../game/writs";
+import { readRiding } from "../game/riding";
+import { formatRemainingSeconds } from "../game/daily-reset";
 
 export const WRIT_ABBR: Record<WritCraft, string> = {
   blacksmithing: "BS",
@@ -76,6 +58,8 @@ export interface PresentedCharacterDailies {
   pledges: Record<PledgeGiver, DailyCell>;
   worldBosses: Record<WorldBossZoneId, DailyCell>;
   zoneSlots: Record<string, ZoneSlotCell>;
+  /** Riding lesson: ready, waiting (with time left), or every skill at its cap. */
+  riding: DailyCell;
 }
 
 const UNKNOWN: DailyCell = {
@@ -298,9 +282,26 @@ function randomCell(
   return cell("unknown", `${kind} — not scanned since reset`);
 }
 
+/**
+ * The riding lesson as a daily. It runs on the character's own timer, not
+ * the daily reset, so it is read from the save even when the rest of the
+ * row is out of date: the save says when the next lesson opens.
+ */
+export function ridingCell(character: Pick<Character, "riding">, nowUnix: number): DailyCell {
+  const r = readRiding(character.riding, nowUnix);
+  if (!r) return { ...UNKNOWN, title: "Riding not saved yet: log in once with the latest Snapshot addon" };
+  const skills = `Speed ${r.speed.now}, stamina ${r.stamina.now}, carrying ${r.capacity.now}`;
+  if (r.complete) return cell("done", `Riding complete: ${skills}`);
+  if (r.lessonReady) return cell("available", `Riding lesson ready (${skills})`);
+  if (r.lessonIn != null)
+    return cell("cooldown", `Next riding lesson in ${formatRemainingSeconds(r.lessonIn)} (${skills})`, { remainingSeconds: r.lessonIn });
+  return { ...UNKNOWN, title: `Riding: when the next lesson opens wasn't saved (${skills})` };
+}
+
 export function unknownCharacterDailies(
-  character: Pick<Character, "id" | "name" | "class" | "lastSeen">,
+  character: Pick<Character, "id" | "name" | "class" | "lastSeen"> & Partial<Pick<Character, "riding">>,
   reason: string,
+  nowUnix: number = Math.floor(Date.now() / 1000),
 ): PresentedCharacterDailies {
   const u = { ...UNKNOWN, title: reason };
   return {
@@ -323,6 +324,7 @@ export function unknownCharacterDailies(
     },
     worldBosses: emptyWorldBosses(reason),
     zoneSlots: presentZoneSlots(null, false, reason),
+    riding: ridingCell(character, nowUnix),
   };
 }
 
@@ -338,14 +340,14 @@ export function presentCharacterDailies(
   const dailies = character.dailies;
   const neverLogged = character.lastSeen == null;
   if (neverLogged) {
-    return unknownCharacterDailies(character, "not scanned since last login");
+    return unknownCharacterDailies(character, "not scanned since last login", nowUnix);
   }
   const stale = options?.treatAsFresh ? false : isDailyScanStale(dailies, nowUnix, options?.region ?? "EU");
   if (!dailies || stale) {
     const reason = dailies
       ? "not scanned since reset"
       : "not scanned — update the Snapshot addon and log out once";
-    return unknownCharacterDailies(character, reason);
+    return unknownCharacterDailies(character, reason, nowUnix);
   }
   return {
     characterId: character.id,
@@ -366,6 +368,7 @@ export function presentCharacterDailies(
       WORLD_BOSS_ZONES.map((z) => [z.id, worldBossCell(dailies.worldBosses, z.id)]),
     ) as Record<WorldBossZoneId, DailyCell>,
     zoneSlots: presentZoneSlots(dailies, true, ""),
+    riding: ridingCell(character, nowUnix),
   };
 }
 
