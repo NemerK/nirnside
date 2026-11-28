@@ -37,3 +37,29 @@ export function blessingsFromCharacters(characters: readonly Character[], patch 
   }
   return [...out.values()];
 }
+
+export interface LearnedIngredient {
+  itemId?: number | null;
+  name: string;
+  quantity: number;
+  quality?: number | null;
+}
+
+/**
+ * Each recipe's ingredients, by the result item's id, from the characters
+ * who know it. The game names a recipe's ingredients only to a character
+ * who knows it (snapshot 0.9.49+), so the catalog scan has them only for its
+ * own character's recipes; the rest come from here.
+ */
+export function recipeIngredientsFromCharacters(characters: readonly Character[]): Map<number, LearnedIngredient[]> {
+  const out = new Map<number, LearnedIngredient[]>();
+  for (const c of characters) {
+    for (const list of c.recipeLists ?? []) {
+      for (const r of list.recipes) {
+        if (!r.known || !r.resultItemId || !r.ingredients?.length || out.has(r.resultItemId)) continue;
+        out.set(r.resultItemId, r.ingredients.map((i) => ({ itemId: i.itemId ?? null, name: i.name, quantity: i.quantity, quality: i.quality ?? null })));
+      }
+    }
+  }
+  return out;
+}

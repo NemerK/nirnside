@@ -56,3 +56,22 @@ describe("recipes and plans", () => {
     assert.equal(WRIT_CRAFTS, TRADESKILLS);
   });
 });
+
+describe("recipe ingredients", () => {
+  it("drops the blank rows the game gives for a recipe the scanning character doesn't know", () => {
+    const r = CatalogRecipe.parse({
+      id: "recipe-1", name: "X", source: "ingame",
+      ingredients: [{ name: "", quantity: 0, quality: 0 }, { itemId: 114895, name: "Heartwood", quantity: 6, quality: 1 }],
+    });
+    assert.deepEqual(r.ingredients.map((i) => i.name), ["Heartwood"]);
+  });
+
+  it("learns them from whichever character knows the recipe", async () => {
+    const { recipeIngredientsFromCharacters } = await import("./learn");
+    const knows = { recipeLists: [{ name: "Courtyard", kind: "furnishing" as const, known: 1, total: 1, recipes: [{ name: "Wheelbarrow", known: true, resultItemId: 118015, ingredients: [{ itemId: 114895, name: "Heartwood", quantity: 6 }] }] }] };
+    const doesnt = { recipeLists: [{ name: "Courtyard", kind: "furnishing" as const, known: 0, total: 1, recipes: [{ name: "Wheelbarrow", known: false, resultItemId: 118015 }] }] };
+    const learned = recipeIngredientsFromCharacters([doesnt, knows] as never);
+    assert.equal(learned.get(118015)?.[0].name, "Heartwood");
+    assert.equal(learned.get(118015)?.[0].quantity, 6);
+  });
+});

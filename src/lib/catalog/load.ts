@@ -23,9 +23,9 @@ function pruneExcludedCatalogRows(): void {
   db.prepare(`DELETE FROM catalog WHERE domain IN ('script', 'grimoire') AND source != 'ingame'`).run();
   // Every import also heals the catalog (catalog/heal.ts); report what this start repaired.
   const healed = healCatalog(db);
-  if (healed.folded || healed.dropped || healed.relabelled) {
+  if (healed.folded || healed.dropped || healed.relabelled || healed.cleaned) {
     console.log(
-      `[nirnside] catalog: folded ${healed.folded} duplicate row(s), dropped ${healed.dropped}, corrected ${healed.relabelled} Champion star(s).`,
+      `[nirnside] catalog: folded ${healed.folded} duplicate row(s), dropped ${healed.dropped}, corrected ${healed.relabelled} Champion star(s), cleaned ${healed.cleaned} recipe(s).`,
     );
   }
 }

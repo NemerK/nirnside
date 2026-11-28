@@ -35,7 +35,8 @@ export function columnsOf(
     case "set":
       return { category: str(e.category), subcategory: str(e.dlc) };
     default:
-      return fallback;
+      // Only the two columns: callers pass a whole row as the fallback, and its json must not come back.
+      return { category: fallback.category, subcategory: fallback.subcategory };
   }
 }
 

@@ -670,8 +670,43 @@ local function gameString(prefix, value)
   return text and text ~= "" and zo_strformat("<<1>>", text) or nil
 end
 
+-- A furnishing's place in the game's furniture browser, theme and placement
+-- limit, as the item tooltip reads them (itemtooltips.lua). Nil when the
+-- game hasn't the item's furniture data yet: it loads an item's data on
+-- first use, so a scan of thousands asks again a moment later (fillLater).
+local categoryNames = {}
+local function categoryName(id)
+  if type(id) ~= "number" or id == 0 then return nil end
+  if categoryNames[id] == nil then
+    categoryNames[id] = safe(function() return zo_strformat("<<1>>", (GetFurnitureCategoryInfo(id)) or "") end, "") or ""
+  end
+  return categoryNames[id] ~= "" and categoryNames[id] or nil
+end
+
+local function furnishingOf(link)
+  if not link or link == "" or not GetItemLinkFurnitureDataId then return nil end
+  local dataId = safe(function() return GetItemLinkFurnitureDataId(link) end, 0)
+  if type(dataId) ~= "number" or dataId == 0 then return nil end
+  local categoryId, subcategoryId, theme, limit = GetFurnitureDataInfo(dataId)
+  return {
+    category = categoryName(categoryId),
+    subcategory = categoryName(subcategoryId),
+    theme = gameString("SI_FURNITURETHEMETYPE", theme),
+    limit = gameString("SI_HOUSINGFURNISHINGLIMITTYPE", limit),
+  }
+end
+
+local function flavorOf(link)
+  local flavor = link and safe(function() return GetItemLinkFlavorText(link) end, "") or ""
+  return flavor ~= "" and zo_strformat("<<1>>", flavor) or nil
+end
+
+-- Plans still missing their furniture data after the scan, with their links.
+local pendingFurnishing = {}
+
 local function gatherRecipes()
   local out = {}
+  pendingFurnishing = {}
   if not GetNumRecipeLists or not GetRecipeInfo or not GetRecipeResultItemLink then return out end
   local seen = {}
   local passiveNames = {}
@@ -683,15 +718,6 @@ local function gatherRecipes()
     end
     return passiveNames[tradeskill] ~= "" and passiveNames[tradeskill] or nil
   end
-  local categoryNames = {}
-  local function categoryName(id)
-    if type(id) ~= "number" or id == 0 then return nil end
-    if categoryNames[id] == nil then
-      categoryNames[id] = safe(function() return zo_strformat("<<1>>", (GetFurnitureCategoryInfo(id)) or "") end, "") or ""
-    end
-    return categoryNames[id] ~= "" and categoryNames[id] or nil
-  end
-
   for listIndex = 1, (safe(GetNumRecipeLists, 0) or 0) do
     local listName, numRecipes = safe(function() return GetRecipeListInfo(listIndex) end, nil)
     listName = listName and zo_strformat("<<1>>", listName) or ""
@@ -734,6 +760,8 @@ local function gatherRecipes()
         for i = 1, (tonumber(numIngredients) or 0) do
           safe(function()
             local iName, iIcon, quantity, _, iQuality = GetRecipeIngredientItemInfo(listIndex, recipeIndex, i)
+            -- The game names a recipe's ingredients only to a character who knows it.
+            if not iName or iName == "" or not quantity or quantity == 0 then return end
             local iLink = GetRecipeIngredientItemLink and GetRecipeIngredientItemLink(listIndex, recipeIndex, i, LINK_STYLE_DEFAULT) or nil
             ingredients[#ingredients + 1] = {
               itemId = iLink and iLink ~= "" and GetItemLinkItemId(iLink) or nil,
@@ -748,7 +776,6 @@ local function gatherRecipes()
 
         -- What it makes.
         local rName, rIcon, stack, sellPrice, rQuality = GetRecipeResultItemInfo(listIndex, recipeIndex)
-        local flavor = link and safe(function() return GetItemLinkFlavorText(link) end, "") or ""
         entry.result = {
           itemId = itemId,
           name = zo_strformat("<<1>>", rName or name or ""),
@@ -756,25 +783,51 @@ local function gatherRecipes()
           quality = rQuality,
           stack = type(stack) == "number" and stack > 1 and stack or nil,
           sellPrice = type(sellPrice) == "number" and sellPrice > 0 and sellPrice or nil,
-          flavor = flavor ~= "" and zo_strformat("<<1>>", flavor) or nil,
+          flavor = flavorOf(link),
         }
 
         -- Where the game files a furnishing, its theme and placement limit.
-        local dataId = link and GetItemLinkFurnitureDataId and GetItemLinkFurnitureDataId(link) or 0
-        if type(dataId) == "number" and dataId > 0 then
-          local categoryId, subcategoryId, theme, limit = GetFurnitureDataInfo(dataId)
-          entry.furnishing = {
-            category = categoryName(categoryId),
-            subcategory = categoryName(subcategoryId),
-            theme = gameString("SI_FURNITURETHEMETYPE", theme),
-            limit = gameString("SI_HOUSINGFURNISHINGLIMITTYPE", limit),
-          }
+        if furnishing then
+          entry.furnishing = furnishingOf(link)
+          if not entry.furnishing then pendingFurnishing[#pendingFurnishing + 1] = { entry = entry, link = link } end
         end
         out[#out + 1] = entry
       end)
     end
   end
   return out
+end
+
+local function reportDone()
+  d(string.format(
+    "[Nirnside Catalog] Done: %d CP, %d skill lines, %d abilities, %d sets, %d grimoires, %d scripts, %d Mundus stones, %d dishes, %d recipes and plans. /reloadui or log out to write the file.",
+    #sv.cp, #sv.skillLines, #sv.skills, #sv.sets, #sv.grimoires, #sv.scripts, #sv.mundus, #sv.food, #sv.recipes))
+end
+
+-- Ask again for the plans whose furniture data the game hadn't loaded yet:
+-- a few seconds apart, up to three times, never in combat.
+local function fillLater(attempt)
+  if #pendingFurnishing == 0 or attempt > 3 then
+    if #pendingFurnishing > 0 then
+      d(string.format("[Nirnside Catalog] %d plans still lack their furniture details; the next /nirncatalog tries again.", #pendingFurnishing))
+    end
+    reportDone()
+    return
+  end
+  d(string.format("[Nirnside Catalog] Reading furniture details for %d plans… (%d/3)", #pendingFurnishing, attempt))
+  zo_callLater(function()
+    if IsUnitInCombat("player") then return fillLater(attempt) end
+    local still = {}
+    for _, p in ipairs(pendingFurnishing) do
+      safe(function()
+        p.entry.furnishing = furnishingOf(p.link)
+        if not p.entry.result.flavor then p.entry.result.flavor = flavorOf(p.link) end
+      end)
+      if not p.entry.furnishing then still[#still + 1] = p end
+    end
+    pendingFurnishing = still
+    fillLater(attempt + 1)
+  end, 3000)
 end
 
 local function scan()
@@ -799,9 +852,8 @@ local function scan()
   sv.recipes = gatherRecipes()
   sv.generatedAt = GetTimeStamp()
 
-  d(string.format(
-    "[Nirnside Catalog] Done: %d CP, %d skill lines, %d abilities, %d sets, %d grimoires, %d scripts, %d Mundus stones, %d dishes, %d recipes and plans. /reloadui or log out to write the file.",
-    #sv.cp, #sv.skillLines, #sv.skills, #sv.sets, #sv.grimoires, #sv.scripts, #sv.mundus, #sv.food, #sv.recipes))
+  -- Report when the furniture details have settled (fillLater calls reportDone).
+  fillLater(1)
 end
 
 local function onLoaded(_, name)

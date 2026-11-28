@@ -2854,12 +2854,33 @@ local function gatherRecipeLists()
               if known then knownCount = knownCount + 1 end
               local quality = rPacked[6]
               local resultItemId = rPacked[9]
+              -- The game names a recipe's ingredients only to a character who
+              -- knows it, so each character's save fills in the catalog's.
+              local ingredients = nil
+              if known and GetRecipeIngredientItemInfo then
+                ingredients = {}
+                for i = 1, (tonumber(rPacked[4]) or 0) do
+                  safe(function()
+                    local iName, _, quantity, _, iQuality = GetRecipeIngredientItemInfo(listIndex, recipeIndex, i)
+                    if not iName or iName == "" or not quantity or quantity == 0 then return end
+                    local iLink = GetRecipeIngredientItemLink and GetRecipeIngredientItemLink(listIndex, recipeIndex, i, LINK_STYLE_DEFAULT) or nil
+                    ingredients[#ingredients + 1] = {
+                      itemId = iLink and iLink ~= "" and GetItemLinkItemId(iLink) or nil,
+                      name = zo_strformat("<<1>>", iName),
+                      quantity = quantity,
+                      quality = iQuality,
+                    }
+                  end)
+                end
+                if #ingredients == 0 then ingredients = nil end
+              end
               recipes[#recipes + 1] = {
                 name = recipeName,
                 known = known,
                 quality = (type(quality) == "number" and quality >= 0) and quality or nil,
                 -- Links this recipe to the catalog's full entry by the game's id.
                 resultItemId = (type(resultItemId) == "number" and resultItemId > 0) and resultItemId or nil,
+                ingredients = ingredients,
               }
             end
           end
