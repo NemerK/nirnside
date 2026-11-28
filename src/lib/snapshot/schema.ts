@@ -512,6 +512,19 @@ export const RecipeEntry = z.object({
   quality: z.number().int().nonnegative().optional(),
   /** What it makes, by the game's item id: links it to the catalog's recipe. Snapshot 0.9.48+. */
   resultItemId: z.number().int().positive().nullable().optional().catch(undefined),
+  /** Its ingredients, which the game names only to a character who knows it. Snapshot 0.9.49+. */
+  ingredients: z
+    .array(
+      z.object({
+        itemId: z.number().int().positive().nullable().optional().catch(undefined),
+        name: z.string(),
+        quantity: z.number().int().positive(),
+        quality: z.number().int().nonnegative().nullable().optional(),
+      }),
+    )
+    .nullable()
+    .optional()
+    .catch(undefined),
 });
 export type RecipeEntry = z.infer<typeof RecipeEntry>;
 

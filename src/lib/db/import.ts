@@ -11,8 +11,8 @@ import {
 import { stripVengeanceFromCharacter } from "../game/vengeance";
 import { fileItem, itemsFromSnapshot } from "../game/item-index";
 import { syncItems } from "./game-items";
-import { importCatalogBundle } from "../catalog/import";
-import { blessingsFromCharacters } from "../game/learn";
+import { fillRecipeIngredients, importCatalogBundle } from "../catalog/import";
+import { blessingsFromCharacters, recipeIngredientsFromCharacters } from "../game/learn";
 
 /**
  * Replace the entire local DB with a fresh snapshot. Because Nirnside only ever
@@ -230,6 +230,12 @@ export function importSnapshot(
     if (mundus.length) importCatalogBundle({ source: "ingame", patch: `API${snap.apiVersion}`, mundus }, { touchMeta: false });
   } catch (err) {
     console.warn("[nirnside] could not learn Mundus text:", err);
+  }
+  // Recipe ingredients, which the game names only to a character who knows the recipe.
+  try {
+    fillRecipeIngredients(recipeIngredientsFromCharacters(snap.characters));
+  } catch (err) {
+    console.warn("[nirnside] could not learn recipe ingredients:", err);
   }
   return {
     items: snap.items.length,

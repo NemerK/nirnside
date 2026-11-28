@@ -1,8 +1,8 @@
 ## Title: Nirnside Catalog
 ## Author: Nirnside
-## Version: 0.2.11
+## Version: 0.2.12
 ## APIVersion: 101051
-## AddOnVersion: 12
+## AddOnVersion: 13
 ## SavedVariables: NirnsideCatalog
 ## Description: OPT-IN catalog scanner. Run /nirncatalog while AFK to export the live game catalog (Champion Points, skills, sets) for the Nirnside encyclopedia. Never runs automatically, never in combat, never uploads anything.
 

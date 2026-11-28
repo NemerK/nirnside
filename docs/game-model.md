@@ -301,6 +301,24 @@ character's level in each craft's level passive and Recipe Quality
 (`craftLevels`, as the station checks them). `readRecipe` says whether a
 character knows a recipe and can craft it: known and every requirement met.
 
+What the game holds back, and how Nirnside fills it in:
+
+- **Ingredients.** The game names a recipe's ingredients only to a
+  character who knows it; for the rest it returns blank names and zero
+  amounts. Those blanks are dropped on import (`CatalogRecipe`), and
+  Snapshot 0.9.49 saves the ingredients of each character's known recipes.
+  Each import fills catalog recipes that have none from those saves
+  (`recipeIngredientsFromCharacters`, `fillRecipeIngredients`). A scan's own
+  ingredients are never replaced, and a later scan that brings none keeps
+  the learned ones (the catalog merge keeps stored values wherever the new
+  entry is empty).
+- **Furniture details.** `GetItemLinkFurnitureDataId` answers for few plans
+  in a single pass: the item data loads lazily. Catalog 0.2.12 queues the
+  plans still missing it and asks again up to three times, three seconds
+  apart, pausing in combat, before it reports Done.
+- **Patch.** Entries are filed under the scan's patch (`bundle.patch`)
+  unless one names its own.
+
 Not encoded: where a plan drops. The game has no call for it (it has
 acquire hints only for scribing and skyshards).
 

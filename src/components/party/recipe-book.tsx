@@ -102,6 +102,8 @@ function RecipeTile({ row }: { row: Row }) {
   const result = entry.result;
   const color = tradeskillColor(reading.craft);
   const where = [entry.furnishing?.category, entry.furnishing?.subcategory].filter(Boolean).join(" › ");
+  // Older scans saved blank rows for recipes the scanning character didn't know.
+  const ingredients = entry.ingredients.filter((i) => i.name && (i.quantity ?? 0) > 0);
   const tip = (
     <>
       <span className="block font-medium" style={{ color: qualityColor(result?.quality, "var(--fg)") }}>
@@ -115,17 +117,19 @@ function RecipeTile({ row }: { row: Row }) {
           <EsoText text={result.flavor} />
         </span>
       ) : null}
-      {entry.ingredients.length > 0 ? (
+      {ingredients.length > 0 ? (
         <span className="mt-2 block">
           <span className="block text-[12px] text-fg-subtle">Ingredients</span>
-          {entry.ingredients.map((i, n) => (
+          {ingredients.map((i, n) => (
             <span key={`${i.itemId ?? i.name}-${n}`} className="block tabular-nums">
               <span className="text-fg-muted">{i.quantity ?? 1}×</span>{" "}
               <span style={{ color: qualityColor(i.quality, "var(--fg)") }}>{i.name}</span>
             </span>
           ))}
         </span>
-      ) : null}
+      ) : (
+        <span className="mt-2 block text-[12px] text-fg-subtle">Ingredients show once a character who knows it saves.</span>
+      )}
       {reading.requirements.length > 0 ? (
         <span className="mt-2 block">
           {reading.requirements.map((r) => (

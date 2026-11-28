@@ -83,8 +83,8 @@ describe("one id per skill line", () => {
     db.prepare("UPDATE catalog SET subcategory = NULL WHERE domain = 'skillline' AND id = 'line-dawns-wrath'").run();
 
     // The stray line, and the ability stored under an id of its own making (sk-radiant).
-    assert.deepEqual(heal.healCatalog(db), { folded: 2, dropped: 1, relabelled: 0 });
-    assert.deepEqual(heal.healCatalog(db), { folded: 0, dropped: 0, relabelled: 0 });
+    assert.deepEqual(heal.healCatalog(db), { folded: 2, dropped: 1, relabelled: 0, cleaned: 0 });
+    assert.deepEqual(heal.healCatalog(db), { folded: 0, dropped: 0, relabelled: 0, cleaned: 0 });
     const lines = rows("skillline");
     assert.deepEqual(lines.map((l) => l.id), ["line-class-mastery-templar", "line-dawns-wrath", "line-two-handed"]);
     assert.equal(lines.find((l) => l.id === "line-dawns-wrath")!.subcategory, "Templar");

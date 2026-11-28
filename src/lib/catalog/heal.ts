@@ -23,10 +23,36 @@ const rank = (s: string) => SOURCE_RANK[s as CatalogSource] ?? 1;
  * repairs a database written by an older version. Idempotent: a clean
  * catalog is left as it is.
  */
-export function healCatalog(db: Database): { folded: number; dropped: number; relabelled: number } {
+export function healCatalog(db: Database): { folded: number; dropped: number; relabelled: number; cleaned: number } {
   const ids = foldIds(db);
   const relabelled = correctConstellations(db);
-  return { ...ids, relabelled };
+  const cleaned = dropBlankIngredients(db);
+  return { ...ids, relabelled, cleaned };
+}
+
+/**
+ * Remove the blank ingredients Catalog 0.2.11 stored for recipes the
+ * scanning character didn't know (the game names them only to a character
+ * who does). Since the catalog keeps stored values a later scan leaves
+ * empty, those blanks would otherwise stay and block learning the real ones.
+ */
+export function dropBlankIngredients(db: Database): number {
+  const rows = db
+    .prepare("SELECT id, json FROM catalog WHERE domain = 'recipe' AND json LIKE '%\"ingredients\":[{%'")
+    .all() as { id: string; json: string }[];
+  const fix = db.prepare("UPDATE catalog SET json = ? WHERE domain = 'recipe' AND id = ?");
+  let cleaned = 0;
+  db.transaction(() => {
+    for (const r of rows) {
+      const entry = JSON.parse(r.json) as { ingredients?: { name?: string; quantity?: number }[] };
+      const list = entry.ingredients ?? [];
+      const named = list.filter((i) => i.name && (i.quantity ?? 0) > 0);
+      if (named.length === list.length) continue;
+      fix.run(JSON.stringify({ ...entry, ingredients: named }), r.id);
+      cleaned += 1;
+    }
+  })();
+  return cleaned;
 }
 
 /**

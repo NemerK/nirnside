@@ -44,7 +44,9 @@ export function importCatalogBundle(
     const id = catalogId(domain, e);
     if (!id) return;
     const filed = { ...e, id };
-    rows.push({ domain, id, name: e.name, category, subcategory, source: e.source, patch: e.patch, json: JSON.stringify(filed) });
+    // An entry carries the patch of the scan or seed it came in, unless it names its own.
+    const patch = e.patch || bundle.patch;
+    rows.push({ domain, id, name: e.name, category, subcategory, source: e.source, patch, json: JSON.stringify({ ...filed, patch }) });
   };
 
   // Vengeance lines never enter the catalog, nor do abilities filed under them.
@@ -134,4 +136,32 @@ export function getCatalogMeta(): CatalogMeta | null {
     | { value: string }
     | undefined;
   return row ? (JSON.parse(row.value) as CatalogMeta) : null;
+}
+
+/**
+ * Fill catalog recipes that lack ingredients with the ones a character's
+ * save carries (recipeIngredientsFromCharacters). Only ingredients change,
+ * and only where the catalog has none, so a scan's own stay as they are.
+ */
+export function fillRecipeIngredients(
+  learned: ReadonlyMap<number, { itemId?: number | null; name: string; quantity: number; quality?: number | null }[]>,
+): number {
+  if (learned.size === 0) return 0;
+  const db = getDb();
+  const select = db.prepare("SELECT json FROM catalog WHERE domain = 'recipe' AND id = ?");
+  const update = db.prepare("UPDATE catalog SET json = ? WHERE domain = 'recipe' AND id = ?");
+  let filled = 0;
+  db.transaction(() => {
+    for (const [itemId, ingredients] of learned) {
+      const id = `recipe-${itemId}`;
+      const row = select.get(id) as { json: string } | undefined;
+      if (!row) continue;
+      const entry = JSON.parse(row.json) as { ingredients?: { name?: string; quantity?: number }[] };
+      const named = (entry.ingredients ?? []).filter((i) => i.name && (i.quantity ?? 0) > 0);
+      if (named.length > 0) continue;
+      update.run(JSON.stringify({ ...entry, ingredients }), id);
+      filled += 1;
+    }
+  })();
+  return filled;
 }

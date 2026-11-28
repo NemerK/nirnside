@@ -20,7 +20,8 @@ const base = {
   id: z.string(),
   name: z.string(),
   source: CatalogSource.default("reference"),
-  patch: z.string().default("U50"),
+  /** Empty when the entry doesn't say: the import files it under its bundle's patch. */
+  patch: z.string().default(""),
 };
 
 export const SetBonus = z.object({
@@ -170,7 +171,12 @@ export const CatalogRecipe = z.object({
     .array(z.object({ craft: z.string().nullable().optional(), passive: z.string().nullable().optional(), level: z.number().int().positive() }))
     .default([])
     .catch([]),
-  ingredients: z.array(RecipeItem).default([]).catch([]),
+  /** Named only for recipes the scanning character knows; blanks from older scans are dropped. */
+  ingredients: z
+    .array(RecipeItem)
+    .default([])
+    .catch([])
+    .transform((list) => list.filter((i) => i.name && (i.quantity ?? 0) > 0)),
   result: RecipeItem.extend({
     stack: z.number().int().positive().nullable().optional(),
     sellPrice: z.number().int().nonnegative().nullable().optional(),
