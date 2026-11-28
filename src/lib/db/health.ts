@@ -1,4 +1,5 @@
 import "server-only";
+import { readRules } from "../game/rules";
 
 import { getDb } from "./index";
 import { getAccount, getCharactersFull } from "./queries";
@@ -38,7 +39,9 @@ export function dataHealth(now: number = Math.floor(Date.now() / 1000)): HealthC
     catalog,
     catalogPatch: scanned.length ? `API${Math.max(...scanned)}` : null,
     characters: getCharactersFull(),
-    account: account ? { apiVersion: account.apiVersion ?? null, lastSnapshot: account.lastSnapshot ?? null } : null,
+    account: account
+      ? { apiVersion: account.apiVersion ?? null, lastSnapshot: account.lastSnapshot ?? null, rulesFromGame: readRules(account.rules).source }
+      : null,
     items,
     addonApiVersion: apis.length ? Math.min(...apis) : null,
   });

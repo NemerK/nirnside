@@ -26,6 +26,7 @@ The model lives in `src/lib/game/`:
 | `buffs.ts` | Lasting buffs at the save (Mundus, food, drink), counted down from the save |
 | `riding.ts` | Riding lessons: speed, stamina, capacity against their caps, and when the next lesson opens |
 | `stats.ts` | The character sheet at the save and what an ability adds to it, worded as the game's window |
+| `rules.ts` | The game's caps, timers and costs from the save; reference values only until a save carries them |
 | `item-category.ts` | Where every item belongs: the game's inventory tabs and sub-tabs, in the game's order |
 | `learn.ts` | Facts about the game a save carries (a blessing's text), turned into catalog rows |
 | `food.ts` | One food or drink buff at a time; food raises maximums, drink recovery; recipe families and grades |
@@ -276,6 +277,36 @@ Each stat keeps the game's constant name as `key` ("critical_damage"),
 because the game's stat numbers can change between patches. `stats.ts`
 words the values; it never works one out. A sheet value includes what was
 active at the save (food, Mundus, passives), as in the game's window.
+
+## The game's rules: its own numbers first
+
+Any number the game can report comes from the game. A hand-written value
+is kept only as a fallback for saves that predate it, and each answer says
+which one it is (`readRules(...).source`, the Setup health check "Game
+rules"). Snapshot 0.9.47 and Catalog 0.2.10:
+
+| Value | Game call | Reference until then |
+| --- | --- | --- |
+| Level cap | `GetMaxLevel` | 50 |
+| Champion cap, per constellation | `GetChampionPointsPlayerProgressionCap`, `GetMaxSpendableChampionPointsInAttribute` | `CP_CAP`, `CP_PER_CONSTELLATION` |
+| Champion bar slots | `GetRequiredChampionDisciplineIdForSlot` over the champion bar | `SLOTS_PER_CONSTELLATION` |
+| Spent and unspent per constellation | `GetNumSpentChampionPoints`, `GetNumUnspentChampionPoints` | the stars' points added up |
+| Ability ranks | `MAX_RANKS_PER_ABILITY` | `MAX_ABILITY_RANK` |
+| Skill line caps | `GetSkillLineRankXPExtents` (Snapshot per character, Catalog per line) | `skill-caps.ts` seed |
+| Skyshards per point | `NUM_PARTIAL_SKILL_POINTS_FOR_FULL` | `SKYSHARDS_PER_POINT` |
+| Companion level cap | `GetNumExperiencePointsInCompanionLevel` | `COMPANION_MAX_LEVEL` |
+| Trait change cost | `GetItemRetraitCost` | `TRAIT_CHANGE_CRYSTALS` |
+| Reconstruction cost, per set | `GetItemReconstructionCurrencyOptionCost` | the 75 to 25 curve |
+| Daily and weekly reset | `GetTimedActivityTypeResetTimeS` | EU 03:00, NA 10:00 UTC |
+| Currency caps | `GetMaxPossibleCurrency` | none shown |
+
+Also saved, not yet used: the rapport range (`GetMinimumRapport`,
+`GetMaximumRapport`) and a companion's skill slots per level
+(`GetCompanionNumSlotsUnlockedForLevel`). Which of those slots is the
+ultimate isn't confirmed, so the ultimate's level stays the reference.
+
+Kept as reference, because the API has no call for them: Class Mastery
+points, the racial line's level, and the community pledge rotation.
 
 ## The catalog: one row per thing, the game's facts
 

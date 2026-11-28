@@ -1,5 +1,4 @@
-/** Four slottables per discipline, matching the champion bar. */
-export const CHAMPION_SLOT_COUNT = 4;
+import { SLOTS_PER_CONSTELLATION } from "./champion";
 
 export type ChampionKind = "slottable" | "passive" | "cluster";
 
@@ -35,8 +34,10 @@ export type ChampionGroups = {
 export function groupChampionStars(
   stars: ChampionStarView[],
   catalogKinds: ReadonlyMap<string, ChampionKind> = new Map(),
+  /** Circles on this constellation's bar: the game's count (rules), else the reference. */
+  slotCount: number = SLOTS_PER_CONSTELLATION,
 ): ChampionGroups {
-  const equipped: (ChampionStarView | null)[] = Array.from({ length: CHAMPION_SLOT_COUNT }, () => null);
+  const equipped: (ChampionStarView | null)[] = Array.from({ length: slotCount }, () => null);
   const overflow: ChampionStarView[] = [];
   const unlocked: ChampionStarView[] = [];
   const passives: ChampionStarView[] = [];
@@ -62,7 +63,7 @@ export function groupChampionStars(
 
   for (const star of waiting) {
     const index = star.slot == null ? -1 : star.slot - 1;
-    if (index >= 0 && index < CHAMPION_SLOT_COUNT && equipped[index] == null) {
+    if (index >= 0 && index < slotCount && equipped[index] == null) {
       equipped[index] = star;
     } else {
       overflow.push(star);

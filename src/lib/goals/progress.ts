@@ -147,7 +147,8 @@ export function abilityGoalRank(
   maxRank?: number | null,
 ): number | null {
   if (crafted) return null;
-  const cap = passive ? (maxRank != null && maxRank > 0 ? maxRank : null) : MAX_ABILITY_RANK;
+  // The game's cap when the save reported one, else the reference (actives: IV).
+  const cap = maxRank != null && maxRank > 0 ? maxRank : passive ? null : MAX_ABILITY_RANK;
   if (!Number.isInteger(goalRank) || goalRank <= 0) return cap;
   if (cap == null) return goalRank;
   return Math.min(goalRank, cap);

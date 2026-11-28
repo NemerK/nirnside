@@ -1142,6 +1142,19 @@ local function skillLineTraits(skillType, lineIndex, playerClass)
   end, nil)
 end
 
+-- A skill line's last rank, as the game's skill XP bar knows it
+-- (playerprogressbar.lua): the highest rank GetSkillLineRankXPExtents has.
+local function skillLineMaxRank(skillType, lineIndex)
+  if not GetSkillLineRankXPExtents then return nil end
+  local last = nil
+  for r = 1, 100 do
+    local startXP = safe(function() return (GetSkillLineRankXPExtents(skillType, lineIndex, r)) end, nil)
+    if startXP == nil then break end
+    last = r
+  end
+  return last
+end
+
 local function gatherSkills(masteriesOut, classMasteryOut, playerClass)
   local lines = {}
   local seenMastery = {}
@@ -1184,6 +1197,7 @@ local function gatherSkills(masteriesOut, classMasteryOut, playerClass)
             name = lineName,
             category = safe(function() return GetString("SI_SKILLTYPE", skillType) end, "Skill"),
             rank = rank or 0,
+            maxRank = (not classMasteryLine) and skillLineMaxRank(skillType, lineIndex) or nil,
             subclassed = (traits and traits.subclassed) or false,
             active = traits and traits.isClass and (traits.classActive == true) or nil,
             ownClass = traits and traits.isClass and (traits.isOwnClass == true) or nil,
@@ -1284,8 +1298,16 @@ local function gatherChampion()
           stars[#stars + 1] = star
         end
       end
-      if #stars > 0 then
-        disciplines[#disciplines + 1] = { name = zo_strformat("<<1>>", discName), stars = stars }
+      local spentTotal = safe(function() return GetNumSpentChampionPoints and GetNumSpentChampionPoints(discId) or nil end, nil)
+      local unspent = safe(function() return GetNumUnspentChampionPoints and GetNumUnspentChampionPoints(discId) or nil end, nil)
+      if #stars > 0 or (type(unspent) == "number" and unspent > 0) then
+        disciplines[#disciplines + 1] = {
+          name = zo_strformat("<<1>>", discName),
+          stars = stars,
+          -- The game's own counts for this constellation.
+          spent = type(spentTotal) == "number" and spentTotal or nil,
+          unspent = type(unspent) == "number" and unspent or nil,
+        }
       end
     end
   end)
@@ -3415,6 +3437,9 @@ local function accountCurrencyAmount(curt)
   return GetCurrencyAmount(curt, CURRENCY_LOCATION_ACCOUNT) or 0
 end
 
+-- Currency type per key, learned while reading the wallet; the caps use it.
+local currencyTypeByKey = {}
+
 local function gatherCurrencies()
   local out = {
     bankGold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_BANK) end, 0),
@@ -3452,6 +3477,7 @@ local function gatherCurrencies()
     local curt = safe(curtFn, nil)
     if type(curt) == "number" then
       seenTypes[curt] = true
+      currencyTypeByKey[key] = curt
       local amount = safe(function() return accountCurrencyAmount(curt) end, 0)
       if amount ~= nil then put(key, amount) end
     end
@@ -3469,6 +3495,7 @@ local function gatherCurrencies()
           end, nil)
           local key = currencyKeyFromName(cleanCurrencyName(raw) or "")
           if key then
+            if currencyTypeByKey[key] == nil then currencyTypeByKey[key] = t end
             local amount = safe(function() return accountCurrencyAmount(t) end, 0)
             if amount ~= nil then put(key, amount) end
           end
@@ -3479,6 +3506,92 @@ local function gatherCurrencies()
   end)
 
   return out
+end
+
+-- The game's own numbers for its caps, timers and costs, read where the
+-- game's UI reads them (ESOUI API 101051, esoui/esoui 12.1.7). The app keeps
+-- reference values only for a save that predates these.
+local function gatherRules()
+  local r = {}
+  local function num(fn)
+    local v = safe(fn, nil)
+    return type(v) == "number" and v or nil
+  end
+  r.maxLevel = num(function() return GetMaxLevel() end)
+  r.championCap = num(function() return GetChampionPointsPlayerProgressionCap() end)
+  r.championPerConstellation = num(function() return GetMaxSpendableChampionPointsInAttribute() end)
+  r.maxAbilityRank = type(MAX_RANKS_PER_ABILITY) == "number" and MAX_RANKS_PER_ABILITY or nil
+  r.skyshardsPerPoint = type(NUM_PARTIAL_SKILL_POINTS_FOR_FULL) == "number" and NUM_PARTIAL_SKILL_POINTS_FOR_FULL or nil
+  r.rapportMin = num(function() return GetMinimumRapport() end)
+  r.rapportMax = num(function() return GetMaximumRapport() end)
+
+  -- Champion bar slots per constellation (championassignableactionbar.lua).
+  safe(function()
+    if not GetAssignableChampionBarStartAndEndSlots or not GetRequiredChampionDisciplineIdForSlot then return end
+    local first, last = GetAssignableChampionBarStartAndEndSlots()
+    local counts, names = {}, {}
+    for slot = first, last do
+      local discId = GetRequiredChampionDisciplineIdForSlot(slot, HOTBAR_CATEGORY_CHAMPION)
+      if type(discId) == "number" then
+        counts[discId] = (counts[discId] or 0) + 1
+        names[discId] = names[discId] or zo_strformat("<<1>>", GetChampionDisciplineName(discId) or "")
+      end
+    end
+    local out = {}
+    for discId, n in pairs(counts) do out[#out + 1] = { disciplineId = discId, name = names[discId], slots = n } end
+    if #out > 0 then r.championSlots = out end
+  end)
+
+  -- Companion levels: the last level that still takes experience
+  -- (companion_manager.lua), and the skill slots each level opens.
+  safe(function()
+    if not GetNumExperiencePointsInCompanionLevel then return end
+    local maxLevel = 1
+    for level = 2, 200 do
+      local xp = GetNumExperiencePointsInCompanionLevel(level)
+      if not xp or xp == 0 then break end
+      maxLevel = level
+    end
+    r.companionMaxLevel = maxLevel
+    if GetCompanionNumSlotsUnlockedForLevel then
+      local slots = {}
+      for level = 1, maxLevel do
+        slots[#slots + 1] = num(function() return GetCompanionNumSlotsUnlockedForLevel(level) end) or 0
+      end
+      r.companionSlotsByLevel = slots
+    end
+  end)
+
+  -- Trait change at the transmute station (zo_retraitstation_retrait_base.lua).
+  safe(function()
+    local cost = GetItemRetraitCost()
+    if type(cost) == "number" then r.retraitCost = cost end
+  end)
+
+  -- When the daily and weekly activities reset, as Endeavors count down to
+  -- (timedactivities_manager.lua): absolute unix seconds.
+  safe(function()
+    if TIMED_ACTIVITY_TYPE_DAILY then r.dailyResetAt = num(function() return GetTimedActivityTypeResetTimeS(TIMED_ACTIVITY_TYPE_DAILY) end) end
+    if TIMED_ACTIVITY_TYPE_WEEKLY then r.weeklyResetAt = num(function() return GetTimedActivityTypeResetTimeS(TIMED_ACTIVITY_TYPE_WEEKLY) end) end
+  end)
+
+  -- How much of each currency can be held where the game keeps it.
+  safe(function()
+    if not GetMaxPossibleCurrency or not GetCurrencyPlayerStoredLocation then return end
+    local caps = {}
+    local function cap(key, curt)
+      if type(curt) ~= "number" then return end
+      local where = GetCurrencyPlayerStoredLocation(curt)
+      local max = num(function() return GetMaxPossibleCurrency(curt, where) end)
+      if max and max > 0 then caps[key] = max end
+    end
+    cap("gold", CURT_MONEY)
+    cap("telVar", CURT_TELVAR_STONES)
+    cap("alliancePoints", CURT_ALLIANCE_POINTS)
+    for key, curt in pairs(currencyTypeByKey) do cap(key, curt) end
+    r.currencyCaps = caps
+  end)
+  return r
 end
 
 -- Item Set Collections (stickerbook). Iterated out of combat only; changes
@@ -3642,6 +3755,11 @@ local function gatherStickerbook()
         }
         if bonuses then entry.bonuses = bonuses end
         if maxEquip then entry.maxEquip = maxEquip end
+        -- What the transmute station charges to reconstruct a piece of this
+        -- set, in crystals (itemsetcollectionsdata.lua). Nil until collected.
+        local cost = CURT_CHAOTIC_CREATIA and GetItemReconstructionCurrencyOptionCost
+          and safe(function() return GetItemReconstructionCurrencyOptionCost(setId, CURT_CHAOTIC_CREATIA) end, nil) or nil
+        if type(cost) == "number" then entry.reconstructCost = cost end
         sets[#sets + 1] = entry
       end
       setId = safe(function() return GetNextItemSetCollectionId(setId) end, nil)
@@ -4166,6 +4284,8 @@ local function takeSnapshot(reason)
   sv.esoPlus     = safe(function() return IsESOPlusSubscriber() end, false)
   sv.lastSnapshot = GetTimeStamp()
   sv.currencies  = gatherCurrencies()
+  -- After the wallet: the currency caps use the types it found.
+  sv.rules = safe(function() return gatherRules() end, sv.rules)
   sv.guilds      = gatherGuilds()
 
   -- Account-wide bags + this character's bags in one pass.

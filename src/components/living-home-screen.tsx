@@ -6,7 +6,7 @@ import { timeAgo } from "@/lib/format";
 import { profileMedia } from "@/lib/db/profile";
 import { profileImageUrl } from "@/lib/profile/media";
 import { livingHome, withGuilds } from "@/lib/home/living";
-import { skillLineCap } from "@/lib/game/skill-caps";
+import { lineCap } from "@/lib/db/game-knowledge";
 import { accountAlliancePoints, accountTelVar, goldBreakdown, liveCharacters } from "@/lib/snapshot/roster";
 
 /** The account home: one character as the profile, built from the local snapshot. */
@@ -17,7 +17,7 @@ export function LivingHomeScreen() {
   const characters = liveCharacters(safe(() => getCharactersFull()) ?? []);
   const houses = safe(() => getHouses()) ?? [];
   const model = withGuilds(
-    livingHome(characters, houses, skillLineCap),
+    livingHome(characters, houses, lineCap),
     (account.guilds ?? []).map((guild) => ({ name: guild.name, rank: guild.rank, trader: guild.trader })),
   );
   const gold = goldBreakdown({

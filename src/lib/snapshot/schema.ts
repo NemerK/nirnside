@@ -223,6 +223,8 @@ export const SkillLine = z.object({
   classMastery: z.boolean().default(false),
   /** The line's class as the game names it: every class line from addon 0.9.44, Class Mastery before that. */
   className: z.string().nullable().optional(),
+  /** The line's last rank, as the game's skill XP bar knows it. Snapshot 0.9.47+. */
+  maxRank: z.number().int().positive().nullable().optional().catch(undefined),
   abilities: lenientArray(SkillMorph).default([]),
 });
 export type SkillLine = z.infer<typeof SkillLine>;
@@ -244,6 +246,9 @@ export const ChampionDiscipline = z.object({
   /** Warfare / Fitness / Craft. */
   name: z.string(),
   stars: lenientArray(ChampionStar).default([]),
+  /** The game's own counts for this constellation. Snapshot 0.9.47+. */
+  spent: z.number().int().nonnegative().nullable().optional().catch(undefined),
+  unspent: z.number().int().nonnegative().nullable().optional().catch(undefined),
 });
 
 export const EquippedItem = z.object({
@@ -770,6 +775,34 @@ export const MythicSet = z.object({
 });
 export type MythicSet = z.infer<typeof MythicSet>;
 
+/**
+ * The game's own numbers for its caps, timers and costs, read where the
+ * game's UI reads them (snapshot 0.9.47+). Every field is optional: one the
+ * client didn't give is simply left out, and the model falls back to its
+ * reference value for that one (game/rules.ts).
+ */
+const optNum = z.number().nullable().optional().catch(undefined);
+export const SavedRules = z.object({
+  maxLevel: optNum,
+  championCap: optNum,
+  championPerConstellation: optNum,
+  championSlots: z
+    .array(z.object({ disciplineId: z.number().int(), name: z.string().nullable().optional(), slots: z.number().int().nonnegative() }))
+    .optional()
+    .catch(undefined),
+  maxAbilityRank: optNum,
+  skyshardsPerPoint: optNum,
+  companionMaxLevel: optNum,
+  companionSlotsByLevel: z.array(z.number().int().nonnegative()).optional().catch(undefined),
+  rapportMin: optNum,
+  rapportMax: optNum,
+  retraitCost: optNum,
+  dailyResetAt: optNum,
+  weeklyResetAt: optNum,
+  currencyCaps: z.record(z.string(), z.number().nonnegative()).optional().catch(undefined),
+});
+export type SavedRules = z.infer<typeof SavedRules>;
+
 export const StickerbookSet = z.object({
   setId: z.number().int().nonnegative(),
   name: z.string(),
@@ -797,6 +830,8 @@ export const StickerbookSet = z.object({
     .optional(),
   /** Max pieces equipped, from GetItemLinkSetInfo. Missing until a snapshot records it. */
   maxEquip: z.number().int().positive().optional(),
+  /** Crystals the transmute station charges to reconstruct a piece (GetItemReconstructionCurrencyOptionCost). Snapshot 0.9.47+. */
+  reconstructCost: z.number().int().nonnegative().nullable().optional().catch(undefined),
 });
 export type StickerbookSet = z.infer<typeof StickerbookSet>;
 
@@ -860,6 +895,8 @@ export const AccountSnapshot = z.object({
   companions: lenientArray(AccountCompanion).default([]),
   /** Bank and ESO Plus bank together. Addon 0.9.43+. */
   bankSpace: BagSpace.nullable().optional().catch(null),
+  /** The game's own numbers for its caps, timers and costs. Snapshot 0.9.47+. */
+  rules: SavedRules.nullable().optional().catch(null),
   characters: lenientArray(Character).default([]),
   /**
    * Characters that were on the account and have since been deleted.

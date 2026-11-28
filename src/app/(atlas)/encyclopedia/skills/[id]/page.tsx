@@ -14,7 +14,7 @@ import { SourceBadge } from "@/components/source-badge";
 import { plannerLineIcon } from "@/lib/icons/planner-icons";
 import { resolveSkillIcon, skillIconByName } from "@/lib/icons/skill-icons";
 import { CLASS_MASTERY_POINTS, isClassMasteryLineName } from "@/lib/game/class-mastery";
-import { skillLineCap } from "@/lib/game/skill-caps";
+import { lineCap } from "@/lib/db/game-knowledge";
 import { skillLineRoster } from "@/lib/skills/line-roster";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +49,7 @@ export default async function SkillLinePage({
       archivedAt: character.archivedAt,
       skillLines: character.skillLines,
     })),
-    classMastery ? CLASS_MASTERY_POINTS : skillLineCap(line.name),
+    classMastery ? CLASS_MASTERY_POINTS : lineCap(line.name),
   );
 
   return (

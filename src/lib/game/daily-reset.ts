@@ -9,23 +9,42 @@
 
 export type EsoRegion = "EU" | "NA";
 
+/**
+ * Which clock to count on: a megaserver (the reference hour), or the hour
+ * the game itself reported for this account (`gameHourUtc`, from the save:
+ * Snapshot 0.9.47+ saves when the daily activities reset,
+ * GetTimedActivityTypeResetTimeS).
+ */
+export type ResetClock = EsoRegion | { region: EsoRegion; gameHourUtc: number | null };
+
+function regionOf(clock: ResetClock): EsoRegion {
+  return typeof clock === "string" ? clock : clock.region;
+}
+
 export const ESO_DAILY_RESET_HOUR_UTC: Record<EsoRegion, number> = {
   EU: 3,
   NA: 10,
 };
 
-export function dailyResetHourUtc(region: EsoRegion = "EU"): number {
-  return ESO_DAILY_RESET_HOUR_UTC[region] ?? ESO_DAILY_RESET_HOUR_UTC.EU;
+/** The reset hour: the game's when the save carries it, else the megaserver's reference hour below. */
+export function dailyResetHourUtc(clock: ResetClock = "EU"): number {
+  if (typeof clock !== "string" && clock.gameHourUtc != null) return clock.gameHourUtc;
+  return ESO_DAILY_RESET_HOUR_UTC[regionOf(clock)] ?? ESO_DAILY_RESET_HOUR_UTC.EU;
+}
+
+/** "EU 03:00 UTC": the megaserver and the reset hour this clock counts on. */
+export function resetLabel(clock: ResetClock): string {
+  return `${regionOf(clock)} ${String(dailyResetHourUtc(clock)).padStart(2, "0")}:00 UTC`;
 }
 
 /** Calendar date of the ESO day that contains `unixSeconds` on that megaserver. */
-export function esoDayKey(unixSeconds: number, region: EsoRegion = "EU"): string {
+export function esoDayKey(unixSeconds: number, region: ResetClock = "EU"): string {
   const adjusted = unixSeconds - dailyResetHourUtc(region) * 3600;
   return new Date(adjusted * 1000).toISOString().slice(0, 10);
 }
 
 /** Unix seconds of the next megaserver daily reset after `unixSeconds`. */
-export function nextEsoResetAt(unixSeconds: number, region: EsoRegion = "EU"): number {
+export function nextEsoResetAt(unixSeconds: number, region: ResetClock = "EU"): number {
   const hour = dailyResetHourUtc(region);
   const secs = unixSeconds % 86400;
   const todayReset = unixSeconds - secs + hour * 3600;
@@ -33,7 +52,7 @@ export function nextEsoResetAt(unixSeconds: number, region: EsoRegion = "EU"): n
 }
 
 /** End of the ESO day labeled `dayKey` — next reset after that civil date. */
-export function resetAtForDayKey(dayKey: string, region: EsoRegion = "EU"): number {
+export function resetAtForDayKey(dayKey: string, region: ResetClock = "EU"): number {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
   if (!m) return 0;
   const y = Number(m[1]);

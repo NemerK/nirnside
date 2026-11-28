@@ -34,7 +34,8 @@ import { tallyBagFilters } from "@/lib/game/item-category";
 import { accountAlliancePoints, goldBreakdown } from "@/lib/snapshot/roster";
 import { classColor } from "@/lib/classes";
 import { formatNumber } from "@/lib/format";
-import { currentUnix, dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/game/daily-reset";
+import { currentUnix, nextEsoResetAt, resetLabel } from "@/lib/game/daily-reset";
+import { resetClock } from "@/lib/db/game-knowledge";
 import { communityPledgesForUnix } from "@/lib/game/pledges";
 import { presentAccountDailies } from "@/lib/dailies/present";
 import { knownMotifKeys, presentOutfitStyles } from "@/lib/knowledge/present";
@@ -570,7 +571,7 @@ export function CraftingSection({ sp }: { sp: Params }) {
 
 export function DailiesSection() {
   const account = safe(() => getAccount(), null);
-  const region: EsoRegion = account?.region === "NA" ? "NA" : "EU";
+  const region = resetClock(account?.region === "NA" ? "NA" : "EU");
   const now = currentUnix();
   const isSample = safe(() => getDataSource(), null)?.kind === "sample";
   const todayPledges = communityPledgesForUnix(now, region);
@@ -580,7 +581,7 @@ export function DailiesSection() {
       rows={rows}
       resetAt={nextEsoResetAt(now, region)}
       todayPledges={todayPledges}
-      resetLabel={`${region} ${String(dailyResetHourUtc(region)).padStart(2, "0")}:00 UTC`}
+      resetLabel={resetLabel(region)}
     />
   );
 }

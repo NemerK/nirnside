@@ -1,6 +1,7 @@
 import "server-only";
 import { getSets } from "../db/catalog-queries";
 import { listGearBuilds } from "../db/gear-builds";
+import { gameRules } from "../db/game-knowledge";
 import { getCharactersFull, getItems, getStickerbook } from "../db/queries";
 import { liveCharacters } from "../snapshot/roster";
 import { isMythicSet } from "../game/mythics";
@@ -87,6 +88,7 @@ export function loadBuildPage(): BuildPageData {
       weaponIcons,
       collected: row.collected,
       total: row.total,
+      reconstructCost: row.reconstructCost ?? null,
       crafted,
       traitsNeeded: crafted ? (match?.entry.traitsNeeded ?? null) : null,
       maxEquip: row.maxEquip ?? match?.entry.maxEquip ?? null,
@@ -270,5 +272,5 @@ export function loadBuildPage(): BuildPageData {
     if (lines.length > 0) crafters.push({ name: character.name, lines });
   }
 
-  return { sets, owned, crafters, builds: listGearBuilds() };
+  return { sets, owned, crafters, retraitCost: gameRules().retraitCost, builds: listGearBuilds() };
 }

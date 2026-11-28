@@ -194,6 +194,18 @@ end
 
 local function gatherSkills()
   local lines, skills = {}, {}
+  -- A line's last rank, as the game's skill XP bar knows it
+  -- (playerprogressbar.lua): the highest rank GetSkillLineRankXPExtents has.
+  local function lineMaxRank(skillType, lineIndex)
+    if not GetSkillLineRankXPExtents then return nil end
+    local last = nil
+    for r = 1, 100 do
+      local startXP = safe(function() return (GetSkillLineRankXPExtents(skillType, lineIndex, r)) end, nil)
+      if startXP == nil then break end
+      last = r
+    end
+    return last
+  end
   safe(function()
     local numTypes = GetNumSkillTypes()
     for skillType = 1, numTypes do
@@ -213,6 +225,12 @@ local function gatherSkills()
             icon = nil,
             source = "ingame",
           }
+          -- Class Mastery is points, not ranks. `gameMaxRank` marks the
+          -- number as the game's: shipped reference rows only have `maxRank`.
+          if lineId:sub(1, 18) ~= "line-class-mastery" then
+            line.maxRank = lineMaxRank(skillType, lineIndex)
+            line.gameMaxRank = line.maxRank
+          end
           lines[#lines + 1] = line
           local numAbilities = GetNumSkillAbilities(skillType, lineIndex)
           for a = 1, numAbilities do

@@ -253,3 +253,27 @@ describe("values (snapshot 0.9.46)", () => {
     assert.equal(Item.parse({ itemId: 2, name: "Odd", location: "backpack", use: "text" }).use, undefined);
   });
 });
+
+describe("game rules and caps (snapshot 0.9.47)", () => {
+  it("reads the game's rules, line caps, constellation counts and reconstruction cost; old saves still parse", async () => {
+    const { Character, SavedRules, StickerbookSet } = await import("./schema");
+    const rules = SavedRules.parse({
+      championCap: 3600,
+      championSlots: [{ disciplineId: 1, name: "Craft", slots: 4 }],
+      dailyResetAt: 1795921200,
+      currencyCaps: { transmuteCrystals: 1000 },
+      retraitCost: "odd",
+    });
+    assert.equal(rules.championCap, 3600);
+    assert.equal(rules.retraitCost, undefined);
+    const c = Character.parse({
+      id: "1", name: "T", class: "Sorcerer", race: "Breton", alliance: "Daggerfall Covenant",
+      skillLines: [{ name: "Assault", category: "Alliance War", rank: 6, maxRank: 10 }],
+      champion: [{ name: "Craft", stars: [], spent: 120, unspent: 7 }],
+    });
+    assert.equal(c.skillLines[0].maxRank, 10);
+    assert.equal(c.champion[0].unspent, 7);
+    assert.equal(StickerbookSet.parse({ setId: 1, name: "S", reconstructCost: 25 }).reconstructCost, 25);
+    assert.equal(StickerbookSet.parse({ setId: 1, name: "S" }).reconstructCost, undefined);
+  });
+});

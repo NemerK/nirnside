@@ -54,13 +54,19 @@ export interface CompanionInput {
   seenAt?: number | null;
 }
 
-export function readCompanion(c: CompanionInput): CompanionReading {
+/**
+ * `maxLevel` is the game's companion level cap (rules, snapshot 0.9.47+);
+ * the reference until a save carries it. The ultimate's level stays the
+ * reference: the game's per-level slot counts are saved
+ * (`companionSlotsByLevel`) but which slot is the ultimate isn't confirmed.
+ */
+export function readCompanion(c: CompanionInput, maxLevel: number = COMPANION_MAX_LEVEL): CompanionReading {
   const level = c.level ?? null;
   const theme = Object.entries(COMPANION_THEME).find(([n]) => c.name.toLowerCase().startsWith(n.toLowerCase()))?.[1] ?? null;
   return {
     name: c.name,
     level,
-    maxed: level != null && level >= COMPANION_MAX_LEVEL,
+    maxed: level != null && level >= maxLevel,
     ultimateOpen: level != null && level >= COMPANION_ULTIMATE_LEVEL,
     rapport: c.rapport ?? null,
     theme,
@@ -74,6 +80,9 @@ export function readCompanion(c: CompanionInput): CompanionReading {
  * the model. Progress is shared by every character, so these belong to the
  * account, not to a character.
  */
-export function readAccountCompanions(rows: readonly (CompanionInput & { owned?: boolean | null })[]): CompanionReading[] {
-  return rows.filter((r) => r.owned !== false).map(readCompanion);
+export function readAccountCompanions(
+  rows: readonly (CompanionInput & { owned?: boolean | null })[],
+  maxLevel: number = COMPANION_MAX_LEVEL,
+): CompanionReading[] {
+  return rows.filter((r) => r.owned !== false).map((r) => readCompanion(r, maxLevel));
 }

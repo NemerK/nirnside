@@ -44,8 +44,12 @@ export function account(): Account | null {
 export interface Treasury {
   gold: number;
   bankGold: number;
-  currencies: { key: string; label: string; value: number }[];
+  /** `cap`: the most the game lets the account hold (GetMaxPossibleCurrency, snapshot 0.9.47+), when it's small enough to matter. */
+  currencies: { key: string; label: string; value: number; cap: number | null }[];
 }
+
+/** A cap above this is never close (gold's is 2.1 billion), so it isn't shown. */
+const CAP_WORTH_SHOWING = 1_000_000;
 
 export function treasury(a: Account, characters: Character[]): Treasury {
   const gold = goldBreakdown({ characters, bankGold: a.currencies?.bankGold ?? 0, legacyGold: a.gold });
@@ -57,11 +61,15 @@ export function treasury(a: Account, characters: Character[]): Treasury {
   return {
     gold: gold.total,
     bankGold: gold.bank,
-    currencies: ACCOUNT_CURRENCIES.filter((c) => c.always || (wallet[c.key] ?? 0) > 0).map((c) => ({
-      key: c.key,
-      label: c.label,
-      value: wallet[c.key] ?? 0,
-    })),
+    currencies: ACCOUNT_CURRENCIES.filter((c) => c.always || (wallet[c.key] ?? 0) > 0).map((c) => {
+      const cap = a.rules?.currencyCaps?.[c.key] ?? null;
+      return {
+        key: c.key,
+        label: c.label,
+        value: wallet[c.key] ?? 0,
+        cap: cap != null && cap <= CAP_WORTH_SHOWING ? cap : null,
+      };
+    }),
   };
 }
 

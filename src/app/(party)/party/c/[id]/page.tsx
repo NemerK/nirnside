@@ -3,7 +3,7 @@ import { idleSlots as idleSlots_ } from "@/lib/game/research";
 import { ARMOR_SLOTS, SLOT_LABEL, type WornSlot } from "@/lib/game/equipment";
 import { baseSetName } from "@/lib/game/loadout";
 import { readCharacter, type CharacterReading } from "@/lib/game/understand";
-import { abilityLines, classLines, mundusTexts } from "@/lib/db/game-knowledge";
+import { abilityLines, classLines, gameRules, lineCap, mundusTexts, resetClock } from "@/lib/db/game-knowledge";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Droplet, Moon } from "lucide-react";
@@ -16,7 +16,7 @@ import { listAssignments, listRoles } from "@/lib/db/roles";
 import { rolesForCharacter } from "@/lib/roles/filter";
 import { classColor } from "@/lib/classes";
 import { ALLIANCE_ACCENT, formatNumber, timeAgo } from "@/lib/format";
-import { currentUnix, dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/game/daily-reset";
+import { currentUnix, dailyResetHourUtc, nextEsoResetAt } from "@/lib/game/daily-reset";
 import { communityPledgesForUnix, PLEDGE_GIVER_NAMES } from "@/lib/game/pledges";
 import { presentCharacterDailies, type DailyCell } from "@/lib/dailies/present";
 import { WRIT_CRAFTS, WRIT_LABELS } from "@/lib/game/writs";
@@ -37,7 +37,6 @@ import { getCPStars, setHref } from "@/lib/db/catalog-queries";
 import { loadSetHover } from "@/lib/catalog/hover-sets";
 import { toPartyHref } from "@/lib/party/links";
 import { presentResearch } from "@/lib/knowledge/present";
-import { skillLineCap } from "@/lib/game/skill-caps";
 import { TIER_COLOR, TIER_LABEL, type GoalTier } from "@/lib/goals/types";
 import { constellationColor } from "@/lib/ui/game-colors";
 import { formatTimeLeft } from "@/lib/today/present";
@@ -151,7 +150,8 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
 
   const now = currentUnix();
   const account = safe(() => getAccount(), null);
-  const region: EsoRegion = account?.region === "NA" ? "NA" : "EU";
+  // The game's reset hour from the save; the megaserver's reference hour until then.
+  const region = resetClock(account?.region === "NA" ? "NA" : "EU");
   const isSample = safe(() => getDataSource(), null)?.kind === "sample";
   const color = classColor(c.class) ?? "#b46ad4";
   const known = c.lastSeen != null;
@@ -190,7 +190,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
       .filter((r) => r.goal.tier === tier)
       .map((r) => {
         const line = lineByName.get(r.goal.target.toLowerCase());
-        const need = Math.max(r.goal.targetRank, r.goal.extraRank ?? 0) || line?.cap || skillLineCap(r.goal.target) || 0;
+        const need = Math.max(r.goal.targetRank, r.goal.extraRank ?? 0) || line?.cap || lineCap(r.goal.target) || 0;
         return { name: r.goal.target, rank: line?.rank ?? 0, need, found: !!line && r.mark.state !== "undiscovered", done: r.mark.state === "done" };
       })
       .sort((x, y) => Number(x.done) - Number(y.done) || x.rank / (x.need || 1) - y.rank / (y.need || 1));
@@ -252,7 +252,9 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
   const running = research.inProgress.map((r) => ({ ...r, left: countDown(r.remainingSeconds, elapsed) }));
   const idleSlots = research.crafts.reduce((n, cr) => n + idleSlots_(cr), 0);
   // One reading of the character through the game model.
-  const reading = readCharacter(c, safe(classLines, new Map()), safe(abilityLines, new Map()), { mundus: safe(mundusTexts, []), companions: safe(() => getAccount()?.companions ?? [], []) }, now);
+  // The game's caps and timers from the latest save (reference until then).
+  const rules = gameRules();
+  const reading = readCharacter(c, safe(classLines, new Map()), safe(abilityLines, new Map()), { rules, mundus: safe(mundusTexts, []), companions: safe(() => getAccount()?.companions ?? [], []) }, now);
   const equipped = presentEquipped(c, reading);
 
   const stat = (label: string, value: string, tone = "text-fg") => (
@@ -444,7 +446,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
             meta={c.lastSeen != null ? `as of the last save, ${timeAgo(c.lastSeen)}` : undefined}
             className="md:col-span-2 xl:col-span-12"
           >
-            <CharacterStatus reading={reading} />
+            <CharacterStatus reading={reading} skyshardsPerPoint={rules.skyshardsPerPoint} />
           </Module>
 
           <Module
