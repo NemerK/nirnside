@@ -12,6 +12,7 @@ import type {
   CatalogAchievement,
   CatalogDomain,
   CatalogFood,
+  CatalogRecipe,
   CatalogMundus,
   CatalogSource,
 } from "../catalog/schema";
@@ -73,6 +74,11 @@ export function getMundus() {
 /** Every provisioning dish and its buff, from the catalog scan. */
 export function getFood(filters: Filters = {}) {
   return query<CatalogFood>("food", filters);
+}
+
+/** Every recipe and furnishing plan, from the catalog scan. */
+export function getRecipes(filters: Filters = {}) {
+  return query<CatalogRecipe>("recipe", filters);
 }
 
 export function catalogCount(domain: CatalogDomain): number {

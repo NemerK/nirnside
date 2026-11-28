@@ -5,6 +5,7 @@ import { CraftingSection, SECTION_TITLES } from "@/components/party/scope-sectio
 import { PartyKnowledge } from "@/components/party/knowledge-view";
 import type { KnowledgeTab } from "@/components/knowledge-board";
 import { getCharactersFull } from "@/lib/db/queries";
+import { getRecipes } from "@/lib/db/catalog-queries";
 import { liveCharacters } from "@/lib/snapshot/roster";
 import { applyRosterOrder, getRosterOrder } from "@/lib/roster/order";
 import {
@@ -97,8 +98,10 @@ export default async function Page({ searchParams }: PageProps<"/party/knowledge
             motifs: c.motifs ?? [],
             recipes: presentRecipeLists(c.recipeLists, "provisioning").lists,
             plans: presentRecipeLists(c.recipeLists, "furnishing").lists,
+            craftLevels: c.craftLevels ?? null,
             scribingCount: c.scribingScripts.length,
           }))}
+          recipeBook={safe(() => getRecipes().map((r) => r.entry), [])}
           initialCharId={str(sp.char)}
           initialTab={tab && TABS.has(tab as KnowledgeTab) ? (tab as KnowledgeTab) : undefined}
         />

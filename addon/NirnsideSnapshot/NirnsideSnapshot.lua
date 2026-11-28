@@ -2802,6 +2802,35 @@ local function recipeKind(specialType)
   return "provisioning"
 end
 
+-- The character's level in each craft's level passive (Metalworking,
+-- Engraver, …) and Recipe Quality, as the crafting station checks them
+-- (provisioner.lua: GetNonCombatBonus(GetNonCombatBonusLevelTypeForTradeskillType)).
+local CRAFT_LEVEL_KEYS = {
+  { "CRAFTING_TYPE_BLACKSMITHING", "blacksmithing" },
+  { "CRAFTING_TYPE_CLOTHIER", "clothing" },
+  { "CRAFTING_TYPE_WOODWORKING", "woodworking" },
+  { "CRAFTING_TYPE_JEWELRYCRAFTING", "jewelry" },
+  { "CRAFTING_TYPE_ENCHANTING", "enchanting" },
+  { "CRAFTING_TYPE_ALCHEMY", "alchemy" },
+  { "CRAFTING_TYPE_PROVISIONING", "provisioning" },
+}
+local function gatherCraftLevels()
+  local out = {}
+  if not GetNonCombatBonus or not GetNonCombatBonusLevelTypeForTradeskillType then return out end
+  for _, c in ipairs(CRAFT_LEVEL_KEYS) do
+    local tradeskill = _G[c[1]]
+    if type(tradeskill) == "number" then
+      local level = safe(function() return GetNonCombatBonus(GetNonCombatBonusLevelTypeForTradeskillType(tradeskill)) end, nil)
+      if type(level) == "number" then out[c[2]] = level end
+    end
+  end
+  if NON_COMBAT_BONUS_PROVISIONING_RARITY_LEVEL then
+    local q = safe(function() return GetNonCombatBonus(NON_COMBAT_BONUS_PROVISIONING_RARITY_LEVEL) end, nil)
+    if type(q) == "number" then out.recipeQuality = q end
+  end
+  return out
+end
+
 local function gatherRecipeLists()
   local out = {}
   if not GetNumRecipeLists or not GetRecipeListInfo or not GetRecipeInfo then return out end
@@ -2824,10 +2853,13 @@ local function gatherRecipeLists()
               local known = rPacked[2] == true
               if known then knownCount = knownCount + 1 end
               local quality = rPacked[6]
+              local resultItemId = rPacked[9]
               recipes[#recipes + 1] = {
                 name = recipeName,
                 known = known,
                 quality = (type(quality) == "number" and quality >= 0) and quality or nil,
+                -- Links this recipe to the catalog's full entry by the game's id.
+                resultItemId = (type(resultItemId) == "number" and resultItemId > 0) and resultItemId or nil,
               }
             end
           end
@@ -3314,6 +3346,7 @@ local function gatherCharacter()
     research = safe(function() return gatherResearch() end, { crafts = {} }),
     motifs = safe(function() return gatherMotifs() end, {}),
     recipeLists = safe(function() return gatherRecipeLists() end, {}),
+    craftLevels = safe(function() return gatherCraftLevels() end, nil),
     lastSeen = GetTimeStamp(),
     gold = safe(function() return GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER) end, 0),
     telVar = safe(function() return GetCurrencyAmount(CURT_TELVAR_STONES, CURRENCY_LOCATION_CHARACTER) end, 0),

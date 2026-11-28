@@ -145,6 +145,7 @@ The full map, with sources, is in `docs/game-model.md`. In short:
 | Buffs, riding, stats | `buffs.ts`, `riding.ts`, `stats.ts` | Lasting buffs and riding lessons, counted down from the save; the character sheet and every value, worded as the game shows it |
 | Where items belong | `item-category.ts` | The game's inventory tabs; `itemPlace` files every item |
 | Skills | `skills.ts`, `skill-caps.ts`, `class-mastery.ts`, `vengeance.ts` | Categories and order, rank caps, Class Mastery, lines left out |
+| Crafts, recipes | `tradeskills.ts`, `recipes.ts` | The seven crafts in the game's order; every recipe and plan, known and craftable per character |
 | Dailies | `daily-reset.ts`, `pledges.ts`, `pledge-objectives.ts`, `world-bosses.ts`, `zone-dailies.ts`, `writs.ts`, `riding.ts` | The reset clock, pledges, world bosses, zone dailies, crafting writs, riding lessons |
 | Account | `currencies.ts`, `pithka.ts`, `mythics.ts`, `outfits.ts`, `transmute.ts` | Wallet, content achievements, mythics, outfit styles, crystal costs |
 | Game rules | `rules.ts` | The game's caps, timers and costs from the save; reference values only until a save carries them |
@@ -195,7 +196,11 @@ including a server. Database access lives in `src/lib/db/`.
   - gold only for gold amounts and legendary items;
   - target tiers: violet mandatory, blue extra, slate completionist;
   - Champion Points: green Craft, blue Warfare, red Fitness;
-  - item quality uses the game's colors.
+  - crafts: one hue each (`--craft-*`, `tradeskillColor`): steel
+    blacksmithing, leather clothing, green woodworking, blue enchanting,
+    pink alchemy, orange provisioning, teal jewelry;
+  - item quality uses the game's colors (`--q-*` in `src/app/quality.css`,
+    shared by both looks).
 - Follow Atlas's structure for what goes where: account-wide vs
   per-character. Give it character, not just modernization.
 - **Easy to read:** little scrolling, one click to what you need, no walls

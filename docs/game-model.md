@@ -27,6 +27,8 @@ The model lives in `src/lib/game/`:
 | `riding.ts` | Riding lessons: speed, stamina, capacity against their caps, and when the next lesson opens |
 | `stats.ts` | The character sheet at the save and what an ability adds to it, worded as the game's window |
 | `rules.ts` | The game's caps, timers and costs from the save; reference values only until a save carries them |
+| `tradeskills.ts` | The seven crafts (the game's tradeskills) in its order, with the game's names; the writs and the gear crafts use this list |
+| `recipes.ts` | Recipes and furnishing plans: what each makes, its station, requirements, and whether a character knows it and can craft it |
 | `item-category.ts` | Where every item belongs: the game's inventory tabs and sub-tabs, in the game's order |
 | `learn.ts` | Facts about the game a save carries (a blessing's text), turned into catalog rows |
 | `food.ts` | One food or drink buff at a time; food raises maximums, drink recovery; recipe families and grades |
@@ -277,6 +279,30 @@ Each stat keeps the game's constant name as `key` ("critical_damage"),
 because the game's stat numbers can change between patches. `stats.ts`
 words the values; it never works one out. A sheet value includes what was
 active at the save (food, Mundus, passives), as in the game's window.
+
+## Recipes and plans
+
+Catalog 0.2.11 reads every provisioning recipe and furnishing plan the way
+the crafting station and tooltip do (`provisioner.lua`), as the `recipe`
+domain, keyed by what it makes (`recipe-<result item id>`):
+
+| Fact | Game call |
+| --- | --- |
+| Name, list, station (craft) | `GetRecipeListInfo`, `GetRecipeInfo` |
+| Skill requirements ("Requires Metalworking 3") | `GetRecipeTradeskillRequirement`, `GetTradeskillLevelPassiveAbilityId` |
+| Recipe Quality requirement | `GetRecipeInfo` (`qualityReq`) |
+| Ingredients and amounts | `GetRecipeIngredientItemInfo`, `GetRecipeIngredientItemLink` |
+| What it makes: quality, stack, sell price, description | `GetRecipeResultItemInfo`, `GetItemLinkFlavorText` |
+| A furnishing's category, theme, placement limit | `GetItemLinkFurnitureDataId`, `GetFurnitureDataInfo`, `GetFurnitureCategoryInfo` |
+
+Snapshot 0.9.48 links each character's recipes to those entries by the
+result item's id (`resultItemId`, by name on older saves) and saves the
+character's level in each craft's level passive and Recipe Quality
+(`craftLevels`, as the station checks them). `readRecipe` says whether a
+character knows a recipe and can craft it: known and every requirement met.
+
+Not encoded: where a plan drops. The game has no call for it (it has
+acquire hints only for scribing and skyshards).
 
 ## The game's rules: its own numbers first
 

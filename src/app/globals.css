@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./quality.css";
 
 /*
  * Nirnside theming.
@@ -128,15 +129,16 @@ html[data-look="classic"] [data-rendered-look="atlas"] {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* ESO item quality colors (fixed across themes). */
-  --color-q-trash: #9d9d9d;
-  --color-q-normal: #c8c6bf;
-  --color-q-fine: #4cd12a;
-  --color-q-superior: #3a92ff;
-  --color-q-epic: #a94ff5;
-  --color-q-legendary: #d8b13a;
-  --color-q-mythic: #e6832b;
+  /* ESO item quality colors (fixed across themes), from the --q-* variables below. */
+  --color-q-trash: var(--q-trash);
+  --color-q-normal: var(--q-normal);
+  --color-q-fine: var(--q-fine);
+  --color-q-superior: var(--q-superior);
+  --color-q-epic: var(--q-epic);
+  --color-q-legendary: var(--q-legendary);
+  --color-q-mythic: var(--q-mythic);
 }
+
 
 html {
   color-scheme: dark;

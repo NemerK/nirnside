@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./quality.css";
 
 /*
  * Party — the character-first look.
@@ -36,6 +37,14 @@ html.party {
   --cp-craft: #69d391;
   --cp-warfare: #66b3ff;
   --cp-fitness: #ff7b7b;
+  /* The crafts, one hue each (steel, leather, wood, glyph, reagent, kitchen, gem). Not gold: that is for gold and legendary items. */
+  --craft-blacksmithing: #9fb1c4;
+  --craft-clothing: #c9a27e;
+  --craft-woodworking: #8fbf6e;
+  --craft-enchanting: #7f9cff;
+  --craft-alchemy: #e486ad;
+  --craft-provisioning: #ea9461;
+  --craft-jewelry: #62c9c3;
   --shadow-pop: 0 18px 48px rgb(4 2 8 / 0.6);
 }
 
@@ -68,13 +77,14 @@ html.party {
   --font-display: var(--font-party-display);
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
 
-  --color-q-trash: #9d9d9d;
-  --color-q-normal: #c8c6bf;
-  --color-q-fine: #4cd12a;
-  --color-q-superior: #3a92ff;
-  --color-q-epic: #a94ff5;
-  --color-q-legendary: #d8b13a;
-  --color-q-mythic: #e6832b;
+  /* Item quality colors: the --q-* variables in globals.css. */
+  --color-q-trash: var(--q-trash);
+  --color-q-normal: var(--q-normal);
+  --color-q-fine: var(--q-fine);
+  --color-q-superior: var(--q-superior);
+  --color-q-epic: var(--q-epic);
+  --color-q-legendary: var(--q-legendary);
+  --color-q-mythic: var(--q-mythic);
 }
 
 body {

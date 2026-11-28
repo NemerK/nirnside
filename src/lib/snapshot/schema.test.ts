@@ -277,3 +277,21 @@ describe("game rules and caps (snapshot 0.9.47)", () => {
     assert.equal(StickerbookSet.parse({ setId: 1, name: "S" }).reconstructCost, undefined);
   });
 });
+
+describe("recipes linked by id, craft levels (snapshot 0.9.48)", () => {
+  it("reads a recipe's result item id and the character's craft levels; old saves still parse", async () => {
+    const { Character } = await import("./schema");
+    const base = { id: "1", name: "T", class: "Sorcerer", race: "Breton", alliance: "Daggerfall Covenant" };
+    const c = Character.parse({
+      ...base,
+      recipeLists: [{ name: "Gallery", kind: "furnishing", known: 1, total: 1, recipes: [{ name: "Breton Throne", known: true, resultItemId: 115000 }] }],
+      craftLevels: { blacksmithing: 3, recipeQuality: 4 },
+    });
+    assert.equal(c.recipeLists[0].recipes[0].resultItemId, 115000);
+    assert.equal(c.craftLevels?.recipeQuality, 4);
+    const old = Character.parse({ ...base, recipeLists: [{ name: "Gallery", kind: "furnishing", recipes: [{ name: "Breton Throne", known: true }] }] });
+    assert.equal(old.recipeLists[0].recipes[0].resultItemId, undefined);
+    assert.equal(old.craftLevels, undefined);
+    assert.equal(Character.parse({ ...base, craftLevels: "odd" }).craftLevels, null);
+  });
+});

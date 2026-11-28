@@ -1,4 +1,3 @@
-import { qualityTextClass } from "../game/quality";
 import { styleKey } from "../game/motifs";
 import type {
   Character,
@@ -288,7 +287,3 @@ export function knownMotifKeys(styles: MotifStyle[] | undefined): Set<string> {
   return keys;
 }
 
-export function recipeQualityClass(quality: number | undefined): string {
-  // Recipes report the game's numeric quality; normal (1) stays plain text.
-  return quality && quality >= 2 ? qualityTextClass(quality) : "text-fg";
-}

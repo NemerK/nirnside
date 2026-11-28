@@ -508,7 +508,10 @@ export type MotifStyle = z.infer<typeof MotifStyle>;
 export const RecipeEntry = z.object({
   name: z.string(),
   known: z.boolean().default(false),
+  /** The Recipe Quality rank it requires (GetRecipeInfo's qualityReq), not the dish's quality. */
   quality: z.number().int().nonnegative().optional(),
+  /** What it makes, by the game's item id: links it to the catalog's recipe. Snapshot 0.9.48+. */
+  resultItemId: z.number().int().positive().nullable().optional().catch(undefined),
 });
 export type RecipeEntry = z.infer<typeof RecipeEntry>;
 
@@ -687,6 +690,12 @@ export const Character = z.object({
   motifs: lenientArray(MotifStyle).default([]),
   /** Provisioning recipes + furnishing plans this character knows or is missing. */
   recipeLists: lenientArray(RecipeList).default([]),
+  /**
+   * The character's level in each craft's level passive (Metalworking,
+   * Engraver, …) and `recipeQuality`, as the crafting station checks them.
+   * Snapshot 0.9.48+.
+   */
+  craftLevels: z.record(z.string(), z.number().int().nonnegative()).nullable().optional().catch(null),
   /** Wizard's Wardrobe setups for this character, if that addon is installed. */
   wardrobe: Wardrobe.nullable().default(null),
   /** Unix seconds of this character's last logout snapshot. null = never logged since install. */

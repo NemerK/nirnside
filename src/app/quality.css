@@ -1,0 +1,15 @@
+/*
+ * ESO item quality colors, once for both looks: globals.css and party.css
+ * import this. Plain variables, so inline styles (qualityColor) can use them
+ * too: "@theme inline" only bakes the --color-q-* names into utility classes
+ * and never publishes them as variables.
+ */
+:root {
+  --q-trash: #9d9d9d;
+  --q-normal: #c8c6bf;
+  --q-fine: #4cd12a;
+  --q-superior: #3a92ff;
+  --q-epic: #a94ff5;
+  --q-legendary: #d8b13a;
+  --q-mythic: #e6832b;
+}

@@ -640,6 +640,143 @@ local function gatherFood()
   return out
 end
 
+----------------------------------------------------------------------
+-- Recipes and plans: every provisioning recipe and furnishing plan, with
+-- what it makes, where it's crafted, what it needs and, for furnishings,
+-- where the game files it. Read the way the game's crafting stations and
+-- tooltips read them (ESOUI API 101051; esoui/esoui 12.1.7
+-- ingame/crafting/keyboard/provisioner.lua). The game doesn't say where a
+-- plan drops, so that isn't recorded.
+----------------------------------------------------------------------
+
+-- The crafts by the game's constant, with Nirnside's key for each.
+local CRAFT_KEYS = {
+  { "CRAFTING_TYPE_BLACKSMITHING", "blacksmithing" },
+  { "CRAFTING_TYPE_CLOTHIER", "clothing" },
+  { "CRAFTING_TYPE_WOODWORKING", "woodworking" },
+  { "CRAFTING_TYPE_JEWELRYCRAFTING", "jewelry" },
+  { "CRAFTING_TYPE_ENCHANTING", "enchanting" },
+  { "CRAFTING_TYPE_ALCHEMY", "alchemy" },
+  { "CRAFTING_TYPE_PROVISIONING", "provisioning" },
+}
+local craftKeyOf = {}
+for _, c in ipairs(CRAFT_KEYS) do
+  if type(_G[c[1]]) == "number" then craftKeyOf[_G[c[1]]] = c[2] end
+end
+
+local function gameString(prefix, value)
+  if type(value) ~= "number" then return nil end
+  local text = safe(function() return GetString(prefix, value) end, "")
+  return text and text ~= "" and zo_strformat("<<1>>", text) or nil
+end
+
+local function gatherRecipes()
+  local out = {}
+  if not GetNumRecipeLists or not GetRecipeInfo or not GetRecipeResultItemLink then return out end
+  local seen = {}
+  local passiveNames = {}
+  local function passiveName(tradeskill)
+    if passiveNames[tradeskill] == nil then
+      passiveNames[tradeskill] = safe(function()
+        return zo_strformat("<<1>>", GetAbilityName(GetTradeskillLevelPassiveAbilityId(tradeskill)) or "")
+      end, "") or ""
+    end
+    return passiveNames[tradeskill] ~= "" and passiveNames[tradeskill] or nil
+  end
+  local categoryNames = {}
+  local function categoryName(id)
+    if type(id) ~= "number" or id == 0 then return nil end
+    if categoryNames[id] == nil then
+      categoryNames[id] = safe(function() return zo_strformat("<<1>>", (GetFurnitureCategoryInfo(id)) or "") end, "") or ""
+    end
+    return categoryNames[id] ~= "" and categoryNames[id] or nil
+  end
+
+  for listIndex = 1, (safe(GetNumRecipeLists, 0) or 0) do
+    local listName, numRecipes = safe(function() return GetRecipeListInfo(listIndex) end, nil)
+    listName = listName and zo_strformat("<<1>>", listName) or ""
+    for recipeIndex = 1, (tonumber(numRecipes) or 0) do
+      safe(function()
+        local _, name, numIngredients, levelReq, qualityReq, special, station, resultItemId = GetRecipeInfo(listIndex, recipeIndex)
+        local link = GetRecipeResultItemLink(listIndex, recipeIndex, LINK_STYLE_DEFAULT)
+        local itemId = (type(resultItemId) == "number" and resultItemId > 0) and resultItemId
+          or (link and link ~= "" and GetItemLinkItemId(link)) or nil
+        if not itemId or itemId == 0 or seen[itemId] then return end
+        seen[itemId] = true
+        local furnishing = PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING ~= nil
+          and special == PROVISIONER_SPECIAL_INGREDIENT_TYPE_FURNISHING
+        local entry = {
+          id = "recipe-" .. tostring(itemId),
+          name = zo_strformat("<<1>>", name or ""),
+          list = listName ~= "" and listName or nil,
+          kind = furnishing and "furnishing" or "provisioning",
+          craft = craftKeyOf[station],
+          craftName = gameString("SI_TRADESKILLTYPE", station),
+          qualityReq = type(qualityReq) == "number" and qualityReq > 0 and qualityReq or nil,
+          levelReq = type(levelReq) == "number" and levelReq > 0 and levelReq or nil,
+          source = "ingame",
+        }
+
+        -- Skill requirements, worded as the game's: "Requires Engraver 3".
+        local requires = {}
+        if GetNumRecipeTradeskillRequirements then
+          for i = 1, (GetNumRecipeTradeskillRequirements(listIndex, recipeIndex) or 0) do
+            local tradeskill, level = GetRecipeTradeskillRequirement(listIndex, recipeIndex, i)
+            if type(tradeskill) == "number" and type(level) == "number" and level > 0 then
+              requires[#requires + 1] = { craft = craftKeyOf[tradeskill], passive = passiveName(tradeskill), level = level }
+            end
+          end
+        end
+        if #requires > 0 then entry.requires = requires end
+
+        -- What it takes, by the game's item ids.
+        local ingredients = {}
+        for i = 1, (tonumber(numIngredients) or 0) do
+          safe(function()
+            local iName, iIcon, quantity, _, iQuality = GetRecipeIngredientItemInfo(listIndex, recipeIndex, i)
+            local iLink = GetRecipeIngredientItemLink and GetRecipeIngredientItemLink(listIndex, recipeIndex, i, LINK_STYLE_DEFAULT) or nil
+            ingredients[#ingredients + 1] = {
+              itemId = iLink and iLink ~= "" and GetItemLinkItemId(iLink) or nil,
+              name = zo_strformat("<<1>>", iName or ""),
+              icon = normIcon(iIcon),
+              quantity = quantity,
+              quality = iQuality,
+            }
+          end)
+        end
+        if #ingredients > 0 then entry.ingredients = ingredients end
+
+        -- What it makes.
+        local rName, rIcon, stack, sellPrice, rQuality = GetRecipeResultItemInfo(listIndex, recipeIndex)
+        local flavor = link and safe(function() return GetItemLinkFlavorText(link) end, "") or ""
+        entry.result = {
+          itemId = itemId,
+          name = zo_strformat("<<1>>", rName or name or ""),
+          icon = normIcon(rIcon),
+          quality = rQuality,
+          stack = type(stack) == "number" and stack > 1 and stack or nil,
+          sellPrice = type(sellPrice) == "number" and sellPrice > 0 and sellPrice or nil,
+          flavor = flavor ~= "" and zo_strformat("<<1>>", flavor) or nil,
+        }
+
+        -- Where the game files a furnishing, its theme and placement limit.
+        local dataId = link and GetItemLinkFurnitureDataId and GetItemLinkFurnitureDataId(link) or 0
+        if type(dataId) == "number" and dataId > 0 then
+          local categoryId, subcategoryId, theme, limit = GetFurnitureDataInfo(dataId)
+          entry.furnishing = {
+            category = categoryName(categoryId),
+            subcategory = categoryName(subcategoryId),
+            theme = gameString("SI_FURNITURETHEMETYPE", theme),
+            limit = gameString("SI_HOUSINGFURNISHINGLIMITTYPE", limit),
+          }
+        end
+        out[#out + 1] = entry
+      end)
+    end
+  end
+  return out
+end
+
 local function scan()
   if IsUnitInCombat("player") then
     d("[Nirnside Catalog] In combat — scan refused. Run /nirncatalog while AFK.")
@@ -659,11 +796,12 @@ local function scan()
   sv.scripts = scripts
   sv.mundus = gatherMundus()
   sv.food = gatherFood()
+  sv.recipes = gatherRecipes()
   sv.generatedAt = GetTimeStamp()
 
   d(string.format(
-    "[Nirnside Catalog] Done: %d CP, %d skill lines, %d abilities, %d sets, %d grimoires, %d scripts, %d Mundus stones, %d dishes. /reloadui or log out to write the file.",
-    #sv.cp, #sv.skillLines, #sv.skills, #sv.sets, #sv.grimoires, #sv.scripts, #sv.mundus, #sv.food))
+    "[Nirnside Catalog] Done: %d CP, %d skill lines, %d abilities, %d sets, %d grimoires, %d scripts, %d Mundus stones, %d dishes, %d recipes and plans. /reloadui or log out to write the file.",
+    #sv.cp, #sv.skillLines, #sv.skills, #sv.sets, #sv.grimoires, #sv.scripts, #sv.mundus, #sv.food, #sv.recipes))
 end
 
 local function onLoaded(_, name)
@@ -671,7 +809,7 @@ local function onLoaded(_, name)
   EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
   sv = ZO_SavedVars:NewAccountWide("NirnsideCatalog", 1, nil, {
     patch = "live", source = "ingame",
-    cp = {}, skillLines = {}, skills = {}, sets = {}, grimoires = {}, scripts = {}, achievements = {}, mundus = {}, food = {},
+    cp = {}, skillLines = {}, skills = {}, sets = {}, grimoires = {}, scripts = {}, achievements = {}, mundus = {}, food = {}, recipes = {},
   })
   SLASH_COMMANDS["/nirncatalog"] = function() safe(scan) end
 end

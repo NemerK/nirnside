@@ -1,8 +1,9 @@
 /**
  * Item quality, lowest to highest, as the game ranks it. Mythic is the
  * game's display quality for mythic items (ITEM_DISPLAY_QUALITY_MYTHIC_OVERRIDE).
- * Colors come from the theme tokens --color-q-*; recipes report the game's
- * numeric quality (1 normal … 5 legendary).
+ * Colors come from the --q-* variables (globals.css), which the theme's
+ * --color-q-* classes use too; the game reports quality as a number
+ * (0 trash, 1 normal … 5 legendary).
  */
 export const QUALITIES = ["trash", "normal", "fine", "superior", "epic", "legendary", "mythic"] as const;
 export type Quality = (typeof QUALITIES)[number];
@@ -27,7 +28,7 @@ export function parseQuality(raw: string | number | null | undefined): Quality |
 /** The theme color for a quality, as a CSS value. */
 export function qualityColor(raw: string | number | null | undefined, fallback = "var(--border-strong)"): string {
   const q = parseQuality(raw);
-  return q ? `var(--color-q-${q})` : fallback;
+  return q ? `var(--q-${q})` : fallback;
 }
 
 /** Tailwind classes, one per quality, so the build keeps them. */

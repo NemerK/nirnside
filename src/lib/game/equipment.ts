@@ -14,6 +14,7 @@
  *   researched per item type (robes and jerkins share one line). Shields
  *   take armor traits.
  */
+import type { Tradeskill } from "./tradeskills";
 
 export const WEIGHTS = ["light", "medium", "heavy"] as const;
 export type Weight = (typeof WEIGHTS)[number];
@@ -41,7 +42,8 @@ export const WEAPONS = [
 ] as const;
 export type Weapon = (typeof WEAPONS)[number];
 
-export type Craft = "blacksmithing" | "clothing" | "woodworking" | "jewelry";
+/** The crafts that make gear: a subset of the tradeskills (tradeskills.ts). */
+export type Craft = Extract<Tradeskill, "blacksmithing" | "clothing" | "woodworking" | "jewelry">;
 export type TraitFamily = "armor" | "weapon" | "jewelry";
 
 /** Every craftable, collectible, wearable piece the game has, as one key. */
