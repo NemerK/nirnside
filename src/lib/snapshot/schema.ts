@@ -61,7 +61,47 @@ export const ItemQuality = z.enum([
 ]);
 export type ItemQuality = z.infer<typeof ItemQuality>;
 
+/**
+ * What an ability adds to the stat sheet, in the game's numbers
+ * (GetAbilityDerivedStatAndEffectByIndex / GetAbilityAdvancedStatAndEffectByIndex).
+ * `advanced` marks an Advanced Stats line; `format` says how the game shows it.
+ * Snapshot 0.9.46+, Catalog 0.2.9+.
+ */
+export const StatEffect = z.object({
+  /** The game's constant name, lower case ("critical_damage"): stable across patches. */
+  key: z.string().nullable().optional(),
+  stat: z.number().int(),
+  label: z.string().nullable().optional(),
+  value: z.number(),
+  advanced: z.boolean().nullable().optional(),
+  format: z.string().nullable().optional(),
+});
+export type StatEffect = z.infer<typeof StatEffect>;
+
+/**
+ * An item's numbers as its tooltip shows them (snapshot 0.9.46+). Only what
+ * the item has is present: jewelry has no armor, a potion no weapon damage.
+ */
+const itemValueFields = {
+  /** Armor rating (GetItemLinkArmorRating). */
+  armor: z.number().int().nonnegative().nullable().optional(),
+  /** Weapon or spell damage of a weapon (GetItemLinkWeaponPower). */
+  weaponPower: z.number().int().nonnegative().nullable().optional(),
+  /** The trait's text with its numbers (GetItemLinkTraitInfo). */
+  traitText: z.string().nullable().optional(),
+  /** Enchant charges on a weapon. */
+  charges: z.number().int().nonnegative().nullable().optional(),
+  maxCharges: z.number().int().nonnegative().nullable().optional(),
+  /** Sell value in gold (GetItemLinkValue). */
+  value: z.number().int().nonnegative().nullable().optional(),
+  /** What using it does: a potion's, food's or poison's effects, with numbers. */
+  use: z.array(z.string()).nullable().optional().catch(undefined),
+};
+
 export const Item = z.object({
+  ...itemValueFields,
+  /** The enchant's text with its numbers (GetItemLinkEnchantInfo). Snapshot 0.9.46+. */
+  enchant: z.string().nullable().optional(),
   /** ESO itemId (numeric). Stable per item definition. */
   itemId: z.number().int().nonnegative(),
   /** Full itemLink string (|H...|h|h) as ESO produces it. Kept verbatim. */
@@ -196,6 +236,8 @@ export const ChampionStar = z.object({
   /** Slottable, passive, or a constellation root. Older snapshots omit it. */
   kind: z.enum(["slottable", "passive", "cluster"]).optional().catch(undefined),
   icon: z.string().optional(),
+  /** What these points give now, as the Champion window says it. Snapshot 0.9.46+. */
+  bonus: z.string().nullable().optional(),
 });
 
 export const ChampionDiscipline = z.object({
@@ -205,6 +247,7 @@ export const ChampionDiscipline = z.object({
 });
 
 export const EquippedItem = z.object({
+  ...itemValueFields,
   slot: z.string(),
   /** Which bar: "front", "back", or null for armor/jewelry. */
   bar: z.enum(["front", "back"]).nullable().default(null),
@@ -259,10 +302,59 @@ export const ActiveBuff = z.object({
   endsAt: z.number().int().nonnegative().nullable().optional(),
   /** A Mundus blessing ("Boon: The Warrior"). */
   mundus: z.boolean().nullable().optional(),
-  /** The game's text, with this patch's numbers. Blessings only. */
+  /** The effect's text with this character's numbers. Blessings only before snapshot 0.9.46, every effect since. */
   description: z.string().nullable().optional(),
+  /** What it adds to the stat sheet (a Mundus stone's amount). Snapshot 0.9.46+. */
+  effects: lenientArray(StatEffect).optional(),
 });
 export type ActiveBuff = z.infer<typeof ActiveBuff>;
+
+/**
+ * The character sheet at the save (snapshot 0.9.46+): the Stats window's rows
+ * and every Advanced Stat, with the game's names. Whatever was active at that
+ * moment (food, Mundus, passives) is included, as in the game's window.
+ */
+export const StatLine = z.object({
+  key: z.string(),
+  stat: z.number().int(),
+  label: z.string().nullable().optional(),
+  value: z.number(),
+});
+export const AdvancedStatLine = z.object({
+  category: z.string().nullable().optional(),
+  /** The game's constant name, lower case ("critical_damage"). */
+  key: z.string().nullable().optional(),
+  stat: z.number().int(),
+  label: z.string().nullable().optional(),
+  format: z.string().nullable().optional(),
+  flat: z.number().nullable().optional(),
+  percent: z.number().nullable().optional(),
+});
+export const CharacterStats = z.object({
+  main: lenientArray(StatLine).default([]),
+  advanced: lenientArray(AdvancedStatLine).default([]),
+});
+export type CharacterStats = z.infer<typeof CharacterStats>;
+
+/** A skill slotted on the front or back bar at the save (snapshot 0.9.46+). */
+export const BarSkill = z.object({
+  /** 1–5, then 6 for the ultimate. */
+  slot: z.number().int().positive(),
+  ultimate: z.boolean().nullable().optional(),
+  abilityId: z.number().int().nonnegative().nullable().optional(),
+  /** Set when a scribed skill sits here. */
+  craftedAbilityId: z.number().int().nonnegative().nullable().optional(),
+  name: z.string().nullable().optional(),
+  icon: z.string().nullable().optional(),
+  /** The tooltip text with this character's numbers. */
+  description: z.string().nullable().optional(),
+});
+export type BarSkill = z.infer<typeof BarSkill>;
+export const CharacterBar = z.object({
+  bar: z.enum(["front", "back"]),
+  skills: lenientArray(BarSkill).default([]),
+});
+export type CharacterBar = z.infer<typeof CharacterBar>;
 
 /** Riding lessons (addon 0.9.43+). */
 export const Riding = z.object({
@@ -557,6 +649,8 @@ export const Character = z.object({
   /** Skyshard pieces toward the next point. */
   skyshards: z.number().int().nonnegative().nullable().optional().catch(null),
   backpack: BagSpace.nullable().optional().catch(null),
+  stats: CharacterStats.nullable().optional().catch(null),
+  bars: lenientArray(CharacterBar).optional(),
   /** Attribute point spend. */
   attributes: z
     .object({ magicka: z.number().int(), health: z.number().int(), stamina: z.number().int() })

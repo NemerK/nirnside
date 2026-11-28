@@ -35,7 +35,7 @@ export function abilityLines(): Map<string, string> {
 /** Each Mundus blessing's text as the game wrote it, for readCharacter. */
 export function mundusTexts(): MundusText[] {
   try {
-    return getMundus().map(({ entry }) => ({ name: entry.name, description: entry.description }));
+    return getMundus().map(({ entry }) => ({ name: entry.name, description: entry.description, effects: entry.effects }));
   } catch {
     return [];
   }

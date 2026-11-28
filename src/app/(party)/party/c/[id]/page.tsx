@@ -29,6 +29,8 @@ import { EquippedPanel, type EquippedPiece, type EquippedSet } from "@/component
 import { HoverTip } from "@/components/party/hover-tip";
 import { TodayPanel, type TodayRow } from "@/components/party/today-panel";
 import { CharacterStatus } from "@/components/party/character-status";
+import { CharacterSheet as SheetPanel } from "@/components/party/character-sheet";
+import { EsoText } from "@/components/eso-text";
 import { DAILY_TRACKABLES, trackedFor } from "@/lib/party/daily-tracking";
 import { getDailyTracking } from "@/lib/db/daily-tracking";
 import { getCPStars, setHref } from "@/lib/db/catalog-queries";
@@ -95,6 +97,10 @@ function presentEquipped(c: Character, reading: CharacterReading) {
       quality: e.quality ?? null,
       trait: e.trait ?? null,
       enchant: e.enchant ?? null,
+      traitText: e.traitText ?? null,
+      armor: e.armor ?? null,
+      weaponPower: e.weaponPower ?? null,
+      charges: e.maxCharges ? { now: e.charges ?? 0, max: e.maxCharges } : null,
       setName: e.setName ?? null,
       setHref: hrefFor(e.setName ?? null, e.setId),
       setCount: countOf(counts, e.setName),
@@ -235,6 +241,10 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
   const starText = new Map(
     safe(() => getCPStars(), []).map((r) => [r.entry.name.toLowerCase(), r.entry.description] as const),
   );
+  // What each star's points give now, as the Champion window says it (snapshot 0.9.46+).
+  const starBonus = new Map(
+    c.champion.flatMap((d) => d.stars).filter((s) => s.bonus).map((s) => [s.name.toLowerCase(), { bonus: s.bonus!, points: s.points }] as const),
+  );
 
   // Research: every slot, running or idle. Research keeps going after logout.
   const research = presentResearch(c.research);
@@ -264,8 +274,22 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
               {reading.mundus.blessings.map((m) => (
                 <span key={m.name}>
                   {" · "}
-                  {m.text ? (
-                    <HoverTip tip={<span className="text-[13px] text-fg">{m.text}</span>}>
+                  {m.text || m.amount ? (
+                    <HoverTip
+                      tip={
+                        <>
+                          {m.amount ? <span className="block text-[13px] font-medium tabular-nums text-fg">{m.amount}</span> : null}
+                          {m.text ? (
+                            <span className="mt-0.5 block text-[13px] text-fg-muted">
+                              <EsoText text={m.text} />
+                            </span>
+                          ) : null}
+                          {m.amountFrom === "catalog" ? (
+                            <span className="mt-1 block text-[12px] text-fg-subtle">The stone&apos;s base amount; this character&apos;s own shows after its next save.</span>
+                          ) : null}
+                        </>
+                      }
+                    >
                       <span className="cursor-help underline decoration-dotted underline-offset-2">{m.name}</span>
                     </HoverTip>
                   ) : (
@@ -423,6 +447,14 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
             <CharacterStatus reading={reading} />
           </Module>
 
+          <Module
+            title="Character sheet"
+            meta={reading.stats ? "as the game's Stats window showed it at the save" : undefined}
+            className="md:col-span-2 xl:col-span-12"
+          >
+            <SheetPanel stats={reading.stats} bars={reading.skillBars} />
+          </Module>
+
           <Module title="Champion Points" href={`${base}/champion`} hrefLabel="Constellations" meta="hover a star" className="md:col-span-2 xl:col-span-7">
             {sheet.champion.length === 0 ? (
               <Empty>No Champion Points captured.</Empty>
@@ -451,8 +483,18 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
                                       {star}
                                     </span>
                                     <span className="mt-1 block text-fg-muted">
-                                      {starText.get(star.toLowerCase()) || "No description in the Library yet. A catalog scan in game adds it."}
+                                      {starText.get(star.toLowerCase()) ? (
+                                        <EsoText text={starText.get(star.toLowerCase())!} />
+                                      ) : (
+                                        "No description in the Library yet. A catalog scan in game adds it."
+                                      )}
                                     </span>
+                                    {starBonus.get(star.toLowerCase()) ? (
+                                      <span className="mt-1.5 block border-t border-border pt-1.5 text-fg">
+                                        <span className="text-fg-subtle">With {starBonus.get(star.toLowerCase())!.points} points: </span>
+                                        <EsoText text={starBonus.get(star.toLowerCase())!.bonus} />
+                                      </span>
+                                    ) : null}
                                   </>
                                 }
                               >

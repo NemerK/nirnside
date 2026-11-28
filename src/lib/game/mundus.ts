@@ -1,6 +1,8 @@
 import type { WornInput } from "./loadout";
 import { parsePieceType, pieceKindFromName } from "./equipment";
 import { canonicalTrait } from "./traits";
+import { effectsText } from "./stats";
+import type { StatEffect } from "../snapshot/schema";
 
 /**
  * Mundus stones.
@@ -20,9 +22,10 @@ import { canonicalTrait } from "./traits";
  *
  * What each stone boosts is kept here as reference. The numbers move with
  * patches, so they are never written here: the game states them. A
- * character's own blessing text comes from its saved buffs (addon 0.9.43+),
- * and every stone's text from the catalog scan (Catalog 0.2.5+). Both beat
- * the reference line below.
+ * character's own blessing (text and amount, with its Divines pieces) comes
+ * from its saved buffs (Snapshot 0.9.43+, amounts 0.9.46+); every stone's
+ * text and base amount from the catalog scan (Catalog 0.2.5+, amounts
+ * 0.2.9+). Both beat the reference line below.
  */
 
 export interface MundusStone {
@@ -64,6 +67,8 @@ export function findMundus(raw: string | null | undefined): MundusStone | null {
 export interface MundusText {
   name: string;
   description?: string | null;
+  /** The stone's amounts, in the game's numbers. */
+  effects?: readonly StatEffect[] | null;
 }
 
 export interface ActiveBlessing {
@@ -74,6 +79,12 @@ export interface ActiveBlessing {
   text: string | null;
   /** Where `text` came from. */
   textFrom: "buff" | "catalog" | null;
+  /** What it adds, in the game's numbers: the character's own (with Divines) when saved, else the stone's base. */
+  effects: StatEffect[];
+  /** Those amounts in words ("+11% Critical Damage"); null when nothing has reported them. */
+  amount: string | null;
+  /** Where `effects` came from. */
+  amountFrom: "buff" | "catalog" | null;
 }
 
 export interface MundusReading {
@@ -91,7 +102,7 @@ export interface MundusReading {
 export interface MundusInput {
   mundus?: string | null;
   mundusBoons?: readonly string[] | null;
-  buffs?: readonly { name: string; mundus?: boolean | null; description?: string | null }[] | null;
+  buffs?: readonly { name: string; mundus?: boolean | null; description?: string | null; effects?: readonly StatEffect[] | null }[] | null;
 }
 
 export function readMundus(
@@ -109,14 +120,22 @@ export function readMundus(
   const names = c.mundusBoons?.length ? [...c.mundusBoons] : c.mundus ? [c.mundus] : [];
   const blessings = names.map((raw): ActiveBlessing => {
     const key = stoneKey(raw);
-    const buff = (c.buffs ?? []).find((b) => b.mundus && stoneKey(b.name) === key && b.description);
-    const row = catalog.find((m) => stoneKey(m.name) === key && m.description);
+    const buffs = (c.buffs ?? []).filter((b) => b.mundus && stoneKey(b.name) === key);
+    const rows = catalog.filter((m) => stoneKey(m.name) === key);
+    const buff = buffs.find((b) => b.description);
+    const row = rows.find((m) => m.description);
+    const buffAmount = buffs.find((b) => b.effects?.length);
+    const rowAmount = rows.find((m) => m.effects?.length);
+    const effects = [...(buffAmount?.effects ?? rowAmount?.effects ?? [])];
     const stone = findMundus(raw);
     return {
       stone,
       name: stone?.name ?? raw.replace(/^boon:\s*/i, "").trim(),
       text: buff?.description ?? row?.description ?? null,
       textFrom: buff?.description ? "buff" : row?.description ? "catalog" : null,
+      effects,
+      amount: effectsText(effects),
+      amountFrom: buffAmount ? "buff" : rowAmount ? "catalog" : null,
     };
   });
   const allowed = twiceBorn >= 5 ? 2 : 1;

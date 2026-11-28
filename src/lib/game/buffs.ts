@@ -1,3 +1,4 @@
+import { effectsText } from "./stats";
 import type { ActiveBuff } from "../snapshot/schema";
 
 /**
@@ -20,6 +21,10 @@ export interface BuffReading {
   /** Seconds left now, counted from the save; null = lasts until removed. */
   remaining: number | null;
   expired: boolean;
+  /** The game's text with this character's numbers (snapshot 0.9.46+, blessings before that). */
+  description: string | null;
+  /** What it adds to the stat sheet, in words ("+11% Critical Damage"). */
+  amount: string | null;
 }
 
 export function readBuffs(buffs: readonly ActiveBuff[] | null | undefined, now: number): BuffReading[] {
@@ -31,6 +36,8 @@ export function readBuffs(buffs: readonly ActiveBuff[] | null | undefined, now: 
       mundus: b.mundus === true,
       remaining,
       expired: remaining === 0,
+      description: b.description ?? null,
+      amount: effectsText(b.effects),
     };
   });
 }

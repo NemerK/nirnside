@@ -1,4 +1,20 @@
 import type { Item } from "../snapshot/schema";
+import { esoPlainText } from "../text/eso-markup";
+
+/**
+ * An item's numbers in one line, as its tooltip gives them (snapshot
+ * 0.9.46+): damage or armor, the enchant, and what using it does. Null when
+ * the save holds none.
+ */
+export function itemValuesLine(item: Item): string | null {
+  const parts = [
+    // The tooltip's own labels (SI_ITEM_FORMAT_STR_DAMAGE, SI_ITEM_FORMAT_STR_ARMOR).
+    item.weaponPower ? `Damage ${item.weaponPower.toLocaleString("en-US")}` : item.armor ? `Armor ${item.armor.toLocaleString("en-US")}` : null,
+    item.enchant ? esoPlainText(item.enchant) : null,
+    ...(item.use ?? []).map((u) => esoPlainText(u)),
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
 
 /** Where some of an item is: a character's bags, or an account-wide bag. */
 export interface Holder {

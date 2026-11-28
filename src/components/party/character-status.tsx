@@ -1,4 +1,6 @@
 import { Bar } from "@/components/party/module";
+import { EsoText } from "@/components/eso-text";
+import { HoverTip } from "@/components/party/hover-tip";
 import { SKYSHARDS_PER_POINT } from "@/lib/game/skills";
 import type { CharacterReading } from "@/lib/game/understand";
 import { formatTimeLeft } from "@/lib/today/present";
@@ -26,7 +28,31 @@ export function CharacterStatus({ reading }: { reading: CharacterReading }) {
           <ul className="space-y-1 text-[13px]">
             {timed.map((b) => (
               <li key={b.name} className="flex items-baseline justify-between gap-3">
-                <span className={`truncate ${b.expired ? "text-fg-subtle line-through" : "text-fg"}`}>{b.name}</span>
+                {b.description || b.amount ? (
+                  <HoverTip
+                    className="min-w-0"
+                    tip={
+                      <>
+                        <span className="block font-medium text-fg">{b.name}</span>
+                        {b.amount ? <span className="mt-0.5 block tabular-nums text-fg">{b.amount}</span> : null}
+                        {b.description ? (
+                          <span className="mt-1 block text-fg-muted">
+                            <EsoText text={b.description} />
+                          </span>
+                        ) : null}
+                      </>
+                    }
+                  >
+                    <span
+                      tabIndex={0}
+                      className={`block cursor-help truncate underline decoration-dotted underline-offset-2 ${b.expired ? "text-fg-subtle line-through" : "text-fg"}`}
+                    >
+                      {b.name}
+                    </span>
+                  </HoverTip>
+                ) : (
+                  <span className={`truncate ${b.expired ? "text-fg-subtle line-through" : "text-fg"}`}>{b.name}</span>
+                )}
                 <span className={`shrink-0 tabular-nums ${b.expired ? "text-fg-subtle" : "text-fg-muted"}`}>
                   {b.expired ? "ran out" : formatTimeLeft(b.remaining)}
                 </span>

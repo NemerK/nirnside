@@ -1,3 +1,4 @@
+import { esoPlainText } from "@/lib/text/eso-markup";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -280,7 +281,7 @@ export default async function CharacterPage({ params, searchParams }: PageProps<
               {c.classMastery && <Badge tone="muted">Class Mastery</Badge>}
               {reading.mundus.blessings.map((m) => (
                 <Badge key={m.name} tone="muted">
-                  <span title={m.text ?? undefined}>{m.name}</span>
+                  <span title={[m.amount, m.text ? esoPlainText(m.text) : null].filter(Boolean).join("\n") || undefined}>{m.name}</span>
                 </Badge>
               ))}
               {c.classMasteries.length > 0 && (

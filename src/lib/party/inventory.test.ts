@@ -34,3 +34,12 @@ test("different traits or sets stay apart", () => {
   ]);
   assert.equal(groups.length, 2);
 });
+
+test("an item's numbers in one line, as its tooltip gives them", async () => {
+  const { itemValuesLine } = await import("./inventory");
+  const base = { itemId: 1, name: "X", location: "backpack" as const, count: 1, ownerCharacter: null, ownerCharacterId: null, setName: null, setId: null, trait: null, level: null, equipSlot: null, obtainable: true, bound: false, stolen: false, scribing: [] };
+  assert.equal(itemValuesLine({ ...base, armor: 1396, enchant: "Adds |cffffff868|r Maximum Magicka." }), "Armor 1,396 · Adds 868 Maximum Magicka.");
+  assert.equal(itemValuesLine({ ...base, weaponPower: 1335, armor: 0 }), "Damage 1,335");
+  assert.equal(itemValuesLine({ ...base, use: ["Restore 4000 Magicka."] }), "Restore 4000 Magicka.");
+  assert.equal(itemValuesLine(base), null);
+});

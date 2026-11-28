@@ -462,6 +462,97 @@ end
 ----------------------------------------------------------------------
 local BOON_IDS = { 13940, 13943, 13974, 13975, 13976, 13977, 13978, 13979, 13980, 13981, 13982, 13984, 13985 }
 
+-- Every stat's constant name, from the API's DerivedStats and
+-- AdvancedStatDisplayType lists (ESOUI API 101051). The game identifies a
+-- stat by a number that can change between patches; the name does not, so
+-- each stat is saved with its name as `key` ("critical_damage").
+local DERIVED_STAT_NAMES = {
+  "ARMOR_RATING", "ATTACK_POWER", "BLOCK", "CRITICAL_CHANCE", "CRITICAL_RESISTANCE",
+  "CRITICAL_STRIKE", "DAMAGE_RESIST_BLEED", "DAMAGE_RESIST_COLD", "DAMAGE_RESIST_DISEASE",
+  "DAMAGE_RESIST_DROWN", "DAMAGE_RESIST_EARTH", "DAMAGE_RESIST_FIRE", "DAMAGE_RESIST_GENERIC",
+  "DAMAGE_RESIST_MAGIC", "DAMAGE_RESIST_OBLIVION", "DAMAGE_RESIST_PHYSICAL",
+  "DAMAGE_RESIST_POISON", "DAMAGE_RESIST_SHOCK", "DODGE", "HEALING_DONE", "HEALING_TAKEN",
+  "HEALTH_MAX", "HEALTH_REGEN_COMBAT", "HEALTH_REGEN_IDLE", "MAGICKA_MAX", "MAGICKA_REGEN_COMBAT",
+  "MAGICKA_REGEN_IDLE", "MISS", "MITIGATION", "MOUNT_STAMINA_MAX", "MOUNT_STAMINA_REGEN_COMBAT",
+  "MOUNT_STAMINA_REGEN_MOVING", "OFFENSIVE_PENETRATION", "PHYSICAL_PENETRATION", "PHYSICAL_RESIST",
+  "POWER", "SPELL_CRITICAL", "SPELL_MITIGATION", "SPELL_PENETRATION", "SPELL_POWER",
+  "SPELL_RESIST", "STAMINA_MAX", "STAMINA_REGEN_COMBAT", "STAMINA_REGEN_IDLE",
+  "WEAPON_AND_SPELL_DAMAGE",
+}
+local ADVANCED_STAT_NAMES = {
+  "ALLIANCE_POINTS_BONUS", "ALL_XP", "ARMOR", "ARMOR_CAP", "BASH_COST", "BASH_DAMAGE",
+  "BLEED_DAMAGE", "BLEED_RESIST", "BLOCK_COST", "BLOCK_MITIGATION", "BLOCK_SPEED", "CC_BREAK_COST",
+  "COIN_BONUS", "COLD_DAMAGE", "COLD_RESIST", "CRITICAL_CHANCE", "CRITICAL_DAMAGE",
+  "CRITICAL_HEALING", "CRITICAL_PERCENT", "CRITICAL_PERCENT_CAP", "CRITICAL_RESIST",
+  "DISEASE_DAMAGE", "DISEASE_RESIST", "DODGE_COST", "EARTH_DAMAGE", "EARTH_RESIST", "FIRE_DAMAGE",
+  "FIRE_RESIST", "FROST_RESIST", "GENERIC_DAMAGE", "GENERIC_RESIST", "HEALING_DONE",
+  "HEALING_DONE_BONUSES", "HEALING_TAKEN", "HEALING_TAKEN_BONUSES", "INSPIRATION_BONUS",
+  "MAGIC_DAMAGE", "MAGIC_RESIST", "MONSTER_KILL_XP", "OBLIVION_DAMAGE", "OBLIVION_RESIST",
+  "PHYSICAL_DAMAGE", "PHYSICAL_PENETRATION", "PHYSICAL_RESIST", "PLAYER_KILL_XP", "POISON_DAMAGE",
+  "POISON_RESIST", "SHOCK_DAMAGE", "SHOCK_RESIST", "SNEAK_COST", "SNEAK_SPEED_REDUCTION",
+  "SPELL_PENETRATION", "SPELL_RESIST", "SPRINT_COST", "SPRINT_SPEED",
+  "SUBSCRIBER_ALLIANCE_POINTS_BONUS", "SUBSCRIBER_ALL_XP", "SUBSCRIBER_COIN_BONUS",
+  "SUBSCRIBER_INSPIRATION_BONUS", "SUBSCRIBER_TELVAR_BONUS", "TELVAR_BONUS",
+  "ULTIMATE_REGEN_COMBAT",
+}
+local function keysFor(prefix, names)
+  local t = {}
+  for _, n in ipairs(names) do
+    local v = _G[prefix .. n]
+    if type(v) == "number" then t[v] = n:lower() end
+  end
+  return t
+end
+local DERIVED_KEY = keysFor("STAT_", DERIVED_STAT_NAMES)
+local ADVANCED_KEY = keysFor("ADVANCED_STAT_DISPLAY_TYPE_", ADVANCED_STAT_NAMES)
+
+-- A stone's amounts, the way the game's Mundus tooltip reads them
+-- (zo_statentry_keyboard.lua, zo_stats_keyboard.lua; ESOUI API 101051):
+-- the derived stats ("Weapon and Spell Damage" +238) and the advanced ones
+-- ("Critical Damage" 11, percent). Names are the game's own.
+local function boonEffects(abilityId)
+  local out = {}
+  local formats = {}
+  for name, label in pairs({
+    ADVANCED_STAT_DISPLAY_FORMAT_FLAT = "flat",
+    ADVANCED_STAT_DISPLAY_FORMAT_PERCENT = "percent",
+    ADVANCED_STAT_DISPLAY_FORMAT_FLAT_AND_PERCENT = "flatAndPercent",
+    ADVANCED_STAT_DISPLAY_FORMAT_FLAT_OR_PERCENT = "flatOrPercent",
+  }) do
+    if _G[name] ~= nil then formats[_G[name]] = label end
+  end
+  local advancedNames = {}
+  safe(function()
+    for ci = 1, GetNumAdvancedStatCategories() do
+      local categoryId = GetAdvancedStatsCategoryId(ci)
+      local _, numStats = GetAdvancedStatCategoryInfo(categoryId)
+      for si = 1, (numStats or 0) do
+        local statType, displayName = GetAdvancedStatInfo(categoryId, si)
+        advancedNames[statType] = zo_strformat("<<1>>", displayName or "")
+      end
+    end
+  end)
+  safe(function()
+    for i = 1, (GetAbilityNumDerivedStats(abilityId) or 0) do
+      local stat, effect = GetAbilityDerivedStatAndEffectByIndex(abilityId, i)
+      if type(effect) == "number" and effect ~= 0 then
+        local label = GetString("SI_DERIVEDSTATS", stat)
+        out[#out + 1] = { key = DERIVED_KEY[stat], stat = stat, label = label ~= "" and zo_strformat("<<1>>", label) or nil, value = effect }
+      end
+    end
+  end)
+  safe(function()
+    for i = 1, (GetAbilityNumAdvancedStats(abilityId) or 0) do
+      local stat, format, effect = GetAbilityAdvancedStatAndEffectByIndex(abilityId, i)
+      if type(effect) == "number" and effect ~= 0 then
+        local label = advancedNames[stat]
+        out[#out + 1] = { advanced = true, key = ADVANCED_KEY[stat], stat = stat, label = label ~= "" and label or nil, format = formats[format], value = effect }
+      end
+    end
+  end)
+  return out
+end
+
 local function gatherMundus()
   local out = {}
   if not GetAbilityName or not GetAbilityDescription then return out end
@@ -471,7 +562,9 @@ local function gatherMundus()
       local stone = raw and zo_strformat("<<1>>", raw):match("^[Bb]oon:%s*(.+)$")
       if not stone or stone == "" then return end
       local description = zo_strformat("<<1>>", GetAbilityDescription(id) or "")
+      local effects = boonEffects(id)
       out[#out + 1] = {
+        effects = #effects > 0 and effects or nil,
         id = "mundus-" .. slug(stone),
         name = stone,
         abilityId = id,

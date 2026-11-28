@@ -25,6 +25,7 @@ The model lives in `src/lib/game/`:
 | `mundus.ts` | The 13 Mundus stones as of Update 51 and what each boosts, one blessing (two with Twice-Born Star), Divines strengthening it, and the game's own text for each blessing |
 | `buffs.ts` | Lasting buffs at the save (Mundus, food, drink), counted down from the save |
 | `riding.ts` | Riding lessons: speed, stamina, capacity against their caps, and when the next lesson opens |
+| `stats.ts` | The character sheet at the save and what an ability adds to it, worded as the game's window |
 | `item-category.ts` | Where every item belongs: the game's inventory tabs and sub-tabs, in the game's order |
 | `learn.ts` | Facts about the game a save carries (a blessing's text), turned into catalog rows |
 | `food.ts` | One food or drink buff at a time; food raises maximums, drink recovery; recipe families and grades |
@@ -227,7 +228,11 @@ the game.
   experience and inspiration instead of Spell Damage. The numbers come
   from the game, never from here: a character's own blessing text from its
   saved buffs, and every stone's from the catalog scan (`mundus` domain).
-  A save's blessing text also fills the catalog row (`learn.ts`).
+  A save's blessing text also fills the catalog row (`learn.ts`). The
+  amount too: the character's own (with its Divines pieces) from the buff,
+  the stone's base from the catalog (`effects`, Snapshot 0.9.46, Catalog
+  0.2.9), read with `GetAbilityDerivedStatAndEffectByIndex` and
+  `GetAbilityAdvancedStatAndEffectByIndex`, as the game's Mundus tooltip.
 - **Food and drink.** One buff at a time. Food raises maximum Health,
   Magicka or Stamina, drinks raise their recovery, and specialities mix
   both. Standard recipes touch one stat, difficult two, complex three.
@@ -249,6 +254,28 @@ the game.
 Sources: UESP (Online:Crafting_Motifs, Online:Mundus_Stones,
 Online:Divines, Online:Provisioning, Online:Recipes, Online:Rapport) and the
 ZOS Companions System Guide.
+
+## Values: every number the game shows
+
+Anything saved that has a number in game keeps it, read the way the
+game's own window reads it (ESOUI API 101051; the UI code in esoui/esoui
+12.1.7). Snapshot 0.9.46 and Catalog 0.2.9:
+
+| What | Game call | The game's window |
+| --- | --- | --- |
+| Character sheet | `GetPlayerStat` for the Stats window's rows; `GetAdvancedStatValue` over the Advanced Stats categories | Stats, Advanced Stats |
+| Mundus amount | `GetAbilityDerivedStatAndEffectByIndex`, `GetAbilityAdvancedStatAndEffectByIndex` | Mundus tooltip |
+| Lasting effects | `GetAbilityEffectDescription(buffSlot)` and the stat amounts above | Buff tooltip |
+| Champion stars | `GetChampionSkillCurrentBonusText(id, points)` | Champion window |
+| Gear | `GetItemLinkArmorRating`, `GetItemLinkWeaponPower`, `GetItemLinkTraitInfo`, `GetItemLinkEnchantInfo`, enchant charges | Item tooltip |
+| Every item | `GetItemLinkValue` (sell value); `GetItemLinkOnUseAbilityInfo` and `GetItemLinkTraitOnUseAbilityInfo` (what using it does) | Item tooltip |
+| Action bars | `GetSlotBoundId`, `GetSlotName`, `GetSlotTexture`, front and back | Action bar |
+| Skills, sets, food | Already carried their numbers in the game's text | Tooltips |
+
+Each stat keeps the game's constant name as `key` ("critical_damage"),
+because the game's stat numbers can change between patches. `stats.ts`
+words the values; it never works one out. A sheet value includes what was
+active at the save (food, Mundus, passives), as in the game's window.
 
 ## The catalog: one row per thing, the game's facts
 
