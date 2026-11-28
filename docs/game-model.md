@@ -247,6 +247,34 @@ Sources: UESP (Online:Crafting_Motifs, Online:Mundus_Stones,
 Online:Divines, Online:Provisioning, Online:Recipes, Online:Rapport) and the
 ZOS Companions System Guide.
 
+## Skill lines: one id, always with its class
+
+Every skill line has one catalog id, `skillLineId(name, className)` in
+`skills.ts`: "line-" + its name, lowercase, apostrophes dropped
+("Dawn's Wrath" → `line-dawns-wrath`). Class Mastery is one tree per class
+under one name, so its id carries the class (`line-class-mastery-templar`).
+
+- **Import.** The catalog import files every line, and every ability's
+  line, under that id, whatever id a scan sent. The indexed columns come
+  from the merged entry, so a scan that sends no class can't blank it.
+- **Repair on load.** `catalog/heal.ts` folds lines stored under any other
+  id into their one row (the higher-ranked source wins per field, the other
+  fills gaps), moves their abilities, and drops Class Mastery rows with no
+  class. It runs at every start and leaves a clean catalog untouched.
+- **The game names the class.** From Snapshot 0.9.44 and Catalog 0.2.6,
+  every class line carries its class: the player's class for their own
+  lines, else the class id the game gives the line.
+
+Why: before November 2026 the catalog addon slugged the apostrophe into a
+hyphen (`line-dawn-s-wrath`) and never sent a class. The catalog never
+forgets, so those rows stayed beside the seed's as a second copy with no
+class, and every list of class lines (the roster's skill grid, the target
+picker) showed them in a classless "Class" group. The addon was fixed on
+24 November, but the stored rows weren't, and a later patch hid them in one
+picker only. `catalog/skill-lines.test.ts` fails if any of this comes back:
+a scan's line under another id, a stored duplicate, a class line without
+its class, or a seed line off its id.
+
 ## The item index: where everything belongs
 
 Every import brings the `game_items` table in line with the scan, keyed by

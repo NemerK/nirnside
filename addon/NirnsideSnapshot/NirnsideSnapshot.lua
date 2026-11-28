@@ -900,7 +900,22 @@ end
 -- line leveled to 50 becomes "mastered" and unlocks account-wide. We read this
 -- through SKILLS_DATA_MANAGER by the line's skillLineId; every call is guarded
 -- so a client without these methods simply reports nothing extra.
-local function skillLineTraits(skillType, lineIndex)
+-- The class a class skill line belongs to, as the game names it. Own lines are
+-- the player's class; for another class's line the game is asked for the line's
+-- class id. Nil when this client offers neither; the app then uses its catalog.
+local function classOfSkillLine(data, skillLineId, isOwnClass, playerClass)
+  if isOwnClass and playerClass and playerClass ~= "" then return playerClass end
+  local classId = safe(function()
+    if data and type(data.GetClassId) == "function" then return data:GetClassId() end
+    if type(GetSkillLineClassId) == "function" then return GetSkillLineClassId(skillLineId) end
+    return nil
+  end, nil)
+  if type(classId) ~= "number" or classId <= 0 or type(GetClassName) ~= "function" then return nil end
+  local name = safe(function() return zo_strformat("<<1>>", GetClassName(GENDER_MALE, classId)) end, nil)
+  return name ~= "" and name or nil
+end
+
+local function skillLineTraits(skillType, lineIndex, playerClass)
   return safe(function()
     local skillLineId = select(4, GetSkillLineInfo(skillType, lineIndex))
     if not skillLineId or not SKILLS_DATA_MANAGER then return nil end
@@ -918,6 +933,7 @@ local function skillLineTraits(skillType, lineIndex)
       classActive = isClass and active or nil,
       mastered = isClass and mastered,
       name = data.GetName and zo_strformat("<<1>>", data:GetName()) or nil,
+      className = isClass and classOfSkillLine(data, skillLineId, isOwnClass, playerClass) or nil,
     }
   end, nil)
 end
@@ -933,7 +949,7 @@ local function gatherSkills(masteriesOut, classMasteryOut, playerClass)
         local name, rank, discovered = GetSkillLineInfo(skillType, lineIndex)
         local lineName = zo_strformat("<<1>>", name)
         local classMasteryLine = isClassMasteryLineName(lineName)
-        local traits = skillLineTraits(skillType, lineIndex)
+        local traits = skillLineTraits(skillType, lineIndex, playerClass)
         -- Other classes' Class Mastery trees share the same display name.
         -- A character only has their own; skip the rest.
         local otherClassMastery = classMasteryLine and traits and traits.isClass and traits.isOwnClass == false
@@ -968,7 +984,8 @@ local function gatherSkills(masteriesOut, classMasteryOut, playerClass)
             active = traits and traits.isClass and (traits.classActive == true) or nil,
             ownClass = traits and traits.isClass and (traits.isOwnClass == true) or nil,
             classMastery = classMasteryLine,
-            className = classMasteryLine and playerClass or nil,
+            -- Every class line carries its class (Class Mastery is the character's own).
+            className = (classMasteryLine and playerClass) or (traits and traits.className) or nil,
             abilities = abilities,
           }
         end

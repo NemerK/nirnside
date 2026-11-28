@@ -153,6 +153,30 @@ local function isVengeanceLine(skillType, lineIndex, lineName)
   return flagged == true
 end
 
+-- The class a class skill line belongs to, as the game names it: the player's
+-- class for their own lines, else the class id the game gives the line. Nil
+-- when this client offers neither; the app then keeps the class it already knows.
+local function classOfSkillLine(skillType, lineIndex)
+  local data = safe(function()
+    if not SKILLS_DATA_MANAGER or not SKILLS_DATA_MANAGER.GetSkillLineDataByIndices then return nil end
+    return SKILLS_DATA_MANAGER:GetSkillLineDataByIndices(skillType, lineIndex)
+  end, nil)
+  if not data or type(data.IsClassSkillLine) ~= "function" or not data:IsClassSkillLine() then return nil end
+  if type(data.IsPlayerClassSkillLine) == "function" and data:IsPlayerClassSkillLine() then
+    local own = safe(function() return zo_strformat("<<1>>", GetUnitClass("player")) end, nil)
+    if own and own ~= "" then return own end
+  end
+  local classId = safe(function()
+    if type(data.GetClassId) == "function" then return data:GetClassId() end
+    local skillLineId = select(4, GetSkillLineInfo(skillType, lineIndex))
+    if type(GetSkillLineClassId) == "function" and skillLineId then return GetSkillLineClassId(skillLineId) end
+    return nil
+  end, nil)
+  if type(classId) ~= "number" or classId <= 0 or type(GetClassName) ~= "function" then return nil end
+  local name = safe(function() return zo_strformat("<<1>>", GetClassName(GENDER_MALE, classId)) end, nil)
+  return name ~= "" and name or nil
+end
+
 local function gatherSkills()
   local lines, skills = {}, {}
   safe(function()
@@ -162,11 +186,15 @@ local function gatherSkills()
       for lineIndex = 1, numLines do
         local lineName = zo_strformat("<<1>>", GetSkillLineInfo(skillType, lineIndex))
         if lineName and lineName ~= "" and not isVengeanceLine(skillType, lineIndex, lineName) then
+          local className = classOfSkillLine(skillType, lineIndex)
           local lineId = "line-" .. lineSlug(lineName)
+          -- Class Mastery is one tree per class under one name; its id carries the class.
+          if lineId == "line-class-mastery" and className then lineId = lineId .. "-" .. slug(className) end
           local line = {
             id = lineId,
             name = lineName,
             category = safe(function() return zo_strformat("<<1>>", GetString("SI_SKILLTYPE", skillType)) end, "Skill"),
+            className = className,
             icon = nil,
             source = "ingame",
           }
