@@ -180,7 +180,7 @@ export const SkillLine = z.object({
    * Distinct from subclassing "mastered" class lines.
    */
   classMastery: z.boolean().default(false),
-  /** Owning class, set on Class Mastery so identically named trees can be told apart. */
+  /** The line's class as the game names it: every class line from addon 0.9.44, Class Mastery before that. */
   className: z.string().nullable().optional(),
   abilities: lenientArray(SkillMorph).default([]),
 });

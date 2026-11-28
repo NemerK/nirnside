@@ -1,6 +1,7 @@
 import { getDb, setMeta } from "../db";
 import { CatalogBundle, SOURCE_RANK, type CatalogDomain, type CatalogSource } from "./schema";
 import { isExcludedCatalogLineId, isExcludedSkillLine } from "../game/vengeance";
+import { skillLineId } from "../game/skills";
 
 type CatalogSourceKey = CatalogSource;
 
@@ -13,7 +14,7 @@ function isEmpty(v: unknown): boolean {
 }
 
 /** Merge `next` over `prev`, keeping `prev`'s value wherever `next` is empty. */
-function mergeEntry(prev: Record<string, unknown>, next: Record<string, unknown>): Record<string, unknown> {
+export function mergeEntry(prev: Record<string, unknown>, next: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...prev };
   for (const [k, v] of Object.entries(next)) {
     if (!isEmpty(v)) out[k] = v;
@@ -56,17 +57,27 @@ export function importCatalogBundle(
 
   // Vengeance lines never enter the catalog, nor do abilities filed under them.
   const excludedIds = new Set<string>();
+  // Every line is filed under its one id (game/skills.ts skillLineId), whatever
+  // id the scan sent, and its abilities follow it. A line with no id (Class
+  // Mastery without its class) is left out: the seed has each class's tree.
+  const lineIdOf = new Map<string, string | null>();
   for (const s of bundle.sets) push("set", s, s.category, s.dlc);
   for (const l of bundle.skillLines) {
     if (isExcludedSkillLine(l)) {
       excludedIds.add(l.id.toLowerCase());
       continue;
     }
-    push("skillline", l, l.category, l.className);
+    const id = skillLineId(l.name, l.className);
+    lineIdOf.set(l.id, id);
+    const filed: typeof l = { ...l, id: id ?? l.id };
+    if (id) push("skillline", filed, l.category, l.className);
   }
   for (const s of bundle.skills) {
     if (isExcludedCatalogLineId(s.lineId) || excludedIds.has(s.lineId.toLowerCase())) continue;
-    push("skill", s, s.lineId, s.type);
+    const lineId = lineIdOf.has(s.lineId) ? lineIdOf.get(s.lineId) : s.lineId;
+    if (!lineId) continue;
+    const filed: typeof s = { ...s, lineId };
+    push("skill", filed, lineId, s.type);
   }
   for (const c of bundle.cp) push("cp", c, c.category, c.type);
   for (const g of bundle.grimoires) push("grimoire", g, g.skillLine, null);
@@ -89,17 +100,20 @@ export function importCatalogBundle(
       const existing = selectStmt.get(r.domain, r.id) as { source: string; json: string } | undefined;
       if (existing && rank(r.source) < rank(existing.source)) continue; // lower precedence: keep existing
 
-      let mergedJson = r.json;
+      let row = r;
       if (existing) {
         // Field-level merge: incoming (higher/equal precedence) wins per field,
         // but keeps existing values where incoming is empty/absent. This lets a
         // partial in-game scan upgrade entries without dropping reference detail.
         const prev = JSON.parse(existing.json) as Record<string, unknown>;
         const next = JSON.parse(r.json) as Record<string, unknown>;
-        mergedJson = JSON.stringify(mergeEntry(prev, next));
+        const merged = mergeEntry(prev, next);
+        // The indexed columns come from the merged entry, so a scan that left a
+        // field empty (a class line's class) can't blank the column either.
+        row = { ...r, json: JSON.stringify(merged), ...columnsOf(r.domain, merged, r) };
       }
 
-      upsertStmt.run({ ...r, json: mergedJson });
+      upsertStmt.run(row);
       counts[r.domain] = (counts[r.domain] ?? 0) + 1;
     }
   });
@@ -113,6 +127,25 @@ export function importCatalogBundle(
   setMeta("catalog", { patch: bundle.patch, source: bestSource, updatedAt: Date.now() });
 
   return counts;
+}
+
+/** The category / subcategory columns for an entry, as `push` files them. */
+function columnsOf(
+  domain: CatalogDomain,
+  e: Record<string, unknown>,
+  fallback: { category: string | null; subcategory: string | null },
+): { category: string | null; subcategory: string | null } {
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
+  switch (domain) {
+    case "skillline":
+      return { category: str(e.category), subcategory: str(e.className) };
+    case "skill":
+      return { category: str(e.lineId), subcategory: str(e.type) };
+    case "set":
+      return { category: str(e.category), subcategory: str(e.dlc) };
+    default:
+      return fallback;
+  }
 }
 
 export interface CatalogMeta {

@@ -54,3 +54,30 @@ export const SKILL_WINDOW_LINE_ORDER: Record<string, readonly string[]> = {
 
 /** Live ESO cap for active and ultimate morph-slot ranks (the game's MAX_RANKS_PER_ABILITY). */
 export const MAX_ABILITY_RANK = 4;
+
+/**
+ * A skill line's one catalog id: "line-" + its name, lowercase, apostrophes
+ * dropped, everything else not a letter or digit as a hyphen ("Dawn's Wrath"
+ * → "line-dawns-wrath"). Class Mastery is one tree per class under one name,
+ * so its id carries the class ("line-class-mastery-templar"); without a
+ * class there is no id for it (null).
+ *
+ * The catalog addon builds the same id (lineSlug), and the import files
+ * every line under it whatever id a scan sent, so one line can never be
+ * stored twice. Older scans slugged the apostrophe into a hyphen
+ * ("line-dawn-s-wrath") and filed Class Mastery without its class; those rows
+ * are folded back in on load (catalog/load.ts).
+ */
+export function skillLineId(name: string, className?: string | null): string | null {
+  const slug = (s: string) =>
+    s
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/['’]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  const base = `line-${slug(name)}`;
+  if (base !== "line-class-mastery") return base;
+  return className?.trim() ? `${base}-${slug(className)}` : null;
+}
