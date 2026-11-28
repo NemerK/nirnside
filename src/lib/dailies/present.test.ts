@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { Character, CharacterDailies } from "../snapshot/schema";
 import { resetAtForDayKey } from "../game/daily-reset";
-import { isDailyScanStale, presentCharacterDailies, zoneSlotKey } from "./present";
+import { isDailyScanStale, presentCharacterDailies, ridingCell, zoneSlotKey } from "./present";
 
 function char(dailies: CharacterDailies | null, lastSeen: number | null = 1): Character {
   return {
@@ -315,5 +315,30 @@ describe("dailies presentation", () => {
     assert.equal(row.zoneSlots[zoneSlotKey("western-skyrim", "boss")]?.status, "done");
     assert.match(row.zoneSlots[zoneSlotKey("western-skyrim", "boss")]?.title ?? "", /Problem Growth/);
     assert.equal(row.zoneSlots[zoneSlotKey("wrothgar", "delve")]?.status, "open");
+  });
+});
+
+describe("riding lesson as a daily", () => {
+  const riding = (over: Partial<NonNullable<Character["riding"]>>) => ({
+    speed: 40, maxSpeed: 60, stamina: 60, maxStamina: 60, capacity: 60, maxCapacity: 60, trainableAt: 2_000, ...over,
+  });
+
+  it("waits on the character's own timer, counted from the save", () => {
+    const cell = ridingCell({ riding: riding({}) }, 2_000 - 3 * 3600);
+    assert.equal(cell.status, "cooldown");
+    assert.equal(cell.remainingSeconds, 3 * 3600);
+  });
+
+  it("is open once the timer has passed, and done when every skill is capped", () => {
+    assert.equal(ridingCell({ riding: riding({}) }, 5_000).status, "available");
+    assert.equal(ridingCell({ riding: riding({ speed: 60 }) }, 0).status, "done");
+  });
+
+  it("is unknown before the addon saved it, and still read when the rest of the row is stale", () => {
+    assert.equal(ridingCell({ riding: null }, 0).status, "unknown");
+    const c = { ...char(null), riding: riding({}) };
+    const row = presentCharacterDailies(c, 5_000);
+    assert.equal(row.scanned, false);
+    assert.equal(row.riding.status, "available");
   });
 });

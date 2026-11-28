@@ -56,3 +56,10 @@ export const SKILL_WINDOW_LINE_ORDER: Record<string, readonly string[]> = {
 export const MAX_ABILITY_RANK = 4;
 
 export { skillLineId } from "./catalog-ids";
+
+/**
+ * Skyshards: every three collected grant one skill point. The game reports
+ * the pieces toward the next point (GetNumSkyShards, 0 to 2).
+ * Source: UESP Online:Skyshards.
+ */
+export const SKYSHARDS_PER_POINT = 3;

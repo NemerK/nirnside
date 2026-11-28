@@ -145,7 +145,7 @@ The full map, with sources, is in `docs/game-model.md`. In short:
 | Buffs, riding | `buffs.ts`, `riding.ts` | Lasting buffs and riding lessons, counted down from the save |
 | Where items belong | `item-category.ts` | The game's inventory tabs; `itemPlace` files every item |
 | Skills | `skills.ts`, `skill-caps.ts`, `class-mastery.ts`, `vengeance.ts` | Categories and order, rank caps, Class Mastery, lines left out |
-| Dailies | `daily-reset.ts`, `pledges.ts`, `pledge-objectives.ts`, `world-bosses.ts`, `zone-dailies.ts` | The reset clock, pledges, world bosses, zone dailies |
+| Dailies | `daily-reset.ts`, `pledges.ts`, `pledge-objectives.ts`, `world-bosses.ts`, `zone-dailies.ts`, `writs.ts`, `riding.ts` | The reset clock, pledges, world bosses, zone dailies, crafting writs, riding lessons |
 | Account | `currencies.ts`, `pithka.ts`, `mythics.ts`, `outfits.ts`, `transmute.ts` | Wallet, content achievements, mythics, outfit styles, crystal costs |
 | Addons | `addons.ts`, `setups.ts` | What addons are, sources and freshness, Wizard's Wardrobe setups |
 | Everything at once | `understand.ts` | `readCharacter(c, classLines(), abilityLines())` |

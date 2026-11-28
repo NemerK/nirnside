@@ -18,7 +18,8 @@ import { classColor } from "@/lib/classes";
 import { ALLIANCE_ACCENT, formatNumber, timeAgo } from "@/lib/format";
 import { currentUnix, dailyResetHourUtc, nextEsoResetAt, type EsoRegion } from "@/lib/game/daily-reset";
 import { communityPledgesForUnix, PLEDGE_GIVER_NAMES } from "@/lib/game/pledges";
-import { presentCharacterDailies, WRIT_CRAFTS, WRIT_LABELS, type DailyCell } from "@/lib/dailies/present";
+import { presentCharacterDailies, type DailyCell } from "@/lib/dailies/present";
+import { WRIT_CRAFTS, WRIT_LABELS } from "@/lib/game/writs";
 import { WORLD_BOSS_ZONES } from "@/lib/game/world-bosses";
 import { toGoalSubject } from "@/lib/goals/progress";
 import { governs } from "@/lib/goals/effective";
@@ -27,6 +28,7 @@ import { presentSheet } from "@/lib/party/sheet";
 import { EquippedPanel, type EquippedPiece, type EquippedSet } from "@/components/party/equipped-panel";
 import { HoverTip } from "@/components/party/hover-tip";
 import { TodayPanel, type TodayRow } from "@/components/party/today-panel";
+import { CharacterStatus } from "@/components/party/character-status";
 import { DAILY_TRACKABLES, trackedFor } from "@/lib/party/daily-tracking";
 import { getDailyTracking } from "@/lib/db/daily-tracking";
 import { getCPStars, setHref } from "@/lib/db/catalog-queries";
@@ -213,6 +215,20 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
       detail: null,
       state: todayState(dailies.worldBosses[z.id]?.status ?? "unknown"),
     })),
+    // Riding on its own timer; left out once every skill is trained.
+    ...(dailies.riding.status === "done"
+      ? []
+      : [
+          {
+            key: "riding",
+            label: "Riding lesson",
+            detail:
+              dailies.riding.status === "cooldown" && dailies.riding.remainingSeconds != null
+                ? `next in ${Math.ceil(dailies.riding.remainingSeconds / 3600)}h`
+                : null,
+            state: todayState(dailies.riding.status),
+          },
+        ]),
   ];
 
   // Champion Points: slotted stars in their discipline's color, with what each does.
@@ -226,7 +242,7 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
   const running = research.inProgress.map((r) => ({ ...r, left: countDown(r.remainingSeconds, elapsed) }));
   const idleSlots = research.crafts.reduce((n, cr) => n + idleSlots_(cr), 0);
   // One reading of the character through the game model.
-  const reading = readCharacter(c, safe(classLines, new Map()), safe(abilityLines, new Map()), { mundus: safe(mundusTexts, []) }, now);
+  const reading = readCharacter(c, safe(classLines, new Map()), safe(abilityLines, new Map()), { mundus: safe(mundusTexts, []), companions: safe(() => getAccount()?.companions ?? [], []) }, now);
   const equipped = presentEquipped(c, reading);
 
   const stat = (label: string, value: string, tone = "text-fg") => (
@@ -397,6 +413,14 @@ export default async function CharacterSheet({ params }: PageProps<"/party/c/[id
               tracked={tracking.keys}
               own={tracking.own}
             />
+          </Module>
+
+          <Module
+            title="On the character"
+            meta={c.lastSeen != null ? `as of the last save, ${timeAgo(c.lastSeen)}` : undefined}
+            className="md:col-span-2 xl:col-span-12"
+          >
+            <CharacterStatus reading={reading} />
           </Module>
 
           <Module title="Champion Points" href={`${base}/champion`} hrefLabel="Constellations" meta="hover a star" className="md:col-span-2 xl:col-span-7">

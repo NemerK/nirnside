@@ -2,7 +2,8 @@ import { countDown } from "../game/addons";
 import { idleSlots } from "../game/research";
 import type { Character } from "../snapshot/schema";
 import { presentResearch } from "../knowledge/present";
-import { WRIT_CRAFTS, type PresentedCharacterDailies, type DailyCell } from "../dailies/present";
+import { type PresentedCharacterDailies, type DailyCell } from "../dailies/present";
+import { WRIT_CRAFTS } from "../game/writs";
 
 /**
  * Today: the handful of things that change between sessions, gathered from

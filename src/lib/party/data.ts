@@ -156,8 +156,8 @@ export function dailiesCharacters(): Character[] {
   const rows = safe(
     () =>
       getDb()
-        .prepare("SELECT id, json_extract(json, '$.dailies') AS dailies FROM characters")
-        .all() as { id: string; dailies: string | null }[],
+        .prepare("SELECT id, json_extract(json, '$.dailies') AS dailies, json_extract(json, '$.riding') AS riding FROM characters")
+        .all() as { id: string; dailies: string | null; riding: string | null }[],
     [],
   );
   const out: Character[] = [];
@@ -165,7 +165,9 @@ export function dailiesCharacters(): Character[] {
     const row = rows.find((r) => r.id === c.id);
     let dailies: CharacterDailies | null = null;
     if (row?.dailies) dailies = safe(() => JSON.parse(row.dailies as string) as CharacterDailies, null);
-    out.push({ ...c, dailies });
+    // The riding lesson runs on its own timer and sits on the board too.
+    const riding = row?.riding ? safe(() => JSON.parse(row.riding as string) as Character["riding"], null) : null;
+    out.push({ ...c, dailies, riding });
   }
   return out;
 }

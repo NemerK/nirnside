@@ -1,4 +1,4 @@
-import { WRIT_CRAFTS, WRIT_LABELS } from "../dailies/present";
+import { WRIT_CRAFTS, WRIT_LABELS } from "../game/writs";
 import { PLEDGE_GIVER_NAMES } from "../game/pledges";
 import { WORLD_BOSS_ZONES } from "../game/world-bosses";
 
@@ -10,7 +10,7 @@ import { WORLD_BOSS_ZONES } from "../game/world-bosses";
 export interface DailyTrackable {
   key: string;
   label: string;
-  group: "Dungeons" | "Crafting writs" | "Undaunted pledges" | "World bosses";
+  group: "Dungeons" | "Crafting writs" | "Undaunted pledges" | "World bosses" | "Riding";
 }
 
 export const DAILY_TRACKABLES: DailyTrackable[] = [
@@ -23,11 +23,12 @@ export const DAILY_TRACKABLES: DailyTrackable[] = [
     group: "Undaunted pledges" as const,
   })),
   ...WORLD_BOSS_ZONES.map((z) => ({ key: `boss-${z.id}`, label: z.name, group: "World bosses" as const })),
+  { key: "riding", label: "Riding lesson", group: "Riding" },
 ];
 
 const KEYS = new Set(DAILY_TRACKABLES.map((d) => d.key));
 
-/** Until you choose: dungeons, writs and pledges. World bosses are one click away. */
+/** Until you choose: dungeons, writs, pledges and the riding lesson. World bosses are one click away. */
 export const DEFAULT_TRACKED = DAILY_TRACKABLES.filter((d) => d.group !== "World bosses").map((d) => d.key);
 
 export interface DailyTracking {
