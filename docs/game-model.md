@@ -281,6 +281,29 @@ as passive; ultimates were stored as active; the seed's set ids were
 invented. Tests in `catalog/skill-lines.test.ts` and
 `catalog/catalog-heal.test.ts` fail if any of it comes back.
 
+## Data health
+
+`health.ts` checks what Nirnside holds against the game after the fact, and
+Setup shows the result at the top (`db/health.ts` gathers the inputs). Each
+check is a mistake the catalog really had, or a reason data may be stale,
+with what fixes it:
+
+| Check | A problem when | A note when |
+| --- | --- | --- |
+| Catalog ids | a row isn't under its one id | |
+| Nothing stored twice | one name sits twice in a kind and place | |
+| Class lines | a class line has no class | |
+| Abilities and their lines | an ability's line is missing | |
+| Champion stars | a star's constellation disagrees with the saves | the scan lists every star as passive (before Catalog 0.2.7) |
+| Game catalog | | no in-game scan, or one from an older patch than the saves |
+| Addons | | they declare an older API version than the game |
+| Character saves | | a character was last saved by an older addon |
+| Items in their place | | an item has no inventory tab |
+| Latest save | | it is a week old or more |
+
+Problems should never last: the catalog repairs itself at every start, so a
+problem that stays is a new bug to trace to its root.
+
 ## The item index: where everything belongs
 
 Every import brings the `game_items` table in line with the scan, keyed by
